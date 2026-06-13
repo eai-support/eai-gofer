@@ -587,7 +587,7 @@
     "ts-loader": "9.5.4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.56.1",
-    "webpack": "5.105.4",
+    "webpack": "5.107.2",
     "webpack-cli": "5.1.4",
     "yaml": "2.8.3"
   },
