@@ -79,6 +79,14 @@ interface GitHubApiError extends Error {
   status?: number;
 }
 
+const TRUSTED_RELEASE_PROTOCOLS = new Set(['https:', 'data:']);
+const TRUSTED_RELEASE_HOSTS = new Set([
+  'api.github.com',
+  'github.com',
+  'codeload.github.com',
+  'objects.githubusercontent.com',
+]);
+
 function normalizeGitHubAsset(asset: GitHubAssetApiResponse): GitHubAsset {
   return {
     id: asset.id ?? 0,
@@ -104,6 +112,20 @@ function normalizeGitHubRelease(release: GitHubReleaseApiResponse): GitHubReleas
     prerelease: release.prerelease ?? false,
     draft: release.draft ?? false,
   };
+}
+
+function assertTrustedDownloadUrl(downloadUrl: string): void {
+  if (downloadUrl.startsWith('data:')) {
+    return;
+  }
+
+  const parsed = new URL(downloadUrl);
+  if (
+    !TRUSTED_RELEASE_PROTOCOLS.has(parsed.protocol) ||
+    !TRUSTED_RELEASE_HOSTS.has(parsed.hostname)
+  ) {
+    throw new Error(`Untrusted release download URL: ${downloadUrl}`);
+  }
 }
 
 /**
@@ -289,6 +311,7 @@ export class GitHubApiClient {
    */
   public async downloadRelease(downloadUrl: string): Promise<ArrayBuffer> {
     try {
+      assertTrustedDownloadUrl(downloadUrl);
       this.logger.info(`Downloading release archive from: ${downloadUrl}`);
       
       const response = await fetch(downloadUrl, {
@@ -300,6 +323,8 @@ export class GitHubApiClient {
       if (!response.ok) {
         throw new Error(`Failed to download release: ${response.status} ${response.statusText}`);
       }
+
+      assertTrustedDownloadUrl(response.url || downloadUrl);
 
       const arrayBuffer = await response.arrayBuffer();
       this.logger.info(`Downloaded release archive: ${arrayBuffer.byteLength} bytes`);

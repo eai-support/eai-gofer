@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 02e16c797750c7a49b1d798b75d41da6fce9767848033cd9dcf569854a19c2fd
+  canonicalChecksum: d51e60f846b7e21215acc7223277c923c394a82e409d0629a2314b2baa8c1999
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -703,9 +703,9 @@ separation from `tasks.md`:
 - Carry forward the last completed gate, blocked gate, and next recovery
   command from `eai-preflight.md` whenever provisioning, object-type publish,
   schema/storage health, workflow readiness, or preview readiness changes.
-- Treat resource provisioning, object-type publish, schema/storage health, and
-  preview readiness as separate gates even when the CLI reports progress in a
-  single run.
+- Treat resource provisioning, object-type publish, schema/storage health, and preview readiness as separate gates even when the CLI reports progress in a single run.
+- Track workflow readiness alongside those gates; do not collapse it into
+  provisioning, schema/storage health, or preview status.
 - Use `eai vertical provision <key> --tenant-id <tenant-id> --select --format json`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,

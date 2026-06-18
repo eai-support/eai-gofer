@@ -571,8 +571,8 @@ precondition to downstream implementation tasks:
   object-type seeding or preview readiness.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.
-- Schema and storage health -> `eai resources schema` / storage diagnostics /
-  `eai verify` before preview/runtime signoff.
+- Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
+  before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,

@@ -111,6 +111,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
     expect(result.response.metadata.requiredReferenceIndicators).toEqual({
       eaiCli: true,
       verticalTemplate: true,
+      eaiAppTemplate: true,
       deploymentRepo: true,
     });
 

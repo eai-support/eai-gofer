@@ -49,11 +49,10 @@ const WORKSPACE_MARKERS = [
   '.specify',
 ];
 
-const EAI_REPO_MARKERS = [
-  path.join('src', 'eai.config', 'object-types.ts'),
-  path.join('src', 'eai.config', 'register.ts'),
-  'manifest.yml',
-];
+const EAI_CONFIG_DIR = path.join('src', 'eai.config');
+const EAI_OBJECT_TYPES_MARKER = path.join(EAI_CONFIG_DIR, 'object-types.ts');
+const EAI_REGISTER_MARKER = path.join(EAI_CONFIG_DIR, 'register.ts');
+const EAI_MANIFEST_MARKER = 'manifest.yml';
 
 const GOFER_GITIGNORE_ENTRIES = [
   '.specify/hooks/',
@@ -316,13 +315,14 @@ export async function detectProjectInfo(workspaceRoot) {
 }
 
 async function detectEaiInitialized(workspaceRoot) {
-  for (const marker of EAI_REPO_MARKERS) {
-    if (await pathExists(path.join(workspaceRoot, marker))) {
-      return true;
-    }
-  }
+  const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest] = await Promise.all([
+    pathExists(path.join(workspaceRoot, EAI_CONFIG_DIR)),
+    pathExists(path.join(workspaceRoot, EAI_OBJECT_TYPES_MARKER)),
+    pathExists(path.join(workspaceRoot, EAI_REGISTER_MARKER)),
+    pathExists(path.join(workspaceRoot, EAI_MANIFEST_MARKER)),
+  ]);
 
-  return false;
+  return (hasObjectTypes && hasRegister) || (hasEaiConfigDir && hasManifest);
 }
 
 function formatLanguage(language) {

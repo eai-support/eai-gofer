@@ -18,8 +18,8 @@ suite('GitHubApiClient release normalization', () => {
       name: 'Gofer v9.9.9',
       body: 'Release notes',
       published_at: '2026-06-18T00:00:00Z',
-      zipball_url: 'https://example.com/gofer.zip',
-      tarball_url: 'https://example.com/gofer.tar.gz',
+      zipball_url: 'https://api.github.com/repos/eai-tools/eai-gofer/zipball/v9.9.9',
+      tarball_url: 'https://api.github.com/repos/eai-tools/eai-gofer/tarball/v9.9.9',
       prerelease: false,
       draft: false,
       assets: [
@@ -29,7 +29,8 @@ suite('GitHubApiClient release normalization', () => {
           content_type: 'application/zip',
           size: 42,
           download_count: 7,
-          browser_download_url: 'https://example.com/plugin.zip',
+          browser_download_url:
+            'https://github.com/eai-tools/eai-gofer/releases/download/v9.9.9/eai-gofer-agent-plugin-9.9.9.zip',
           updated_at: '2026-06-18T00:00:00Z',
         },
       ],
@@ -38,12 +39,24 @@ suite('GitHubApiClient release normalization', () => {
     try {
       const release = await client.getLatestRelease();
       assert.strictEqual(release.version, 'v9.9.9');
-      assert.strictEqual(release.downloadUrl, 'https://example.com/gofer.zip');
+      assert.strictEqual(
+        release.downloadUrl,
+        'https://api.github.com/repos/eai-tools/eai-gofer/zipball/v9.9.9'
+      );
       assert.strictEqual(release.isPrerelease, false);
       assert.strictEqual(release.description, 'Release notes');
       assert.strictEqual(release.published.toISOString(), '2026-06-18T00:00:00.000Z');
     } finally {
       client.makeRequest = originalMakeRequest;
     }
+  });
+
+  test('rejects untrusted release download URLs before fetch', async () => {
+    const client = GitHubApiClient.getInstance();
+
+    await assert.rejects(
+      () => client.downloadRelease('https://example.com/gofer.zip'),
+      /Untrusted release download URL/
+    );
   });
 });

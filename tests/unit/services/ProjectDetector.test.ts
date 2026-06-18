@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as path from 'path';
 import { ProjectDetector } from '../../../extension/src/services/ProjectDetector';
 import { FileUtils } from '../../../extension/src/utils/fileUtils';
 
@@ -157,6 +158,26 @@ describe('ProjectDetector', () => {
       expect(info.language).toBe('javascript');
       expect(info.testCommand).toBeNull();
       expect(info.framework).toBeNull();
+    });
+
+    it('does not classify a repo as EAI-initialized when only manifest.yml exists', async () => {
+      mockFileExists('manifest.yml');
+
+      const info = await ProjectDetector.detect('/workspace/generic-manifest-app');
+
+      expect(info.eaiInitialized).toBe(false);
+    });
+
+    it('classifies a repo as EAI-initialized when manifest.yml and src/eai.config exist together', async () => {
+      mockFileExists(
+        'manifest.yml',
+        path.join('src', 'eai.config'),
+        path.join('src', 'eai.config', 'register.ts')
+      );
+
+      const info = await ProjectDetector.detect('/workspace/eai-app');
+
+      expect(info.eaiInitialized).toBe(true);
     });
 
     it('detects pnpm package manager', async () => {

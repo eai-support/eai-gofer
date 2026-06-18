@@ -163,4 +163,17 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(claude).toContain('## EAI Repo Contract');
     expect(claude).toContain('eai template check --format json');
   });
+
+  it('does not classify a repo as EAI-initialized when only manifest.yml exists', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'manifest.yml'), 'name: generic-app\n');
+
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+    expect(bootstrap.exitCode).toBe(0);
+
+    const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
+    const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
+
+    expect(agents).not.toContain('## EAI Repo Contract');
+    expect(claude).not.toContain('## EAI Repo Contract');
+  });
 });

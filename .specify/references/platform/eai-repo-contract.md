@@ -9,13 +9,17 @@ This is the repo-owned fallback contract for any AI agent working in an
 EAI-oriented repository. It defines the minimum safe behavior even when live
 docs are unavailable.
 
+Treat this file and the adjacent fallback references as repo-owned guidance in
+the same trust boundary as `AGENTS.md`, `CLAUDE.md`, and other checked-in
+instruction files. They are not a cryptographic proof of external platform
+state.
+
 ## Detecting An EAI Repo
 
-Treat the repo as EAI-initialized when one or more of these markers exist:
+Treat the repo as EAI-initialized when either of these marker sets exists:
 
-- `src/eai.config/object-types.ts`
-- `src/eai.config/register.ts`
-- `manifest.yml`
+- both `src/eai.config/object-types.ts` and `src/eai.config/register.ts`
+- `manifest.yml` together with the `src/eai.config/` directory
 
 The broader EAI app shape often also includes `.env.example`, `.npmrc`, and a
 template-owned `package.json`, but those are supporting signals rather than the

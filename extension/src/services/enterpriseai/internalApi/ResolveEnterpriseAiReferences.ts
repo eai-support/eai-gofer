@@ -82,6 +82,9 @@ const REFERENCE_TYPE_ALIASES: Readonly<Record<string, EnterpriseAiReferenceType>
   [LEGACY_EAI_REFERENCE_NAME]: 'eai',
   [LEGACY_EAI_REFERENCE_DOCS]: 'eai',
   [LEGACY_EAI_REFERENCE_DOCS_UNDERSCORE]: 'eai',
+  'vertical-template': 'eai-app-template',
+  vertical_template: 'eai-app-template',
+  'vertical-template-docs': 'eai-app-template',
   eai_app_template_docs: 'eai-app-template',
   'eai-app-template': 'eai-app-template',
   'eai-app-template-docs': 'eai-app-template',
@@ -195,6 +198,10 @@ function buildFallbackReferencePaths(
 
   if (referenceType === 'eai') {
     paths.push(path.posix.join(fallbackPath, `${LEGACY_EAI_REFERENCE_NAME}.md`));
+  }
+
+  if (referenceType === 'eai-app-template') {
+    paths.push(path.posix.join(fallbackPath, 'vertical-template.md'));
   }
 
   return paths;
