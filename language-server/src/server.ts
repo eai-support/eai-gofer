@@ -130,7 +130,7 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
   return withErrorHandling('server-initialization', async () => {
     logger.logServerEvent('Initializing Gofer Language Server', {
       processId: params.processId,
-      workspaceFolders: params.workspaceFolders?.map((f) => f.uri),
+      workspaceFolders: params.workspaceFolders?.map((folder) => folder.uri),
     });
 
     const capabilities = params.capabilities;
@@ -145,13 +145,14 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
 
     // Get workspace path
     if (params.workspaceFolders && params.workspaceFolders.length > 0) {
-      workspacePath = params.workspaceFolders[0].uri.replace('file://', '');
+      const resolvedWorkspacePath = params.workspaceFolders[0].uri.replace('file://', '');
+      workspacePath = resolvedWorkspacePath;
       logger.info(`Workspace path: ${workspacePath}`);
 
       try {
         // Initialize Gofer loader
-        goferLoader = new GoferLoader(workspacePath);
-        mcpToolHandler = new MCPToolHandler(workspacePath, connection);
+        goferLoader = new GoferLoader(resolvedWorkspacePath);
+        mcpToolHandler = new MCPToolHandler(resolvedWorkspacePath, connection);
         logger.info('Gofer loader and MCP tool handler initialized successfully');
       } catch (error) {
         logger.error('Failed to initialize Gofer components', error);
