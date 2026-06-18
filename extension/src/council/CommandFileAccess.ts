@@ -29,7 +29,7 @@ export async function readDirectorySafe(
       directoryPath,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new Error(`Failed to read command directory: ${directoryPath}`);
+    throw new Error(`Failed to read command directory: ${directoryPath}`, { cause: error });
   }
 }
 
@@ -51,6 +51,6 @@ export async function pathExistsSafe(
       targetPath,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new Error(`Failed to access command path: ${targetPath}`);
+    throw new Error(`Failed to access command path: ${targetPath}`, { cause: error });
   }
 }

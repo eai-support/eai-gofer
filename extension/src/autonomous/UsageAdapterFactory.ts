@@ -125,14 +125,14 @@ export class UsageAdapterFactory {
       | 'gemini'
       | 'auto';
 
-    let providerId: CLIProviderId | null = null;
+    const providerId =
+      preference === 'auto'
+        ? 'claude-cli'
+        : preference === 'claude' || preference === 'codex'
+          ? (`${preference}-cli` as CLIProviderId)
+          : null;
 
-    if (preference === 'auto') {
-      // Default to Claude CLI for auto mode
-      providerId = 'claude-cli';
-    } else if (preference === 'claude' || preference === 'codex') {
-      providerId = `${preference}-cli` as CLIProviderId;
-    } else {
+    if (!providerId) {
       // Copilot/Gemini selections do not have CLI usage adapters.
       return null;
     }

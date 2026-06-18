@@ -236,7 +236,9 @@ export class ProviderFactoryCliResolver {
           }
         );
 
-        throw new Error(guidance);
+        throw new Error(guidance, {
+          cause: error,
+        });
       }
     }
 

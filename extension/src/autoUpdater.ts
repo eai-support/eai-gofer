@@ -317,7 +317,7 @@ export class AutoUpdater {
       // Use VS Code's built-in extension installation
       const vsixUri = vscode.Uri.file(vsixPath);
       await vscode.commands.executeCommand('workbench.extensions.installExtension', vsixUri);
-    } catch (_error) {
+    } catch (installError) {
       // Fallback: Try the CLI approach with better error handling
 
       try {
@@ -343,7 +343,8 @@ export class AutoUpdater {
 
         if (!codeCommand) {
           throw new Error(
-            'VS Code CLI command not found. Please install VS Code CLI or restart VS Code to complete the update.'
+            'VS Code CLI command not found. Please install VS Code CLI or restart VS Code to complete the update.',
+            { cause: installError }
           );
         }
 
@@ -360,7 +361,7 @@ export class AutoUpdater {
           !stderr.includes('Extension') &&
           !stderr.includes('installed')
         ) {
-          throw new Error(stderr);
+          throw new Error(stderr, { cause: installError });
         }
       } catch (cliError) {
         // If both methods fail, provide clear instructions
@@ -374,9 +375,9 @@ export class AutoUpdater {
 3. Run "Extensions: Install from VSIX..."
 4. Select the downloaded file
 
-Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`);
+Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`, { cause: cliError });
         } else {
-          throw new Error(`Failed to install extension: ${errorMsg}`);
+          throw new Error(`Failed to install extension: ${errorMsg}`, { cause: cliError });
         }
       }
     }

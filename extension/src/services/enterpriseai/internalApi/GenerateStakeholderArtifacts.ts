@@ -511,7 +511,8 @@ async function readInputArtifact(pathInfo: ResolvedWorkspacePath, label: string)
       (error.code === 'ENOENT' || error.code === 'ENOTDIR' || error.code === 'EACCES')
     ) {
       throw new Error(
-        `COMMS_INPUT_ARTIFACT_MISSING: ${label} artifact not readable at ${normalizePathForOutput(pathInfo.reportPath)}.`
+        `COMMS_INPUT_ARTIFACT_MISSING: ${label} artifact not readable at ${normalizePathForOutput(pathInfo.reportPath)}.`,
+        { cause: error }
       );
     }
 
@@ -521,10 +522,13 @@ async function readInputArtifact(pathInfo: ResolvedWorkspacePath, label: string)
 
     if (error instanceof Error) {
       throw new Error(
-        `COMMS_INPUT_ARTIFACT_MISSING: failed to read ${label} artifact (${error.message}).`
+        `COMMS_INPUT_ARTIFACT_MISSING: failed to read ${label} artifact (${error.message}).`,
+        { cause: error }
       );
     }
-    throw new Error(`COMMS_INPUT_ARTIFACT_MISSING: failed to read ${label} artifact.`);
+    throw new Error(`COMMS_INPUT_ARTIFACT_MISSING: failed to read ${label} artifact.`, {
+      cause: error,
+    });
   }
 }
 
@@ -839,7 +843,8 @@ async function writeArtifact(pathInfo: ResolvedWorkspacePath, content: string): 
     throw new Error(
       `COMMS_OUTPUT_WRITE_FAILED: failed to write artifact ${pathInfo.reportPath}. ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }

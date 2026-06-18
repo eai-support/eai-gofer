@@ -144,14 +144,17 @@ async function readRequiredArtifact(
       (error.code === 'ENOENT' || error.code === 'ENOTDIR' || error.code === 'EACCES')
     ) {
       throw new Error(
-        `RESEARCH_INPUT_MISSING: ${label} artifact not readable at ${pathInfo.reportPath}.`
+        `RESEARCH_INPUT_MISSING: ${label} artifact not readable at ${pathInfo.reportPath}.`,
+        { cause: error }
       );
     }
 
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error(`RESEARCH_INPUT_MISSING: failed to read ${label} artifact.`);
+    throw new Error(`RESEARCH_INPUT_MISSING: failed to read ${label} artifact.`, {
+      cause: error,
+    });
   }
 }
 

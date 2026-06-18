@@ -227,9 +227,9 @@ export class MemoryConsolidator {
 
     let merged = 0;
     let conflictsResolved = 0;
-    let compacted = 0;
-    let flaggedStale = 0;
-    let decayed = 0;
+    let compacted: number;
+    let flaggedStale: number;
+    let decayed: number;
     const toArchive: string[] = [];
 
     // Step 1: Detect duplicates
