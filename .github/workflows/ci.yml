@@ -383,19 +383,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [test, e2e-tests, lint]
-    if: github.ref == 'refs/heads/main'
+    if: always() && needs.test.result == 'success' && needs.e2e-tests.result == 'success' && needs.lint.result == 'success'
 
     steps:
+      - name: Skip Package Build Outside Main
+        if: github.ref != 'refs/heads/main'
+        run: echo "Package VSCode Extension only produces a VSIX artifact on main."
+
       - name: Checkout Repository
+        if: github.ref == 'refs/heads/main'
         uses: actions/checkout@v6
 
       - name: Setup Node.js
+        if: github.ref == 'refs/heads/main'
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install Dependencies
+        if: github.ref == 'refs/heads/main'
         run: |
           npm ci
           cd extension
@@ -404,6 +411,7 @@ jobs:
           npm ci
 
       - name: Build All Components
+        if: github.ref == 'refs/heads/main'
         run: |
           npm run build
           cd extension
@@ -412,11 +420,13 @@ jobs:
           npm run build || tsc
 
       - name: Package Extension
+        if: github.ref == 'refs/heads/main'
         run: |
           cd extension
           npx @vscode/vsce package
 
       - name: Upload Extension Package
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: vscode-extension
