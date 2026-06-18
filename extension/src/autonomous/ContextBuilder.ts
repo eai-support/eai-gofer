@@ -1012,7 +1012,7 @@ export class ContextBuilder extends EventEmitter {
     loadingDecisions: LoadingDecision[]
   ): Promise<{ memories: Memory[]; loadTime: number }> {
     const startTime = Date.now();
-    let memories: Memory[] = [];
+    let memories: Memory[];
 
     // T063: Use layered memory if available and enabled
     if (this.useLayeredMemory && this.memoryLayerManager) {

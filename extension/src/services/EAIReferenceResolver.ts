@@ -117,9 +117,13 @@ export class EAIReferenceResolver {
       }
 
       if (error instanceof Error) {
-        throw new Error(`Unable to access fallback reference path ${targetPath}: ${error.message}`);
+        throw new Error(`Unable to access fallback reference path ${targetPath}: ${error.message}`, {
+          cause: error,
+        });
       }
-      throw new Error(`Unable to access fallback reference path ${targetPath}.`);
+      throw new Error(`Unable to access fallback reference path ${targetPath}.`, {
+        cause: error,
+      });
     }
   }
 }

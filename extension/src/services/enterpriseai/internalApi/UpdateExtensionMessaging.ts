@@ -175,7 +175,8 @@ export async function updateExtensionMessaging(
       throw new Error(
         `POS_UPDATE_WRITE_FAILED: failed to update ${surface}. ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
+        { cause: error }
       );
     }
   }

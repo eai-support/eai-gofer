@@ -123,7 +123,8 @@ export async function detectInstalledEaiCliVersion(
 
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `EAI_CLI_VERSION_DETECTION_FAILED: eai ${args.join(' ')} failed with unexpected error: ${errorMessage}`
+        `EAI_CLI_VERSION_DETECTION_FAILED: eai ${args.join(' ')} failed with unexpected error: ${errorMessage}`,
+        { cause: error }
       );
     }
   }

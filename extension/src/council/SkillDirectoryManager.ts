@@ -85,36 +85,33 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     }
 
     // Search in priority order: Claude > Codex > Gemini > Copilot
-    let metadata: CommandMetadata | null = null;
-
     // 1. Try Claude CLI
-    metadata = this.searchClaudeCommands(commandName);
-    if (metadata) {
-      this.commandCache.set(commandName, metadata);
-      return metadata;
+    const claudeMetadata = this.searchClaudeCommands(commandName);
+    if (claudeMetadata) {
+      this.commandCache.set(commandName, claudeMetadata);
+      return claudeMetadata;
     }
 
     // 2. Try Codex CLI
-    metadata = this.searchCodexSkills(commandName);
-    if (metadata) {
-      this.commandCache.set(commandName, metadata);
-      return metadata;
+    const codexMetadata = this.searchCodexSkills(commandName);
+    if (codexMetadata) {
+      this.commandCache.set(commandName, codexMetadata);
+      return codexMetadata;
     }
 
     // 3. Try Gemini CLI
-    metadata = this.searchGeminiCommands(commandName);
-    if (metadata) {
-      this.commandCache.set(commandName, metadata);
-      return metadata;
+    const geminiMetadata = this.searchGeminiCommands(commandName);
+    if (geminiMetadata) {
+      this.commandCache.set(commandName, geminiMetadata);
+      return geminiMetadata;
     }
 
     // 4. Try Copilot Chat
-    metadata = this.searchCopilotPrompts(commandName);
-    if (metadata) {
-      this.commandCache.set(commandName, metadata);
-      return metadata;
+    const copilotMetadata = this.searchCopilotPrompts(commandName);
+    if (copilotMetadata) {
+      this.commandCache.set(commandName, copilotMetadata);
+      return copilotMetadata;
     }
-
     return null;
   }
 

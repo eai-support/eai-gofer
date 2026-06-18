@@ -398,7 +398,9 @@ The next stage will read the artifacts from this stage and continue the workflow
         }
       }
     } catch (error) {
-      throw new Error('Generated command has invalid YAML: ' + error);
+      throw new Error('Generated command has invalid YAML', {
+        cause: error,
+      });
     }
 
     // Check content has body

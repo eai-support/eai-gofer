@@ -20,7 +20,7 @@ export async function debugAIUsageCommand(workspacePath: string): Promise<void> 
 
   outputChannel.appendLine('1. Claude Code Installation:');
 
-  let claudeDirExists = false;
+  let claudeDirExists: boolean;
   try {
     claudeDirExists = (await fs.promises.stat(claudeDir)).isDirectory();
   } catch {
