@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.6.1] - 2026-06-18
+
+Auto-release
+
 ## [3.6.0] - 2026-06-13
 
 Closed-loop goal reconciliation and validation flow upgrades
