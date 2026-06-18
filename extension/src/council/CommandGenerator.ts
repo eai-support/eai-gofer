@@ -379,28 +379,26 @@ The next stage will read the artifacts from this stage and continue the workflow
       throw new Error('Generated command missing YAML frontmatter');
     }
 
-    // Parse YAML
+    let frontmatter: Record<string, unknown>;
     try {
-      const frontmatter = yaml.load(frontmatterMatch[1]) as Record<string, unknown>;
-
-      // Check required fields
-      if (!frontmatter.name) {
-        throw new Error('Generated command missing required field: name');
-      }
-      if (!frontmatter.description) {
-        throw new Error('Generated command missing required field: description');
-      }
-
-      // Platform-specific validation
-      if (platform === 'codex') {
-        if (!frontmatter.result_schema) {
-          throw new Error('Codex skill missing required field: result_schema');
-        }
-      }
+      frontmatter = yaml.load(frontmatterMatch[1]) as Record<string, unknown>;
     } catch (error) {
       throw new Error('Generated command has invalid YAML', {
         cause: error,
       });
+    }
+
+    // Check required fields
+    if (!frontmatter.name) {
+      throw new Error('Generated command missing required field: name');
+    }
+    if (!frontmatter.description) {
+      throw new Error('Generated command missing required field: description');
+    }
+
+    // Platform-specific validation
+    if (platform === 'codex' && !frontmatter.result_schema) {
+      throw new Error('Codex skill missing required field: result_schema');
     }
 
     // Check content has body
