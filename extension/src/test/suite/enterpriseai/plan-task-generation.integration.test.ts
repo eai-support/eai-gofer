@@ -56,6 +56,7 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
     assert.deepStrictEqual(result.response.metadata.requiredReferenceIndicators, {
       eaiCli: true,
       verticalTemplate: true,
+      eaiAppTemplate: true,
       deploymentRepo: true,
     });
     assert.strictEqual(result.emittedEvent.contractId, 'EVT-006');

@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: 3a2e49db19ba55ca6c9b7b3d61adb67121ece89896076760f2c4c0694c00440a
+  canonicalChecksum: 4cbbcc9cc74ca1f250eb9f4f8d6d4f41cf00c989bdac5fa82c93367e30e32493
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -594,8 +594,8 @@ precondition to downstream implementation tasks:
   object-type seeding or preview readiness.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.
-- Schema and storage health -> `eai resources schema` / storage diagnostics /
-  `eai verify` before preview/runtime signoff.
+- Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
+  before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,

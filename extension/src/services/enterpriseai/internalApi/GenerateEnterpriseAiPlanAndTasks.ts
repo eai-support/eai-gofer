@@ -52,6 +52,7 @@ export interface DeploymentConventionMetadata {
 export interface RequiredReferenceIndicators {
   eaiCli: boolean;
   verticalTemplate: boolean;
+  eaiAppTemplate: boolean;
   deploymentRepo: boolean;
 }
 
@@ -151,6 +152,7 @@ function buildRequiredReferenceIndicators(
   return {
     eaiCli: hasNonEmptyValue(references.eaiCli),
     verticalTemplate: hasNonEmptyValue(templateReference),
+    eaiAppTemplate: hasNonEmptyValue(templateReference),
     deploymentRepo: hasNonEmptyValue(references.deploymentRepo),
   };
 }
@@ -165,7 +167,7 @@ function assertRequiredReferenceIndicators(
 
   if (!indicators.eaiCli || !indicators.verticalTemplate || !indicators.deploymentRepo) {
     throw new Error(
-      'Required reference indicators are incomplete. eaiCli, verticalTemplate, and deploymentRepo must be present.'
+      'Required reference indicators are incomplete. eaiCli, verticalTemplate/eaiAppTemplate, and deploymentRepo must be present.'
     );
   }
 }

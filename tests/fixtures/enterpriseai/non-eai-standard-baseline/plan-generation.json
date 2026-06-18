@@ -21,6 +21,7 @@
       "requiredReferenceIndicators": {
         "eaiCli": true,
         "deploymentRepo": true,
+        "eaiAppTemplate": true,
         "verticalTemplate": true
       },
       "pinnedEaiCli": {
@@ -54,6 +55,7 @@
         "requiredReferenceIndicators": {
           "eaiCli": true,
           "deploymentRepo": true,
+          "eaiAppTemplate": true,
           "verticalTemplate": true
         },
         "pinnedEaiCli": {

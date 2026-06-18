@@ -8,7 +8,8 @@ Core files:
 - `eai.md` - CLI and platform fallback guidance
 - `eai-repo-contract.md` - repo-owned behavior contract for AI agents in EAI repos
 - `eai-error-catalog.yaml` - common EAI CLI/platform failure signatures and recovery paths
-- `vertical-template.md` - fallback template guidance
+- `vertical-template.md` - preferred fallback template guidance alias
+- `eai-app-template.md` - legacy fallback template guidance alias kept for compatibility
 - `deployment-repo.md` - fallback deployment guidance
 
 These files are intentionally public-safe. Private repositories can replace or

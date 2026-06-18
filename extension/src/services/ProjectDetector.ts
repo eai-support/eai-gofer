@@ -348,17 +348,19 @@ export class ProjectDetector {
     workspacePath: string,
     info: ProjectInfo
   ): Promise<void> {
-    const markers = [
-      path.join('src', 'eai.config', 'object-types.ts'),
-      path.join('src', 'eai.config', 'register.ts'),
-      'manifest.yml',
-    ];
+    const eaiConfigDir = path.join(workspacePath, 'src', 'eai.config');
+    const objectTypesPath = path.join(eaiConfigDir, 'object-types.ts');
+    const registerPath = path.join(eaiConfigDir, 'register.ts');
+    const manifestPath = path.join(workspacePath, 'manifest.yml');
 
-    for (const marker of markers) {
-      if (await FileUtils.exists(path.join(workspacePath, marker))) {
-        info.eaiInitialized = true;
-        return;
-      }
-    }
+    const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest] = await Promise.all([
+      FileUtils.exists(eaiConfigDir),
+      FileUtils.exists(objectTypesPath),
+      FileUtils.exists(registerPath),
+      FileUtils.exists(manifestPath),
+    ]);
+
+    const hasCoreEaiConfig = hasObjectTypes && hasRegister;
+    info.eaiInitialized = hasCoreEaiConfig || (hasEaiConfigDir && hasManifest);
   }
 }
