@@ -131,7 +131,7 @@ jobs:
           fi
 
       - name: Comment PR with Test Results
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
         uses: actions/github-script@v9
         with:
           script: |
