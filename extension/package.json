@@ -568,7 +568,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "4.0.4",
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "10.0.1",
     "@types/glob": "8.1.0",
     "@types/graphlib": "2.1.12",
     "@types/js-yaml": "4.0.9",
