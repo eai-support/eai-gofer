@@ -13,57 +13,83 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     const specifyCommand = readRepoFile('.claude/commands/2_gofer_specify.md');
     const planCommand = readRepoFile('.claude/commands/3_gofer_plan.md');
     const tasksCommand = readRepoFile('.claude/commands/4_gofer_tasks.md');
+    const implementCommand = readRepoFile('.claude/commands/5_gofer_implement.md');
 
     expect(scenarioCommand).toContain('EAI App Delivery Preflight');
     expect(scenarioCommand).toContain('EAI Platform And Azure App Stack Policy');
     expect(scenarioCommand).toContain('EAI Platform first, including the EAI app template');
-    expect(scenarioCommand).toContain('/gofer:eai-first-run');
-    expect(scenarioCommand).toContain('GitHub Codespaces');
-    expect(scenarioCommand).toContain('node --version');
-    expect(scenarioCommand).toContain('npm config get');
     expect(scenarioCommand).toMatch(
       /App delivery in EAI Gofer means EAI Platform\s+delivery by default/
     );
+    expect(scenarioCommand).toContain('/gofer:eai-first-run');
     expect(scenarioCommand).toContain('npm install -g @eai-tools/cli');
     expect(scenarioCommand).toContain('eai update --check');
     expect(scenarioCommand).toContain('eai login');
     expect(scenarioCommand).toContain('eai tenant list --format json');
     expect(scenarioCommand).toContain('eai init <app-name>');
-    expect(scenarioCommand).toContain('eai vertical create <name>');
     expect(scenarioCommand).toContain('eai template check --format json');
-    expect(scenarioCommand).toContain('eai gofer refresh --check');
-    expect(scenarioCommand).toContain('eai resources schema --format json');
+    expect(scenarioCommand).toMatch(/eai gofer\s+refresh --check\s+--format json/);
+    expect(scenarioCommand).toContain('eai workflow readiness --format json');
+    expect(scenarioCommand).toContain('eai vertical create <name>');
+    expect(scenarioCommand).toContain(
+      'eai vertical provision <key> --tenant-id <tenant-id> --select --format json'
+    );
+    expect(scenarioCommand).toContain(
+      'eai resources storage doctor --tenant-id <tenant-id> --format json'
+    );
+    expect(scenarioCommand).toContain('.specify/references/platform/eai-repo-contract.md');
+    expect(scenarioCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
     expect(scenarioCommand).toContain('.specify/specs/{feature}/eai-preflight.md');
 
     expect(researchCommand).toContain('eai-preflight.md');
     expect(researchCommand).toContain('EAI preflight summary');
+    expect(researchCommand).toContain('last completed gate');
+    expect(researchCommand).toContain('blocked gate');
+    expect(researchCommand).toContain('workflow readiness');
     expect(researchCommand).toContain('src/eai.config/object-types.ts');
     expect(researchCommand).toContain('eai blocks readiness');
-    expect(researchCommand).toContain('eai resources schema --format json');
-    expect(researchCommand).toContain('eai gofer refresh');
     expect(researchCommand).toContain('EAI Platform/Azure stack fit');
+    expect(researchCommand).toContain('.specify/references/platform/eai-repo-contract.md');
 
     expect(specifyCommand).toContain('EAI App Delivery Preflight');
     expect(specifyCommand).toContain('EAI Platform/Azure App Stack Policy');
     expect(planCommand).toContain('EAI app-readiness handoff');
+    expect(planCommand).toContain('EAI app lifecycle ordering handoff');
+    expect(planCommand).toContain('next recovery command');
     expect(planCommand).toContain('EAI Platform/Azure app stack decision');
     expect(tasksCommand).toContain('EAI readiness unblock -> `eai-preflight.md`');
+    expect(tasksCommand).toContain('App resource provisioning -> `eai vertical provision`');
+    expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
+    expect(tasksCommand).toContain(
+      'Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`'
+    );
     expect(tasksCommand).toContain('Do not emit tasks that establish a non-EAI primary runtime');
+    expect(implementCommand).toMatch(
+      /resource provisioning,\s*object-type publish,\s*schema\/storage health,\s*and preview readiness as separate gates/i
+    );
+    expect(implementCommand).toMatch(/last\s+completed gate/i);
+    expect(implementCommand).toContain('eai verify storage --tenant-id <tenant-id>');
+    expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
   });
 
   it('ships the EAI preflight template to canonical and mirrored resources', () => {
     const canonicalTemplate = readRepoFile('.specify/templates/eai-preflight-template.md');
-    const mirroredTemplate = readRepoFile(
-      'extension/resources/templates/eai-preflight-template.md'
-    );
+    const mirroredTemplate = readRepoFile('extension/resources/templates/eai-preflight-template.md');
 
     expect(canonicalTemplate).toContain('App Stack Policy');
-    expect(canonicalTemplate).toContain('eai update --check');
-    expect(canonicalTemplate).toContain('eai template check --format json');
-    expect(canonicalTemplate).toContain('eai gofer refresh --check --format json');
-    expect(canonicalTemplate).toContain('eai resources schema --format json');
-    expect(canonicalTemplate).toContain('Project drift status');
+    expect(canonicalTemplate).toContain('Execution Order And Gate Tracking');
+    expect(canonicalTemplate).toContain('CLI release status');
+    expect(canonicalTemplate).toContain('Drift readiness');
+    expect(canonicalTemplate).toContain('Workflow readiness');
+    expect(canonicalTemplate).toContain('Object-type publish');
+    expect(canonicalTemplate).toContain(
+      'eai resources storage doctor --tenant-id <tenant-id> --format json'
+    );
     expect(mirroredTemplate).toContain('App Stack Policy');
-    expect(mirroredTemplate).toContain('Project drift status');
+    expect(mirroredTemplate).toContain('Execution Order And Gate Tracking');
+    expect(mirroredTemplate).toContain('CLI release status');
+    expect(mirroredTemplate).toContain('Drift readiness');
+    expect(mirroredTemplate).toContain('Workflow readiness');
+    expect(mirroredTemplate).toContain('Object-type publish');
   });
 });

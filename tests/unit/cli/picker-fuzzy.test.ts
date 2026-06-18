@@ -62,6 +62,7 @@ const ALL_COMMANDS: string[] = [
   'gofer:cloud',
   'gofer:check-workspace',
   'gofer:bootstrap-workspace',
+  'gofer:eai-first-run',
   // Control commands (3)
   'gofer:plan',
   'gofer:side',
@@ -119,6 +120,11 @@ describe('CLI fuzzy picker (T131 / US5 AC-2)', () => {
   it('fuzzy("work") matches the workspace check helper', () => {
     const matches = fuzzyMatch('work', ALL_COMMANDS);
     expect(matches).toContain('gofer:check-workspace');
+  });
+
+  it('fuzzy("fir") matches the EAI first-run helper', () => {
+    const matches = fuzzyMatch('fir', ALL_COMMANDS);
+    expect(matches).toContain('gofer:eai-first-run');
   });
 
   it('fuzzy("pers") matches the personality control command', () => {

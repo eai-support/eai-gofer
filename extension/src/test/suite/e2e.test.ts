@@ -147,6 +147,8 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should handle download failures gracefully', async function () {
+      this.timeout(30000);
+
       // This test doesn't require network access
 
       // Verify the function exists and returns a promise

@@ -86,11 +86,13 @@ describe('Gofer workspace bootstrap scripts', () => {
     for (const relativePath of [
       '.specify/.gofer-version',
       '.specify/commands/0_business_scenario.md',
+      '.specify/references/platform/README.md',
+      '.specify/references/platform/eai.md',
+      '.specify/references/platform/eai-repo-contract.md',
+      '.specify/references/platform/eai-error-catalog.yaml',
       '.specify/templates/spec-template.md',
-      '.specify/templates/goal-ledger-template.json',
       '.specify/templates/gofer-model-policy.yaml',
       '.specify/memory/gofer-model-policy.yaml',
-      '.specify/scripts/node/gofer-closed-loop-audit.mjs',
       '.specify/scripts/hooks/post-tool-use.mjs',
       '.specify/scripts/powershell/install-optional-tools.ps1',
       '.specify/README.md',
@@ -142,5 +144,23 @@ describe('Gofer workspace bootstrap scripts', () => {
         'utf8'
       )
     ).toBe(customModelPolicy);
+  });
+
+  it('adds EAI repo guidance to generated instruction files when template markers exist', () => {
+    fs.mkdirSync(path.join(workspaceRoot, 'src', 'eai.config'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'src', 'eai.config', 'object-types.ts'), 'export {};\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'src', 'eai.config', 'register.ts'), 'export {};\n');
+
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+    expect(bootstrap.exitCode).toBe(0);
+
+    const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
+    const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
+
+    expect(agents).toContain('## EAI Repo Contract');
+    expect(agents).toContain('/gofer:eai-first-run');
+    expect(agents).toContain('.specify/references/platform/eai-error-catalog.yaml');
+    expect(claude).toContain('## EAI Repo Contract');
+    expect(claude).toContain('eai template check --format json');
   });
 });

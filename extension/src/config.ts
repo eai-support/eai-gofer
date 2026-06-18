@@ -22,7 +22,7 @@ export const MCP_CONFIG_FILE = '.vscode/mcp.json';
 
 // GitHub constants
 export const GITHUB_OWNER = 'eai-tools';
-export const GITHUB_REPO = 'gofer';
+export const GITHUB_REPO = 'eai-gofer';
 export const GITHUB_API_BASE = 'https://api.github.com';
 
 // Language Server constants

@@ -71,7 +71,7 @@ describe('Config - Constants', () => {
     });
 
     it('should have correct GitHub repo', () => {
-      expect(GITHUB_REPO).toBe('gofer');
+      expect(GITHUB_REPO).toBe('eai-gofer');
     });
 
     it('should have GitHub API base URL', () => {

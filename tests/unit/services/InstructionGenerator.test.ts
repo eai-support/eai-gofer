@@ -37,6 +37,7 @@ function makeProjectInfo(overrides: Partial<ProjectInfo> = {}): ProjectInfo {
     hasTypeScript: true,
     hasEslint: true,
     hasPrettier: true,
+    eaiInitialized: false,
     ...overrides,
   };
 }
@@ -187,6 +188,21 @@ describe('InstructionGenerator', () => {
 
       expect(content).toContain('Plan First');
       expect(content).toContain('Verification Before Done');
+    });
+
+    it('adds EAI repo contract guidance when the repo is EAI-initialized', async () => {
+      const info = makeProjectInfo({ eaiInitialized: true });
+
+      const agents = await generator.generateAgentsMd(info);
+      const claude = await generator.generateClaudeMd(info);
+      const copilot = await generator.generateCopilotMd(info);
+
+      expect(agents).toContain('## EAI Repo Contract');
+      expect(agents).toContain('/gofer:eai-first-run');
+      expect(claude).toContain('## EAI Repo Contract');
+      expect(claude).toContain('eai workflow readiness --format json');
+      expect(copilot).toContain('## EAI Repo Contract');
+      expect(copilot).toContain('.specify/references/platform/eai-repo-contract.md');
     });
   });
 

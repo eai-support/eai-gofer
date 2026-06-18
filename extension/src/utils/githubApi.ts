@@ -37,6 +37,37 @@ export interface ReleaseInfo {
   isPrerelease: boolean;
 }
 
+interface GitHubReleaseApiResponse {
+  id?: number;
+  tag_name?: string;
+  tagName?: string;
+  name?: string;
+  body?: string;
+  published_at?: string;
+  publishedAt?: string;
+  assets?: GitHubAssetApiResponse[];
+  zipball_url?: string;
+  zipballUrl?: string;
+  tarball_url?: string;
+  tarballUrl?: string;
+  prerelease?: boolean;
+  draft?: boolean;
+}
+
+interface GitHubAssetApiResponse {
+  id?: number;
+  name?: string;
+  content_type?: string;
+  contentType?: string;
+  size?: number;
+  download_count?: number;
+  downloadCount?: number;
+  browser_download_url?: string;
+  browserDownloadUrl?: string;
+  updated_at?: string;
+  updatedAt?: string;
+}
+
 interface GitHubRepositoryInfo {
   description: string;
   name: string;
@@ -46,6 +77,33 @@ interface GitHubRepositoryInfo {
 
 interface GitHubApiError extends Error {
   status?: number;
+}
+
+function normalizeGitHubAsset(asset: GitHubAssetApiResponse): GitHubAsset {
+  return {
+    id: asset.id ?? 0,
+    name: asset.name ?? '',
+    contentType: asset.contentType ?? asset.content_type ?? 'application/octet-stream',
+    size: asset.size ?? 0,
+    downloadCount: asset.downloadCount ?? asset.download_count ?? 0,
+    browserDownloadUrl: asset.browserDownloadUrl ?? asset.browser_download_url ?? '',
+    updatedAt: asset.updatedAt ?? asset.updated_at ?? '',
+  };
+}
+
+function normalizeGitHubRelease(release: GitHubReleaseApiResponse): GitHubRelease {
+  return {
+    id: release.id ?? 0,
+    tagName: release.tagName ?? release.tag_name ?? '',
+    name: release.name ?? '',
+    body: release.body ?? '',
+    publishedAt: release.publishedAt ?? release.published_at ?? '',
+    assets: (release.assets ?? []).map(normalizeGitHubAsset),
+    zipballUrl: release.zipballUrl ?? release.zipball_url ?? '',
+    tarballUrl: release.tarballUrl ?? release.tarball_url ?? '',
+    prerelease: release.prerelease ?? false,
+    draft: release.draft ?? false,
+  };
 }
 
 /**
@@ -149,7 +207,10 @@ export class GitHubApiClient {
    */
   public async getLatestRelease(): Promise<ReleaseInfo> {
     try {
-      const release = await this.makeRequest<GitHubRelease>(`/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+      const rawRelease = await this.makeRequest<GitHubReleaseApiResponse>(
+        `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
+      );
+      const release = normalizeGitHubRelease(rawRelease);
       
       return {
         version: release.tagName,
@@ -180,17 +241,20 @@ export class GitHubApiClient {
    */
   public async getAllReleases(page: number = 1, perPage: number = 30): Promise<ReleaseInfo[]> {
     try {
-      const releases = await this.makeRequest<GitHubRelease[]>(
+      const releases = await this.makeRequest<GitHubReleaseApiResponse[]>(
         `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?page=${page}&per_page=${perPage}`
       );
       
-      return releases.map(release => ({
+      return releases.map(rawRelease => {
+        const release = normalizeGitHubRelease(rawRelease);
+        return {
         version: release.tagName,
         published: new Date(release.publishedAt),
         description: release.body,
         downloadUrl: release.zipballUrl,
         isPrerelease: release.prerelease,
-      }));
+        };
+      });
     } catch (error) {
       this.logger.error('Failed to get all releases', error as Error);
       throw error;
@@ -202,7 +266,10 @@ export class GitHubApiClient {
    */
   public async getRelease(tagName: string): Promise<ReleaseInfo> {
     try {
-      const release = await this.makeRequest<GitHubRelease>(`/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/${tagName}`);
+      const rawRelease = await this.makeRequest<GitHubReleaseApiResponse>(
+        `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/${tagName}`
+      );
+      const release = normalizeGitHubRelease(rawRelease);
       
       return {
         version: release.tagName,

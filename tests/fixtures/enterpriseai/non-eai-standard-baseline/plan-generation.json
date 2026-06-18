@@ -20,8 +20,8 @@
       },
       "requiredReferenceIndicators": {
         "eaiCli": true,
-        "eaiAppTemplate": true,
-        "deploymentRepo": true
+        "deploymentRepo": true,
+        "verticalTemplate": true
       },
       "pinnedEaiCli": {
         "installedVersion": "2.7.4",
@@ -53,8 +53,8 @@
         },
         "requiredReferenceIndicators": {
           "eaiCli": true,
-          "eaiAppTemplate": true,
-          "deploymentRepo": true
+          "deploymentRepo": true,
+          "verticalTemplate": true
         },
         "pinnedEaiCli": {
           "installedVersion": "2.7.4",
