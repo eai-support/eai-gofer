@@ -17,10 +17,12 @@ import {
 
 export class GoferLSPClient {
   private client: LanguageClient | undefined;
-  private outputChannel: vscode.OutputChannel;
+  private outputChannel: vscode.LogOutputChannel;
 
   constructor(private context: vscode.ExtensionContext) {
-    this.outputChannel = vscode.window.createOutputChannel('Gofer Language Server');
+    this.outputChannel = vscode.window.createOutputChannel('Gofer Language Server', {
+      log: true,
+    });
   }
 
   async start(): Promise<void> {
@@ -111,7 +113,10 @@ export class GoferLSPClient {
     try {
       const startPromise = this.client.start();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Language Server start timed out after 10 seconds')), 10000);
+        setTimeout(
+          () => reject(new Error('Language Server start timed out after 10 seconds')),
+          10000
+        );
       });
 
       await Promise.race([startPromise, timeoutPromise]);
