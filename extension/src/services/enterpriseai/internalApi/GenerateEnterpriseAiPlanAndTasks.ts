@@ -6,7 +6,8 @@ import { type WorkflowProfile } from '../models/Workflow';
 
 export interface ResolvedEnterpriseAiReferences {
   eaiCli: string;
-  eaiAppTemplate: string;
+  verticalTemplate?: string;
+  eaiAppTemplate?: string;
   deploymentRepo: string;
 }
 
@@ -50,7 +51,7 @@ export interface DeploymentConventionMetadata {
 
 export interface RequiredReferenceIndicators {
   eaiCli: boolean;
-  eaiAppTemplate: boolean;
+  verticalTemplate: boolean;
   deploymentRepo: boolean;
 }
 
@@ -145,9 +146,11 @@ function deriveArtifactPath(specPath: string, artifactName: string): string {
 function buildRequiredReferenceIndicators(
   references: ResolvedEnterpriseAiReferences
 ): RequiredReferenceIndicators {
+  const templateReference = references.verticalTemplate ?? references.eaiAppTemplate ?? '';
+
   return {
     eaiCli: hasNonEmptyValue(references.eaiCli),
-    eaiAppTemplate: hasNonEmptyValue(references.eaiAppTemplate),
+    verticalTemplate: hasNonEmptyValue(templateReference),
     deploymentRepo: hasNonEmptyValue(references.deploymentRepo),
   };
 }
@@ -160,9 +163,9 @@ function assertRequiredReferenceIndicators(
     return;
   }
 
-  if (!indicators.eaiCli || !indicators.eaiAppTemplate || !indicators.deploymentRepo) {
+  if (!indicators.eaiCli || !indicators.verticalTemplate || !indicators.deploymentRepo) {
     throw new Error(
-      'Required reference indicators are incomplete. eaiCli, eaiAppTemplate, and deploymentRepo must be present.'
+      'Required reference indicators are incomplete. eaiCli, verticalTemplate, and deploymentRepo must be present.'
     );
   }
 }

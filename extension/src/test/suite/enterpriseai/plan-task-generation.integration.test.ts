@@ -22,8 +22,9 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
     assert.ok(/pin\s+guidance to `major\.minor`/.test(planCommand));
 
     assert.ok(/Ordered Runnable Task-Generation Guidance/.test(tasksCommand));
-    assert.ok(/scaffold before/.test(tasksCommand));
-    assert.ok(/pinned `eai major\.minor` deployment tasks/.test(tasksCommand));
+    assert.ok(/real EAI app gates before any claim of seeding/.test(tasksCommand));
+    assert.ok(/App resource provisioning -> `eai vertical provision`/.test(tasksCommand));
+    assert.ok(/pinned `eai major\.minor` deployment tasks/i.test(tasksCommand));
   });
 
   test('propagates market-analysis reference indicators and eai pin metadata for IAP-006 and EVT-006', () => {
@@ -33,7 +34,7 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
       specPath: '.specify/specs/029-enterpriseai-student-vertical-builder/spec.md',
       resolvedReferences: {
         eaiCli: '.specify/references/platform/eai.md',
-        eaiAppTemplate: '.specify/references/platform/eai-app-template.md',
+        verticalTemplate: '.specify/references/platform/vertical-template.md',
         deploymentRepo: '.specify/references/platform/deployment-repo.md',
       },
       installedEaiCliVersion: '2.7.4',
@@ -54,7 +55,7 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
     assert.strictEqual(result.response.metadata.marketAnalysis?.referencedInPlan, true);
     assert.deepStrictEqual(result.response.metadata.requiredReferenceIndicators, {
       eaiCli: true,
-      eaiAppTemplate: true,
+      verticalTemplate: true,
       deploymentRepo: true,
     });
     assert.strictEqual(result.emittedEvent.contractId, 'EVT-006');

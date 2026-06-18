@@ -44,13 +44,23 @@ function validateResolvedReferences(value: unknown): string[] {
     return ['resolvedReferences must be an object.'];
   }
 
-  const requiredFields = ['eaiCli', 'eaiAppTemplate', 'deploymentRepo'] as const;
   const errors: string[] = [];
 
-  for (const field of requiredFields) {
+  for (const field of ['eaiCli', 'deploymentRepo'] as const) {
     if (typeof value[field] !== 'string' || !value[field].trim()) {
       errors.push(`resolvedReferences.${field} must be a non-empty string.`);
     }
+  }
+
+  const legacyTemplate =
+    typeof value.eaiAppTemplate === 'string' ? value.eaiAppTemplate.trim() : '';
+  const verticalTemplate =
+    typeof value.verticalTemplate === 'string' ? value.verticalTemplate.trim() : '';
+
+  if (!legacyTemplate && !verticalTemplate) {
+    errors.push(
+      'resolvedReferences.verticalTemplate must be a non-empty string (resolvedReferences.eaiAppTemplate is accepted as a legacy alias).'
+    );
   }
 
   return errors;

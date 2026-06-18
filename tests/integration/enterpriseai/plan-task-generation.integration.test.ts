@@ -25,8 +25,9 @@ describe('enterpriseai plan/task generation (root integration)', () => {
     expect(planCommand).toMatch(/pin\s+guidance to `major\.minor`/);
 
     expect(tasksCommand).toContain('Ordered Runnable Task-Generation Guidance');
-    expect(tasksCommand).toContain('scaffold before');
-    expect(tasksCommand).toContain('pinned `eai major.minor` deployment tasks');
+    expect(tasksCommand).toContain('real EAI app gates before any claim of seeding');
+    expect(tasksCommand).toContain('App resource provisioning -> `eai vertical provision`');
+    expect(tasksCommand).toMatch(/Pinned `eai major\.minor` deployment tasks/i);
   });
 
   it('wires IAP-001, IAP-002, and IAP-003 through EVT-001/002/003 payload emission', () => {
@@ -81,7 +82,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
       specPath: '.specify/specs/029-enterpriseai-student-vertical-builder/spec.md',
       resolvedReferences: {
         eaiCli: '.specify/references/platform/eai.md',
-        eaiAppTemplate: '.specify/references/platform/eai-app-template.md',
+        verticalTemplate: '.specify/references/platform/vertical-template.md',
         deploymentRepo: '.specify/references/platform/deployment-repo.md',
       },
       installedEaiCliVersion: '2.7.4',
@@ -109,7 +110,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
     expect(result.response.metadata.deploymentConventions.included).toBe(true);
     expect(result.response.metadata.requiredReferenceIndicators).toEqual({
       eaiCli: true,
-      eaiAppTemplate: true,
+      verticalTemplate: true,
       deploymentRepo: true,
     });
 

@@ -62,13 +62,20 @@ export class InstructionGenerator {
     // Core principles (from workflow/principles.md)
     content = content.replace('{{principles}}', principlesFragment.trim());
 
+    if (projectInfo.eaiInitialized) {
+      content = content.replace(
+        '## Core Principles',
+        `${this.buildEaiRepoContractSection()}\n\n## Core Principles`
+      );
+    }
+
     return content;
   }
 
   /**
    * T022/T025: Generate CLAUDE.md content from project info.
    */
-  public async generateClaudeMd(_projectInfo: ProjectInfo): Promise<string> {
+  public async generateClaudeMd(projectInfo: ProjectInfo): Promise<string> {
     const base = await this.loadTemplate('base', 'claude-base.md');
     const workflowFragment = await this.loadTemplate('workflow', 'principles.md');
     const goferFragment = await this.loadTemplate('gofer', 'gofer-claude.md');
@@ -87,6 +94,10 @@ export class InstructionGenerator {
 
     // Gofer pipeline commands
     content = content.replace('{{goferCommands}}', goferFragment.trim());
+
+    if (projectInfo.eaiInitialized) {
+      content = `${content.trimEnd()}\n\n${this.buildEaiRepoContractSection()}\n`;
+    }
 
     return content;
   }
@@ -109,6 +120,13 @@ export class InstructionGenerator {
 
     // Code quality (language conventions)
     content = content.replace('{{codeQuality}}', langFragment.trim());
+
+    if (projectInfo.eaiInitialized) {
+      content = content.replace(
+        '## Code Quality',
+        `${this.buildEaiRepoContractSection()}\n\n## Code Quality`
+      );
+    }
 
     return content;
   }
@@ -227,5 +245,16 @@ export class InstructionGenerator {
       parts.push(`Test runner: ${info.testRunner}.`);
     }
     return parts.join(' ');
+  }
+
+  private buildEaiRepoContractSection(): string {
+    return [
+      '## EAI Repo Contract',
+      '',
+      '- This repo appears to be initialized from the EAI app template. Read `.specify/references/platform/eai-repo-contract.md` and `.specify/references/platform/eai-error-catalog.yaml` before app-delivery work.',
+      '- Run `/gofer:eai-first-run` when CLI, login, tenant, template, or Gofer readiness is missing or stale.',
+      '- Check `eai update --check`, `eai template check --format json`, `eai gofer refresh --check --format json`, and `eai workflow readiness --format json` when the CLI advertises them.',
+      '- Build on EAI Platform first and Azure second. Keep provisioning, types seed, schema/storage health, workflow readiness, and preview as separate gates.',
+    ].join('\n');
   }
 }

@@ -17,6 +17,7 @@ export interface ProjectInfo {
   hasTypeScript: boolean;
   hasEslint: boolean;
   hasPrettier: boolean;
+  eaiInitialized: boolean;
 }
 
 /**
@@ -41,6 +42,7 @@ export class ProjectDetector {
       hasTypeScript: false,
       hasEslint: false,
       hasPrettier: false,
+      eaiInitialized: false,
     };
 
     // Run all detection in parallel
@@ -49,6 +51,7 @@ export class ProjectDetector {
       ProjectDetector.detectTestRunner(workspacePath, info),
       ProjectDetector.detectLinterFormatter(workspacePath, info),
       ProjectDetector.detectPackageManager(workspacePath, info),
+      ProjectDetector.detectEaiInitialization(workspacePath, info),
     ]);
 
     // These depend on language detection results
@@ -336,6 +339,24 @@ export class ProjectDetector {
     for (const { file, manager } of managers) {
       if (await FileUtils.exists(path.join(workspacePath, file))) {
         info.packageManager = manager;
+        return;
+      }
+    }
+  }
+
+  private static async detectEaiInitialization(
+    workspacePath: string,
+    info: ProjectInfo
+  ): Promise<void> {
+    const markers = [
+      path.join('src', 'eai.config', 'object-types.ts'),
+      path.join('src', 'eai.config', 'register.ts'),
+      'manifest.yml',
+    ];
+
+    for (const marker of markers) {
+      if (await FileUtils.exists(path.join(workspacePath, marker))) {
+        info.eaiInitialized = true;
         return;
       }
     }
