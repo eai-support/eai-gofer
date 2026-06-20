@@ -29,6 +29,8 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('npm install -g @eai-tools/cli');
     expect(command).toContain('eai update --check');
     expect(command).toContain('eai --describe');
+    expect(command).toContain('eai agent guide --format json');
+    expect(command).toContain('eai errors explain <code-or-reason> --format json');
     expect(command).toContain('eai whoami');
     expect(command).toContain('eai tenant list --format json');
     expect(command).toContain(

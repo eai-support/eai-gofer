@@ -199,7 +199,10 @@ describe('InstructionGenerator', () => {
 
       expect(agents).toContain('## EAI Repo Contract');
       expect(agents).toContain('/gofer:eai-first-run');
+      expect(agents).toContain('eai agent guide --format json');
+      expect(agents).toContain('eai errors explain <code-or-reason> --format json');
       expect(claude).toContain('## EAI Repo Contract');
+      expect(claude).toContain('eai agent guide --format json');
       expect(claude).toContain('eai workflow readiness --format json');
       expect(copilot).toContain('## EAI Repo Contract');
       expect(copilot).toContain('.specify/references/platform/eai-repo-contract.md');

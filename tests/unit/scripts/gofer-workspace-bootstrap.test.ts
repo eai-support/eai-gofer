@@ -148,7 +148,10 @@ describe('Gofer workspace bootstrap scripts', () => {
 
   it('adds EAI repo guidance to generated instruction files when template markers exist', () => {
     fs.mkdirSync(path.join(workspaceRoot, 'src', 'eai.config'), { recursive: true });
-    fs.writeFileSync(path.join(workspaceRoot, 'src', 'eai.config', 'object-types.ts'), 'export {};\n');
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'src', 'eai.config', 'object-types.ts'),
+      'export {};\n'
+    );
     fs.writeFileSync(path.join(workspaceRoot, 'src', 'eai.config', 'register.ts'), 'export {};\n');
 
     const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
@@ -160,7 +163,10 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(agents).toContain('## EAI Repo Contract');
     expect(agents).toContain('/gofer:eai-first-run');
     expect(agents).toContain('.specify/references/platform/eai-error-catalog.yaml');
+    expect(agents).toContain('eai agent guide --format json');
+    expect(agents).toContain('eai errors explain <code-or-reason> --format json');
     expect(claude).toContain('## EAI Repo Contract');
+    expect(claude).toContain('eai agent guide --format json');
     expect(claude).toContain('eai template check --format json');
   });
 

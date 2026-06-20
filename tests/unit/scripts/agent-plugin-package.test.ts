@@ -49,6 +49,10 @@ describe('Gofer agent plugin package', () => {
       const zipPath = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}.zip`);
       const pluginRoot = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
+      const umbrellaSkill = fs.readFileSync(
+        path.join(pluginRoot, 'plugin-skills', 'eai-gofer', 'SKILL.md'),
+        'utf8'
+      );
       expect(fs.existsSync(zipPath)).toBe(true);
       expect(fs.existsSync(pluginRoot)).toBe(true);
 
@@ -121,6 +125,11 @@ describe('Gofer agent plugin package', () => {
         'copilot plugin marketplace add https://github.com/eai-tools/eai-gofer'
       );
       expect(readme).toContain('gemini extensions install https://github.com/eai-tools/eai-gofer');
+      expect(readme).toContain('eai agent guide --format json');
+      expect(readme).toContain('eai errors explain <code-or-reason> --format json');
+      expect(umbrellaSkill).toContain('eai agent guide --format json');
+      expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
+      expect(umbrellaSkill).toContain('eai publicapi');
 
       for (const command of FULL_COMMAND_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);
