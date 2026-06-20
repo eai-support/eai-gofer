@@ -1,6 +1,6 @@
 ---
 name: gofer:eai-first-run
-description: "Prepare a new machine or repo for the first EAI Gofer app build."
+description: 'Prepare a new machine or repo for the first EAI Gofer app build.'
 ---
 
 # EAI Gofer First Run
@@ -45,26 +45,26 @@ click/command instructions and continue after the folder is open.
 
 Run only safe read/check commands first:
 
-| Tool    | POSIX check                       | PowerShell check                         |
-| ------- | --------------------------------- | ---------------------------------------- |
-| Git     | `git --version`                   | `git --version`                          |
-| Node.js | `node --version`                  | `node --version`                         |
-| npm     | `npm --version`                   | `npm --version`                          |
-| EAI CLI | `eai --version`                   | `eai --version`                          |
+| Tool     | POSIX check                          | PowerShell check                     |
+| -------- | ------------------------------------ | ------------------------------------ |
+| Git      | `git --version`                      | `git --version`                      |
+| Node.js  | `node --version`                     | `node --version`                     |
+| npm      | `npm --version`                      | `npm --version`                      |
+| EAI CLI  | `eai --version`                      | `eai --version`                      |
 | Registry | `npm config get @eai-tools:registry` | `npm config get @eai-tools:registry` |
 
 If Git, Node.js, or npm is missing, ask before installing. Use the least
 surprising platform path:
 
-| Platform            | Preferred install path                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| macOS               | Use Homebrew if already installed; otherwise use the official Git/Node installer path.  |
-| Linux               | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
-| Windows             | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.      |
-| GitHub Codespaces   | Prefer preinstalled tools and user-level npm; avoid host-level package installs.        |
+| Platform          | Preferred install path                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| macOS             | Use Homebrew if already installed; otherwise use the official Git/Node installer path. |
+| Linux             | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
+| Windows           | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.     |
+| GitHub Codespaces | Prefer preinstalled tools and user-level npm; avoid host-level package installs.       |
 
-For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell redirection
-or assume Git Bash exists unless it was detected.
+For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell
+redirection or assume Git Bash exists unless it was detected.
 
 ## Step 3: Install Or Update EAI CLI
 
@@ -103,9 +103,22 @@ Run:
 eai --describe
 ```
 
+If advertised, also run:
+
+```bash
+eai agent guide --format json
+```
+
 Prefer commands and options advertised by the installed CLI over remembered
 syntax. Use JSON only where the CLI advertises it. Record a safe summary in the
 first-run report.
+
+When any later `eai` command fails, use the CLI's error guidance before
+inventing a workaround:
+
+```bash
+eai errors explain <code-or-reason> --format json
+```
 
 Specifically note whether the installed CLI advertises the commands needed for:
 
@@ -117,6 +130,8 @@ Specifically note whether the installed CLI advertises the commands needed for:
 - project drift checks via `eai template check`
 - Gofer drift checks via `eai gofer refresh --check`
 - UI block discovery via `eai blocks`
+- AI-agent guidance via `eai agent guide`
+- error recovery guidance via `eai errors explain`
 
 ## Step 5: Login, Tenant, And Account Readiness
 
@@ -179,9 +194,9 @@ eai template check --format json
 eai gofer refresh --check --format json
 ```
 
-If `eai verify`, `eai template check`, or `eai doctor --check-updates`
-returns `E001` or reports "Not in an EAI project", treat the repo as not yet
-initialized from the EAI app template and explain that clearly.
+If `eai verify`, `eai template check`, or `eai doctor --check-updates` returns
+`E001` or reports "Not in an EAI project", treat the repo as not yet initialized
+from the EAI app template and explain that clearly.
 
 If this is an empty or approved target folder, ask for final confirmation and
 run the advertised equivalent of:
@@ -220,8 +235,8 @@ bundle or downloaded public bundle as the bootstrap source described by
 
 Make sure the active host is working in the initialized EAI app folder:
 
-- VS Code: open the folder in the current or a new VS Code window when `code`
-  is available; otherwise give exact UI steps.
+- VS Code: open the folder in the current or a new VS Code window when `code` is
+  available; otherwise give exact UI steps.
 - Codex: show the absolute folder path and ask the user to open that folder as
   the active Codex workspace if the host cannot switch automatically.
 - Claude Code: show the absolute folder path and ask the user to attach/open it
@@ -276,8 +291,8 @@ Each section should include:
 
 ## Step 11: Start The Pipeline
 
-When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold are
-ready, tell the user to start:
+When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold
+are ready, tell the user to start:
 
 ```text
 /0_business_scenario <what you want to build>

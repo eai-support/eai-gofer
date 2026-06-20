@@ -202,6 +202,9 @@ The command:
   and `npm install -g @eai-tools/cli` when EAI CLI installation is approved
 - runs `eai update --check`, `eai --describe`, `eai whoami`, and
   `eai tenant list --format json` before assuming CLI syntax or tenant readiness
+- runs `eai agent guide --format json` when advertised, and after `eai` errors
+  uses `eai errors explain <code-or-reason> --format json` before guessing a
+  workaround
 - asks for the project display name, proposes a lowercase kebab-case CLI name,
   confirms the active tenant, then runs
   `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`

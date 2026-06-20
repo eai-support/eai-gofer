@@ -405,7 +405,8 @@ function buildEaiRepoContractSection(projectInfo) {
 
 - This repo appears to be initialized from the EAI app template. Before app-delivery work, read \`.specify/references/platform/eai-repo-contract.md\` and \`.specify/references/platform/eai-error-catalog.yaml\`.
 - If CLI, login, tenant, template, or Gofer readiness is missing or stale, run \`/gofer:eai-first-run\` before building.
-- Use \`eai update --check\`, \`eai template check --format json\`, \`eai gofer refresh --check --format json\`, and \`eai workflow readiness --format json\` when the CLI advertises them before assuming the repo is current.
+- Use \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\`, \`eai template check --format json\`, \`eai gofer refresh --check --format json\`, and \`eai workflow readiness --format json\` when the CLI advertises them before assuming the repo is current.
+- After any \`eai\` command error, use \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
 - Build on EAI Platform first and Azure second. Treat non-EAI runtimes as explicit exceptions only.
 - Keep provisioning, types seed, schema/storage health, workflow readiness, and preview as separate gates.`;
 }
