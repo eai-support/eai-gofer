@@ -2,7 +2,7 @@
   "name": "gofer",
   "displayName": "Gofer [PREVIEW]",
   "description": "Guide repository work from business scenario through the core Gofer pipeline to unified validation inside VS Code.",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "publisher": "EnterpriseAI",
   "icon": "icon.png",
   "author": {
