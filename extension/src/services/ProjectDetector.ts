@@ -352,15 +352,19 @@ export class ProjectDetector {
     const objectTypesPath = path.join(eaiConfigDir, 'object-types.ts');
     const registerPath = path.join(eaiConfigDir, 'register.ts');
     const manifestPath = path.join(workspacePath, 'manifest.yml');
+    const runtimeContractPath = path.join(workspacePath, 'eai.runtime.json');
 
-    const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest] = await Promise.all([
-      FileUtils.exists(eaiConfigDir),
-      FileUtils.exists(objectTypesPath),
-      FileUtils.exists(registerPath),
-      FileUtils.exists(manifestPath),
-    ]);
+    const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest, hasRuntimeContract] =
+      await Promise.all([
+        FileUtils.exists(eaiConfigDir),
+        FileUtils.exists(objectTypesPath),
+        FileUtils.exists(registerPath),
+        FileUtils.exists(manifestPath),
+        FileUtils.exists(runtimeContractPath),
+      ]);
 
     const hasCoreEaiConfig = hasObjectTypes && hasRegister;
-    info.eaiInitialized = hasCoreEaiConfig || (hasEaiConfigDir && hasManifest);
+    info.eaiInitialized =
+      hasRuntimeContract || hasCoreEaiConfig || (hasEaiConfigDir && hasManifest);
   }
 }

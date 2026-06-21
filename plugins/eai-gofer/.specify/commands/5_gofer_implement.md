@@ -1,7 +1,9 @@
 ---
 name: 5_gofer_implement
-description: "Execute all tasks from tasks.md phase by phase with feedback loops and engineering review."
-title: "Gofer Implement"
+description:
+  'Execute all tasks from tasks.md phase by phase with feedback loops and
+  engineering review.'
+title: 'Gofer Implement'
 category: pipeline
 surfaces:
   - claude
@@ -15,27 +17,46 @@ surfaces:
   - system-skills
 aliases: [gofer:implement]
 ---
+
 ---
-description: Execute tasks from tasks.md to implement the feature
----
+
+## description: Execute tasks from tasks.md to implement the feature
 
 # Gofer Implement
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -59,9 +80,9 @@ Before editing, re-check the planned depth and generic risk labels from
   rollback artifacts before code changes; update tests before or alongside the
   fix.
 - **dynamic**: confirm `workflow-dag.md` exists and `requiresConfirmation` is
-  false before executing shard-oriented work. Run each shard against its declared
-  inputs/outputs, then run the reducer and verifier/refuter pass before marking
-  tasks complete.
+  false before executing shard-oriented work. Run each shard against its
+  declared inputs/outputs, then run the reducer and verifier/refuter pass before
+  marking tasks complete.
 
 If the implementation reveals a higher-risk surface than planned, stop and
 upgrade the depth before continuing. Do not silently broaden scope.
@@ -606,21 +627,34 @@ If implementation was interrupted:
 
 ---
 
-## EnterpriseAI Deployment Preflight Gate (Manifest/Config)
+## EnterpriseAI Runtime Deployment Preflight Gate
 
 The standard Gofer workflow is the public default. EnterpriseAI deployment
 preflight is migration-only and runs only when `workflowProfile` is explicitly
 `enterpriseai`.
 
 Before any deployment task emitted by `/4_gofer_tasks` completes, this stage
-MUST execute deployment preflight checks (manifest/config gate). A task that
-invokes `eai deploy` is not marked complete until all of the following files
-are present at the workspace root and pass their readiness checks:
+MUST execute deployment preflight checks for the runtime contract and deploy
+doctor gate. A task that invokes `eai deploy` is not marked complete until all
+of the following files are present at the workspace root and pass their
+readiness checks:
 
-| Required File  | Purpose                                                 |
-| -------------- | ------------------------------------------------------- |
-| `manifest.yml` | Vertical application manifest (from `eai init`) |
-| `config.json`  | Runtime configuration bundle (environment-specific)     |
+| Required File             | Purpose                                                        |
+| ------------------------- | -------------------------------------------------------------- |
+| `eai.runtime.json`        | Provider-neutral runtime contract from the EAI app template    |
+| `.eai/deploy-doctor.json` | Black-box deploy doctor evidence from the deployed app runtime |
+
+Required commands:
+
+```bash
+eai runtime validate
+mkdir -p .eai
+eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
+```
+
+`/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
+PublicAPI/BFF reachability, service-identity requirements, and declared smoke
+tests must pass before deployment is complete.
 
 ### Gate behaviour
 
@@ -640,7 +674,8 @@ separation from `tasks.md`:
 - Run the spec-derived tests before implementation and record the expected
   failure when the implementation is missing or incomplete.
 - Implement only against the approved `contract-pack.md`, `context-bundle.md`,
-  `reuse-scan.md`, `journeys/base-journey.md`, `plan.md`, and `goal-ledger.json`.
+  `reuse-scan.md`, `journeys/base-journey.md`, `plan.md`, and
+  `goal-ledger.json`.
 - For application delivery, stop and return to the preview loop if
   `{FEATURE_DIR}/ui-approval.md` is missing or not approved. App-delivery runs
   MUST NOT continue as though the UI is settled when approval has not been
@@ -652,43 +687,47 @@ separation from `tasks.md`:
   app template, and Azure second: use the EAI scaffold, PublicAPI/object
   types/workflows/block catalog, ResourceAPI/`eai resources schema`, tenant/app
   enrollment, provisioning, diagnostics, and Azure-compatible
-  deployment/supporting services before any non-EAI exception. Do not introduce a
-  non-EAI primary runtime, database, hosting platform, or app stack unless
+  deployment/supporting services before any non-EAI exception. Do not introduce
+  a non-EAI primary runtime, database, hosting platform, or app stack unless
   `plan.md`, `service-fit-matrix.md`, and approval artifacts record it as an
   explicit exception.
 - Before implementing UI, run or inspect `eai --describe`, `eai blocks list`,
   `eai blocks describe <id>` for every selected block, and
-  `eai resources schema --format json`. Implementation notes must cite the block IDs,
-  required resources, bindings, package lane, coupling status, Storybook story
-  IDs, theme override points, and any approved custom-block exception.
+  `eai resources schema --format json`. Implementation notes must cite the block
+  IDs, required resources, bindings, package lane, coupling status, Storybook
+  story IDs, theme override points, and any approved custom-block exception.
 - Reject unknown component names during implementation unless `tasks.md` and
   `ui-approval.md` explicitly authorize a custom extension block and manifest.
-- Treat package-profile, block-porting, source-platform decoupling, and public-readiness
-  tasks as first-class implementation tasks, not polish. Update
+- Treat package-profile, block-porting, source-platform decoupling, and
+  public-readiness tasks as first-class implementation tasks, not polish. Update
   `{FEATURE_DIR}/goal-ledger.json` whenever a task changes an owner, target
   metric, delivery state, promotion criterion, or re-loop trigger. External and
   hybrid profile work is incomplete until package exports, Storybook stories,
   theme overrides, consumer smoke checks, and unsupported custom-block
   exceptions are resolved or explicitly deferred by approval artifacts.
-- Do not let public or hybrid package lanes import source-platform internals directly.
-  Use `eai resources schema`, an adapter boundary, or an approved
+- Do not let public or hybrid package lanes import source-platform internals
+  directly. Use `eai resources schema`, an adapter boundary, or an approved
   restricted-source exception; record the coupling status in implementation
   notes and `ui-review-log.md`.
-- For EAI app delivery, read `.specify/references/platform/eai-repo-contract.md`,
+- For EAI app delivery, read
+  `.specify/references/platform/eai-repo-contract.md`,
   `.specify/references/platform/eai-error-catalog.yaml`, and
   `.specify/specs/{feature}/eai-preflight.md` before remote platform changes.
-- Carry forward the last completed gate, blocked gate, and next recovery
-  command from `eai-preflight.md` whenever provisioning, object-type publish,
+- Carry forward the last completed gate, blocked gate, and next recovery command
+  from `eai-preflight.md` whenever provisioning, object-type publish,
   schema/storage health, workflow readiness, or preview readiness changes.
-- Treat resource provisioning, object-type publish, schema/storage health, and preview readiness as separate gates even when the CLI reports progress in a single run.
+- Treat resource provisioning, object-type publish, schema/storage health, and
+  preview readiness as separate gates even when the CLI reports progress in a
+  single run.
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
-- Use `eai vertical provision <key> --tenant-id <tenant-id> --select --format json`,
+- Use
+  `eai vertical provision <key> --tenant-id <tenant-id> --select --format json`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
-  `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded
-  by the preflight artifact instead of improvising a new sequence.
+  `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded by
+  the preflight artifact instead of improvising a new sequence.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,
   AI assistance mode, contextual prefill or conversational support, completion
@@ -701,12 +740,12 @@ separation from `tasks.md`:
   self-review evidence and append it to `{FEATURE_DIR}/ui-review-log.md`.
 - For application delivery, after UI approval and before treating platform
   selection as complete, update `{FEATURE_DIR}/service-fit-matrix.md` with
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
-  select`, `eai resources schema --format json`, `eai workflow readiness
-  --format json`, `eai verify calls --format json`, or equivalent approved
-  platform evidence. The matrix must distinguish
-  accessible now, purchasable but unavailable now, and unavailable without new
-  platform work.
+  tenant-aware evidence from `eai --describe`, `eai whoami`,
+  `eai tenant select`, `eai resources schema --format json`,
+  `eai workflow readiness --format json`, `eai verify calls --format json`, or
+  equivalent approved platform evidence. The matrix must distinguish accessible
+  now, purchasable but unavailable now, and unavailable without new platform
+  work.
 - For non-app work, skip the preview, approval, branding, and service-fit gates
   while preserving the same numbered stage flow.
 - Do not add extra user-facing app steps unless `plan.md` records why they
@@ -751,8 +790,8 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - If the operator explicitly requests `diagnose` and `spec.md` is present, run
   `gofer:diagnose` inline; bug context, failing output, or equivalent failure
   evidence may supplement the investigation. Write
-  `.specify/specs/{feature}/diagnose-report.md` using the same artifact
-  contract as the standalone helper.
+  `.specify/specs/{feature}/diagnose-report.md` using the same artifact contract
+  as the standalone helper.
 - If the required inputs are missing, continue the stage normally and report
   that the helper was not run.
 - These selectors are optional and do not change stage progress, routing, or

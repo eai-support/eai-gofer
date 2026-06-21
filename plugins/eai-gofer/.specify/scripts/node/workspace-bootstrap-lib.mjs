@@ -53,6 +53,7 @@ const EAI_CONFIG_DIR = path.join('src', 'eai.config');
 const EAI_OBJECT_TYPES_MARKER = path.join(EAI_CONFIG_DIR, 'object-types.ts');
 const EAI_REGISTER_MARKER = path.join(EAI_CONFIG_DIR, 'register.ts');
 const EAI_MANIFEST_MARKER = 'manifest.yml';
+const EAI_RUNTIME_CONTRACT_MARKER = 'eai.runtime.json';
 
 const GOFER_GITIGNORE_ENTRIES = [
   '.specify/hooks/',
@@ -315,14 +316,16 @@ export async function detectProjectInfo(workspaceRoot) {
 }
 
 async function detectEaiInitialized(workspaceRoot) {
-  const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest] = await Promise.all([
-    pathExists(path.join(workspaceRoot, EAI_CONFIG_DIR)),
-    pathExists(path.join(workspaceRoot, EAI_OBJECT_TYPES_MARKER)),
-    pathExists(path.join(workspaceRoot, EAI_REGISTER_MARKER)),
-    pathExists(path.join(workspaceRoot, EAI_MANIFEST_MARKER)),
-  ]);
+  const [hasEaiConfigDir, hasObjectTypes, hasRegister, hasManifest, hasRuntimeContract] =
+    await Promise.all([
+      pathExists(path.join(workspaceRoot, EAI_CONFIG_DIR)),
+      pathExists(path.join(workspaceRoot, EAI_OBJECT_TYPES_MARKER)),
+      pathExists(path.join(workspaceRoot, EAI_REGISTER_MARKER)),
+      pathExists(path.join(workspaceRoot, EAI_MANIFEST_MARKER)),
+      pathExists(path.join(workspaceRoot, EAI_RUNTIME_CONTRACT_MARKER)),
+    ]);
 
-  return (hasObjectTypes && hasRegister) || (hasEaiConfigDir && hasManifest);
+  return hasRuntimeContract || (hasObjectTypes && hasRegister) || (hasEaiConfigDir && hasManifest);
 }
 
 function formatLanguage(language) {

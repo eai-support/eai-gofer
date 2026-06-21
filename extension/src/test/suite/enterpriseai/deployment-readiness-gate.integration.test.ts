@@ -13,7 +13,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
   setup(async () => {
     await fs.rm(fixturesDir, { recursive: true, force: true });
     await fs.mkdir(fixturesDir, { recursive: true });
-    await fs.writeFile(path.join(fixturesDir, 'manifest.yml'), 'name: vertical-app\n', 'utf8');
+    await fs.writeFile(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n', 'utf8');
   });
 
   teardown(async () => {
@@ -34,7 +34,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
         runId: 'run_029_0001',
         stage: 'implementation',
         deploymentTaskId: 'task_deploy_01',
-        requiredFiles: ['manifest.yml', 'config.json'],
+        requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
         blockCompletionOnFailure: true,
       },
       {
@@ -52,11 +52,11 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
     assert.strictEqual(result.operationName, 'implementation.validateDeploymentReadiness');
     assert.strictEqual(result.response.status, 'completed');
     assert.strictEqual(result.response.readinessPassed, false);
-    assert.deepStrictEqual(result.response.missingFiles, ['config.json']);
+    assert.deepStrictEqual(result.response.missingFiles, ['.eai/deploy-doctor.json']);
     assert.strictEqual(result.response.deploymentTaskCompletionAllowed, false);
     assert.strictEqual(result.emittedEvent.contractId, 'EVT-012');
     assert.strictEqual(consumedPayloads.length, 1);
-    assert.deepStrictEqual(consumedPayloads[0].missingFiles, ['config.json']);
+    assert.deepStrictEqual(consumedPayloads[0].missingFiles, ['.eai/deploy-doctor.json']);
     assert.strictEqual(eventHandlers.consumerCount(), 0);
   });
 

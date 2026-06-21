@@ -35,8 +35,8 @@ suite('ProgressProvider Test Suite', function () {
       // Ignore if it doesn't exist
     }
 
-    await fs.rm(path.join(tempDir, 'manifest.yml'), { force: true });
-    await fs.rm(path.join(tempDir, 'config.json'), { force: true });
+    await fs.rm(path.join(tempDir, 'eai.runtime.json'), { force: true });
+    await fs.rm(path.join(tempDir, '.eai'), { recursive: true, force: true });
 
     // Create fresh progress provider for each test with 0ms debounce for faster testing
     progressProvider = new ProgressProvider(tempDir, undefined, 0);
@@ -321,8 +321,8 @@ created: "2025-10-22"
         (error: unknown): boolean =>
           error instanceof Error &&
           error.message.includes('IMPL_DEPLOYMENT_VALIDATION_FAILED') &&
-          error.message.includes('manifest.yml') &&
-          error.message.includes('config.json')
+          error.message.includes('eai.runtime.json') &&
+          error.message.includes('.eai/deploy-doctor.json')
       );
 
       const tasksPath = path.join(tempDir, '.specify', 'specs', specId, 'tasks.md');
@@ -337,8 +337,9 @@ created: "2025-10-22"
         { id: 'T001', desc: 'Deploy vertical app to EnterpriseAI production', status: 'pending' },
       ]);
 
-      await fs.writeFile(path.join(tempDir, 'manifest.yml'), 'name: app\n');
-      await fs.writeFile(path.join(tempDir, 'config.json'), '{"env":"prod"}\n');
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, '.eai', 'deploy-doctor.json'), '{"status":"pass"}\n');
 
       await progressProvider.getChildren();
       progressProvider.refresh();
@@ -351,13 +352,13 @@ created: "2025-10-22"
       assert.ok(tasksContent.includes('- [x] T001 Deploy vertical app to EnterpriseAI production'));
     });
 
-    test('should block completion for deployment readiness tasks identified by manifest keywords', async () => {
-      const specId = '013-enterpriseai-deploy-manifest-keyword';
+    test('should block completion for deployment readiness tasks identified by runtime evidence keywords', async () => {
+      const specId = '013-enterpriseai-deploy-runtime-keyword';
       await setWorkflowProfile('enterpriseai');
-      await createTestSpecWithTasks(specId, 'EnterpriseAI Manifest Gate', 'in_progress', [
+      await createTestSpecWithTasks(specId, 'EnterpriseAI Runtime Gate', 'in_progress', [
         {
           id: 'T001',
-          desc: 'Validate manifest and config for production release',
+          desc: 'Validate runtime contract and deploy doctor smoke for production release',
           status: 'pending',
         },
       ]);
@@ -373,7 +374,7 @@ created: "2025-10-22"
         (error: unknown): boolean =>
           error instanceof Error &&
           error.message.includes('IMPL_DEPLOYMENT_VALIDATION_FAILED') &&
-          error.message.includes('manifest.yml')
+          error.message.includes('eai.runtime.json')
       );
     });
 
@@ -409,8 +410,9 @@ created: "2025-10-22"
         { id: 'T002', desc: 'Deploy service B to EnterpriseAI production', status: 'pending' },
       ]);
 
-      await fs.writeFile(path.join(tempDir, 'manifest.yml'), 'name: app\n');
-      await fs.writeFile(path.join(tempDir, 'config.json'), '{"env":"prod"}\n');
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, '.eai', 'deploy-doctor.json'), '{"status":"pass"}\n');
 
       await progressProvider.getChildren();
       progressProvider.refresh();

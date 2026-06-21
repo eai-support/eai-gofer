@@ -118,7 +118,7 @@ function createInternalApiPayloadFixtures(): Record<
       runId: 'run_001',
       stage: 'implementation',
       deploymentTaskId: 'task_deploy_001',
-      requiredFiles: ['manifest.yml', 'config.json', '.env.example'],
+      requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },
   };
@@ -186,8 +186,17 @@ describe('enterpriseai internal API + external posture contract coverage (root i
       );
 
       fs.mkdirSync(deploymentFixtureDir, { recursive: true });
-      fs.writeFileSync(path.join(deploymentFixtureDir, 'manifest.yml'), 'name: test-app\n', 'utf8');
-      fs.writeFileSync(path.join(deploymentFixtureDir, 'config.json'), '{"env":"test"}\n', 'utf8');
+      fs.writeFileSync(
+        path.join(deploymentFixtureDir, 'eai.runtime.json'),
+        '{"schemaVersion":1}\n',
+        'utf8'
+      );
+      fs.mkdirSync(path.join(deploymentFixtureDir, '.eai'), { recursive: true });
+      fs.writeFileSync(
+        path.join(deploymentFixtureDir, '.eai', 'deploy-doctor.json'),
+        '{"status":"pass"}\n',
+        'utf8'
+      );
       fs.writeFileSync(
         path.join(deploymentFixtureDir, '.env.example'),
         'API_URL=https://example.com\n',
@@ -321,7 +330,7 @@ describe('enterpriseai internal API + external posture contract coverage (root i
           runId: 'run_coverage_001',
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_coverage',
-          requiredFiles: ['manifest.yml', 'config.json', '.env.example'],
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
           blockCompletionOnFailure: true,
         },
         {

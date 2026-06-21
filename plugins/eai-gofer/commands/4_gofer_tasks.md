@@ -19,35 +19,56 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should
+     still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json`
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+6. If the user says yes, run the Gofer workspace bootstrap helper and then
+   resume this command from the top.
+7. If the user says no, stop and explain that Gofer stage/helper work depends on
+   the repo-owned scaffold.
 
 ---
-description: Generate actionable task breakdown from implementation plan
----
+
+## description: Generate actionable task breakdown from implementation plan
 
 # Gofer Tasks
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -497,24 +518,24 @@ The standard Gofer workflow is the public default. EnterpriseAI task generation
 is migration-only and used only when `workflowProfile` is explicitly
 `enterpriseai`.
 
-When the workflow profile is explicitly `enterpriseai`,
-`tasks.md` MUST emit deployment
-tasks in the following ordered chain. Each task is independently runnable and
-the ordering enforces scaffold before deployment so that configuration and
-manifest artifacts exist before any deploy command runs.
+When the workflow profile is explicitly `enterpriseai`, `tasks.md` MUST emit
+deployment tasks in the following ordered chain. Each task is independently
+runnable and the ordering enforces scaffold before deployment so that runtime
+contract and deploy-doctor evidence exist before any deploy command runs.
 
 0. **EAI readiness unblock -> `eai-preflight.md`**
    - If `{FEATURE_DIR}/eai-preflight.md` is missing, stale, or blocked, emit
      only the smallest runnable unblock tasks before normal build tasks:
      install/update `eai`, run `eai login`, run `eai tenant select`, confirm a
      tenant-admin membership with `eai tenant list --format json`, initialize
-     the EAI app template with `eai init <app-name> --skip-prompts
-     --company-tenant <tenant-id>` when confirmed, and confirm app enrollment
-     with `eai vertical list/create/select`.
+     the EAI app template with
+     `eai init <app-name> --skip-prompts --company-tenant <tenant-id>` when
+     confirmed, and confirm app enrollment with
+     `eai vertical list/create/select`.
    - Do not emit object-type, UI, implementation, deployment, or service-fit
      tasks until EAI readiness is `ready` or explicitly deferred by the user.
-   - Never invent tenant IDs, app keys, app URLs, or platform capabilities.
-     Use `eai --describe`, public EAI docs, and the user's confirmed tenant/app
+   - Never invent tenant IDs, app keys, app URLs, or platform capabilities. Use
+     `eai --describe`, public EAI docs, and the user's confirmed tenant/app
      selection as evidence.
    - Do not emit tasks that establish a non-EAI primary runtime, database,
      hosting platform, or app framework. Non-EAI technologies can appear only as
@@ -522,26 +543,33 @@ manifest artifacts exist before any deploy command runs.
      fit is recorded.
 1. **EAI App Template scaffolding -> `eai init`**
    - Command: `eai init <app-name> --skip-prompts --company-tenant <tenant-id>`
-   - Produces the working directory, `manifest.yml`, and `config.json` expected
-     by subsequent tasks.
-2. **Local validation -> `eai verify`**
-   - Command: `eai verify`
-   - Confirms manifest/config correctness before any deploy attempt.
+   - Produces the working directory and provider-neutral `eai.runtime.json`
+     expected by subsequent runtime and deployment tasks.
+2. **Local validation -> `eai runtime validate` and `eai verify`**
+   - Commands: `eai runtime validate` and `eai verify`
+   - Confirms the runtime contract, tenant/workflow configuration, and platform
+     readiness before any deploy attempt.
 3. **Pinned `eai major.minor` deployment tasks -> `eai deploy`**
    - Command: `eai deploy trigger --repo <org/repo>`
    - Inherits the `major.minor` pin recorded in `plan.md`.
+4. **Post-deploy smoke gate -> `eai deploy doctor`**
+   - Command:
+     `mkdir -p .eai && eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json`
+   - Captures black-box runtime smoke evidence for `/health`, Auth.js,
+     PublicAPI/BFF reachability, tenant/workflow config, and declared smoke
+     tests.
 
 <!-- prettier-ignore -->
-The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, and only then invoke pinned `eai major.minor` deployment tasks. Breaking the order causes deployment preflight gating in `/5_gofer_implement` to fail.
+The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, invoke pinned `eai major.minor` deployment tasks, and then capture deploy-doctor evidence. Breaking the order causes deployment preflight gating in `/5_gofer_implement` to fail.
 
 ### App-Delivery Preconditions Inside Shared Stages
 
 For **application delivery**, task generation MUST treat the UI-first gate as a
 precondition to downstream implementation tasks:
 
-- If `{FEATURE_DIR}/ui-approval.md` does not exist or is not approved, emit
-  only the blocking preview/approval tasks needed to reach approval; do **not**
-  emit downstream implementation tasks as if the UI were already settled.
+- If `{FEATURE_DIR}/ui-approval.md` does not exist or is not approved, emit only
+  the blocking preview/approval tasks needed to reach approval; do **not** emit
+  downstream implementation tasks as if the UI were already settled.
 - If `{FEATURE_DIR}/service-fit-matrix.md` is missing or does not distinguish
   accessible now vs purchasable vs unavailable platform capabilities, emit a
   blocking service-fit task group before normal build tasks.
@@ -564,9 +592,9 @@ precondition to downstream implementation tasks:
   move into a reusable package lane, including Storybook story ID coverage,
   theme override points, exports, and compatibility checks.
 - Add source-platform decoupling tasks whenever a block or package lane is not
-  restricted-source and still depends on source-platform internals; the task must define the
-  resource-schema or adapter boundary and the regression proof that source-platform coupling is no
-  longer required by the public surface.
+  restricted-source and still depends on source-platform internals; the task
+  must define the resource-schema or adapter boundary and the regression proof
+  that source-platform coupling is no longer required by the public surface.
 - Add public-readiness tasks for external and hybrid profiles covering public
   exports, docs/examples where already part of the package surface,
   accessibility/theming contracts, consumer smoke tests, and unsupported
@@ -581,10 +609,10 @@ precondition to downstream implementation tasks:
 - EAI readiness unblock -> `eai-preflight.md` before any remote platform task.
 - App resource provisioning -> `eai vertical provision` before any claim of
   object-type seeding or preview readiness.
-- Object-type publish -> `eai types seed` only after provisioning and
-  validation are complete.
-- Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
-  before preview/runtime signoff.
+- Object-type publish -> `eai types seed` only after provisioning and validation
+  are complete.
+- Schema and storage health -> `eai resources schema` / storage diagnostics /
+  `eai verify` before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,
@@ -605,10 +633,10 @@ precondition to downstream implementation tasks:
   - update `ui-review-log.md`
   - block downstream work until `ui-approval.md` is approved
 - App-delivery service-fit tasks that update `service-fit-matrix.md` using
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
-  select`, `eai resources schema --format json`, `eai workflow readiness
-  --format json`, `eai verify calls --format json`, or equivalent approved
-  platform evidence.
+  tenant-aware evidence from `eai --describe`, `eai whoami`,
+  `eai tenant select`, `eai resources schema --format json`,
+  `eai workflow readiness --format json`, `eai verify calls --format json`, or
+  equivalent approved platform evidence.
 - A scope-control task that checks whether any user-facing app process exceeds
   four steps and either combines/automates extra steps or records the approved
   exception and rationale.
@@ -626,8 +654,8 @@ When a command-line workflow is expected to update platform state, `tasks.md`
 MUST order work like this unless the plan proves a different authoritative
 dependency:
 
-0. Respect the real EAI app gates before any claim of seeding, schema
-   readiness, or preview readiness.
+0. Respect the real EAI app gates before any claim of seeding, schema readiness,
+   or preview readiness.
 1. Define or extend the authoritative storage model.
 2. Implement platform-side orchestrator writes into those stores.
 3. Implement secret/config persistence if secrets or environment state are part

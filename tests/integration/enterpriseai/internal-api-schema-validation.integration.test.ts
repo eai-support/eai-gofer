@@ -91,7 +91,7 @@ function createInternalApiPayloadFixtures(): Record<
       runId: 'run_001',
       stage: 'implementation',
       deploymentTaskId: 'task_deploy_001',
-      requiredFiles: ['manifest.yml', 'config.json', '.env.example'],
+      requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },
   };
