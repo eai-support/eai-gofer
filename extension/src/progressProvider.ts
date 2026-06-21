@@ -11,11 +11,17 @@ import { Logger } from './utils/logger';
 // Debug output channel for initialization troubleshooting
 let debugChannel: vscode.OutputChannel | undefined;
 
-const ENTERPRISE_AI_DEPLOYMENT_REQUIRED_FILES: readonly string[] = ['manifest.yml', 'config.json'];
+const ENTERPRISE_AI_DEPLOYMENT_REQUIRED_FILES: readonly string[] = [
+  'eai.runtime.json',
+  '.eai/deploy-doctor.json',
+];
 const PRIMARY_DEPLOYMENT_KEYWORDS: readonly string[] = ['deploy', 'deployment', 'rollout'];
 const DEPLOYMENT_ARTIFACT_KEYWORDS: readonly string[] = [
-  'manifest',
-  'config',
+  'runtime',
+  'contract',
+  'doctor',
+  'smoke',
+  'eai.runtime',
   'image',
   'container',
   'helm',
@@ -845,7 +851,7 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
       const missingFiles = readiness.response.missingFiles.join(', ');
       const message =
         `Cannot mark deployment task "${task.id}" complete. ` +
-        `Missing required deployment files: ${missingFiles}.`;
+        `Missing required runtime contract or deploy doctor evidence files: ${missingFiles}.`;
       void vscode.window.showWarningMessage(message);
       throw new Error(`IMPL_DEPLOYMENT_VALIDATION_FAILED: ${message}`);
     }

@@ -11,4 +11,5 @@ Run ID: run_standard_artifacts
 4. **Demo Script Summary**
    - Standard implementation outcomes.
 5. **Success Metrics**
-   - Deployment readiness gate passes (manifest/config), parity checks pass, and stakeholder demo completes within 5 minutes.
+   - Deployment readiness gate passes (runtime contract and smoke evidence),
+     parity checks pass, and stakeholder demo completes within 5 minutes.

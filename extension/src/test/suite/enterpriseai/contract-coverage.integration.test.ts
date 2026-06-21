@@ -98,7 +98,7 @@ function createInternalApiPayloadFixtures(): Record<
       runId: 'run_001',
       stage: 'implementation',
       deploymentTaskId: 'task_deploy_001',
-      requiredFiles: ['manifest.yml', 'config.json', '.env.example'],
+      requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },
   };
@@ -191,7 +191,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
       runId: 'run_001',
       deploymentTaskId: 'task_deploy_01',
       readinessPassed: false,
-      missingFiles: ['manifest.yml', 'config.json'],
+      missingFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
       validatedAt: '2026-04-09T00:25:00Z',
     },
   };

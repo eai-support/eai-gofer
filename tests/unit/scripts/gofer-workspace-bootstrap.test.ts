@@ -182,4 +182,17 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(agents).not.toContain('## EAI Repo Contract');
     expect(claude).not.toContain('## EAI Repo Contract');
   });
+
+  it('adds EAI repo guidance when eai.runtime.json exists', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+    expect(bootstrap.exitCode).toBe(0);
+
+    const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
+    const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
+
+    expect(agents).toContain('## EAI Repo Contract');
+    expect(claude).toContain('## EAI Repo Contract');
+  });
 });

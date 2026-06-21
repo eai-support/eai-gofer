@@ -125,6 +125,16 @@ const REQUIRED_SECTION_TITLES: readonly string[] = [
   'Success Metrics',
 ];
 
+const DEFAULT_SUCCESS_METRIC_LINES: readonly string[] = [
+  'Deployment readiness gate passes (runtime contract and smoke evidence), parity',
+  'checks pass, and stakeholder demo completes within 5 minutes.',
+];
+
+const DEFAULT_DEMO_SUCCESS_METRIC_LINES: readonly string[] = [
+  'Deployment readiness gate passes (runtime contract and smoke evidence),',
+  'parity checks pass, and stakeholder demo completes within 5 minutes.',
+];
+
 const PERSONA_DECK_PROFILES: Readonly<Record<StakeholderPersona, PersonaDeckProfile>> = {
   executive: {
     label: 'Executive Committee',
@@ -562,8 +572,7 @@ function buildStakeholderSections(
     solutionOverview,
     architectureReference,
     demoSummary,
-    successMetrics:
-      'Deployment readiness gate passes (manifest/config), parity checks pass, and stakeholder demo completes within 5 minutes.',
+    successMetrics: DEFAULT_SUCCESS_METRIC_LINES.join(' '),
   };
   if (workflowProfile === 'enterpriseai') {
     sections.aiAugmentedJourney =
@@ -583,6 +592,12 @@ function buildAiJourneySection(
   return [heading, sections.aiAugmentedJourney, ''];
 }
 
+function wrapDefaultSuccessMetric(successMetrics: string): readonly string[] {
+  return successMetrics === DEFAULT_SUCCESS_METRIC_LINES.join(' ')
+    ? DEFAULT_SUCCESS_METRIC_LINES
+    : [successMetrics];
+}
+
 function buildReleaseNotesContent(
   runId: string,
   generatedAt: string,
@@ -595,25 +610,35 @@ function buildReleaseNotesContent(
     `- Generated At: ${generatedAt}`,
     '',
     '## Problem Statement',
+    '',
     sections.problemStatement,
     '',
     '## EnterpriseAI Solution Overview',
+    '',
     sections.solutionOverview,
     '',
     ...buildAiJourneySection(sections),
     '## Architecture Diagram Reference',
+    '',
     sections.architectureReference,
     '',
     '## Demo Script Summary',
+    '',
     sections.demoSummary,
     '',
     '## Success Metrics',
-    sections.successMetrics,
+    '',
+    ...wrapDefaultSuccessMetric(sections.successMetrics),
     '',
   ].join('\n');
 }
 
 function buildDemoScriptContent(runId: string, sections: StakeholderSections): string {
+  const successMetricLines =
+    sections.successMetrics === DEFAULT_SUCCESS_METRIC_LINES.join(' ')
+      ? DEFAULT_DEMO_SUCCESS_METRIC_LINES
+      : [sections.successMetrics];
+
   return [
     '# Demo Script (5-minute walkthrough)',
     '',
@@ -631,7 +656,7 @@ function buildDemoScriptContent(runId: string, sections: StakeholderSections): s
     `${sections.aiAugmentedJourney ? '5' : '4'}. **Demo Script Summary**`,
     `   - ${sections.demoSummary}`,
     `${sections.aiAugmentedJourney ? '6' : '5'}. **Success Metrics**`,
-    `   - ${sections.successMetrics}`,
+    ...successMetricLines.map((line, index) => `${index === 0 ? '   -' : '    '} ${line}`),
     '',
   ].join('\n');
 }
@@ -662,7 +687,7 @@ function buildMarpDeckContent(runId: string, sections: StakeholderSections): str
     sections.demoSummary,
     '',
     '## Success Metrics',
-    sections.successMetrics,
+    ...wrapDefaultSuccessMetric(sections.successMetrics),
     '',
   ].join('\n');
 }

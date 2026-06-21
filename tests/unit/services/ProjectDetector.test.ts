@@ -168,6 +168,14 @@ describe('ProjectDetector', () => {
       expect(info.eaiInitialized).toBe(false);
     });
 
+    it('classifies a repo as EAI-initialized when eai.runtime.json exists', async () => {
+      mockFileExists('eai.runtime.json');
+
+      const info = await ProjectDetector.detect('/workspace/eai-runtime-app');
+
+      expect(info.eaiInitialized).toBe(true);
+    });
+
     it('classifies a repo as EAI-initialized when manifest.yml and src/eai.config exist together', async () => {
       mockFileExists(
         'manifest.yml',

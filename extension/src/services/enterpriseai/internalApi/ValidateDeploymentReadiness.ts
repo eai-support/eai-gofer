@@ -49,14 +49,13 @@ export interface ValidateDeploymentReadinessOptions {
 }
 
 const ALLOWED_REQUIRED_DEPLOYMENT_FILES = new Set<string>([
-  'manifest.yml',
-  'manifest.yaml',
-  'config.json',
+  'eai.runtime.json',
   '.env.example',
-  'deployment/manifest.yml',
-  'deployment/manifest.yaml',
-  'deployment/config.json',
   'deployment/.env.example',
+  '.eai/deploy-doctor.json',
+  '.eai/runtime-doctor.json',
+  'deployment/deploy-doctor.json',
+  'deployment/runtime-doctor.json',
 ]);
 
 function toIsoTimestamp(date: Date = new Date()): string {
@@ -107,7 +106,7 @@ function normalizeRequiredFile(requiredFile: string): string {
 
   if (!ALLOWED_REQUIRED_DEPLOYMENT_FILES.has(normalized)) {
     throw new Error(
-      `IMPL_DEPLOYMENT_PATH_INVALID: requiredFiles must use allowlisted manifest/config paths. Received: ${requiredFile}`
+      `IMPL_DEPLOYMENT_PATH_INVALID: requiredFiles must use allowlisted runtime contract or deploy doctor evidence paths. Received: ${requiredFile}`
     );
   }
 
@@ -174,7 +173,7 @@ export async function validateDeploymentReadiness(
   const requiredFiles = normalizeRequiredFiles(request.requiredFiles);
   if (requiredFiles.length < 1) {
     throw new Error(
-      'IMPL_DEPLOYMENT_REQUIRED_FILES_MISSING: requiredFiles must include at least one manifest/config file.'
+      'IMPL_DEPLOYMENT_REQUIRED_FILES_MISSING: requiredFiles must include at least one runtime contract or deploy doctor evidence file.'
     );
   }
 

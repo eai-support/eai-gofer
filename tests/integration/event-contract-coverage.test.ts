@@ -102,8 +102,17 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
       );
 
       fs.mkdirSync(deploymentFixtureDir, { recursive: true });
-      fs.writeFileSync(path.join(deploymentFixtureDir, 'manifest.yml'), 'name: test-app\n', 'utf8');
-      fs.writeFileSync(path.join(deploymentFixtureDir, 'config.json'), '{"env":"test"}\n', 'utf8');
+      fs.writeFileSync(
+        path.join(deploymentFixtureDir, 'eai.runtime.json'),
+        '{"schemaVersion":1}\n',
+        'utf8'
+      );
+      fs.mkdirSync(path.join(deploymentFixtureDir, '.eai'), { recursive: true });
+      fs.writeFileSync(
+        path.join(deploymentFixtureDir, '.eai', 'deploy-doctor.json'),
+        '{"status":"pass"}\n',
+        'utf8'
+      );
 
       workflowActivateProfile(
         {
@@ -327,7 +336,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
           runId: 'run_evt_012',
           stage: 'implementation',
           deploymentTaskId: 'task_evt_012',
-          requiredFiles: ['manifest.yml', 'config.json'],
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
         {

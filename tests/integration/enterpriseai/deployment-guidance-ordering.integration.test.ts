@@ -22,27 +22,29 @@ function createFixtureDir(prefix: string): string {
 }
 
 describe('enterpriseai deployment guidance ordering (root integration)', () => {
-  it('documents scaffold-before-deploy ordering, EAI CLI syntax, and manifest/config preflight gating', () => {
+  it('documents scaffold-before-deploy ordering, EAI CLI syntax, and runtime deploy-doctor gating', () => {
     const tasksCommand = readCommandFile('4_gofer_tasks.md');
     const implementCommand = readCommandFile('5_gofer_implement.md');
 
     expect(tasksCommand).toContain('Ordered Runnable Task-Generation Guidance');
     expect(tasksCommand).toContain('EAI App Template scaffolding -> `eai init`');
     expect(tasksCommand).toContain('eai init <app-name>');
+    expect(tasksCommand).toContain('eai runtime validate');
     expect(tasksCommand).toContain('eai verify');
     expect(tasksCommand).toContain('eai deploy trigger --repo <org/repo>');
+    expect(tasksCommand).toContain('eai deploy doctor --url <deployed-url> --format json');
 
-    expect(implementCommand).toContain('EnterpriseAI Deployment Preflight Gate (Manifest/Config)');
-    expect(implementCommand).toContain('deployment preflight checks (manifest/config gate)');
-    expect(implementCommand).toContain('manifest.yml');
-    expect(implementCommand).toContain('config.json');
+    expect(implementCommand).toContain('EnterpriseAI Runtime Deployment Preflight Gate');
+    expect(implementCommand).toContain('runtime contract and deploy');
+    expect(implementCommand).toContain('eai.runtime.json');
+    expect(implementCommand).toContain('.eai/deploy-doctor.json');
   });
 
   it('enforces required-file readiness gating before deployment task completion and emits EVT-012', async () => {
     const fixturesDir = createFixtureDir('fixtures-deployment-guidance-ordering');
     fs.rmSync(fixturesDir, { recursive: true, force: true });
     fs.mkdirSync(fixturesDir, { recursive: true });
-    fs.writeFileSync(path.join(fixturesDir, 'manifest.yml'), 'name: vertical-app\n', 'utf8');
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n', 'utf8');
 
     try {
       const eventHandlers = createDeploymentReadinessEventHandlers();
@@ -58,7 +60,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           runId: 'run_029_0001',
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_01',
-          requiredFiles: ['manifest.yml', 'config.json'],
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
         {
@@ -74,12 +76,12 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
 
       expect(result.contractId).toBe('IAP-011');
       expect(result.response.readinessPassed).toBe(false);
-      expect(result.response.missingFiles).toEqual(['config.json']);
+      expect(result.response.missingFiles).toEqual(['.eai/deploy-doctor.json']);
       expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
       expect(result.emittedEvent.contractId).toBe('EVT-012');
       expect(consumedPayloads).toHaveLength(1);
       expect(consumedPayloads[0].deploymentTaskId).toBe('task_deploy_01');
-      expect(consumedPayloads[0].missingFiles).toEqual(['config.json']);
+      expect(consumedPayloads[0].missingFiles).toEqual(['.eai/deploy-doctor.json']);
       expect(eventHandlers.consumerCount()).toBe(0);
 
       await expect(
