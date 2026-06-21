@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.0] - 2026-06-21
+
+Add provider-neutral runtime contract deployment gates
+
 ## [3.6.2] - 2026-06-21
 
 Expose EAI CLI agent guidance in public Gofer
