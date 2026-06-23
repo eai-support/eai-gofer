@@ -585,7 +585,7 @@
     "mocha": "11.3.0",
     "sharp": "0.34.5",
     "ts-loader": "9.6.0",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.61.1",
     "webpack": "5.107.2",
     "webpack-cli": "7.0.3",
