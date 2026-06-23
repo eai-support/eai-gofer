@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.1] - 2026-06-23
+
+Patch release: fix Gofer workspace refresh version detection, package EAI platform references into agent plugins, and preserve slash-command routing across Claude, Codex, Copilot, Gemini, and VS Code.
+
 ## [3.7.0] - 2026-06-21
 
 Add provider-neutral runtime contract deployment gates
