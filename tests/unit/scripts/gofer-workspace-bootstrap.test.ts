@@ -119,6 +119,24 @@ describe('Gofer workspace bootstrap scripts', () => {
     ]);
     expect(post.exitCode).toBe(0);
     expect(post.payload.status).toBe('healthy');
+
+    const embeddedCheckScript = path.join(
+      workspaceRoot,
+      '.specify',
+      'scripts',
+      'node',
+      'gofer-workspace-check.mjs'
+    );
+    const embeddedPost = runJson(embeddedCheckScript, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'claude',
+      '--json',
+    ]);
+    expect(embeddedPost.exitCode).toBe(0);
+    expect(embeddedPost.payload.status).toBe('healthy');
+    expect(embeddedPost.payload.expectedVersion).toBe(embeddedPost.payload.actualVersion);
   });
 
   it('does not overwrite existing instruction files by default', () => {

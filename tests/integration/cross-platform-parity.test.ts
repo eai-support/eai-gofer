@@ -70,7 +70,7 @@ describe('Cross-Platform Feature Parity', () => {
 
       expect(router.getCommandSyntax(testCommand, 'claude')).toBe('/1_gofer_research');
       expect(router.getCommandSyntax(testCommand, 'copilot')).toBe('#1_gofer_research');
-      expect(router.getCommandSyntax(testCommand, 'codex')).toBe('$ $1_gofer_research');
+      expect(router.getCommandSyntax(testCommand, 'codex')).toBe('/1_gofer_research');
       expect(router.getCommandSyntax(testCommand, 'gemini')).toBe('/gofer:1_gofer_research');
       expect(router.getCommandSyntax('gofer:diagnose', 'gemini')).toBe('/gofer:diagnose');
     });
@@ -386,7 +386,9 @@ describe('Cross-Platform Feature Parity', () => {
 
         expect(fs.existsSync(agentSkillPath)).toBe(true);
         expect(fs.existsSync(systemSkillPath)).toBe(true);
-        expect(fs.readFileSync(systemSkillPath, 'utf8')).toBe(fs.readFileSync(agentSkillPath, 'utf8'));
+        expect(fs.readFileSync(systemSkillPath, 'utf8')).toBe(
+          fs.readFileSync(agentSkillPath, 'utf8')
+        );
       });
     });
   });

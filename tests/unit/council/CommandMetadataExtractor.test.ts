@@ -104,19 +104,21 @@ description: Tasks stage skill
 ---
 
 To continue the pipeline:
-Run: $ $5_gofer_implement
+Run: /5_gofer_implement
 Use separate Codex CLI sessions for parallel perspectives.
 `;
       vi.mocked(fs.promises.readFile).mockResolvedValue(content as never);
 
-      const metadata = await extractor.extractFromCodexSkill('/repo/.system/skills/4_gofer_tasks/SKILL.md');
+      const metadata = await extractor.extractFromCodexSkill(
+        '/repo/.system/skills/4_gofer_tasks/SKILL.md'
+      );
 
       expect(metadata.name).toBe('4_gofer_tasks');
       expect(metadata.description).toBe('Tasks stage skill');
       expect(metadata.platform).toBe('codex');
       expect(metadata.supportsAutoChain).toBe(true);
       expect(metadata.supportsParallelAgents).toBe(true);
-      expect(metadata.invocationSyntax.prefix).toBe('$ $');
+      expect(metadata.invocationSyntax.prefix).toBe('/');
     });
 
     it('normalizes gofer-prefixed Codex skill names back to command ids', async () => {
@@ -125,7 +127,7 @@ name: gofer/gofer:diagnose
 description: Diagnose helper
 ---
 
-Run: $ $gofer:diagnose
+Run: /gofer:diagnose
 `;
       vi.mocked(fs.promises.readFile).mockResolvedValue(content as never);
 
@@ -134,11 +136,11 @@ Run: $ $gofer:diagnose
       );
 
       expect(metadata.name).toBe('gofer:diagnose');
-      expect(metadata.invocationSyntax.example).toBe('$ $gofer:diagnose');
+      expect(metadata.invocationSyntax.example).toBe('/gofer:diagnose');
     });
 
     it('handles missing frontmatter name safely', () => {
-      const content = `No frontmatter\n\nRun: $ $next`;
+      const content = `No frontmatter\n\nRun: /next`;
       vi.mocked(fs.readFileSync).mockReturnValue(content);
 
       const metadata = extractor.extractFromCodexSkillSync('/repo/.system/skills/x/SKILL.md');
@@ -158,7 +160,9 @@ description: [unterminated
 `;
       vi.mocked(fs.readFileSync).mockReturnValue(malformed);
 
-      const metadata = extractor.extractFromClaudeCommandSync('/repo/.claude/commands/0_business_scenario.md');
+      const metadata = extractor.extractFromClaudeCommandSync(
+        '/repo/.claude/commands/0_business_scenario.md'
+      );
       expect(metadata.description).toBe('Body Title');
       expect(metadata.platform).toBe('claude');
     });
@@ -176,9 +180,9 @@ description: [unterminated
     });
 
     it('validates codex syntax', () => {
-      expect(extractor.validateInvocationSyntax('$ $1_gofer_research', 'codex')).toBe(true);
+      expect(extractor.validateInvocationSyntax('/1_gofer_research', 'codex')).toBe(true);
+      expect(extractor.validateInvocationSyntax('$ $1_gofer_research', 'codex')).toBe(false);
       expect(extractor.validateInvocationSyntax('$ $ 1_gofer_research', 'codex')).toBe(false);
-      expect(extractor.validateInvocationSyntax('/1_gofer_research', 'codex')).toBe(false);
     });
 
     it('formats Gemini helper syntax without double-prefixing gofer names', async () => {
