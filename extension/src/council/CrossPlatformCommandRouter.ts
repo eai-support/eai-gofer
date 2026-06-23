@@ -178,7 +178,9 @@ export class CrossPlatformCommandRouter {
         .filter((file) => file.endsWith('.md'))
         .map(async (file) => {
           try {
-            return await this.metadataExtractor.extractFromClaudeCommand(path.join(claudeDir, file));
+            return await this.metadataExtractor.extractFromClaudeCommand(
+              path.join(claudeDir, file)
+            );
           } catch {
             return null;
           }
@@ -220,7 +222,9 @@ export class CrossPlatformCommandRouter {
         .filter((file) => file.endsWith('.toml'))
         .map(async (file) => {
           try {
-            return await this.metadataExtractor.extractFromGeminiCommand(path.join(geminiDir, file));
+            return await this.metadataExtractor.extractFromGeminiCommand(
+              path.join(geminiDir, file)
+            );
           } catch {
             return null;
           }
@@ -264,14 +268,13 @@ export class CrossPlatformCommandRouter {
    *
    * @param commandName Command name
    * @param platform Target platform
-   * @returns Invocation syntax (e.g., "/1_gofer_research" or "$ $1_gofer_research")
+   * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const geminiCommand =
-      commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
+    const geminiCommand = commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
     const syntaxMap: Record<PlatformType, string> = {
       claude: `/${commandName}`,
-      codex: `$ $${commandName}`,
+      codex: `/${commandName}`,
       copilot: `#${commandName}`,
       gemini: `/${geminiCommand}`,
     };
@@ -453,7 +456,9 @@ export class CrossPlatformCommandRouter {
 
   private async getCommandPathAsync(commandName: string, platform: PlatformType): Promise<string> {
     validateCommandName(commandName);
-    return this.resolveExistingCommandPathAsync(this.getCommandPathCandidates(commandName, platform));
+    return this.resolveExistingCommandPathAsync(
+      this.getCommandPathCandidates(commandName, platform)
+    );
   }
 
   private getCodexCommandPathCandidates(commandName: string): string[] {
@@ -477,7 +482,11 @@ export class CrossPlatformCommandRouter {
 
   private async resolveExistingCommandPathAsync(candidates: string[]): Promise<string> {
     for (const candidate of candidates) {
-      const exists = await pathExistsSafe(candidate, 'resolveExistingCommandPathAsync', this.logWarning);
+      const exists = await pathExistsSafe(
+        candidate,
+        'resolveExistingCommandPathAsync',
+        this.logWarning
+      );
       if (exists) {
         return candidate;
       }

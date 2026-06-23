@@ -52,12 +52,12 @@ describe('Validation Parallel Performance (US-3)', () => {
       const startTime = Date.now();
 
       // Simulate 6 concurrent terminal processes
-      // $ $validation-correctness <feature>
-      // $ $validation-security <feature>
-      // $ $validation-performance <feature>
-      // $ $validation-test-quality <feature>
-      // $ $validation-integration <feature>
-      // $ $validation-standards <feature>
+      // /validation-correctness <feature>
+      // /validation-security <feature>
+      // /validation-performance <feature>
+      // /validation-test-quality <feature>
+      // /validation-integration <feature>
+      // /validation-standards <feature>
       const terminalSessions = Array.from({ length: 6 }, (_, i) =>
         Promise.resolve({
           terminal: i + 1,

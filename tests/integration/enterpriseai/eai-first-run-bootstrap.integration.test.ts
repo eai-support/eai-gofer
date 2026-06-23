@@ -33,6 +33,11 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('eai errors explain <code-or-reason> --format json');
     expect(command).toContain('eai whoami');
     expect(command).toContain('eai tenant list --format json');
+    expect(command).toContain('eai provision entra');
+    expect(command).toContain('AADSTS50011');
+    expect(command).toContain(
+      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+    );
     expect(command).toContain(
       'eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>'
     );

@@ -67,6 +67,11 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/plugins/eai-gofer/plugin.json',
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
+        'eai-gofer/.specify/references/platform/README.md',
+        'eai-gofer/.specify/references/platform/eai.md',
+        'eai-gofer/.specify/references/platform/eai-repo-contract.md',
+        'eai-gofer/.specify/references/platform/eai-error-catalog.yaml',
+        'eai-gofer/.specify/templates/gofer-model-policy.yaml',
       ]) {
         expect(zipListing).toContain(required);
       }

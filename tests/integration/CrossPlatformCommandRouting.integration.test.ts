@@ -428,7 +428,7 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
 
       expect(router.getCommandSyntax(commandName, 'claude')).toBe('/1_gofer_research');
       expect(router.getCommandSyntax(commandName, 'copilot')).toBe('#1_gofer_research');
-      expect(router.getCommandSyntax(commandName, 'codex')).toBe('$ $1_gofer_research');
+      expect(router.getCommandSyntax(commandName, 'codex')).toBe('/1_gofer_research');
       expect(router.getCommandSyntax(commandName, 'gemini')).toBe('/gofer:1_gofer_research');
     });
   });

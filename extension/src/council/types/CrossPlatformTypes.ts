@@ -129,7 +129,7 @@ export interface CommandInvocationSyntax {
   platform: PlatformType;
 
   /**
-   * Command prefix (Claude: "/", Copilot: "#", Codex: "$ $", Gemini: "/gofer:")
+   * Command prefix (Claude: "/", Copilot: "#", Codex: "/", Gemini: "/gofer:")
    */
   prefix: string;
 

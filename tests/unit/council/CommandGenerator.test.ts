@@ -53,10 +53,10 @@ Task: subagent_type="validation-correctness"
   });
 
   describe('transformContent', () => {
-    it('transforms claude command syntax to codex syntax', () => {
+    it('preserves canonical slash command syntax for codex skills', () => {
       const transformed = generator.transformContent(sampleMetadata.content, 'claude', 'codex');
-      expect(transformed).toContain('$ $2_gofer_specify');
-      expect(transformed).not.toContain('/2_gofer_specify');
+      expect(transformed).toContain('/2_gofer_specify');
+      expect(transformed).not.toContain('$ $2_gofer_specify');
     });
 
     it('transforms claude command syntax to copilot syntax', () => {
@@ -69,12 +69,19 @@ Task: subagent_type="validation-correctness"
       const content = 'Run /0a_problem_validation before research.';
 
       const codexTransformed = generator.transformContent(content, 'claude', 'codex');
-      expect(codexTransformed).toContain('$ $0a_problem_validation');
-      expect(codexTransformed).not.toContain('/0a_problem_validation');
+      expect(codexTransformed).toContain('/0a_problem_validation');
+      expect(codexTransformed).not.toContain('$ $0a_problem_validation');
 
       const copilotTransformed = generator.transformContent(content, 'claude', 'copilot');
       expect(copilotTransformed).toContain('#0a_problem_validation');
       expect(copilotTransformed).not.toContain('/0a_problem_validation');
+    });
+
+    it('does not rewrite codex slash commands inside canonical file paths', () => {
+      const content = 'Canonical source: .specify/commands/0_business_scenario.md';
+      const transformed = generator.transformContent(content, 'claude', 'codex');
+      expect(transformed).toContain('.specify/commands/0_business_scenario.md');
+      expect(transformed).not.toContain('.specify/commands$ $0_business_scenario.md');
     });
 
     it('converts task tool mentions for codex', () => {
@@ -141,7 +148,7 @@ Task: subagent_type="validation-correctness"
       const base = '## Key Rules\n\nFollow rules.';
       const enhanced = generator.injectPlatformSections(base, 'codex', '1_gofer_research');
       expect(enhanced).toContain('## Pipeline Continuation');
-      expect(enhanced).toContain('**Next Command:** `$ $2_gofer_specify`');
+      expect(enhanced).toContain('**Next Command:** `/2_gofer_specify`');
       expect(enhanced).toContain('Codex CLI does not support automatic command chaining');
     });
 

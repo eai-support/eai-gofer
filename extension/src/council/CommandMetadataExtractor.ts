@@ -206,7 +206,7 @@ export class CommandMetadataExtractor {
     const syntaxPatterns: Record<PlatformType, RegExp> = {
       claude: /^\/[^\s]+(?:\s+.*)?$/,
       copilot: /^#[^\s]+(?:\s+.*)?$/,
-      codex: /^\$\s+\$[^\s]+(?:\s+.*)?$/,
+      codex: /^\/[^\s]+(?:\s+.*)?$/,
       gemini: /^\/gofer:[^\s]+(?:\s+.*)?$/,
     };
 
@@ -329,17 +329,16 @@ export class CommandMetadataExtractor {
     if (platform === 'codex') {
       return {
         platform: 'codex',
-        prefix: '$ $',
-        example: '$ $' + commandName,
-        pattern: '^\\$\\s+\\$' + commandName + '(\\s+.*)?$',
+        prefix: '/',
+        example: '/' + commandName,
+        pattern: '^/' + commandName + '(\\s+.*)?$',
         supportsArguments: true,
         argumentFormat: 'space-separated after command',
       };
     }
 
     if (platform === 'gemini') {
-      const geminiCommand =
-        commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
+      const geminiCommand = commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
       return {
         platform: 'gemini',
         prefix: '/gofer:',

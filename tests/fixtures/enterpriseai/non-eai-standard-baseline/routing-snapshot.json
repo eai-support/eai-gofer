@@ -1,7 +1,7 @@
 {
   "claudeSyntax": "/0_business_scenario",
   "copilotSyntax": "#0_business_scenario",
-  "codexSyntax": "$ $0_business_scenario",
+  "codexSyntax": "/0_business_scenario",
   "sameClaudePathAcrossProfiles": true,
   "standardProfileMatched": true
 }

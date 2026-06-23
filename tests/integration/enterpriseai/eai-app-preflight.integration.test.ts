@@ -34,6 +34,11 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain(
       'eai vertical provision <key> --tenant-id <tenant-id> --select --format json'
     );
+    expect(scenarioCommand).toContain('AADSTS50011');
+    expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
+    expect(scenarioCommand).toMatch(
+      /eai provision entra --force\s+--redirect-uri <exact-callback-uri> --debug/
+    );
     expect(scenarioCommand).toContain(
       'eai resources storage doctor --tenant-id <tenant-id> --format json'
     );
@@ -69,12 +74,18 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     );
     expect(implementCommand).toMatch(/last\s+completed gate/i);
     expect(implementCommand).toContain('eai verify storage --tenant-id <tenant-id>');
+    expect(implementCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
+    expect(implementCommand).toContain(
+      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+    );
     expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
   });
 
   it('ships the EAI preflight template to canonical and mirrored resources', () => {
     const canonicalTemplate = readRepoFile('.specify/templates/eai-preflight-template.md');
-    const mirroredTemplate = readRepoFile('extension/resources/templates/eai-preflight-template.md');
+    const mirroredTemplate = readRepoFile(
+      'extension/resources/templates/eai-preflight-template.md'
+    );
 
     expect(canonicalTemplate).toContain('App Stack Policy');
     expect(canonicalTemplate).toContain('Execution Order And Gate Tracking');
@@ -82,6 +93,8 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(canonicalTemplate).toContain('Drift readiness');
     expect(canonicalTemplate).toContain('Workflow readiness');
     expect(canonicalTemplate).toContain('Object-type publish');
+    expect(canonicalTemplate).toContain('Entra redirect readiness');
+    expect(canonicalTemplate).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
     expect(canonicalTemplate).toContain(
       'eai resources storage doctor --tenant-id <tenant-id> --format json'
     );
@@ -91,5 +104,17 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(mirroredTemplate).toContain('Drift readiness');
     expect(mirroredTemplate).toContain('Workflow readiness');
     expect(mirroredTemplate).toContain('Object-type publish');
+    expect(mirroredTemplate).toContain('Entra redirect readiness');
+  });
+
+  it('catalogs Entra redirect URI mismatch as an EAI-led recovery path', () => {
+    const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
+
+    expect(catalog).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
+    expect(catalog).toContain('AADSTS50011');
+    expect(catalog).toContain('/api/auth/callback/microsoft-entra-id');
+    expect(catalog).toContain(
+      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+    );
   });
 });
