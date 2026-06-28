@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.3] - 2026-06-28
+
+Rename vertical terminology to app
+
 ## [3.7.2] - 2026-06-28
 
 App-native Gofer integrations for Codex, Claude, GitHub Copilot, Gemini, and VS Code, with provider-neutral MCP bridge tools and deterministic agent plugin packaging.
