@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.2] - 2026-06-28
+
+App-native Gofer integrations for Codex, Claude, GitHub Copilot, Gemini, and VS Code, with provider-neutral MCP bridge tools and deterministic agent plugin packaging.
+
 ## [3.7.1] - 2026-06-23
 
 Patch release: fix Gofer workspace refresh version detection, package EAI platform references into agent plugins, and preserve slash-command routing across Claude, Codex, Copilot, Gemini, and VS Code.

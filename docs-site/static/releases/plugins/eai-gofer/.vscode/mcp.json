@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "gofer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/language-server/dist/server.js"
+      ],
+      "description": "Gofer - Spec-driven development orchestrator"
+    }
+  }
+}
