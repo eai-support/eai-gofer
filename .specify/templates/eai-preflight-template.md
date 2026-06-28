@@ -129,6 +129,12 @@ rationale, owner, expiry, and validation evidence.
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
   `eai verify storage --tenant-id <tenant-id>` before claiming schema or preview
   readiness.
+- If v4 passive ResourceAPI search reports `resource_search_embedding_required`,
+  `search_embedding_required`, or missing vector embedding readiness, inspect
+  `capabilities.search` from storage doctor. Use full-text search when
+  `fulltext` is ready and reserve hybrid/vector search for tenants where storage
+  doctor reports those modes ready. Do not apply this fallback to legacy v1/v3
+  or active ResourceAPI behavior.
 - Do not claim provisioning, seeding, schema readiness, or preview readiness as
   equivalent states. Record each gate separately.
 

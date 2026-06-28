@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 0e076fb1934d6dbf32029d3ea07dbb7d1e263416d005b97200c0acb062c0b863
+  canonicalChecksum: 09165fe9da8548c939baa3fc857e73edb5c5fd52112c92aa53069f9c39be2250
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -726,6 +726,14 @@ separation from `tasks.md`:
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
   `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded
   by the preflight artifact instead of improvising a new sequence.
+- For v4 passive ResourceAPI search, treat `capabilities.search.fulltext`,
+  `capabilities.search.hybrid`, and `capabilities.search.vector` from
+  `eai resources storage doctor --tenant-id <tenant-id> --format json` as
+  separate readiness states. If hybrid/vector are unavailable but fulltext is
+  ready, use `eai resources search "<query>" --fulltext --tenant-id <tenant-id>`
+  and record semantic search as a deferred platform capability only when the
+  business scenario genuinely requires it. Do not apply this fallback to legacy
+  v1/v3 or active ResourceAPI behavior.
 - If a browser or runtime auth log reports `AADSTS50011`, `redirect_uri`,
   "reply URL specified in the request does not match", or
   `/api/auth/callback/microsoft-entra-id`, match
