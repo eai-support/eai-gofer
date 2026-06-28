@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_business_scenario.md
-  canonicalChecksum: e0c92e692661d1dabbde538f08ca035a1ffc76bff0db88e14131b4b3fd22d681
+  canonicalChecksum: 6265bf99ce68154b2ff62c979982b9ca6a7f2a46d9ec9259fd3896791354132d
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -228,6 +228,12 @@ with an unrelated non-EAI stack.
      `eai workflow readiness --format json` so later stages can cite actual
      platform resource fields, actions, events, and workflow availability
      instead of guessing.
+   - For v4 passive ResourceAPI search requirements, run or plan to run
+     `eai resources storage doctor --tenant-id <tenant-id> --format json` and
+     treat fulltext, hybrid, and vector as separate readiness states. Prefer
+     `eai resources search "<query>" --fulltext` until doctor reports semantic
+     search modes ready. Do not apply this fallback to legacy v1/v3 or active
+     ResourceAPI behavior.
    - Use the EAI scenario library to map the business problem to the common
      four-step pattern: capture demand/context, prepare the decision, execute
      and collaborate, then resolve/explain/improve.
