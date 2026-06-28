@@ -140,13 +140,12 @@ const PERSONA_DECK_PROFILES: Readonly<Record<StakeholderPersona, PersonaDeckProf
     label: 'Executive Committee',
     title: 'Executive Committee EnterpriseAI Readout',
     decisionFocus: 'Portfolio value, strategic fit, funding, and executive risk appetite.',
-    primaryDecision:
-      'Approve the vertical outcome, sponsor, value target, and next investment gate.',
+    primaryDecision: 'Approve the app outcome, sponsor, value target, and next investment gate.',
     diagram: [
       'flowchart LR',
-      '  Need["Business need"] --> Vertical["EnterpriseAI vertical"]',
-      '  Vertical --> Outcome["Measurable outcome"]',
-      '  Vertical --> Governance["Decision gates"]',
+      '  Need["Business need"] --> App["EnterpriseAI app"]',
+      '  App --> Outcome["Measurable outcome"]',
+      '  App --> Governance["Decision gates"]',
       '  Outcome --> Value["Enterprise value"]',
       '  Governance --> Risk["Managed risk"]',
     ],
