@@ -22,7 +22,7 @@ updated: '{{iso_timestamp}}'
 | Drift readiness             | {{ready       | drift_detected        | not_applicable}}             | {{eai template check / eai gofer refresh --check}}                                 |
 | App enrollment ready        | {{ready       | confirmation_required | blocked                      | deferred}}                                                                         | {{vertical list/create/select summary}}                            |
 | Entra redirect readiness    | {{ready       | not_required          | blocked                      | deferred}}                                                                         | {{callback URI, client ID label, and AADSTS50011 recovery status}} |
-| Resource provisioning       | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{eai vertical provision, entra, and storage-health evidence}}      |
+| Resource provisioning       | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{eai app provision, entra, and storage-health evidence}}           |
 | Object-type publish         | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{eai types validate/seed/diff evidence}}                           |
 | Schema and storage health   | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{resource schema, storage status/doctor, verify storage evidence}} |
 | Workflow readiness          | {{ready       | blocked               | deferred}}                   | {{eai workflow readiness evidence}}                                                |
@@ -39,34 +39,34 @@ updated: '{{iso_timestamp}}'
 
 ## Commands Run
 
-| Purpose                   | Command                                                                       | Result                |
-| ------------------------- | ----------------------------------------------------------------------------- | --------------------- |
-| Install check             | `command -v eai`                                                              | {{result}}            |
-| Version check             | `eai --version`                                                               | {{result}}            |
-| Release check             | `eai update --check`                                                          | {{result}}            |
-| Capability discovery      | `eai --describe`                                                              | {{result}}            |
-| Login check               | `eai whoami`                                                                  | {{result}}            |
-| Tenant check              | `eai tenant list --format json`                                               | {{result}}            |
-| Project check             | `eai verify`                                                                  | {{result_or_not_run}} |
-| Template drift check      | `eai template check --format json`                                            | {{result_or_not_run}} |
-| Gofer drift check         | `eai gofer refresh --check --format json`                                     | {{result_or_not_run}} |
-| App enrollment check      | `eai vertical list --format json`                                             | {{result_or_not_run}} |
-| App selection             | `eai vertical select <key> --format json`                                     | {{result_or_not_run}} |
-| App resource provisioning | `eai vertical provision <key> --tenant-id <tenant-id> --select --format json` | {{result_or_not_run}} |
-| Entra provisioning        | `eai provision entra`                                                         | {{result_or_not_run}} |
-| Entra redirect recovery   | `eai provision entra --force --redirect-uri <exact-callback-uri> --debug`     | {{result_or_not_run}} |
-| Environment pull          | `eai env pull`                                                                | {{result_or_not_run}} |
-| Object-type validation    | `eai types validate`                                                          | {{result_or_not_run}} |
-| Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`     | {{result_or_not_run}} |
-| Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                   | {{result_or_not_run}} |
-| Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`                  | {{result_or_not_run}} |
-| Storage status            | `eai resources storage status --tenant-id <tenant-id> --format json`          | {{result_or_not_run}} |
-| Storage doctor            | `eai resources storage doctor --tenant-id <tenant-id> --format json`          | {{result_or_not_run}} |
-| Storage verify            | `eai verify storage --tenant-id <tenant-id>`                                  | {{result_or_not_run}} |
-| Resource call verify      | `eai verify calls --tenant-id <tenant-id> --resource-type <resource-type>`    | {{result_or_not_run}} |
-| Workflow readiness check  | `eai workflow readiness --format json`                                        | {{result_or_not_run}} |
-| Block catalog check       | `eai blocks list --format json`                                               | {{result_or_not_run}} |
-| Block readiness check     | `eai blocks readiness --package-profile {{profile}} --format json`            | {{result_or_not_run}} |
+| Purpose                   | Command                                                                    | Result                |
+| ------------------------- | -------------------------------------------------------------------------- | --------------------- |
+| Install check             | `command -v eai`                                                           | {{result}}            |
+| Version check             | `eai --version`                                                            | {{result}}            |
+| Release check             | `eai update --check`                                                       | {{result}}            |
+| Capability discovery      | `eai --describe`                                                           | {{result}}            |
+| Login check               | `eai whoami`                                                               | {{result}}            |
+| Tenant check              | `eai tenant list --format json`                                            | {{result}}            |
+| Project check             | `eai verify`                                                               | {{result_or_not_run}} |
+| Template drift check      | `eai template check --format json`                                         | {{result_or_not_run}} |
+| Gofer drift check         | `eai gofer refresh --check --format json`                                  | {{result_or_not_run}} |
+| App enrollment check      | `eai app list --format json`                                               | {{result_or_not_run}} |
+| App selection             | `eai app select <key> --format json`                                       | {{result_or_not_run}} |
+| App resource provisioning | `eai app provision <key> --tenant-id <tenant-id> --select --format json`   | {{result_or_not_run}} |
+| Entra provisioning        | `eai provision entra`                                                      | {{result_or_not_run}} |
+| Entra redirect recovery   | `eai provision entra --force --redirect-uri <exact-callback-uri> --debug`  | {{result_or_not_run}} |
+| Environment pull          | `eai env pull`                                                             | {{result_or_not_run}} |
+| Object-type validation    | `eai types validate`                                                       | {{result_or_not_run}} |
+| Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`  | {{result_or_not_run}} |
+| Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                | {{result_or_not_run}} |
+| Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`               | {{result_or_not_run}} |
+| Storage status            | `eai resources storage status --tenant-id <tenant-id> --format json`       | {{result_or_not_run}} |
+| Storage doctor            | `eai resources storage doctor --tenant-id <tenant-id> --format json`       | {{result_or_not_run}} |
+| Storage verify            | `eai verify storage --tenant-id <tenant-id>`                               | {{result_or_not_run}} |
+| Resource call verify      | `eai verify calls --tenant-id <tenant-id> --resource-type <resource-type>` | {{result_or_not_run}} |
+| Workflow readiness check  | `eai workflow readiness --format json`                                     | {{result_or_not_run}} |
+| Block catalog check       | `eai blocks list --format json`                                            | {{result_or_not_run}} |
+| Block readiness check     | `eai blocks readiness --package-profile {{profile}} --format json`         | {{result_or_not_run}} |
 
 ## Template Markers
 
@@ -121,8 +121,8 @@ rationale, owner, expiry, and validation evidence.
 ## Recovery Rules
 
 - If `eai types seed` fails with an app-resources/provisioning error, return to
-  `eai vertical provision <key> --tenant-id <tenant-id> --select --format json`
-  and keep `Object-type publish` blocked.
+  `eai app provision <key> --tenant-id <tenant-id> --select --format json` and
+  keep `Object-type publish` blocked.
 - If `eai resources schema`, storage endpoints, app endpoints, or preview URLs
   return `503` or equivalent readiness failures, run
   `eai resources storage status --tenant-id <tenant-id> --format json`,

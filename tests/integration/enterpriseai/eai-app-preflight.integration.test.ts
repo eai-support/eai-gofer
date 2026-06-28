@@ -30,9 +30,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('eai template check --format json');
     expect(scenarioCommand).toMatch(/eai gofer\s+refresh --check\s+--format json/);
     expect(scenarioCommand).toContain('eai workflow readiness --format json');
-    expect(scenarioCommand).toContain('eai vertical create <name>');
+    expect(scenarioCommand).toContain('eai app create <name>');
     expect(scenarioCommand).toContain(
-      'eai vertical provision <key> --tenant-id <tenant-id> --select --format json'
+      'eai app provision <key> --tenant-id <tenant-id> --select --format json'
     );
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
@@ -63,7 +63,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(planCommand).toContain('next recovery command');
     expect(planCommand).toContain('EAI Platform/Azure app stack decision');
     expect(tasksCommand).toContain('EAI readiness unblock -> `eai-preflight.md`');
-    expect(tasksCommand).toContain('App resource provisioning -> `eai vertical provision`');
+    expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
     expect(tasksCommand).toContain(
       'Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`'

@@ -278,7 +278,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
         {
           releaseId: 'rel_evt_009',
           surfaces: ['README.md', 'extension/README.md', 'extension/package.json'],
-          primaryMessage: 'EnterpriseAI-first vertical app delivery',
+          primaryMessage: 'EnterpriseAI-first app delivery',
           preserveMultiPlatformSection: true,
         },
         {

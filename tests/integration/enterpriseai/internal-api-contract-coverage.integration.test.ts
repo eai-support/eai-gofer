@@ -308,7 +308,7 @@ describe('enterpriseai internal API + external posture contract coverage (root i
         {
           releaseId: 'rel_coverage_001',
           surfaces: ['README.md', 'extension/README.md', 'extension/package.json'],
-          primaryMessage: 'EnterpriseAI-first vertical app delivery',
+          primaryMessage: 'EnterpriseAI-first app delivery',
           preserveMultiPlatformSection: true,
         },
         {
