@@ -43,6 +43,16 @@ export interface IResourceOperations {
   setupClaudeAgents(): Promise<void>;
 
   /**
+   * Setup Claude app/plugin skills from bundled resources
+   */
+  setupClaudeSkills(): Promise<void>;
+
+  /**
+   * Setup VS Code/GitHub Copilot custom agents
+   */
+  setupCopilotAgents(): Promise<void>;
+
+  /**
    * Setup GitHub Copilot prompts
    */
   setupCopilotPrompts(): Promise<void>;
@@ -51,6 +61,11 @@ export interface IResourceOperations {
    * Setup GitHub Copilot instructions
    */
   setupCopilotInstructions(): Promise<void>;
+
+  /**
+   * Setup GitHub Copilot agent skills
+   */
+  setupCopilotSkills(): Promise<void>;
 
   /**
    * Setup Gemini CLI extension commands
@@ -121,6 +136,11 @@ export interface IResourceOperations {
    * Copy bundled templates
    */
   copyBundledTemplates(): Promise<void>;
+
+  /**
+   * Copy bundled public references
+   */
+  copyBundledReferences(): Promise<void>;
 }
 
 /**
@@ -212,6 +232,10 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Copying bundled templates');
         await resourceOps.copyBundledTemplates();
 
+        progress.report({ message: 'Copying public references...' });
+        this.logger.info('UpgradeService', 'Copying public references');
+        await resourceOps.copyBundledReferences();
+
         progress.report({ message: 'Updating Claude commands...' });
         this.logger.info('UpgradeService', 'Setting up Claude commands');
         await resourceOps.setupClaudeCommands();
@@ -220,6 +244,14 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up Claude agents');
         await resourceOps.setupClaudeAgents();
 
+        progress.report({ message: 'Updating Claude skills...' });
+        this.logger.info('UpgradeService', 'Setting up Claude skills');
+        await resourceOps.setupClaudeSkills();
+
+        progress.report({ message: 'Updating VS Code agents...' });
+        this.logger.info('UpgradeService', 'Setting up VS Code/GitHub Copilot agents');
+        await resourceOps.setupCopilotAgents();
+
         progress.report({ message: 'Updating GitHub Copilot prompts...' });
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot prompts');
         await resourceOps.setupCopilotPrompts();
@@ -227,6 +259,10 @@ export class UpgradeService {
         progress.report({ message: 'Updating GitHub Copilot instructions...' });
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot instructions');
         await resourceOps.setupCopilotInstructions();
+
+        progress.report({ message: 'Updating GitHub Copilot skills...' });
+        this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
+        await resourceOps.setupCopilotSkills();
 
         progress.report({ message: 'Updating Gemini commands...' });
         this.logger.info('UpgradeService', 'Setting up Gemini commands');
@@ -339,6 +375,10 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Copying bundled templates');
         await resourceOps.copyBundledTemplates();
 
+        progress.report({ message: 'Copying public references...' });
+        this.logger.info('UpgradeService', 'Copying public references');
+        await resourceOps.copyBundledReferences();
+
         progress.report({ message: 'Updating Claude commands...' });
         this.logger.info('UpgradeService', 'Setting up Claude commands');
         await resourceOps.setupClaudeCommands();
@@ -347,6 +387,14 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up Claude agents');
         await resourceOps.setupClaudeAgents();
 
+        progress.report({ message: 'Updating Claude skills...' });
+        this.logger.info('UpgradeService', 'Setting up Claude skills');
+        await resourceOps.setupClaudeSkills();
+
+        progress.report({ message: 'Updating VS Code agents...' });
+        this.logger.info('UpgradeService', 'Setting up VS Code/GitHub Copilot agents');
+        await resourceOps.setupCopilotAgents();
+
         progress.report({ message: 'Updating GitHub Copilot prompts...' });
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot prompts');
         await resourceOps.setupCopilotPrompts();
@@ -354,6 +402,10 @@ export class UpgradeService {
         progress.report({ message: 'Updating GitHub Copilot instructions...' });
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot instructions');
         await resourceOps.setupCopilotInstructions();
+
+        progress.report({ message: 'Updating GitHub Copilot skills...' });
+        this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
+        await resourceOps.setupCopilotSkills();
 
         progress.report({ message: 'Updating Gemini commands...' });
         this.logger.info('UpgradeService', 'Setting up Gemini commands');

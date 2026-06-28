@@ -6,7 +6,7 @@
  * - T084: MCP Tool Handler multi-directory search
  * - Priority fallback (.claude/commands/ > .agents/skills/ > .github/prompts/)
  * - Graceful degradation when MCP not available
- * - MCP initialization skipped for non-Claude providers
+ * - Provider-neutral MCP initialization for app/native agent surfaces
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -49,61 +49,52 @@ describe('MCP Integration (T084)', () => {
     mcpHelper = new MCPConfigHelper(mockWorkspacePath, mockContext);
   });
 
-  describe('T083: Provider-based MCP Initialization Guard', () => {
-    it('should skip MCP setup when defaultCLI is "codex"', async () => {
-      mockConfig['defaultCLI'] = 'codex';
-      mockConfig['cliProvider'] = 'auto';
+  describe('Provider-neutral MCP Initialization', () => {
+    it.each(['codex', 'copilot', 'gemini', 'claude', 'auto'])(
+      'should write MCP setup when defaultCLI is "%s"',
+      async (provider) => {
+        mockConfig['defaultCLI'] = provider;
+        mockConfig['cliProvider'] = 'auto';
 
-      // Should return early without throwing
-      await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
-    });
+        // Mock fs operations to succeed
+        const fs = await import('fs/promises');
+        vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+        vi.mocked(fs.readFile).mockRejectedValue(new Error('File not found'));
+        vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
-    it('should skip MCP setup when defaultCLI is "copilot"', async () => {
-      mockConfig['defaultCLI'] = 'copilot';
-      mockConfig['cliProvider'] = 'auto';
+        await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
 
-      // Should return early without throwing
-      await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
-    });
+        expect(fs.writeFile).toHaveBeenCalled();
+        const written = vi.mocked(fs.writeFile).mock.calls.at(-1)?.[1] as string;
+        const parsed = JSON.parse(written);
+        expect(parsed.servers.gofer.command).toBe('node');
+        expect(parsed.servers.gofer.args).toEqual(['/extension/language-server/dist/server.js']);
+        expect(parsed.servers.gofer.env).toBeUndefined();
+      }
+    );
 
-    it('should allow MCP setup when defaultCLI is "claude"', async () => {
-      mockConfig['defaultCLI'] = 'claude';
-      mockConfig['cliProvider'] = 'auto';
-
-      // Mock fs operations to succeed
+    it('should migrate old nested gofer config to top-level servers without duplicating it', async () => {
       const fs = await import('fs/promises');
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.readFile).mockRejectedValue(new Error('File not found'));
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-
-      // Should proceed with MCP setup
-      await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
-
-      // Should have attempted to write config
-      expect(fs.writeFile).toHaveBeenCalled();
-    });
-
-    it('should allow MCP setup when defaultCLI is "auto" and cliProvider is "claude"', async () => {
-      mockConfig['defaultCLI'] = 'auto';
-      mockConfig['cliProvider'] = 'claude';
-
-      // Mock fs operations
-      const fs = await import('fs/promises');
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.readFile).mockRejectedValue(new Error('File not found'));
+      vi.mocked(fs.readFile).mockResolvedValue(
+        JSON.stringify({
+          mcp: {
+            servers: {
+              gofer: { command: 'old', args: [] },
+              other: { command: 'other', args: [] },
+            },
+          },
+        })
+      );
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
 
-      expect(fs.writeFile).toHaveBeenCalled();
-    });
-
-    it('should skip MCP setup when both settings indicate non-Claude provider', async () => {
-      mockConfig['defaultCLI'] = 'auto';
-      mockConfig['cliProvider'] = 'codex';
-
-      // Should return early
-      await expect(mcpHelper.createOrUpdateConfig()).resolves.toBeUndefined();
+      const written = vi.mocked(fs.writeFile).mock.calls.at(-1)?.[1] as string;
+      const parsed = JSON.parse(written);
+      expect(parsed.servers.gofer.command).toBe('node');
+      expect(parsed.mcp.servers.gofer).toBeUndefined();
+      expect(parsed.mcp.servers.other.command).toBe('other');
     });
   });
 
@@ -145,7 +136,7 @@ describe('MCP Integration (T084)', () => {
 
   describe('Graceful Degradation', () => {
     it('should handle missing directory creation gracefully', async () => {
-      mockConfig['defaultCLI'] = 'claude';
+      mockConfig['defaultCLI'] = 'auto';
 
       const fs = await import('fs/promises');
       // Mock mkdir to fail but writeFile to succeed (directory already exists)
@@ -158,7 +149,7 @@ describe('MCP Integration (T084)', () => {
     });
 
     it('should handle write errors by throwing', async () => {
-      mockConfig['defaultCLI'] = 'claude';
+      mockConfig['defaultCLI'] = 'auto';
 
       const fs = await import('fs/promises');
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);

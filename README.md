@@ -35,6 +35,26 @@ If `/0_business_scenario` is unknown in a new repo, the host has not loaded the
 Gofer plugin or repo commands yet. Install/update the plugin first, then run
 `/gofer:eai-first-run` to prepare the workspace and start the app build.
 
+## App-Native Integration Model
+
+Gofer now uses a light-plugin model across AI coding apps. The repo remains the
+source of truth for `.specify/commands/`, `.specify/scripts/`, templates,
+references, specs, and memory. App plugins and app-native customizations provide
+thin entry points that check/bootstrap the repo and then route back to the
+repo-owned commands.
+
+| Surface                         | Clean entry point                                                                                | Repo integration                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE           | One `eai-gofer` umbrella plugin skill for setup, routing, and diagnostics                        | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app    | Gofer custom agents plus one umbrella skill; avoid duplicating every stage command in the picker | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app                 | Plugin umbrella skill for discovery; repo slash commands remain the fast path                    | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Gemini CLI / Gemini Code Assist | Gemini extension commands and workspace MCP/customization where available                        | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+
+The UX rule is: initialized repos use plain commands such as
+`/0_business_scenario`; app/plugin skills are for first-run setup, workspace
+diagnostics, explanation, and recovery. This update does not add AWS/Kiro
+app-integration support.
+
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
 see the [5-minute first run guide](./.tech-docs/first-run.md).
 
@@ -119,6 +139,10 @@ Public release assets:
   `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Versioned releases: `https://eai-tools.github.io/eai-gofer/releases/`
 
+VS Code and Copilot agent mode also receive repo-local customization files:
+`.github/agents/`, `.github/skills/`, `.github/prompts/`,
+`.github/instructions/`, and `.vscode/mcp.json`.
+
 ### Claude Code
 
 Recommended install path:
@@ -143,6 +167,15 @@ codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .ag
 codex plugin add eai-gofer@eai-gofer
 ```
 
+References:
+
+- [Codex App](https://developers.openai.com/codex/app)
+- [Codex plugins](https://developers.openai.com/codex/plugins)
+
+The Codex plugin exposes the umbrella `eai-gofer` skill rather than a second
+namespaced copy of every stage command. In an initialized repo, use the plain
+slash commands from `.agents/skills/`.
+
 ### GitHub Copilot CLI
 
 Recommended install path:
@@ -154,6 +187,7 @@ copilot plugin install eai-gofer@eai-gofer
 
 References:
 
+- [GitHub Copilot app](https://docs.github.com/en/copilot/how-tos/github-copilot-app)
 - [Finding and installing Copilot CLI plugins](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing)
 - [Copilot CLI plugin marketplace](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-marketplace)
 
@@ -242,6 +276,9 @@ Cross-platform behavior:
 | `.specify/templates/` | Repo bootstrap templates and helpers          |
 | `.specify/specs/`     | Local working artifacts created per feature   |
 | `plugins/eai-gofer/`  | Portable plugin bundle for CLI hosts          |
+| `.claude/skills/`     | Claude Code app/plugin umbrella skill         |
+| `.github/agents/`     | VS Code/GitHub Copilot custom agents          |
+| `.github/skills/`     | VS Code/GitHub Copilot umbrella skill         |
 | `.tech-docs/`         | Public documentation source for the docs site |
 
 ## Development
