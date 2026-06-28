@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.4] - 2026-06-28
+
+Finish app terminology in stakeholder artifacts
+
 ## [3.7.3] - 2026-06-28
 
 Rename vertical terminology to app
