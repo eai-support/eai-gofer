@@ -19,59 +19,36 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should
-     still keep the core scaffold healthy
+   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json`
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-6. If the user says yes, run the Gofer workspace bootstrap helper and then
-   resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on
-   the repo-owned scaffold.
+6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
 
 ---
-
-description: Generate technical implementation plan with architecture and
-contracts
-
+description:
+  Generate technical implementation plan with architecture and contracts
 ---
 
 # Gofer Plan
 
 ## Token And Cost Policy
-
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
-   truth for simple, medium, hard, and arbiter model routing. If it is missing,
-   run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
-     synthesis, validation, and security; Opus for high-risk arbitration or
-     release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
-     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
-     for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
-     default research synthesis; Pro for large-context architecture or high-risk
-     arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before
-     choosing a paid/high-tier picker model for hard security, architecture, or
-     release gates.
-3. Keep raw tool output out of the main conversation context. Save stable
-   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
-   summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes:
-   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
-   stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or
-   validation bursts, checkpoint the durable artifacts and compact/clear/resume
-   context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence,
-contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -124,13 +101,13 @@ If missing, prompt user to run the prerequisite stage.
 6. Spec coverage validation
 7. Output: `plan.md`, `data-model.md`, `contracts/`, `quickstart.md`
 8. EnterpriseAI profile output: task-ready references to `context-bundle.md`,
-   `contract-pack.md`, `reuse-scan.md`, `audit-history.md`, and for app delivery
-   `ui-review-log.md`, `ui-approval.md`, and `service-fit-matrix.md`, including
-   public-readiness, block-porting, source platform decoupling, Storybook, theme
-   override, and package-profile decisions
-9. Dynamic-only output: `workflow-dag.md` with shards, inputs, outputs, reducer
-   expectations, verifier/refuter evidence, budget limits, stop conditions, and
-   resumable progress location
+   `contract-pack.md`, `reuse-scan.md`, `audit-history.md`, and for app
+   delivery `ui-review-log.md`, `ui-approval.md`, and
+   `service-fit-matrix.md`, including public-readiness, block-porting, source platform
+   decoupling, Storybook, theme override, and package-profile decisions
+9. Dynamic-only output: `workflow-dag.md` with shards, inputs, outputs,
+   reducer expectations, verifier/refuter evidence, budget limits, stop
+   conditions, and resumable progress location
 
 ---
 
@@ -164,8 +141,8 @@ Planning dispatches multiple agents — keep main context lightweight.
    directly):
    - Note feature name from FEATURE_DIR
    - Note whether `discovery.md`, `.specify/memory/constitution.md` exist
-   - Note whether `ui-preview-brief.md`, `ui-review-log.md`, `ui-approval.md`,
-     and `service-fit-matrix.md` exist
+   - Note whether `ui-preview-brief.md`, `ui-review-log.md`,
+     `ui-approval.md`, and `service-fit-matrix.md` exist
    - Note external/internal/hybrid profile choice, package lane, coupling
      status, Storybook story IDs, theme override points, custom-block
      exceptions, and public-readiness status when app delivery applies
@@ -665,11 +642,13 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
 
 1. **EAI CLI version pin** — record the installed `eai` version as a
    `major.minor` pin (for example `2.0`). The plan stage resolves the local
-   version via `eai --version`, strips the patch component, and writes the pin
-   to the `EnterpriseAI Profile Metadata` block of `plan-template.md` so every
-   downstream task is reproducible. Plans MUST apply
-   `pin guidance to `major.minor``and never to a specific patch release. If`{FEATURE_DIR}/eai-preflight.md`exists, use its CLI version/install evidence as the primary source and re-run`eai
-   --version` only to confirm local drift.
+   version via `eai --version`, strips the patch component, and writes the
+   pin to the `EnterpriseAI Profile Metadata` block of `plan-template.md` so
+   every downstream task is reproducible. Plans MUST apply
+   `pin guidance to `major.minor`` and never to a specific patch release.
+   If `{FEATURE_DIR}/eai-preflight.md` exists, use its CLI version/install
+   evidence as the primary source and re-run `eai --version` only to confirm
+   local drift.
 2. **EAI app-readiness handoff** — for EAI app delivery, reference
    `{FEATURE_DIR}/eai-preflight.md` before making platform or template
    assumptions. The plan MUST preserve:
@@ -680,30 +659,31 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - whether app creation/selection is confirmed, deferred, or blocked
    - block-catalog readiness and package-profile compatibility evidence
    - the last completed gate, blocked gate, and next recovery command from the
-     EAI preflight artifact If EAI readiness is blocked, plan only the smallest
-     unblock task group and do not invent object types, tenant IDs, app keys, or
-     platform capabilities.
-3. **EAI app lifecycle ordering handoff** — keep the platform lifecycle explicit
-   inside the plan. Resource provisioning, object-type publish, schema/storage
-   health, workflow readiness, and preview readiness must remain distinct gates
-   with the recovery path carried forward from `{FEATURE_DIR}/eai-preflight.md`.
+     EAI preflight artifact
+   If EAI readiness is blocked, plan only the smallest unblock task group and
+   do not invent object types, tenant IDs, app keys, or platform capabilities.
+3. **EAI app lifecycle ordering handoff** — keep the platform lifecycle
+   explicit inside the plan. Resource provisioning, object-type publish,
+   schema/storage health, workflow readiness, and preview readiness must remain
+   distinct gates with the recovery path carried forward from
+   `{FEATURE_DIR}/eai-preflight.md`.
 4. **EAI Platform/Azure app stack decision** — for app delivery, the plan MUST
    use EAI Platform, including the EAI app template, as the primary app
-   substrate and Azure as the preferred cloud/supporting substrate. The plan
-   MUST NOT select Firebase, Supabase, Vercel as the primary runtime, AWS, GCP,
+   substrate and Azure as the preferred cloud/supporting substrate. The plan MUST
+   NOT select Firebase, Supabase, Vercel as the primary runtime, AWS, GCP,
    bespoke backends, unmanaged databases, or unrelated SaaS platforms as the
    default app stack. Any non-EAI technology must be recorded as an integration
    target, migration reference, or approved exception with rationale, owner,
-   expiry, and validation evidence. Capabilities unavailable in EAI
-   Platform/Azure must be recorded in `{FEATURE_DIR}/service-fit-matrix.md` as
-   platform work, operator-required, or upgrade-required rather than substituted
-   silently.
-5. **Deployment convention** — reference the configured deployment documentation
-   for the target project and note which environment (dev/staging/prod) each
-   deliverable targets.
-6. **Integration map handoff** — restate the App → EAI Services → Deployment
-   Target chain from `spec.md` and bind each link to a task identifier in
-   `tasks.md`.
+   expiry, and validation evidence.
+   Capabilities unavailable in EAI Platform/Azure must be recorded in
+   `{FEATURE_DIR}/service-fit-matrix.md` as platform work, operator-required, or
+   upgrade-required rather than substituted silently.
+5. **Deployment convention** — reference the configured deployment
+   documentation for the target project and note which environment
+   (dev/staging/prod) each deliverable targets.
+6. **Integration map handoff** — restate the App → EAI Services →
+   Deployment Target chain from `spec.md` and bind each link to a task
+   identifier in `tasks.md`.
 7. **Contract pack handoff** — reference `{FEATURE_DIR}/contract-pack.md` and
    bind each actor, object type, workflow/journey, permission boundary,
    API/event, runtime assumption, and acceptance test to plan sections and
@@ -720,9 +700,9 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    the preview loop before plan/tasks are considered complete. The plan MUST:
    - keep the first preview constrained to EAI App Template blocks unless an
      approved extension is recorded
-   - cite `eai blocks describe <id>` evidence for every selected block ID, plus
-     the ResourceAPI/Object Type fields from `eai resources schema` that feed
-     each block
+   - cite `eai blocks describe <id>` evidence for every selected block ID,
+     plus the ResourceAPI/Object Type fields from `eai resources schema` that
+     feed each block
    - record override points for theme tokens, `presentationConfig`, copy,
      data/action bindings, and client extension blocks
    - capture whether client branding/logos are in scope
@@ -731,27 +711,25 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and require
      explicit stakeholder approval in `{FEATURE_DIR}/ui-approval.md`
 10. **EnterpriseAI service-fit handoff** — for app delivery, the plan MUST
-    produce or update `{FEATURE_DIR}/service-fit-matrix.md` after UI approval
-    and before tasks are treated as complete. The matrix must distinguish:
-
-- accessible now
-- purchasable but unavailable now
-- unavailable without new platform work The plan must source this evidence from
-  `eai --describe`, `eai whoami`, `eai tenant select`,
-  `eai resources schema --format json`, `eai verify calls --format json`,
-  `eai workflow readiness [workflow-key] --format json`,
-  `eai workflow status <workflow-key>`, `eai workflow request <workflow-key>`,
-  `eai provision entra --rotate-secret`, or documented equivalent public
-  platform evidence.
-
-11. **Reuse-before-create decision log** — reference
-    `{FEATURE_DIR}/reuse-scan.md` for every new or extended EnterpriseAI object
-    type, API/event, workflow, or module.
+   produce or update `{FEATURE_DIR}/service-fit-matrix.md` after UI approval and
+   before tasks are treated as complete. The matrix must distinguish:
+   - accessible now
+   - purchasable but unavailable now
+   - unavailable without new platform work
+   The plan must source this evidence from `eai --describe`, `eai whoami`,
+   `eai tenant select`, `eai resources schema --format json`,
+   `eai verify calls --format json`, `eai workflow readiness [workflow-key]
+   --format json`, `eai workflow status <workflow-key>`, `eai workflow request
+   <workflow-key>`, `eai provision entra --rotate-secret`, or documented
+   equivalent public platform evidence.
+11. **Reuse-before-create decision log** — reference `{FEATURE_DIR}/reuse-scan.md`
+   for every new or extended EnterpriseAI object type, API/event, workflow, or
+   module.
 12. **Audit history seed** — create or update `{FEATURE_DIR}/audit-history.md`
-    with stable finding IDs, decision exceptions, owner, expiry, and review
-    cadence so validation can track recurring issues.
-13. **Public/private knowledge split** — identify which implementation facts are
-    safe for public docs, Gofer guidance, EAI CLI help, or EAI App Template
+   with stable finding IDs, decision exceptions, owner, expiry, and review
+   cadence so validation can track recurring issues.
+13. **Public/private knowledge split** — identify which implementation facts
+    are safe for public docs, Gofer guidance, EAI CLI help, or EAI App Template
     comments, and which facts are restricted-source. Plans must express blocked
     states as public-safe actions (`operator_required`, `upgrade_required`, or
     documented support URL) rather than exposing private service topology.
