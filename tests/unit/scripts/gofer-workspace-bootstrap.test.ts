@@ -213,4 +213,28 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(agents).toContain('## EAI Repo Contract');
     expect(claude).toContain('## EAI Repo Contract');
   });
+
+  it('can include host app mirror resources for Claude, Codex, Copilot, and Gemini', () => {
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'claude',
+      '--include-mirrors',
+    ]);
+    expect(bootstrap.exitCode).toBe(0);
+
+    for (const relativePath of [
+      '.claude/skills/eai-gofer/SKILL.md',
+      '.github/agents/gofer-business.agent.md',
+      '.github/skills/eai-gofer/SKILL.md',
+      '.agents/skills/0_business_scenario/SKILL.md',
+      '.gemini/extension.json',
+    ]) {
+      expect(
+        fs.existsSync(path.join(workspaceRoot, relativePath)),
+        `${relativePath} should exist`
+      ).toBe(true);
+    }
+  });
 });

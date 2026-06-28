@@ -313,6 +313,7 @@ export class ResourceSyncer implements IResourceOperations {
     await this.createGoferStructure();
     await this.syncCanonicalCommands();
     await this.copyBundledTemplates();
+    await this.copyBundledReferences();
     await this.ensureDefaultModelPolicy();
 
     // Restore constitution if it existed
@@ -334,6 +335,7 @@ export class ResourceSyncer implements IResourceOperations {
     const folders = [
       'commands',
       'memory',
+      'references',
       'scripts/bash',
       'scripts/hooks',
       'scripts/node',
@@ -427,6 +429,24 @@ export class ResourceSyncer implements IResourceOperations {
     );
   }
 
+  public async setupClaudeSkills(): Promise<void> {
+    await this.syncBundledDirectory(
+      'Claude skills',
+      'claude-skills',
+      path.join(this.workspacePath, '.claude', 'skills')
+    );
+  }
+
+  public async setupCopilotAgents(): Promise<void> {
+    await this.copyBundledResources(
+      'VS Code/GitHub Copilot agents',
+      'github-agents',
+      path.join(this.workspacePath, '.github', 'agents'),
+      ['*.agent.md'],
+      false
+    );
+  }
+
   public async setupCopilotPrompts(): Promise<void> {
     const promptsDir = path.join(this.workspacePath, '.github', 'prompts');
 
@@ -449,6 +469,14 @@ export class ResourceSyncer implements IResourceOperations {
       path.join(this.workspacePath, '.github', 'instructions'),
       ['*.instructions.md'],
       false
+    );
+  }
+
+  public async setupCopilotSkills(): Promise<void> {
+    await this.syncBundledDirectory(
+      'GitHub Copilot skills',
+      'github-skills',
+      path.join(this.workspacePath, '.github', 'skills')
     );
   }
 
@@ -1730,6 +1758,14 @@ AI agents validate code against the constitution before and during the final
       'templates',
       ['*.md', '*.yaml'],
       false
+    );
+  }
+
+  public async copyBundledReferences(): Promise<void> {
+    await this.syncBundledDirectory(
+      'public references',
+      'references',
+      path.join(this.specifyPath, 'references')
     );
   }
 

@@ -6,12 +6,13 @@ development with AI coding agents.
 
 ## Overview
 
-The EAI Gofer Language Server serves as the bridge between the VSCode extension
-and AI coding agents (Claude Code, GitHub Copilot). It provides:
+The EAI Gofer Language Server serves as the bridge between the VS Code
+extension, workspace MCP, and AI coding agents in Codex, Claude Code, GitHub
+Copilot, and compatible app surfaces. It provides:
 
 - **LSP Communication**: Custom methods for extension-to-server communication
-- **MCP Tools**: 6 tools that AI agents can invoke to interact with
-  specifications
+- **MCP Tools**: 29 tools that AI agents can invoke for specs, tasks, context
+  health, workspace bootstrap, pipeline state, validation, and artifact reads
 - **EAI Gofer Integration**: Loads and parses GitHub Gofer format specifications
 - **Real-time Updates**: Notifies extension when task status changes
 
@@ -32,132 +33,20 @@ language-server/
 
 ## MCP Tools
 
-The server exposes 6 MCP tools for AI agents:
+The server exposes 29 MCP tools for AI agents:
 
-### 1. `gofer_get_specs`
+| Category             | Tools                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Specs and tasks      | `gofer_get_specs`, `gofer_get_next_task`, `gofer_execute_task`, `gofer_update_task_status`                                                                    |
+| Validation and tests | `gofer_validate_code`, `gofer_run_tests`, `gofer_check_slop`, `gofer_validate_branch`                                                                         |
+| Context health       | `gofer_get_context_health`, `gofer_expand_observation`, `gofer_peek_observation`, `gofer_fold_observation`, `gofer_grep_observations`                         |
+| Context REPL         | `gofer_context_peek`, `gofer_context_grep`, `gofer_context_fold`, `gofer_context_expand`, `gofer_context_undo`, `gofer_context_history`, `gofer_context_repl` |
+| Research and handoff | `gofer_get_research_index`, `gofer_load_research_chunk`, `gofer_trigger_handoff`                                                                              |
+| App/native bridge    | `gofer_check_workspace`, `gofer_bootstrap_workspace`, `gofer_get_pipeline_state`, `gofer_start_stage`, `gofer_explain_eai_error`, `gofer_open_artifact`       |
 
-Get all specifications from `.specify/specs/`
-
-**Parameters**: None
-
-**Returns**:
-
-```typescript
-{
-  specs: Array<{
-    id: string;
-    title: string;
-    status: string;
-    tasks: Array<{
-      id: string;
-      description: string;
-      status: 'pending' | 'in_progress' | 'testing' | 'completed' | 'failed';
-      dependencies: string[];
-    }>;
-  }>;
-}
-```
-
-### 2. `gofer_get_next_task`
-
-Get the next available task to work on (respects dependencies)
-
-**Parameters**: None
-
-**Returns**:
-
-```typescript
-{
-  specId: string;
-  taskId: string;
-  description: string;
-  context: string;  // Full spec context
-} | null
-```
-
-### 3. `gofer_execute_task`
-
-Get full context for executing a specific task
-
-**Parameters**:
-
-- `specId` (string): Specification ID (e.g., "001-login-feature")
-- `taskId` (string): Task ID (e.g., "T001")
-
-**Returns**:
-
-```typescript
-{
-  spec: {
-    title: string;
-    description: string;
-    acceptanceCriteria: string[];
-  };
-  task: {
-    description: string;
-    requirements: string;
-  };
-  constitution: {
-    principles: string[];
-  };
-  relatedFiles: string[];
-}
-```
-
-### 4. `gofer_update_task_status`
-
-Update task status in spec file
-
-**Parameters**:
-
-- `specId` (string): Specification ID
-- `taskId` (string): Task ID
-- `status` (string): One of: `pending`, `in_progress`, `testing`, `completed`,
-  `failed`, `blocked`
-
-**Returns**:
-
-```typescript
-{
-  success: boolean;
-}
-```
-
-### 5. `gofer_validate_code`
-
-Validate code against constitutional requirements
-
-**Parameters**:
-
-- `files` (string[]): Array of file paths to validate
-
-**Returns**:
-
-```typescript
-{
-  isValid: boolean;
-  issues: string[];
-  suggestions: string[];
-}
-```
-
-### 6. `gofer_run_tests`
-
-Run Playwright tests for a specification
-
-**Parameters**:
-
-- `specId` (string): Specification ID
-
-**Returns**:
-
-```typescript
-{
-  passed: boolean;
-  failedTests: string[];
-  summary: string;
-}
-```
+The app/native bridge tools are deliberately thin. They call or explain the
+repo-owned `.specify/scripts/` and artifact files so Codex App, Claude Code,
+GitHub Copilot, Gemini, and VS Code do not need separate Gofer workflow logic.
 
 ## LSP Custom Methods
 
@@ -199,7 +88,8 @@ node dist/server.js --stdio
 The server requires:
 
 - Workspace root path (provided during LSP initialization)
-- `.specify/specs/` directory in workspace
+- `.specify/` for full pipeline state; the app/native bridge can report missing
+  or stale scaffolds before the repo is initialized
 
 ## Development
 

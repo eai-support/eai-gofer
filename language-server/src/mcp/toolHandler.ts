@@ -10,8 +10,12 @@ import { GoferLoader, Spec, Task } from '../utils/goferLoader';
 import { ValidationService } from '../utils/ValidationService';
 import { TestHarnessGenerator } from '../utils/TestHarnessGenerator';
 import { ResearchChunker } from '../utils/ResearchChunker';
+import { execFile } from 'node:child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 // Type definitions for MCP tool responses
 interface SpecSummary {
@@ -339,6 +343,19 @@ interface TriggerHandoffResponse {
   errorCode?: string;
 }
 
+interface ScriptExecutionResult {
+  success: boolean;
+  exitCode?: number | string;
+  stdout: string;
+  stderr: string;
+}
+
+interface StageCommandMetadata {
+  stem: string;
+  name: string;
+  description: string;
+}
+
 export class MCPToolHandler {
   private goferLoader: GoferLoader;
   private validationService: ValidationService;
@@ -435,6 +452,435 @@ export class MCPToolHandler {
     }
 
     return { valid: true };
+  }
+
+  private async pathExists(targetPath: string): Promise<boolean> {
+    try {
+      await fs.access(targetPath);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  private getServerDir(): string {
+    return typeof __dirname === 'string' ? __dirname : process.cwd();
+  }
+
+  private async resolveNodeScript(scriptName: string): Promise<string | null> {
+    const serverDir = this.getServerDir();
+    const candidates = [
+      path.join(this.workspacePath, '.specify', 'scripts', 'node', scriptName),
+      path.resolve(serverDir, '..', '..', '..', 'resources', 'node-scripts', scriptName),
+      path.resolve(
+        serverDir,
+        '..',
+        '..',
+        '..',
+        'extension',
+        'resources',
+        'node-scripts',
+        scriptName
+      ),
+      path.join(process.cwd(), 'extension', 'resources', 'node-scripts', scriptName),
+      path.join(process.cwd(), '.specify', 'scripts', 'node', scriptName),
+    ];
+
+    for (const candidate of candidates) {
+      if (await this.pathExists(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeHost(host?: string): string {
+    const normalized = String(host || 'auto').toLowerCase();
+    return ['auto', 'claude', 'codex', 'copilot', 'gemini', 'vscode'].includes(normalized)
+      ? normalized
+      : 'auto';
+  }
+
+  private async runCommand(
+    command: string,
+    args: string[],
+    timeout = 60000
+  ): Promise<ScriptExecutionResult> {
+    const cwd = (await this.pathExists(this.workspacePath)) ? this.workspacePath : process.cwd();
+    try {
+      const { stdout, stderr } = await execFileAsync(command, args, {
+        cwd,
+        timeout,
+        maxBuffer: 1024 * 1024,
+      });
+      return { success: true, stdout, stderr };
+    } catch (error) {
+      const execError = error as NodeJS.ErrnoException & {
+        stdout?: string;
+        stderr?: string;
+        code?: number | string;
+      };
+      return {
+        success: false,
+        exitCode: execError.code,
+        stdout: execError.stdout || '',
+        stderr: execError.stderr || execError.message || '',
+      };
+    }
+  }
+
+  private parseJsonFromExecution(result: ScriptExecutionResult): unknown | null {
+    const payload = result.stdout.trim();
+    if (!payload) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(payload);
+    } catch {
+      return null;
+    }
+  }
+
+  private async readJsonIfExists(filePath: string): Promise<unknown | null> {
+    try {
+      return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      return null;
+    }
+  }
+
+  private async resolveSourceDirectory(relativePath: string): Promise<string | null> {
+    const candidates = [
+      path.join(this.workspacePath, relativePath),
+      path.join(process.cwd(), relativePath),
+      path.join(process.cwd(), 'extension', 'resources', this.mapResourceDirectory(relativePath)),
+    ];
+
+    for (const candidate of candidates) {
+      if (await this.pathExists(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  private mapResourceDirectory(relativePath: string): string {
+    const normalized = relativePath.replace(/\\/g, '/');
+    const map: Record<string, string> = {
+      '.specify/commands': 'specify-commands',
+      '.specify/references': 'references',
+    };
+    return map[normalized] || normalized;
+  }
+
+  private normalizeCommandKey(command: string): string {
+    return command
+      .trim()
+      .replace(/^\$+/, '')
+      .replace(/^\//, '')
+      .replace(/^eai-gofer:/, '')
+      .toLowerCase()
+      .replace(/[:/-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  private async loadStageCommandMetadata(): Promise<Map<string, StageCommandMetadata>> {
+    const commandsDir = await this.resolveSourceDirectory(path.join('.specify', 'commands'));
+    const commandMap = new Map<string, StageCommandMetadata>();
+    if (!commandsDir) {
+      return commandMap;
+    }
+
+    const entries = (await fs.readdir(commandsDir)).filter((entry) => entry.endsWith('.md'));
+    for (const entry of entries) {
+      const stem = path.basename(entry, '.md');
+      const content = await fs.readFile(path.join(commandsDir, entry), 'utf-8');
+      const frontmatter = content.match(/^---\n([\s\S]*?)\n---/);
+      const block = frontmatter?.[1] || '';
+      const name = block.match(/^name:\s*(.+)$/m)?.[1]?.trim() || stem;
+      const description = block.match(/^description:\s*(.+)$/m)?.[1]?.trim() || '';
+      const metadata = { stem, name, description };
+
+      for (const key of [stem, name, `/${stem}`, `/${name}`]) {
+        commandMap.set(this.normalizeCommandKey(key), metadata);
+      }
+    }
+
+    return commandMap;
+  }
+
+  private resolveWorkspaceArtifactPath(relativePath: string): { path?: string; error?: string } {
+    if (!relativePath || typeof relativePath !== 'string') {
+      return { error: 'path must be a non-empty workspace-relative string' };
+    }
+
+    if (path.isAbsolute(relativePath)) {
+      return { error: 'path must be workspace-relative, not absolute' };
+    }
+
+    const resolved = path.resolve(this.workspacePath, relativePath);
+    const workspaceRoot = path.resolve(this.workspacePath);
+    if (resolved !== workspaceRoot && !resolved.startsWith(`${workspaceRoot}${path.sep}`)) {
+      this.logSecurityViolation('Path traversal attempt in artifact path', { relativePath });
+      return { error: 'path escapes workspace root' };
+    }
+
+    return { path: resolved };
+  }
+
+  async checkWorkspace(host?: string): Promise<Record<string, unknown>> {
+    const script = await this.resolveNodeScript('gofer-workspace-check.mjs');
+    if (!script) {
+      return {
+        success: false,
+        status: 'missing',
+        error: 'gofer-workspace-check.mjs was not found in the workspace or bundled resources',
+        prompt: 'This repo is missing or stale for Gofer. Initialize/update it now?',
+      };
+    }
+
+    const result = await this.runCommand('node', [
+      script,
+      '--workspace',
+      this.workspacePath,
+      '--host',
+      this.normalizeHost(host),
+      '--json',
+    ]);
+    const payload = this.parseJsonFromExecution(result);
+
+    return {
+      success: Boolean(payload),
+      ...(payload && typeof payload === 'object' ? payload : {}),
+      exitCode: result.exitCode,
+      stderr: result.stderr || undefined,
+    };
+  }
+
+  async bootstrapWorkspace(options: {
+    host?: string;
+    includeMirrors?: boolean;
+    dryRun?: boolean;
+  }): Promise<Record<string, unknown>> {
+    const script = await this.resolveNodeScript('gofer-workspace-bootstrap.mjs');
+    if (!script) {
+      return {
+        success: false,
+        status: 'missing',
+        error: 'gofer-workspace-bootstrap.mjs was not found in the workspace or bundled resources',
+      };
+    }
+
+    const args = [
+      script,
+      '--workspace',
+      this.workspacePath,
+      '--host',
+      this.normalizeHost(options.host),
+    ];
+    if (options.includeMirrors ?? true) {
+      args.push('--include-mirrors');
+    }
+    if (options.dryRun) {
+      args.push('--dry-run');
+    }
+
+    const result = await this.runCommand('node', args, 120000);
+    const payload = this.parseJsonFromExecution(result);
+
+    return {
+      success: Boolean(payload),
+      ...(payload && typeof payload === 'object' ? payload : {}),
+      exitCode: result.exitCode,
+      stderr: result.stderr || undefined,
+    };
+  }
+
+  async getPipelineState(): Promise<Record<string, unknown>> {
+    const specsDir = path.join(this.workspacePath, '.specify', 'specs');
+    const states: unknown[] = [];
+    const artifacts: Record<string, string[]> = {};
+
+    try {
+      const entries = await fs.readdir(specsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('_')) {
+          continue;
+        }
+
+        const featureDir = path.join(specsDir, entry.name);
+        const state = await this.readJsonIfExists(path.join(featureDir, 'pipeline-state.json'));
+        if (state) {
+          states.push(state);
+        }
+
+        const featureFiles = (await fs.readdir(featureDir, { withFileTypes: true }))
+          .filter((file) => file.isFile())
+          .map((file) => file.name)
+          .filter((file) => file.endsWith('.md') || file.endsWith('.json'))
+          .sort();
+        artifacts[entry.name] = featureFiles;
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return {
+          success: true,
+          active: null,
+          states: [],
+          artifacts: {},
+          message: 'No .specify/specs directory found yet',
+        };
+      }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+
+    const active =
+      states.find(
+        (state) =>
+          typeof state === 'object' &&
+          state !== null &&
+          (state as { status?: string }).status === 'in_progress'
+      ) ||
+      states[0] ||
+      null;
+
+    return { success: true, active, states, artifacts };
+  }
+
+  async startStage(command: string, feature?: string): Promise<Record<string, unknown>> {
+    const commandMap = await this.loadStageCommandMetadata();
+    const metadata = commandMap.get(this.normalizeCommandKey(command));
+    if (!metadata) {
+      return {
+        success: false,
+        error: `Unknown Gofer command: ${command}`,
+        availableCommands: Array.from(commandMap.values())
+          .map((item) => item.name)
+          .sort(),
+      };
+    }
+
+    const slashCommand = metadata.name.includes(':') ? `/${metadata.name}` : `/${metadata.stem}`;
+    return {
+      success: true,
+      command: slashCommand,
+      feature,
+      description: metadata.description,
+      preflight: {
+        tool: 'gofer_check_workspace',
+        promptOnMissingOrStale:
+          'This repo is missing or stale for Gofer. Initialize/update it now?',
+        bootstrapTool: 'gofer_bootstrap_workspace',
+      },
+      instruction: feature
+        ? `Run ${slashCommand} ${feature} after workspace check passes.`
+        : `Run ${slashCommand} after workspace check passes.`,
+    };
+  }
+
+  async validateBranch(base = 'origin/main'): Promise<Record<string, unknown>> {
+    const branch = await this.runCommand('git', ['rev-parse', '--abbrev-ref', 'HEAD'], 10000);
+    const status = await this.runCommand('git', ['status', '--short'], 10000);
+    const changed = await this.runCommand('git', ['diff', '--name-only', `${base}...HEAD`], 10000);
+
+    return {
+      success: branch.success,
+      branch: branch.stdout.trim() || 'unknown',
+      base,
+      dirty: status.stdout.trim().length > 0,
+      status: status.stdout.trim().split('\n').filter(Boolean),
+      changedFiles: changed.stdout.trim().split('\n').filter(Boolean),
+      recommendedValidation: [
+        'node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json',
+        'npm run gofer:version-check',
+        'npm run ci:test',
+        '/6_gofer_validate',
+      ],
+      warning: changed.success
+        ? undefined
+        : `Could not compare against ${base}: ${changed.stderr || 'unknown git error'}`,
+    };
+  }
+
+  async explainEaiError(codeOrReason: string): Promise<Record<string, unknown>> {
+    if (!codeOrReason || typeof codeOrReason !== 'string') {
+      return { success: false, error: 'codeOrReason is required' };
+    }
+
+    const cli = await this.runCommand(
+      'eai',
+      ['errors', 'explain', codeOrReason, '--format', 'json'],
+      30000
+    );
+    const cliPayload = this.parseJsonFromExecution(cli);
+    if (cli.success && cliPayload) {
+      return { success: true, source: 'eai-cli', explanation: cliPayload };
+    }
+
+    const catalogPath = path.join(
+      this.workspacePath,
+      '.specify',
+      'references',
+      'platform',
+      'eai-error-catalog.yaml'
+    );
+    let fallback = '';
+    try {
+      const catalog = await fs.readFile(catalogPath, 'utf-8');
+      const lines = catalog.split('\n');
+      const needle = codeOrReason.toLowerCase();
+      const matches = lines
+        .map((line, index) => ({ line, index }))
+        .filter((item) => item.line.toLowerCase().includes(needle))
+        .slice(0, 8)
+        .map((item) => `${item.index + 1}: ${item.line}`);
+      fallback = matches.join('\n');
+    } catch {
+      fallback = '';
+    }
+
+    return {
+      success: true,
+      source: fallback ? 'repo-error-catalog' : 'fallback',
+      codeOrReason,
+      explanation:
+        fallback ||
+        'Run `eai login`, confirm the active tenant with `eai whoami`, run `eai --describe`, then retry with `eai errors explain <code-or-reason> --format json` when the CLI is available.',
+      cliError: cli.stderr || undefined,
+    };
+  }
+
+  async openArtifact(relativePath: string, maxBytes = 20000): Promise<Record<string, unknown>> {
+    const resolved = this.resolveWorkspaceArtifactPath(relativePath);
+    if (resolved.error || !resolved.path) {
+      return { success: false, error: resolved.error };
+    }
+
+    try {
+      const content = await fs.readFile(resolved.path, 'utf-8');
+      const limit = Math.max(1000, Math.min(Number(maxBytes) || 20000, 100000));
+      return {
+        success: true,
+        path: relativePath,
+        bytes: Buffer.byteLength(content, 'utf-8'),
+        truncated: Buffer.byteLength(content, 'utf-8') > limit,
+        content: content.slice(0, limit),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   /**
