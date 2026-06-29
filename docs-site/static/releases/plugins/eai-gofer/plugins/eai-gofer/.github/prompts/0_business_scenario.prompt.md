@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_business_scenario.md
-  canonicalChecksum: e0c92e692661d1dabbde538f08ca035a1ffc76bff0db88e14131b4b3fd22d681
+  canonicalChecksum: 16393c78873dcd5f3069fe4380a88f742187210fce4d17a1da40780f083bdd21
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -228,6 +228,12 @@ with an unrelated non-EAI stack.
      `eai workflow readiness --format json` so later stages can cite actual
      platform resource fields, actions, events, and workflow availability
      instead of guessing.
+   - For v4 passive ResourceAPI search requirements, run or plan to run
+     `eai resources storage doctor --tenant-id <tenant-id> --format json` and
+     treat fulltext, hybrid, and vector as separate readiness states. Prefer
+     `eai resources search "<query>" --fulltext` until doctor reports semantic
+     search modes ready. Do not apply this fallback to legacy v1/v3 or active
+     ResourceAPI behavior.
    - Use the EAI scenario library to map the business problem to the common
      four-step pattern: capture demand/context, prepare the decision, execute
      and collaborate, then resolve/explain/improve.
@@ -938,6 +944,16 @@ pipeline-state.json is updated atomically by each stage on completion.
 If the closed-loop audit recommends an earlier stage than `currentStage`, the
 audit wins. Pipeline state tracks progress; the audit tracks whether progress is
 still valid.
+
+**Spec Artifact Guard (Mandatory)**:
+
+Before routing to `#3_gofer_plan`, `#4_gofer_tasks`, `#5_gofer_implement`, or
+`#6_gofer_validate`, confirm that `.specify/specs/{feature}/spec.md` exists and
+is not the unfilled `spec-template.md` copy created by feature bootstrap. A
+missing, empty, or placeholder-filled spec always routes back to
+`#2_gofer_specify`, even when `pipeline-state.json`, `plan.md`, `tasks.md`, or
+validation artifacts imply later progress. Gofer must never plan, task,
+implement, or validate a feature from research or plan artifacts alone.
 
 **Fallback — File-existence heuristics** (used when no pipeline-state.json
 exists):

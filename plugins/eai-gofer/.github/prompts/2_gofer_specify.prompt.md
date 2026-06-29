@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/2_gofer_specify.md
-  canonicalChecksum: 434297d46ab7e4c56c37476fe663d2a56f6551a79fc57dbf54eb9d348f985c4d
+  canonicalChecksum: baaed1feea12f095fa355548756671d00ba3be64198850897c99f44ad35b5528
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -111,6 +111,21 @@ This command expects:
 If these don't exist, prompt user to run `#1_gofer_research` first.
 
 ---
+
+## Spec Artifact Guarantee
+
+This stage is the first point where the placeholder `spec.md` created by
+feature bootstrap becomes a real feature specification. Before this command
+finishes or auto-chains to `#3_gofer_plan`, verify that
+`{FEATURE_DIR}/spec.md` exists, is non-empty, and no longer contains the raw
+template placeholders such as `[FEATURE NAME]`, `[###-feature-name]`,
+`[Describe this user journey]`, `System MUST [specific capability]`, or
+`ACTION REQUIRED`. If the check fails, write or repair `spec.md` immediately and
+do not continue to planning.
+
+Downstream stages use repo scripts that fail on missing, empty, or still-template
+specs. Treat that failure as a required return to `#2_gofer_specify`, not as a
+script problem to bypass.
 
 ## Outline
 

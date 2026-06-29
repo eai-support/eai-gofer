@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/6_gofer_validate.md
-  canonicalChecksum: 94c6243f8d55b966276400f4f60138b0f83d28c86ce577de81c891bf5eab43c8
+  canonicalChecksum: 994a89e36569e86c2d0513347845dc1b14b5014fc696ef90afb7943d8d053d89
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -105,6 +105,15 @@ This command expects in `.specify/specs/{feature}/`:
 - Implemented code (from #5_gofer_implement)
 
 ---
+
+## Spec Artifact Guard
+
+Before validation, `.specify/scripts/bash/check-prerequisites.sh --json
+--require-tasks` must confirm that `{FEATURE_DIR}/spec.md` exists, is
+non-empty, and is not the unfilled spec template. If the helper reports
+`spec.md` as missing, empty, or `template`, stop and run `#2_gofer_specify`.
+Validation cannot score functional correctness, traceability, or objective
+outcomes without a real specification.
 
 ## Outline
 
