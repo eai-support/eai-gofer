@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: fa2b436e30882a5a7649fdb597d728a3c2e5cbc9aa63e79ed5ec2a48e3455a51
+  canonicalChecksum: 391300d2f14bff67a70018b6423d9212b99e13f589be5557c025dd6025de1a34
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -101,6 +101,7 @@ This command expects in `.specify/specs/{feature}/`:
 - `spec.md` - Feature specification (from #2_gofer_specify)
 - `plan.md` - Implementation plan (from #3_gofer_plan)
 - `tasks.md` - Task breakdown (from #4_gofer_tasks)
+- `loop-contract.json` - Bounded eval commands and stop rules (from /1 through /4)
 
 If missing, prompt user to run the prerequisite stage.
 
@@ -188,6 +189,8 @@ During implementation, use these techniques to preserve context quality:
    - **Required**: tasks.md (task list and execution plan)
    - **Required**: plan.md (tech stack, architecture, file structure)
    - **Required**: spec.md (scope boundaries and protected files)
+   - **Required**: loop-contract.json (bounded loop objective, eval commands,
+     maximum iterations, stop conditions, and escalation rules)
    - **Optional**: data-model.md (entities and relationships)
    - **Optional**: contracts/ (API specifications)
    - **Optional**: research.md (technical decisions)
@@ -281,10 +284,25 @@ Extract from tasks.md:
 3. **Task details**: ID, description, file paths, [P] markers
 4. **Current progress**: Which tasks are already `[X]` completed
 5. **Protected files**: List from "Protected Files" section
+6. **Loop evidence tasks**: eval command tasks, ledger append tasks, and
+   stop/escalation rules
 
 ---
 
 ## Step 7: Execute Implementation
+
+### Loop Contract Preflight
+
+Before editing code, run:
+
+```bash
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --init --json
+```
+
+If this reports contract blocking findings, repair `loop-contract.json` before
+editing code. If `loop-contract.json` was initialized for an older feature, keep
+going but make sure task execution appends real `loop-ledger.jsonl` evidence
+before this stage completes.
 
 ### Checkpoint Strategy
 
@@ -330,6 +348,16 @@ Create checkpoints (git commits) at strategic points:
 3. **Parallel tasks**: [P] marked tasks can run together
 4. **File coordination**: Same-file tasks run sequentially
 5. **Scope check**: Verify every file against protected list
+6. **Loop evidence**: After each focused implementation/check-repair loop,
+   append a ledger record:
+
+   ```bash
+   node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 5_implement --record '{"iteration":1,"action":"<command-or-review>","result":"pass","summary":"<evidence summary>"}' --json
+   ```
+
+   Use `result: "fail"` or `"blocked"` when a check fails and include a
+   material `nextAction`. Stop and escalate instead of continuing silently when
+   the same action reaches `humanEscalation.maxFailedIterations`.
 
 ### Execution Order
 
@@ -540,6 +568,15 @@ After all tasks complete:
 2. **Check implementation matches spec**
 3. **Run automated tests** if they exist
 4. **Validate against plan.md architecture**
+5. **Run loop audit in strict mode**:
+
+   ```bash
+   node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 5_implement --json --strict
+   ```
+
+   If the audit fails, implementation is not complete. Repair the contract,
+   append missing ledger evidence, run the failing eval command, or escalate
+   according to the stop condition.
 
 ---
 
@@ -604,6 +641,7 @@ After implementation complete and review gate passes:
 ════════════════════════════════════════════════════════════════
 
   Tasks: [N]/[N] completed
+  Loop evidence: {FEATURE_DIR}/loop-ledger.jsonl
 
   Phases completed:
   - Phase 1: Setup ✓
