@@ -91,6 +91,16 @@ If missing, prompt user to run the prerequisite stage.
 
 ---
 
+## Spec Artifact Guard
+
+`spec.md` is the source of truth for scope, acceptance criteria, protected
+boundaries, and downstream traceability. Before planning, the setup script must
+confirm `{FEATURE_DIR}/spec.md` exists, is non-empty, and is not the raw
+`spec-template.md` placeholder seeded by feature bootstrap. If
+`.specify/scripts/bash/setup-plan.sh --json` reports that `spec.md` is missing,
+empty, or `template`, stop and run `/2_gofer_specify`; do not create or refresh
+`plan.md` from research alone.
+
 ## Outline
 
 1. Context health check

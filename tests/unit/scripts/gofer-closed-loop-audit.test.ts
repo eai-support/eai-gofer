@@ -56,6 +56,19 @@ function buildSpec(): string {
 `;
 }
 
+function buildTemplateSpec(): string {
+  return `# Feature Specification: [FEATURE NAME]
+
+**Feature Branch**: \`[###-feature-name]\`
+
+## Requirements
+
+<!-- ACTION REQUIRED -->
+
+- **FR-001**: System MUST [specific capability]
+`;
+}
+
 function buildTraceability(
   codeEvidence = 'src/example.ts',
   testEvidence = 'tests/example.test.ts'
@@ -245,6 +258,17 @@ describe('gofer-closed-loop-audit.mjs', () => {
     expect(result.exitCode).toBe(1);
     expect(result.payload.status).toBe('fail');
     expect(result.payload.recommendedStartStage).toBe('4_tasks');
+  });
+
+  it('reopens specify when spec.md is still the bootstrap template', async () => {
+    writeFile(path.join(featureDir, 'spec.md'), buildTemplateSpec());
+
+    const result = await runAudit(workspaceRoot, featureDir, ['--strict']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.payload.status).toBe('fail');
+    expect(result.payload.recommendedStartStage).toBe('2_specify');
+    expect(JSON.stringify(result.payload.blockingFindings)).toContain('spec.md is template');
   });
 
   it('reopens research when an assumption drift control has expired', async () => {

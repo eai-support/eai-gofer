@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/3_gofer_plan.md
-  canonicalChecksum: 78baa89267480dfc4488c5e7c15d3fe5951d1bd94e2d31d2e9e6f06f0afc67f9
+  canonicalChecksum: 8f81cb857a36deaa3540774b0d6fd2f8f9476c0cf17ab00c8d1c14672ddb501d
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -104,6 +104,16 @@ This command expects in `.specify/specs/{feature}/`:
 If missing, prompt user to run the prerequisite stage.
 
 ---
+
+## Spec Artifact Guard
+
+`spec.md` is the source of truth for scope, acceptance criteria, protected
+boundaries, and downstream traceability. Before planning, the setup script must
+confirm `{FEATURE_DIR}/spec.md` exists, is non-empty, and is not the raw
+`spec-template.md` placeholder seeded by feature bootstrap. If
+`.specify/scripts/bash/setup-plan.sh --json` reports that `spec.md` is missing,
+empty, or `template`, stop and run `#2_gofer_specify`; do not create or refresh
+`plan.md` from research alone.
 
 ## Outline
 

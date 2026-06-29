@@ -62,6 +62,16 @@ If missing, prompt user to run the prerequisite stage.
 
 ---
 
+## Spec Artifact Guard
+
+Before implementation, `.specify/scripts/bash/check-prerequisites.sh --json
+--require-tasks --include-tasks` must confirm that `{FEATURE_DIR}/spec.md`
+exists, is non-empty, and is not the unfilled spec template. If the helper
+reports `spec.md` as missing, empty, or `template`, stop and run
+`/2_gofer_specify` before editing code. Implementation must never proceed from
+`tasks.md` or `plan.md` without an authoritative spec for acceptance criteria
+and protected boundaries.
+
 ## Outline
 
 1. Context health check
