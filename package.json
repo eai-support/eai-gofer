@@ -46,6 +46,7 @@
     "gofer:package-plugin": "node .specify/scripts/node/package-agent-plugin.mjs",
     "gofer:mermaid-export": "node .specify/scripts/node/mermaid-export.mjs",
     "gofer:closed-loop-audit": "node .specify/scripts/node/gofer-closed-loop-audit.mjs",
+    "gofer:loop-audit": "node .specify/scripts/node/gofer-loop-audit.mjs",
     "gofer:codex-doctor": "node .specify/scripts/node/codex-doctor.mjs",
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",

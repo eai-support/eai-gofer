@@ -75,6 +75,7 @@ This command expects in `.specify/specs/{feature}/`:
 - `spec.md` - Feature specification (from /2_gofer_specify)
 - `plan.md` - Implementation plan (from /3_gofer_plan)
 - `goal-ledger.json` - Goal and re-loop contract (from /1 and /2)
+- `loop-contract.json` - Bounded evaluation and stop-condition contract (from /1 and /3)
 
 If missing, prompt user to run the prerequisite stage.
 
@@ -132,6 +133,8 @@ Task generation dispatches agents — keep main context lightweight.
    directly):
    - Note feature name from FEATURE_DIR
    - Note which optional docs exist: data-model.md, contracts/, quickstart.md
+   - Note whether `loop-contract.json` exists. If missing, initialize it with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --init --json`
    - Note the tasks template path: `.specify/templates/tasks-template.md`
 
 ---
@@ -156,6 +159,7 @@ Read these files for full context:
 - {FEATURE_DIR}/data-model.md — Entity definitions (read if exists)
 - {FEATURE_DIR}/contracts/ — API contracts (read all .md files if exists)
 - {FEATURE_DIR}/research.md — Technology decisions (read if exists)
+- {FEATURE_DIR}/loop-contract.json — eval commands, max iterations, stop conditions, and human escalation rules
 - .specify/templates/tasks-template.md — Task template structure
 
 Generate tasks.md organized by user story to enable independent implementation:
@@ -186,6 +190,10 @@ Include these sections:
 4. All phases with tasks
 5. Parallel Execution Guide: Which [P] tasks can run concurrently
 6. Implementation Strategy: MVP first, incremental delivery, polish last
+7. Loop Evidence Tasks:
+   - Task(s) to run each loop-contract eval command at the right phase boundary
+   - Task(s) to append `loop-ledger.jsonl` records after each check-repair cycle
+   - Task(s) to stop and escalate if maxIterations or stop conditions trigger
 
 Validation checks before writing:
 - Every plan phase has at least one task (GAP-02)
@@ -193,6 +201,9 @@ Validation checks before writing:
 - Every acceptance criterion maps to at least one task (GAP-03)
 - Every data model entity has implementing tasks
 - Every API contract endpoint has implementing tasks
+- Every loop-contract eval command maps to at least one task or verification
+  checklist item
+- Every implementation phase explains what ledger evidence will be recorded
 - Task file paths match plan.md File Structure section
 - For CLI-driven platform mutations, task order must reflect authoritative
   store setup before orchestrator writes, orchestrator writes before CLI
@@ -221,6 +232,7 @@ Read these files:
 - {FEATURE_DIR}/spec.md — User stories, acceptance criteria, functional requirements
 - {FEATURE_DIR}/plan.md — Implementation phases, components
 - {FEATURE_DIR}/goal-ledger.json — goals, metrics, delivery states, re-loop triggers
+- {FEATURE_DIR}/loop-contract.json — loop eval commands, max iterations, stop conditions, and escalation rules
 - {FEATURE_DIR}/tasks.md — Task breakdown (read after Agent 1 writes it)
 - {FEATURE_DIR}/data-model.md — Entity definitions (read if exists)
 - {FEATURE_DIR}/contracts/ — API contracts (read if exists)
@@ -245,12 +257,16 @@ Generate {FEATURE_DIR}/traceability.md with:
 6. API Contract Coverage (if contracts/ exists):
    | Endpoint | Contract File | Implementing Task(s) |
 
-7. Coverage Summary:
+7. Loop Evidence Coverage:
+   | Eval Command | Phase Boundary | Task IDs | Ledger Evidence | Stop/Escalation Rule |
+
+8. Coverage Summary:
    - Plan Phases: N/N covered
    - User Stories: N/N covered
    - Acceptance Criteria: N/N covered
    - Requirements with code targets: N/N covered
    - Requirements with test targets: N/N covered
+   - Loop eval commands: N/N covered
    - Data Entities: N/N covered
    - API Endpoints: N/N covered
    - Status: VALIDATION PASSED or VALIDATION FAILED
@@ -425,6 +441,7 @@ Display the task summary and request explicit approval:
   Files created:
   - {FEATURE_DIR}/tasks.md
   - {FEATURE_DIR}/traceability.md
+  - {FEATURE_DIR}/loop-contract.json (updated if evaluation commands changed)
   - {FEATURE_DIR}/issues.md ([N] GitHub issues)
 
 ════════════════════════════════════════════════════════════════

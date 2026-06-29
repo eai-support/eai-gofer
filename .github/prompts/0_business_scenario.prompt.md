@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_business_scenario.md
-  canonicalChecksum: 16393c78873dcd5f3069fe4380a88f742187210fce4d17a1da40780f083bdd21
+  canonicalChecksum: b17606842b196e0dc117b65c234956634efb8b7daaaf11e1e42f8abec206eb95
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -45,8 +45,10 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands#0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -347,6 +349,9 @@ ls -la .specify/memory/constitution.md 2>/dev/null
 | `plan.md`               | `.specify/specs/{feature}/` | Planning complete            |
 | `tasks.md`              | `.specify/specs/{feature}/` | Ready for implement          |
 | `goal-ledger.json`      | `.specify/specs/{feature}/` | Active objective ledger and drift triggers |
+| `loop-contract.json`    | `.specify/specs/{feature}/` | Bounded check-repair loop objective, commands, and stop rules |
+| `loop-ledger.jsonl`     | `.specify/specs/{feature}/` | Implementation/validation iteration evidence |
+| `loop-audit-report.md`  | `.specify/specs/{feature}/` | Latest loop contract and ledger audit |
 | `goal-rebaseline-report.md` | `.specify/specs/{feature}/` | Latest closed-loop audit result |
 | `session-checkpoint.md` | `.specify/specs/{feature}/` | Work paused (resumable)      |
 | `validation-report.md`  | `.specify/specs/{feature}/` | Feature validated            |
@@ -922,6 +927,17 @@ feature directory already exists:
 node .specify/scripts/node/gofer-closed-loop-audit.mjs --feature-dir {FEATURE_DIR} --json
 ```
 
+If `{FEATURE_DIR}/loop-contract.json` is missing, initialize it before routing
+past discovery:
+
+```bash
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 0_business_scenario --init --json
+```
+
+Do not ask the user about loop initialization unless the command fails or would
+overwrite an existing contract. The loop contract is standard Gofer feature
+scaffold, not an optional extra.
+
 If the audit recommends a `recommendedStartStage`, resume from that stage even
 when later artifacts exist. This is how Gofer behaves like a goal-seeking loop:
 goal drift, expired assumptions, contract drift, UX scope changes, or
@@ -1118,8 +1134,8 @@ If context window is filling up:
 | 2     | `#2_gofer_specify`    | spec.md                            | Feature specification                     |
 | 3     | `#3_gofer_plan`       | plan.md, data-model.md, contracts/ | Technical architecture and contracts      |
 | 4     | `#4_gofer_tasks`      | tasks.md, traceability.md, issues.md | Dependency-ordered task breakdown       |
-| 5     | `#5_gofer_implement`  | Code and doc changes               | Execute the planned work                  |
-| 6     | `#6_gofer_validate`   | Validation artifacts               | Terminal quality gate, including review   |
+| 5     | `#5_gofer_implement`  | Code, docs, loop-ledger.jsonl      | Execute bounded check-repair loops        |
+| 6     | `#6_gofer_validate`   | Validation artifacts, loop-audit-report.md | Terminal quality gate, including review |
 
 ### Helper Commands
 
