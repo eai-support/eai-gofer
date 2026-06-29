@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/1_gofer_research.md
-  canonicalChecksum: 76d0a27a91fdc60fc9301868596ca370d512c95dfa21e86fc35953d6c845f811
+  canonicalChecksum: c88082a76a3128d18ebd6513fe9bd49483c5c766af55a830f7bac67c427d83d9
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -132,6 +132,7 @@ This is the **first stage** of the unified Gofer pipeline. Your job is to:
 
 - `.specify/specs/{feature}/research.md`
 - `.specify/specs/{feature}/goal-ledger.json`
+- `.specify/specs/{feature}/loop-contract.json`
 - `.specify/specs/{feature}/proposal-review.md` (optional supporting review context)
 - `.specify/specs/{feature}/journeys/base-journey.md` (application delivery default)
 - `.specify/specs/{feature}/eai-preflight.md` (EAI app delivery default)
@@ -519,6 +520,14 @@ Once all agents complete:
    - Delivery states for any capability that starts mock/hybrid before going live
    - Re-loop triggers for objective drift, assumption expiry, contract drift,
      UX scope changes, and post-validation code/test movement
+6. **Loop Contract Seed**
+   - Initialize `{FEATURE_DIR}/loop-contract.json` if it is missing:
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 1_research --init --json`
+   - Align the loop objective, maximum iterations, evaluation commands, success
+     criteria, stop conditions, and human escalation rules with the research
+     risk profile.
+   - Keep the default contract for ordinary work, but tighten it for
+     release-critical, security, data, auth, platform, or cross-repo work.
 
 ### Novice Walkthrough Guardrail (MANDATORY)
 
@@ -592,6 +601,15 @@ Reference `.specify/specs/{feature}/goal-ledger.json` and capture:
 - Delivery-state discipline (`mock`, `hybrid`, `live`) for each risky capability
 - Re-loop triggers that should reopen `#2_gofer_specify`, `#3_gofer_plan`,
   `#4_gofer_tasks`, or `#6_gofer_validate`
+
+## Loop Contract Seed
+
+Reference `.specify/specs/{feature}/loop-contract.json` and capture:
+
+- The current feature objective in one measurable sentence
+- Evaluation commands that must pass before implementation and validation close
+- Maximum check-repair iterations before human escalation
+- Stop conditions that define when Gofer should stop looping
 
 ## Structured Discovery Output
 
@@ -848,6 +866,7 @@ After saving `research.md`, `goal-ledger.json`, and `proposal-review.md`:
 
 ✓ Research complete: {FEATURE_DIR}/research.md
 ✓ Goal ledger seeded: {FEATURE_DIR}/goal-ledger.json
+✓ Loop contract seeded: {FEATURE_DIR}/loop-contract.json
 ✓ Supporting review context ready: {FEATURE_DIR}/proposal-review.md
 
 Key findings:

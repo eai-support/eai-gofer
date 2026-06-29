@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.",
-    "version": "3.7.5"
+    "version": "3.7.6"
   },
   "plugins": [
     {
       "name": "eai-gofer",
       "source": "./plugins/eai-gofer",
       "description": "Gofer core pipeline from /0_business_scenario through /6_gofer_validate, with optional helper commands.",
-      "version": "3.7.5",
+      "version": "3.7.6",
       "author": {
         "name": "EAI Tools",
         "url": "https://github.com/eai-tools/eai-gofer"

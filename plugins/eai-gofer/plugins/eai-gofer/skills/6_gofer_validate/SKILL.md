@@ -64,6 +64,8 @@ This command expects in `.specify/specs/{feature}/`:
 - `plan.md` - Implementation plan (from /3_gofer_plan)
 - `tasks.md` - Task breakdown (from /4_gofer_tasks)
 - `goal-ledger.json` - Goal, metric, delivery-state, and re-loop contract
+- `loop-contract.json` - Bounded eval commands and stop rules
+- `loop-ledger.jsonl` - Implementation and validation loop evidence
 - `traceability.md` - Requirement -> task -> code -> test matrix
 - Implemented code (from /5_gofer_implement)
 
@@ -199,6 +201,8 @@ Validation loads all artifacts and spawns 6 agents — context pressure is high.
    - plan.md (architecture, file structure, tech stack)
    - tasks.md (task completion status)
    - goal-ledger.json (goal IDs, metrics, delivery states, re-loop triggers)
+   - loop-contract.json (loop objective, eval commands, max iterations, stop conditions)
+   - loop-ledger.jsonl (implementation and validation loop evidence)
    - traceability.md (requirement-to-code/test evidence matrix)
    - research.md (codebase patterns to follow)
 
@@ -232,7 +236,7 @@ Set `DEPLOY_IN_SCOPE = true` if ANY signal is present.
 Set `DEPLOY_IN_SCOPE = false` if NO signal is present.
 Record the determination in the validation report preamble.
 
-## Step 1.5: Closed-Loop Objective Audit
+## Step 1.5: Closed-Loop Objective And Loop Evidence Audit
 
 Before rubric scoring, run the closed-loop audit and write a fresh rebaseline
 report:
@@ -243,10 +247,21 @@ node .specify/scripts/node/gofer-closed-loop-audit.mjs --feature-dir {FEATURE_DI
 
 Also write/update `{FEATURE_DIR}/goal-rebaseline-report.md`.
 
-Validation MUST treat the closed-loop audit as an objective gate:
+Then run the bounded loop audit:
+
+```bash
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 6_validate --json --strict
+```
+
+This writes/updates `{FEATURE_DIR}/loop-audit-report.md`.
+
+Validation MUST treat the closed-loop and loop audits as objective gates:
 
 - If the audit reports missing goal coverage, missing code/test evidence,
   expired assumptions, or invalid goal-ledger structure, validation FAILS.
+- If the loop audit reports a missing/invalid loop contract, missing
+  `loop-ledger.jsonl` evidence, maxIterations breach, or required human
+  escalation, validation FAILS.
 - If the audit recommends reopening `/2_gofer_specify`, `/3_gofer_plan`,
   `/4_gofer_tasks`, or `/6_gofer_validate`, record that as a blocking drift
   finding and FAIL the run. The feature is no longer in a closed state even if
@@ -1134,6 +1149,7 @@ has_ui: [true/false]
 deploy_in_scope: [true/false]
 objective_gate_status: [PASS/FAIL]
 goal_rebaseline_report: goal-rebaseline-report.md
+loop_audit_report: loop-audit-report.md
 blast_radius_verdict: [CONTAINED | BREACHED]
 blast_radius_report: blast-radius-report.md
 GeneratedAt: [ISO timestamp]
@@ -1148,6 +1164,9 @@ OverwriteNoticeWhenApplicable: [new file or overwrite note]
 
 - Goal ledger: `goal-ledger.json`
 - Rebaseline report: `goal-rebaseline-report.md`
+- Loop contract: `loop-contract.json`
+- Loop ledger: `loop-ledger.jsonl`
+- Loop audit report: `loop-audit-report.md`
 - Outcome gate status: [PASS/FAIL]
 - Recommended reopen stage: [none | 2_specify | 3_plan | 4_tasks | 6_validate]
 - Summary: [why objectives remain aligned or why the loop must reopen]

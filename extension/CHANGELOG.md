@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.6] - 2026-06-29
+
+Add loop engineering audit gates across Gofer stages.
+
 ## [3.7.5] - 2026-06-29
 
 Require material specs before downstream Gofer stages; update all host command surfaces and validation checks.

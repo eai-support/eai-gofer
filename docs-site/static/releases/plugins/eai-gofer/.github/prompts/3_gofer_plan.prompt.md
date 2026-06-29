@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/3_gofer_plan.md
-  canonicalChecksum: 8f81cb857a36deaa3540774b0d6fd2f8f9476c0cf17ab00c8d1c14672ddb501d
+  canonicalChecksum: 10b64f5317f8d6352558d56fd85460f078e4fe30689b050c0090e7b8375be407
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -100,6 +100,7 @@ This command expects in `.specify/specs/{feature}/`:
 - `research.md` - Codebase analysis (from #1_gofer_research)
 - `spec.md` - Feature specification (from #2_gofer_specify)
 - `goal-ledger.json` - Objective ledger and re-loop triggers (from /1 and /2)
+- `loop-contract.json` - Bounded check-repair contract (from /1 and /2)
 
 If missing, prompt user to run the prerequisite stage.
 
@@ -172,6 +173,11 @@ Planning dispatches multiple agents — keep main context lightweight.
      exceptions, and public-readiness status when app delivery applies
    - Note whether `goal-ledger.json` exists and which goals, delivery states,
      and re-loop triggers must remain valid through planning
+   - Note whether `loop-contract.json` exists and which evaluation commands,
+     maximum iterations, stop conditions, and escalation triggers must be
+     reflected in implementation phases
+   - If loop-contract.json is missing, initialize it with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 3_plan --init --json`
    - Note whether `{FEATURE_DIR}/sequence-diagrams/selected-option.md` exists
 
 3. **Note template path**: `.specify/templates/plan-template.md`
@@ -197,6 +203,7 @@ Read these files for full context:
 - {FEATURE_DIR}/research.md — Technology decisions, integration points, patterns, constraints
 - {FEATURE_DIR}/spec.md — User stories, requirements, success criteria
 - {FEATURE_DIR}/goal-ledger.json — business goals, metrics, delivery states, and re-loop triggers
+- {FEATURE_DIR}/loop-contract.json — bounded loop objective, evaluation commands, max iterations, stop conditions, and escalation rules
 - {FEATURE_DIR}/ui-preview-brief.md — app-delivery preview brief (read if exists, skip if not)
 - {FEATURE_DIR}/ui-review-log.md — app-delivery preview iteration history (read if exists, skip if not)
 - {FEATURE_DIR}/ui-approval.md — app-delivery approval state (read if exists, skip if not)
@@ -235,7 +242,12 @@ Generate the COMPLETE plan.md with these sections:
    - Delivery states (`mock`, `hybrid`, `live`) plus promotion criteria
    - Re-loop triggers that should send the feature back to specify, plan, tasks,
      or validate when contracts, UX scope, assumptions, or implementation drift
-10. AI-Readable Blocks Bridge:
+10. Loop Engineering Plan:
+   - Evaluation commands from loop-contract.json and where they run
+   - Maximum check-repair iteration count per implementation/validation loop
+   - Stop conditions and human escalation triggers
+   - Required ledger evidence to append after each focused loop
+11. AI-Readable Blocks Bridge:
    - Package profile choice: external, internal, or hybrid
    - Package lane for each UI block or package surface
    - Coupling status, including source-platform decoupling boundary or approved
@@ -257,6 +269,8 @@ Rules:
   visible enough for `#4_gofer_tasks` to emit first-class runnable tasks
 - Keep `goal-ledger.json` aligned with any planning-level changes to goals,
   delivery states, or re-loop triggers
+- Keep `loop-contract.json` aligned with plan-level verification commands, stop
+  conditions, and release-critical escalation paths
 
 Write the complete plan to {FEATURE_DIR}/plan.md.
 
@@ -643,6 +657,7 @@ After all artifacts are created and review gate passes:
 
 Artifacts created:
 - plan.md: Implementation phases and architecture
+- loop-contract.json: Bounded evaluation commands and stop rules
 - data-model.md: Entity definitions
 - contracts/: API specifications
 - quickstart.md: Testing guide
