@@ -98,6 +98,15 @@ This command expects in `.specify/specs/{feature}/`:
 
 ---
 
+## Spec Artifact Guard
+
+Before validation, `.specify/scripts/bash/check-prerequisites.sh --json
+--require-tasks` must confirm that `{FEATURE_DIR}/spec.md` exists, is
+non-empty, and is not the unfilled spec template. If the helper reports
+`spec.md` as missing, empty, or `template`, stop and run `/2_gofer_specify`.
+Validation cannot score functional correctness, traceability, or objective
+outcomes without a real specification.
+
 ## Outline
 
 1. Context health check

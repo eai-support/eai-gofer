@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_business_scenario.md
-  canonicalChecksum: 6265bf99ce68154b2ff62c979982b9ca6a7f2a46d9ec9259fd3896791354132d
+  canonicalChecksum: 16393c78873dcd5f3069fe4380a88f742187210fce4d17a1da40780f083bdd21
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -944,6 +944,16 @@ pipeline-state.json is updated atomically by each stage on completion.
 If the closed-loop audit recommends an earlier stage than `currentStage`, the
 audit wins. Pipeline state tracks progress; the audit tracks whether progress is
 still valid.
+
+**Spec Artifact Guard (Mandatory)**:
+
+Before routing to `#3_gofer_plan`, `#4_gofer_tasks`, `#5_gofer_implement`, or
+`#6_gofer_validate`, confirm that `.specify/specs/{feature}/spec.md` exists and
+is not the unfilled `spec-template.md` copy created by feature bootstrap. A
+missing, empty, or placeholder-filled spec always routes back to
+`#2_gofer_specify`, even when `pipeline-state.json`, `plan.md`, `tasks.md`, or
+validation artifacts imply later progress. Gofer must never plan, task,
+implement, or validate a feature from research or plan artifacts alone.
 
 **Fallback — File-existence heuristics** (used when no pipeline-state.json
 exists):
