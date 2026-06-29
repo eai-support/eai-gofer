@@ -96,6 +96,7 @@ This command expects:
 - Feature directory already created at `.specify/specs/{feature}/`
 - `research.md` completed from `/1_gofer_research`
 - `goal-ledger.json` seeded from `/1_gofer_research`
+- `loop-contract.json` seeded from `/1_gofer_research`
 - `proposal-review.md` if research created supporting review context
 
 If these don't exist, prompt user to run `/1_gofer_research` first.
@@ -161,6 +162,10 @@ Before starting specification, assess context window health:
    - Note whether proposal-review.md exists
    - Note whether goal-ledger.json exists and which goals, metrics, delivery
      states, and re-loop triggers it records
+   - Note whether loop-contract.json exists and which evaluation commands,
+     success criteria, stop conditions, and escalation rules it records
+   - If loop-contract.json is missing, initialize it with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 2_specify --init --json`
 
 3. **Note template path**: `.specify/templates/spec-template.md`
 
@@ -240,6 +245,7 @@ Feature directory: {FEATURE_DIR}
 Read these files for full context:
 - {FEATURE_DIR}/research.md — Codebase analysis, integration points, patterns, constraints
 - {FEATURE_DIR}/goal-ledger.json — machine-readable goals, metrics, delivery states, and re-loop triggers
+- {FEATURE_DIR}/loop-contract.json — bounded loop objective, evaluation commands, success criteria, stop conditions, and escalation rules
 - {FEATURE_DIR}/proposal-review.md — Supporting business scenario, architecture direction, options, overrides (read if exists, skip if not)
 - .specify/templates/spec-template.md — Template structure to follow
 - {FEATURE_DIR}/discovery.md — Business discovery findings (read if exists, skip if not)
@@ -264,11 +270,12 @@ Generate the COMPLETE spec.md following this structure:
 10. Glossary — Key terms
 11. Research Traceability — Matrix mapping each research finding to a spec section
 12. Goal Ledger Alignment — Goal IDs, outcomes, metrics/targets, linked stories, linked requirements
-13. AI-Augmented 4-Step Journey — required for app delivery, not applicable for explicit non-app work
-14. UI Preview And Approval Gate — required for app delivery, not applicable for explicit non-app work
-15. EAI Platform/Azure App Stack Policy — required for app delivery, not applicable for explicit non-app work
-16. EnterpriseAI Service Fit — required for app delivery, not applicable for explicit non-app work
-17. EnterpriseAI Contract Pack Summary — actors, object types, workflows, permissions, APIs/events, runtime assumptions, acceptance tests
+13. Loop Contract Alignment — loop objective, success criteria, required eval commands, max-iteration stop rules, and human escalation triggers
+14. AI-Augmented 4-Step Journey — required for app delivery, not applicable for explicit non-app work
+15. UI Preview And Approval Gate — required for app delivery, not applicable for explicit non-app work
+16. EAI Platform/Azure App Stack Policy — required for app delivery, not applicable for explicit non-app work
+17. EnterpriseAI Service Fit — required for app delivery, not applicable for explicit non-app work
+18. EnterpriseAI Contract Pack Summary — actors, object types, workflows, permissions, APIs/events, runtime assumptions, acceptance tests
 
 If discovery.md exists, use it to:
 - Use Problem Statement for Overview motivation
@@ -648,6 +655,7 @@ After spec.md is complete:
 ```
 ✓ Specification complete: {FEATURE_DIR}/spec.md
 ✓ Goal ledger aligned: {FEATURE_DIR}/goal-ledger.json
+✓ Loop contract aligned: {FEATURE_DIR}/loop-contract.json
 
 Summary:
 - [N] User Stories defined
