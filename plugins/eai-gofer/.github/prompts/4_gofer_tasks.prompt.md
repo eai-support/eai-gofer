@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: 4ce043e3c6472ecd174a68f7b1c290287f3e2b25081c0257fe2867c1a7589d4c
+  canonicalChecksum: d50dc843a80cce32adba64ed1a9973287f658c7e2a151ec90c179ab05d7b427e
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -106,6 +106,15 @@ This command expects in `.specify/specs/{feature}/`:
 If missing, prompt user to run the prerequisite stage.
 
 ---
+
+## Spec Artifact Guard
+
+Before task generation, `.specify/scripts/bash/check-prerequisites.sh --json`
+must confirm that `{FEATURE_DIR}/spec.md` exists, is non-empty, and is not the
+unfilled spec template. If the helper reports `spec.md` as missing, empty, or
+`template`, stop and run `#2_gofer_specify` before generating tasks. Do not
+infer tasks from `plan.md` alone because acceptance criteria and protected
+boundaries live in the spec.
 
 ## Outline
 

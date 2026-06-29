@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 0e076fb1934d6dbf32029d3ea07dbb7d1e263416d005b97200c0acb062c0b863
+  canonicalChecksum: fa2b436e30882a5a7649fdb597d728a3c2e5cbc9aa63e79ed5ec2a48e3455a51
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -105,6 +105,16 @@ This command expects in `.specify/specs/{feature}/`:
 If missing, prompt user to run the prerequisite stage.
 
 ---
+
+## Spec Artifact Guard
+
+Before implementation, `.specify/scripts/bash/check-prerequisites.sh --json
+--require-tasks --include-tasks` must confirm that `{FEATURE_DIR}/spec.md`
+exists, is non-empty, and is not the unfilled spec template. If the helper
+reports `spec.md` as missing, empty, or `template`, stop and run
+`#2_gofer_specify` before editing code. Implementation must never proceed from
+`tasks.md` or `plan.md` without an authoritative spec for acceptance criteria
+and protected boundaries.
 
 ## Outline
 
@@ -726,6 +736,14 @@ separation from `tasks.md`:
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
   `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded
   by the preflight artifact instead of improvising a new sequence.
+- For v4 passive ResourceAPI search, treat `capabilities.search.fulltext`,
+  `capabilities.search.hybrid`, and `capabilities.search.vector` from
+  `eai resources storage doctor --tenant-id <tenant-id> --format json` as
+  separate readiness states. If hybrid/vector are unavailable but fulltext is
+  ready, use `eai resources search "<query>" --fulltext --tenant-id <tenant-id>`
+  and record semantic search as a deferred platform capability only when the
+  business scenario genuinely requires it. Do not apply this fallback to legacy
+  v1/v3 or active ResourceAPI behavior.
 - If a browser or runtime auth log reports `AADSTS50011`, `redirect_uri`,
   "reply URL specified in the request does not match", or
   `/api/auth/callback/microsoft-entra-id`, match
