@@ -50,9 +50,10 @@ mapping when the kickoff needs deeper framing.
 Save session state and create a handoff checkpoint for resumption in a new
 context.
 
-### 8_gofer_resume
+### 8_gofer_branding
 
-Resume a previous Gofer session from a saved checkpoint file.
+Brand Gofer templates and stakeholder documents for a company or consulting-firm
+look and feel.
 
 ### 9_gofer_tests
 

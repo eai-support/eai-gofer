@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: f2be5116f2bbc234c2a3c9b342856c182f7d49c4b993766fc555ec256598e12e
+  canonicalChecksum: 2bdf1c12e6696f6dc71cd4612137fd6d127bcc5022b0c0e3ab40b6953bcf1f5f
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -25,8 +25,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -37,32 +44,52 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should
+     still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json`
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
-
+6. If the user says yes, run the Gofer workspace bootstrap helper and then
+   resume this command from the top.
+7. If the user says no, stop and explain that Gofer stage/helper work depends on
+   the repo-owned scaffold.
 
 # Gofer Tasks
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -102,7 +129,8 @@ This command expects in `.specify/specs/{feature}/`:
 - `spec.md` - Feature specification (from #2_gofer_specify)
 - `plan.md` - Implementation plan (from #3_gofer_plan)
 - `goal-ledger.json` - Goal and re-loop contract (from /1 and /2)
-- `loop-contract.json` - Bounded evaluation and stop-condition contract (from /1 and /3)
+- `loop-contract.json` - Bounded evaluation and stop-condition contract (from /1
+  and /3)
 
 If missing, prompt user to run the prerequisite stage.
 
@@ -126,7 +154,9 @@ boundaries live in the spec.
 5. Engineer review gate
 6. Optional multi-perspective review
 7. Approval gate
-8. Output: `tasks.md`, `traceability.md`, `issues.md`
+8. Output: `tasks.md`, `traceability.md`, `issues.md`,
+   `working-backwards-prfaq.md`, `prfaq-history/04-tasks.md`, and
+   `stakeholder-review-index.md`
 
 ---
 
@@ -427,6 +457,25 @@ node .specify/scripts/node/generate-issues.js "$FEATURE_DIR"
 
 This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
 
+### 6.5 Update Working Backwards PR/FAQ Delivery Plan
+
+Before the approval gate:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - Add Delivery / Operations FAQ content from `tasks.md`, `traceability.md`,
+     `issues.md`, dependencies, phase ordering, launch gates, rollback/support
+     notes, and loop eval tasks.
+   - Update Evidence Links for `tasks.md`, `traceability.md`,
+     `loop-contract.json`, and `issues.md`.
+2. Write `{FEATURE_DIR}/prfaq-history/04-tasks.md` as an immutable snapshot.
+3. Update `{FEATURE_DIR}/stakeholder-review-index.md`.
+   - Mark Business Owner and CTO decisions that changed because of task
+     sequencing or scope boundaries.
+   - Add Delivery review ask for dependencies, protected files, MVP scope,
+     parallel work, release gates, and rollback/support plan.
+4. Do not remove or weaken the task approval gate. The PR/FAQ and review index
+   summarize what is ready; `tasks.md` remains the implementation authority.
+
 ---
 
 ## Step 7: Approval Gate
@@ -470,6 +519,9 @@ Display the task summary and request explicit approval:
   - {FEATURE_DIR}/traceability.md
   - {FEATURE_DIR}/loop-contract.json (updated if evaluation commands changed)
   - {FEATURE_DIR}/issues.md ([N] GitHub issues)
+  - {FEATURE_DIR}/working-backwards-prfaq.md
+  - {FEATURE_DIR}/prfaq-history/04-tasks.md
+  - {FEATURE_DIR}/stakeholder-review-index.md
 
 ════════════════════════════════════════════════════════════════
   APPROVAL REQUIRED BEFORE IMPLEMENTATION
@@ -525,7 +577,6 @@ After approval received:
 Engineering Review: PASSED (cycle [N] of 5)
 ```
 
-
 ---
 
 ## Ordered Runnable Task-Generation Guidance
@@ -534,24 +585,23 @@ The standard Gofer workflow is the public default. EnterpriseAI task generation
 is migration-only and used only when `workflowProfile` is explicitly
 `enterpriseai`.
 
-When the workflow profile is explicitly `enterpriseai`,
-`tasks.md` MUST emit deployment
-tasks in the following ordered chain. Each task is independently runnable and
-the ordering enforces scaffold before deployment so that runtime contract and
-deploy-doctor evidence exist before any deploy command runs.
+When the workflow profile is explicitly `enterpriseai`, `tasks.md` MUST emit
+deployment tasks in the following ordered chain. Each task is independently
+runnable and the ordering enforces scaffold before deployment so that runtime
+contract and deploy-doctor evidence exist before any deploy command runs.
 
 0. **EAI readiness unblock -> `eai-preflight.md`**
    - If `{FEATURE_DIR}/eai-preflight.md` is missing, stale, or blocked, emit
      only the smallest runnable unblock tasks before normal build tasks:
      install/update `eai`, run `eai login`, run `eai tenant select`, confirm a
      tenant-admin membership with `eai tenant list --format json`, initialize
-     the EAI app template with `eai init <app-name> --skip-prompts
-     --company-tenant <tenant-id>` when confirmed, and confirm app enrollment
-     with `eai app list/create/select`.
+     the EAI app template with
+     `eai init <app-name> --skip-prompts --company-tenant <tenant-id>` when
+     confirmed, and confirm app enrollment with `eai app list/create/select`.
    - Do not emit object-type, UI, implementation, deployment, or service-fit
      tasks until EAI readiness is `ready` or explicitly deferred by the user.
-   - Never invent tenant IDs, app keys, app URLs, or platform capabilities.
-     Use `eai --describe`, public EAI docs, and the user's confirmed tenant/app
+   - Never invent tenant IDs, app keys, app URLs, or platform capabilities. Use
+     `eai --describe`, public EAI docs, and the user's confirmed tenant/app
      selection as evidence.
    - Do not emit tasks that establish a non-EAI primary runtime, database,
      hosting platform, or app framework. Non-EAI technologies can appear only as
@@ -569,7 +619,8 @@ deploy-doctor evidence exist before any deploy command runs.
    - Command: `eai deploy trigger --repo <org/repo>`
    - Inherits the `major.minor` pin recorded in `plan.md`.
 4. **Post-deploy smoke gate -> `eai deploy doctor`**
-   - Command: `mkdir -p .eai && eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json`
+   - Command:
+     `mkdir -p .eai && eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json`
    - Captures black-box runtime smoke evidence for `/health`, Auth.js,
      PublicAPI/BFF reachability, tenant/workflow config, and declared smoke
      tests.
@@ -582,9 +633,9 @@ The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to sca
 For **application delivery**, task generation MUST treat the UI-first gate as a
 precondition to downstream implementation tasks:
 
-- If `{FEATURE_DIR}/ui-approval.md` does not exist or is not approved, emit
-  only the blocking preview/approval tasks needed to reach approval; do **not**
-  emit downstream implementation tasks as if the UI were already settled.
+- If `{FEATURE_DIR}/ui-approval.md` does not exist or is not approved, emit only
+  the blocking preview/approval tasks needed to reach approval; do **not** emit
+  downstream implementation tasks as if the UI were already settled.
 - If `{FEATURE_DIR}/service-fit-matrix.md` is missing or does not distinguish
   accessible now vs purchasable vs unavailable platform capabilities, emit a
   blocking service-fit task group before normal build tasks.
@@ -607,9 +658,9 @@ precondition to downstream implementation tasks:
   move into a reusable package lane, including Storybook story ID coverage,
   theme override points, exports, and compatibility checks.
 - Add source-platform decoupling tasks whenever a block or package lane is not
-  restricted-source and still depends on source-platform internals; the task must define the
-  resource-schema or adapter boundary and the regression proof that source-platform coupling is no
-  longer required by the public surface.
+  restricted-source and still depends on source-platform internals; the task
+  must define the resource-schema or adapter boundary and the regression proof
+  that source-platform coupling is no longer required by the public surface.
 - Add public-readiness tasks for external and hybrid profiles covering public
   exports, docs/examples where already part of the package surface,
   accessibility/theming contracts, consumer smoke tests, and unsupported
@@ -624,10 +675,10 @@ precondition to downstream implementation tasks:
 - EAI readiness unblock -> `eai-preflight.md` before any remote platform task.
 - App resource provisioning -> `eai app provision` before any claim of
   object-type seeding or preview readiness.
-- Object-type publish -> `eai types seed` only after provisioning and
-  validation are complete.
-- Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
-  before preview/runtime signoff.
+- Object-type publish -> `eai types seed` only after provisioning and validation
+  are complete.
+- Schema and storage health -> `eai resources schema` / storage diagnostics /
+  `eai verify` before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,
@@ -648,10 +699,10 @@ precondition to downstream implementation tasks:
   - update `ui-review-log.md`
   - block downstream work until `ui-approval.md` is approved
 - App-delivery service-fit tasks that update `service-fit-matrix.md` using
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
-  select`, `eai resources schema --format json`, `eai workflow readiness
-  --format json`, `eai verify calls --format json`, or equivalent approved
-  platform evidence.
+  tenant-aware evidence from `eai --describe`, `eai whoami`,
+  `eai tenant select`, `eai resources schema --format json`,
+  `eai workflow readiness --format json`, `eai verify calls --format json`, or
+  equivalent approved platform evidence.
 - A scope-control task that checks whether any user-facing app process exceeds
   four steps and either combines/automates extra steps or records the approved
   exception and rationale.
@@ -669,8 +720,8 @@ When a command-line workflow is expected to update platform state, `tasks.md`
 MUST order work like this unless the plan proves a different authoritative
 dependency:
 
-0. Respect the real EAI app gates before any claim of seeding, schema
-   readiness, or preview readiness.
+0. Respect the real EAI app gates before any claim of seeding, schema readiness,
+   or preview readiness.
 1. Define or extend the authoritative storage model.
 2. Implement platform-side orchestrator writes into those stores.
 3. Implement secret/config persistence if secrets or environment state are part
@@ -695,17 +746,17 @@ Logs to: `.specify/logs/pipeline.jsonl`
 
 ---
 
-
-
 ## Pipeline Continuation
 
 This completes the 4_gofer_tasks stage. To continue the Gofer pipeline:
 
 **Next Command:** `#5_gofer_implement`
 
-The next stage will read the artifacts from this stage and continue the workflow automatically.
+The next stage will read the artifacts from this stage and continue the workflow
+automatically.
 
-**Note:** Copilot Chat supports context preservation. Your conversation history will be maintained as you progress through pipeline stages.
+**Note:** Copilot Chat supports context preservation. Your conversation history
+will be maintained as you progress through pipeline stages.
 
 ## Key Rules
 

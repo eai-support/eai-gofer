@@ -489,7 +489,7 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
     if (state.autoHandoffTrigger) {
       state.autoHandoffTrigger.setContextBuilder(contextBuilder);
 
-      // Wire SlopReducer to AutoHandoffTrigger (enables auto-reduce before save/clear/resume)
+      // Wire SlopReducer to AutoHandoffTrigger (enables auto-reduce before save/clear/continue)
       const { SlopReducer } = await import('./autonomous/SlopReducer');
       const slopReducer = new SlopReducer(workspacePath);
       state.autoHandoffTrigger.setSlopReducer(slopReducer);

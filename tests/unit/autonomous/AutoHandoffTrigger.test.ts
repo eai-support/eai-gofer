@@ -431,7 +431,7 @@ describe('AutoHandoffTrigger', () => {
       });
 
       expect(doc).toContain('## Resume Instructions');
-      expect(doc).toContain('/8_gofer_resume');
+      expect(doc).toContain('session-checkpoint.md');
     });
 
     it('should include Failed Approaches section when JSONL entries exist', () => {
@@ -807,7 +807,7 @@ describe('AutoHandoffTrigger', () => {
       autoSaveTrigger.dispose();
     });
 
-    it('should send save/clear/resume cycle to pty when autoExecuteSave is enabled', async () => {
+    it('should send save/clear/continue cycle to pty when autoExecuteSave is enabled', async () => {
       const mockPty = { sendText: vi.fn() };
       const autoSaveTrigger = new AutoHandoffTrigger({
         autoExecuteSave: true,
@@ -822,9 +822,11 @@ describe('AutoHandoffTrigger', () => {
       await vi.runAllTimersAsync();
 
       expect(mockPty.sendText).toHaveBeenCalledWith('/7_gofer_save');
-      // After checkpoint timeout + clear + delay, /8_gofer_resume is sent
+      // After checkpoint timeout + clear + delay, a checkpoint continuation prompt is sent
       expect(mockPty.sendText).toHaveBeenCalledWith('/clear');
-      expect(mockPty.sendText).toHaveBeenCalledWith('/8_gofer_resume');
+      expect(mockPty.sendText).toHaveBeenCalledWith(
+        expect.stringContaining('session-checkpoint.md')
+      );
 
       autoSaveTrigger.dispose();
     });
@@ -866,10 +868,10 @@ describe('AutoHandoffTrigger', () => {
       autoSaveTrigger.setClaudeVscodeTerminal(mockPty as unknown as vscode.Terminal);
       autoSaveTrigger.connect(monitor);
 
-      // First auto-save — save/clear/resume sends 3 commands
+      // First auto-save — save/clear/continue sends 3 terminal entries
       monitor.emit('auto-save', createAutoSaveStatus());
       await vi.runAllTimersAsync();
-      expect(mockPty.sendText).toHaveBeenCalledTimes(3); // /7_gofer_save, /clear, /8_gofer_resume
+      expect(mockPty.sendText).toHaveBeenCalledTimes(3); // /7_gofer_save, /clear, checkpoint prompt
 
       // Second auto-save immediately — should be blocked by cooldown
       monitor.emit('auto-save', createAutoSaveStatus());
@@ -959,9 +961,11 @@ describe('AutoHandoffTrigger', () => {
       // auto-save should have fired: /7_gofer_save sent to terminal
       expect(mockPty.sendText).toHaveBeenCalledWith('/7_gofer_save');
 
-      // save/clear/resume cycle sends all three commands to the same pty
+      // save/clear/continue cycle sends all three terminal entries to the same pty
       expect(mockPty.sendText).toHaveBeenCalledWith('/clear');
-      expect(mockPty.sendText).toHaveBeenCalledWith('/8_gofer_resume');
+      expect(mockPty.sendText).toHaveBeenCalledWith(
+        expect.stringContaining('session-checkpoint.md')
+      );
 
       // Usage logger should have recorded the auto-save event
       expect(mockLogger.logHandoff).toHaveBeenCalledWith(
@@ -1079,7 +1083,7 @@ describe('AutoHandoffTrigger', () => {
       });
       await vi.runAllTimersAsync();
 
-      // save/clear/resume sends 3 commands
+      // save/clear/continue sends 3 terminal entries
       expect(mockPty.sendText).toHaveBeenCalledTimes(3);
 
       // Continue above threshold: 75% → 80% — should NOT fire again (edge detection)
@@ -1251,14 +1255,16 @@ describe('AutoHandoffTrigger', () => {
       // Simulate Claude creating the checkpoint file (what /7_gofer_save does)
       fs.writeFileSync(path.join(specDir, 'session-checkpoint.md'), '---\nstatus: paused\n---\n');
 
-      // Advance timers through the full save/clear/resume cycle:
-      // 500ms (save \r) + 1000ms (checkpoint poll) + 500ms (clear \r) + 2000ms (clear pause) + 500ms (resume \r) = 4500ms
+      // Advance timers through the full save/clear/continue cycle:
+      // 500ms (save \r) + 1000ms (checkpoint poll) + 500ms (clear \r) + 2000ms (clear pause) + 500ms (prompt \r) = 4500ms
       await vi.advanceTimersByTimeAsync(5000);
 
       expect(mockPty.sendText).toHaveBeenCalledWith('/7_gofer_save');
-      // After checkpoint detected, /clear and /8_gofer_resume follow
+      // After checkpoint detected, /clear and a continuation prompt follow
       expect(mockPty.sendText).toHaveBeenCalledWith('/clear');
-      expect(mockPty.sendText).toHaveBeenCalledWith('/8_gofer_resume');
+      expect(mockPty.sendText).toHaveBeenCalledWith(
+        expect.stringContaining('session-checkpoint.md')
+      );
 
       rapidTrigger.dispose();
       rapidMonitor.dispose();

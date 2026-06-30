@@ -13,18 +13,29 @@ tasks -> implement -> validate.
 Key commands: `/1_gofer_research`, `/2_gofer_specify`, `/3_gofer_plan`,
 `/4_gofer_tasks`, `/5_gofer_implement`, `/6_gofer_validate`. `/6_gofer_validate`
 is the terminal quality gate and includes the final engineering review loop. Use
-`/7_gofer_save` and `/8_gofer_resume` for session continuity. Optional helpers
-like `/0a_problem_validation`, `/7a_stakeholder_comms`,
-`/gofer:check-workspace`, and `/gofer:bootstrap-workspace` support the workflow
-without adding extra core stages. Artifacts in `.specify/specs/{feature}/`.
+`/7_gofer_save` for checkpoints and `/8_gofer_branding` for branded
+document/deck templates. Optional helpers like `/0a_problem_validation`,
+`/7a_stakeholder_comms`, `/gofer:check-workspace`, and
+`/gofer:bootstrap-workspace` support the workflow without adding extra core
+stages. Artifacts in `.specify/specs/{feature}/`.
 
 ## Token And Cost Policy
 
-- Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned model policy. Use Copilot `Auto` for simple/default work unless the user explicitly chooses a specific model.
-- Use the cheapest capable model first. Prefer compact Copilot prompts and built-in workspace context; only choose paid/high-tier chat models when the task is ambiguous, security-sensitive, release-critical, or a cheaper pass fails.
-- Keep raw command and search output out of chat context. Save durable summaries to `.specify/specs/{feature}/context-bundle.md` and continue from artifacts.
-- Reuse stable non-secret prefixes for provider caching where supported: Gofer scaffold, AGENTS/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-- After large research, planning, implementation, or validation bursts, checkpoint artifacts and compact/clear/resume context when the host supports it.
+- Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned model
+  policy. Use Copilot `Auto` for simple/default work unless the user explicitly
+  chooses a specific model.
+- Use the cheapest capable model first. Prefer compact Copilot prompts and
+  built-in workspace context; only choose paid/high-tier chat models when the
+  task is ambiguous, security-sensitive, release-critical, or a cheaper pass
+  fails.
+- Keep raw command and search output out of chat context. Save durable summaries
+  to `.specify/specs/{feature}/context-bundle.md` and continue from artifacts.
+- Reuse stable non-secret prefixes for provider caching where supported: Gofer
+  scaffold, AGENTS/Copilot instructions, constitution, repo map, stage
+  contracts, and validation rubric.
+- After large research, planning, implementation, or validation bursts,
+  checkpoint artifacts and compact/clear/resume context when the host supports
+  it.
 
 ## Code Quality
 

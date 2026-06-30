@@ -447,7 +447,7 @@ The clean UX rule is: use plain numbered stage commands in initialized repos, an
 
 \`/6_gofer_validate\` is the terminal quality gate. It includes the final engineering review loop and replaces the old standalone review stage in the core pipeline.
 
-Optional helpers like \`/0a_problem_validation\`, \`/7_gofer_save\`, \`/8_gofer_resume\`, \`/9_gofer_tests\`, \`/7a_stakeholder_comms\`, \`/gofer:check-workspace\`, \`/gofer:bootstrap-workspace\`, and \`/gofer:eai-first-run\` remain available outside the core 0-6 stage sequence.
+Optional helpers like \`/0a_problem_validation\`, \`/7_gofer_save\`, \`/8_gofer_branding\`, \`/9_gofer_tests\`, \`/7a_stakeholder_comms\`, \`/gofer:check-workspace\`, \`/gofer:bootstrap-workspace\`, and \`/gofer:eai-first-run\` remain available outside the core 0-6 stage sequence.
 
 ## Distribution Modes
 

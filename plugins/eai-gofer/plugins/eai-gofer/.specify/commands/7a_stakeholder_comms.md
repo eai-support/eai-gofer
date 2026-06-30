@@ -1,7 +1,9 @@
 ---
 name: 7a_stakeholder_comms
-description: "Generate stakeholder-facing communications: release notes, demo scripts, and change briefs."
-title: "Stakeholder Communications"
+description:
+  'Generate stakeholder-facing communications: release notes, demo scripts, and
+  change briefs.'
+title: 'Stakeholder Communications'
 category: utility
 surfaces:
   - claude
@@ -15,29 +17,49 @@ surfaces:
   - system-skills
 aliases: [gofer:comms]
 ---
+
 ---
-description:
-  Generate stakeholder communications package including release notes, demo
-  script, change management brief, and success metrics
+
+description: Generate stakeholder communications package including release
+notes, demo script, change management brief, and success metrics
+
 ---
 
 # Gofer Stakeholder Communications
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -57,6 +79,15 @@ This command expects in `.specify/specs/{feature}/`:
 - `spec.md` — Feature specification (from /2_gofer_specify)
 - `spec-summary.md` — Executive summary (from /2_gofer_specify)
 - `assumptions.md` — Tracked assumptions
+- `working-backwards-prfaq.md` — Running product release PR/FAQ updated by
+  stages 0-6
+- `business-owner-summary.md` — Business Owner summary updated by stages 1, 2,
+  5, and 6
+- `cto-architecture-summary.md` — CTO/Architecture summary updated by stages 3,
+  5, and 6
+- `ciso-security-summary.md` — CISO/Risk summary updated by /6_gofer_validate
+- `stakeholder-review-index.md` — Current stakeholder review status and
+  approve/revise/defer asks
 
 If `validation-report.md` doesn't exist or shows FAIL, do NOT generate comms.
 Instead, inform the user that validation must pass first.
@@ -99,6 +130,15 @@ Instead, inform the user that validation must pass first.
    Parse JSON for FEATURE_DIR
 
 2. **Load all business artifacts**:
+   - `working-backwards-prfaq.md` — Running product release PR/FAQ and internal
+     FAQ
+   - `stakeholder-review-index.md` — Review status and required approvals
+   - `business-owner-summary.md` — Business scenario, process, value,
+     assumptions
+   - `cto-architecture-summary.md` — Architecture, EAI Platform/Azure fit,
+     auth/tenant/data/contracts
+   - `ciso-security-summary.md` — Security posture, controls, residual risk,
+     validation evidence
    - `problem-brief.md` — Original problem and business case
    - `discovery.md` — Business discovery context
    - `spec-summary.md` — Executive summary
@@ -126,6 +166,11 @@ Prompt: "Generate stakeholder communications for feature [FEATURE_NAME].
 Feature directory: {FEATURE_DIR}
 
 Read and use:
+- working-backwards-prfaq.md for the product-release story and FAQ
+- stakeholder-review-index.md for review status and approval asks
+- business-owner-summary.md for business scenario, process, value, and assumptions
+- cto-architecture-summary.md for architecture, EAI Platform/Azure fit, auth, tenancy, data, and contracts
+- ciso-security-summary.md for controls, residual risk, security evidence, and launch gates
 - problem-brief.md for original problem context
 - discovery.md for business discovery findings
 - spec.md for what was specified
@@ -173,13 +218,19 @@ Return structured report (<2000 tokens)."
 Write to `{FEATURE_DIR}/stakeholder-comms.md` using the template at
 `.specify/templates/stakeholder-comms-template.md`.
 
-Populate with comms-writer agent findings. Ensure:
+Populate with comms-writer agent findings and the running PR/FAQ/persona
+summaries. Ensure:
 
 - **All language is non-technical** — no jargon, no acronyms without explanation
 - **Impact is quantified** — use numbers from problem-brief.md
 - **Demo script is actionable** — someone could run the demo from this document
 - **Change management is realistic** — phased rollout with success criteria
 - **Metrics are tied to problem** — connect back to original business case
+- **The PR/FAQ is preserved** — include a "Product Release PR/FAQ" section or
+  direct links to `working-backwards-prfaq.md` and its stage snapshots
+- **Persona summaries are visible** — include links and decision status for
+  `business-owner-summary.md`, `cto-architecture-summary.md`, and
+  `ciso-security-summary.md`
 
 ---
 
@@ -251,12 +302,21 @@ stakeholder communications explaining what changed and why.
 ════════════════════════════════════════════════════════════════
 
   Deliverables:
+  - {FEATURE_DIR}/working-backwards-prfaq.md
+  - {FEATURE_DIR}/business-owner-summary.md
+  - {FEATURE_DIR}/cto-architecture-summary.md
+  - {FEATURE_DIR}/ciso-security-summary.md
+  - {FEATURE_DIR}/stakeholder-review-index.md
   - {FEATURE_DIR}/stakeholder-comms.md
   - {FEATURE_DIR}/business-metrics.md
   - {FEATURE_DIR}/assumptions.md (updated)
 
   Package includes:
+  - Product Release PR/FAQ
   - Executive Summary
+  - Business Owner Summary
+  - CTO Architecture Summary
+  - CISO Security Summary
   - Release Notes (non-technical)
   - Demo Script (5-minute walkthrough)
   - Change Management Brief
@@ -287,17 +347,16 @@ stakeholder communications explaining what changed and why.
 
 ---
 
-## Marp Presentation Deck (EnterpriseAI Profile Extension)
+## Marp Presentation Deck (Recommended For Stakeholder Review)
 
-The standard Gofer workflow is the public default. Marp output is opt-in per run
-and remains recommended only for `workflowProfile=enterpriseai`. When Marp output
-is enabled, generate the general stakeholder deck and the persona deck pack.
-Standard-profile runs skip this step only when the user explicitly opts out;
-Release Notes and the Demo Script (5-minute walkthrough) remain the core
+When stakeholders need a simple walkthrough, generate the general stakeholder
+deck and, for larger changes, the persona deck pack. Skip decks only for small
+docs-only or purely mechanical changes where a short Markdown summary is
+clearer. Release Notes and the Demo Script (5-minute walkthrough) remain core
 deliverables as `release-notes.md` and `demo-script.md`.
 
-When enabled, generate `{FEATURE_DIR}/presentation.marp.md`. The file MUST use
-Marp frontmatter and the canonical EnterpriseAI slide deck structure:
+When a deck is generated, write `{FEATURE_DIR}/presentation.marp.md`. The file
+MUST use Marp frontmatter and the canonical stakeholder slide deck structure:
 
 ```markdown
 ---
@@ -345,18 +404,18 @@ Every section title above (`Problem Statement`,
 
 Generate these additional decks under `{FEATURE_DIR}/presentations/`:
 
-| Deck | Decision-Rights Audience | Required Focus |
-| ---- | ------------------------ | -------------- |
-| `executive.marp.md` | Executive committee | Strategic value, funding gate, risk appetite |
-| `business.marp.md` | Business owner | User journey, operational value, adoption |
-| `internal-delivery.marp.md` | Delivery lead | Dependency plan, red/green loop, delivery risks |
-| `enterprise-architecture.marp.md` | Enterprise architecture | Platform fit, context bundle, contract pack, reuse decisions |
-| `ciso.marp.md` | CISO | Identity, tenant boundary, controls, residual risk |
-| `data-architecture.marp.md` | Data architecture | Object types, lineage, quality, governance |
-| `cio.marp.md` | CIO | Platform strategy, operating model, reuse roadmap |
-| `cfo.marp.md` | CFO | Investment case, benefit tracking, cost risk |
-| `coo.marp.md` | COO | Process change, rollout readiness, support model |
-| `risk-compliance.marp.md` | Risk/compliance | Obligations, evidence, exceptions, audit trail |
+| Deck                              | Decision-Rights Audience | Required Focus                                               |
+| --------------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `executive.marp.md`               | Executive committee      | Strategic value, funding gate, risk appetite                 |
+| `business.marp.md`                | Business owner           | User journey, operational value, adoption                    |
+| `internal-delivery.marp.md`       | Delivery lead            | Dependency plan, red/green loop, delivery risks              |
+| `enterprise-architecture.marp.md` | Enterprise architecture  | Platform fit, context bundle, contract pack, reuse decisions |
+| `ciso.marp.md`                    | CISO                     | Identity, tenant boundary, controls, residual risk           |
+| `data-architecture.marp.md`       | Data architecture        | Object types, lineage, quality, governance                   |
+| `cio.marp.md`                     | CIO                      | Platform strategy, operating model, reuse roadmap            |
+| `cfo.marp.md`                     | CFO                      | Investment case, benefit tracking, cost risk                 |
+| `coo.marp.md`                     | COO                      | Process change, rollout readiness, support model             |
+| `risk-compliance.marp.md`         | Risk/compliance          | Obligations, evidence, exceptions, audit trail               |
 
 Every persona deck MUST include:
 
@@ -393,6 +452,25 @@ node .specify/scripts/node/lib/assemble-stakeholder-pack.mjs $FEATURE_DIR
 The assembler writes `{FEATURE_DIR}/stakeholder-pack.md` and prints which
 artifacts were included vs. missing so the operator can re-run the relevant
 visual generators if needed.
+
+Before presenting the pack, review the included visuals against the visual
+explanation quality gate used by `/6_gofer_validate`:
+
+- Each visual answers one stakeholder question and is simple enough to read
+  without external docs.
+- Each visual has a plain-language preamble, audience, source inputs, and
+  requirement/plan/code/test/EAI evidence links.
+- Each Mermaid/D2/Structurizr-style diagram renders or includes a markdown/text
+  fallback; each UI picture has screenshot, Storybook/component, Playwright, or
+  equivalent render proof.
+- `presentation.marp.md` should exist for substantive stakeholder-facing changes
+  unless the change is small, docs-only, or better explained by a short Markdown
+  summary. If skipped, record the reason in `stakeholder-comms.md`.
+- Every human-facing document starts with a three-to-five-bullet executive
+  summary that explains the decision, value, risk, evidence, and next ask in
+  simple language.
+- Any stale, crowded, private-data-bearing, or untraceable visual is called out
+  in `stakeholder-review-index.md` as `revise visuals <artifact>`.
 
 ---
 

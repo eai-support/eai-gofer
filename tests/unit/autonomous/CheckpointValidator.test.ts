@@ -19,7 +19,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ## Key Decisions
 
@@ -49,7 +49,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ${padding}
 `;
@@ -71,7 +71,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ${padding}
 `;
@@ -92,7 +92,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ## Key Decisions
 
@@ -118,7 +118,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ## Key Decisions
 
@@ -145,7 +145,7 @@ status: in_progress
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 
 ## Key Decisions
 
@@ -179,7 +179,7 @@ session_id: test-123
 
 # Session Handoff
 
-Resume with /8_gofer_resume
+Continue from session-checkpoint.md
 `;
 
       const result = validator.validate(content);

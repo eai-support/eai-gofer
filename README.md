@@ -83,11 +83,36 @@ Gofer now treats the pipeline as a closed loop, not just a straight line:
   evidence, and writes `goal-rebaseline-report.md` when goals, assumptions,
   contracts, UX scope, or implementation drift.
 
+Each stage also maintains a running product-release PR/FAQ in
+`working-backwards-prfaq.md`, with immutable stage snapshots in
+`prfaq-history/`. Gofer uses that same evidence to keep stakeholder review
+documents current:
+
+| Persona            | Summary document              | Built from                                                                                                    |
+| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Business Owner     | `business-owner-summary.md`   | `problem-brief.md`, `discovery.md`, `spec-summary.md`, `business-metrics.md`, value stream evidence, ROI      |
+| CTO / Architecture | `cto-architecture-summary.md` | `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams, `service-fit-matrix.md`, EAI preflight           |
+| CISO / Risk        | `ciso-security-summary.md`    | `validation-report.md`, `audit-history.md`, risk heatmap, auth/tenant controls, secret/data handling evidence |
+
+Gofer also scores visual communication as part of `/6_gofer_validate`.
+Architecture, process, security, UI, and EAI Platform visuals must be simple,
+rendered or fallback-safe, source-controlled, traceable to requirements and
+code/test evidence, and safe for public or stakeholder review. Crowded, stale,
+unrendered, or private-data-bearing diagrams fail the architecture compliance
+gate.
+
+Human-facing documents should start with a short executive summary in plain
+language. Mermaid is the default for Markdown-native diagrams, Marp is
+recommended when stakeholders need a slide narrative, D2/Structurizr-style
+source is acceptable when it makes architecture clearer, and UI behavior should
+be backed by screenshots, Storybook/component proof, Playwright evidence, or an
+equivalent render check.
+
 Optional helpers stay outside the core 0-6 flow:
 
 - `/0a_problem_validation`
 - `/7_gofer_save`
-- `/8_gofer_resume`
+- `/8_gofer_branding`
 - `/9_gofer_tests`
 - `/7a_stakeholder_comms`
 - `/gofer:check-workspace`

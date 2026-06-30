@@ -28,7 +28,7 @@ const CLAUDE_ONLY_STAGES = new Set<string>([
   'gofer_constitution',
   'gofer_hydrate',
   '7_gofer_save',
-  '8_gofer_resume',
+  '8_gofer_branding',
 ]);
 
 let cleanRoot: string;

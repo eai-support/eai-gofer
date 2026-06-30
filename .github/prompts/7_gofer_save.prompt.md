@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/7_gofer_save.md
-  canonicalChecksum: 8a83874d6d7e0c4e8d466e14c9d2a0f9d3ae976f3d195863f8c64aad02b37e65
+  canonicalChecksum: 7899fb34376638edf431974d378829a771e8127b590c2dc0c8c62a645756d3d3
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -25,8 +25,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -254,7 +261,8 @@ From tasks.md Protected Files section:
 ```bash
 cd [repo path]
 git checkout [branch]
-#8_gofer_resume
+# Read .specify/specs/[feature]/session-checkpoint.md
+# Continue with #5_gofer_implement or the stage recorded in the checkpoint
 ```
 
 ### Manual Resume Steps
@@ -291,7 +299,9 @@ Add checkpoint marker to tasks.md:
 ```markdown
 ## Checkpoint: [ISO timestamp]
 
-Progress saved at task [TaskID]. Resume with `#8_gofer_resume`.
+Progress saved at task [TaskID]. Resume by reading
+`session-checkpoint.md` in a fresh session and continuing from the recorded
+stage.
 ````
 
 ---
@@ -315,7 +325,7 @@ Progress saved at task [TaskID]. Resume with `#8_gofer_resume`.
   - Tests: [passing/failing/not run]
 
   To resume:
-  #8_gofer_resume
+  Read {FEATURE_DIR}/session-checkpoint.md in a fresh session
 
   Or manually:
   cd [repo] && git checkout [branch]
@@ -399,7 +409,6 @@ This ensures the resume session starts with clean context.
 
 This command works with:
 
-- `#8_gofer_resume` - Paired resume command
 - `#5_gofer_implement` - Can resume implementation
 - `#6_gofer_validate` - Can validate partial progress
 - `#0_business_scenario` - Detects saved sessions

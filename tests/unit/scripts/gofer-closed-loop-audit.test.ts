@@ -139,7 +139,7 @@ function buildGoalLedger(featureDir: string): string {
         {
           assumptionId: 'A1',
           owner: 'team',
-          expiresAt: '2026-06-30T00:00:00Z',
+          expiresAt: '2099-01-01T00:00:00Z',
           revalidateTrigger: 'Goal changes',
           reopenStage: '1_research',
         },
@@ -168,7 +168,7 @@ function createFeatureFixture(workspaceRoot: string): string {
     padMarkdown('# Tasks\n\n- [ ] T001 Maintain goal ledger')
   );
   writeFile(path.join(featureDir, 'traceability.md'), buildTraceability());
-  writeFile(path.join(featureDir, 'assumptions.md'), buildAssumptions('2026-06-30T00:00:00Z'));
+  writeFile(path.join(featureDir, 'assumptions.md'), buildAssumptions('2099-01-01T00:00:00Z'));
   writeFile(path.join(featureDir, 'goal-ledger.json'), buildGoalLedger(featureDir));
   writeFile(path.join(featureDir, 'validation-report.md'), padMarkdown('# Validation Report'));
   writeFile(path.join(workspaceRoot, 'src', 'example.ts'), 'export const example = true;\n');

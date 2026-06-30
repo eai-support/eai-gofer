@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated": "2026-06-29T10:55:20.590Z",
+  "generated": "2026-06-30T00:08:04.838Z",
   "commands": [
     "0_business_scenario",
     "0a_problem_validation",
@@ -13,7 +13,7 @@
     "6_gofer_validate",
     "7_gofer_save",
     "7a_stakeholder_comms",
-    "8_gofer_resume",
+    "8_gofer_branding",
     "9_gofer_tests",
     "gofer:bootstrap-workspace",
     "gofer:check-workspace",
