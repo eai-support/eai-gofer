@@ -12,8 +12,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -160,7 +167,8 @@ During implementation, use these techniques to preserve context quality:
 ```bash
 /7_gofer_save  # Creates comprehensive checkpoint
 # Start new Claude Code session
-/8_gofer_resume  # Restores state with clean context
+# Read .specify/specs/{feature}/session-checkpoint.md
+# Continue with /5_gofer_implement or the stage named in the checkpoint
 ```
 
 ---
@@ -623,7 +631,30 @@ Report Red/Yellow/Gray findings with coverage gaps."
 
 ## Step 12: Report and Continue
 
-After implementation complete and review gate passes:
+After implementation complete, strict loop audit passes, and review gate passes,
+update the stakeholder-facing implementation record:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - In "The Launch" and Delivery / Operations FAQ, describe what is now built.
+   - Add "What changed from plan" when implementation differs from `plan.md`,
+     `tasks.md`, or stakeholder-approved scope.
+   - Link to code/test evidence, `loop-ledger.jsonl`, and any preview evidence.
+2. Write `{FEATURE_DIR}/prfaq-history/05-implement.md` as an immutable
+   implementation snapshot.
+3. Update `{FEATURE_DIR}/business-owner-summary.md` if implementation changed
+   process, scope, user-facing behavior, assumptions, or success metrics.
+4. Update `{FEATURE_DIR}/cto-architecture-summary.md` if implementation changed
+   architecture, EAI Platform/Azure usage, auth, tenancy, data, contracts, or
+   integration boundaries.
+5. Update `{FEATURE_DIR}/stakeholder-review-index.md` with:
+   - Business Owner review ask for implemented behavior and demo readiness.
+   - CTO review ask for implementation deltas against the architecture summary.
+   - Delivery review ask for completed scope, outstanding risks, and rollback
+     evidence.
+6. Do not mark implementation complete unless the existing feedback loops,
+   `loop-ledger.jsonl`, and strict loop audit requirements remain satisfied.
+
+After the stakeholder PR/FAQ artifacts are updated:
 
 ```
 ════════════════════════════════════════════════════════════════
@@ -632,6 +663,9 @@ After implementation complete and review gate passes:
 
   Tasks: [N]/[N] completed
   Loop evidence: {FEATURE_DIR}/loop-ledger.jsonl
+  Working Backwards PR/FAQ: {FEATURE_DIR}/working-backwards-prfaq.md
+  PR/FAQ implementation snapshot: {FEATURE_DIR}/prfaq-history/05-implement.md
+  Stakeholder review index: {FEATURE_DIR}/stakeholder-review-index.md
 
   Phases completed:
   - Phase 1: Setup ✓

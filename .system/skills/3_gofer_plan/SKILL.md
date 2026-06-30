@@ -12,8 +12,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -116,12 +123,15 @@ empty, or `template`, stop and run `/2_gofer_specify`; do not create or refresh
 5. Optional multi-perspective review
 6. Spec coverage validation
 7. Output: `plan.md`, `data-model.md`, `contracts/`, `quickstart.md`
-8. EnterpriseAI profile output: task-ready references to `context-bundle.md`,
+8. Stakeholder PR/FAQ output: `working-backwards-prfaq.md`,
+   `prfaq-history/03-plan.md`, `cto-architecture-summary.md`, and
+   `stakeholder-review-index.md`
+9. EnterpriseAI profile output: task-ready references to `context-bundle.md`,
    `contract-pack.md`, `reuse-scan.md`, `audit-history.md`, and for app
    delivery `ui-review-log.md`, `ui-approval.md`, and
    `service-fit-matrix.md`, including public-readiness, block-porting, source platform
    decoupling, Storybook, theme override, and package-profile decisions
-9. Dynamic-only output: `workflow-dag.md` with shards, inputs, outputs,
+10. Dynamic-only output: `workflow-dag.md` with shards, inputs, outputs,
    reducer expectations, verifier/refuter evidence, budget limits, stop
    conditions, and resumable progress location
 
@@ -387,6 +397,27 @@ These three artifacts (c4-container.md, bounded-context.md, data-model-erd.md)
 are required for the developer persona pack. The persona-pack completeness gate
 at /4_gofer_tasks start will warn if any are missing.
 
+Visual quality requirements for all planning visuals:
+
+- Answer one review question per visual; split rather than crowding when a
+  diagram has more than about seven primary nodes or steps.
+- Include a plain-language preamble, audience, source inputs, and how to read
+  the visual.
+- Use C4 context/container for boundaries and runtime units, ERD for data,
+  sequence/state for flows, heatmaps for risk/capability priority, and
+  screenshots/storyboards for UI behavior.
+- Keep visuals source-controlled and renderable via Mermaid/D2/Structurizr-style
+  text where practical; otherwise include a markdown-table/text fallback.
+- Generate Marp slide output when stakeholder review needs a simple presentation
+  story; skip it only for small docs-only or mechanical changes where Markdown is
+  clearer.
+- Ensure every human-facing document produced by planning starts with a
+  three-to-five-bullet executive summary in plain language.
+- Link each visual to the requirement, plan decision, contract, code/test path,
+  EAI service/template asset, or validation evidence it summarizes.
+- Do not include tenant-private data, secrets, customer identifiers, or
+  screenshots containing private content.
+
 ### Dynamic-Only: Workflow DAG Writer
 
 When `effectiveProfile=dynamic`, write `{FEATURE_DIR}/workflow-dag.md` before
@@ -641,6 +672,28 @@ Report Red/Yellow/Gray findings with coverage gaps."
 
 ## Step 8: Report and Continue
 
+Before reporting completion, update the stakeholder-facing architecture pack:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - Add the current architecture story to Internal FAQ CTO / Architecture.
+   - Explain how the solution uses EAI Platform first, the EAI App Template
+     when app delivery applies, Azure as the preferred supporting substrate,
+     and any approved exception.
+   - Summarize auth, authorization, tenant boundary, data model, integration,
+     contract, and deployment assumptions in plain language.
+2. Write `{FEATURE_DIR}/prfaq-history/03-plan.md` as an immutable snapshot.
+3. Create or update `{FEATURE_DIR}/cto-architecture-summary.md` from
+   `.specify/templates/cto-architecture-summary-template.md` using
+   `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams,
+   `service-fit-matrix.md`, and `eai-preflight.md` when present.
+4. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask
+   CTO / Architecture to approve, revise, or defer the architecture,
+   EAI/Azure fit, auth/tenant model, data model, and integration contracts.
+5. Preserve the existing loop contract: if planning changed eval commands,
+   stop conditions, or escalation rules, update `loop-contract.json` and keep
+   those changes visible in the stakeholder index rather than replacing loop
+   audit behavior.
+
 After all artifacts are created and review gate passes:
 
 ```
@@ -652,6 +705,10 @@ Artifacts created:
 - data-model.md: Entity definitions
 - contracts/: API specifications
 - quickstart.md: Testing guide
+- working-backwards-prfaq.md: Updated product release PR/FAQ
+- prfaq-history/03-plan.md: Architecture-stage PR/FAQ snapshot
+- cto-architecture-summary.md: CTO/EAI Platform architecture review summary
+- stakeholder-review-index.md: Review status and approval asks
 - workflow-dag.md: Dynamic shard/reducer plan (only when effectiveProfile=dynamic)
 
 Engineering Review: PASSED (cycle [N] of 5)

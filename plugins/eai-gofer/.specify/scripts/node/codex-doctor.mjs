@@ -63,7 +63,7 @@ export const CANONICAL_GOFER_STAGES = Object.freeze([
   '6_gofer_validate',
   '7_gofer_save',
   '7a_stakeholder_comms',
-  '8_gofer_resume',
+  '8_gofer_branding',
   '9_gofer_tests',
   '10_gofer_cloud',
   'gofer_constitution',

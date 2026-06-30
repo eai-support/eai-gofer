@@ -12,8 +12,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -116,7 +123,9 @@ boundaries live in the spec.
 5. Engineer review gate
 6. Optional multi-perspective review
 7. Approval gate
-8. Output: `tasks.md`, `traceability.md`, `issues.md`
+8. Output: `tasks.md`, `traceability.md`, `issues.md`,
+   `working-backwards-prfaq.md`, `prfaq-history/04-tasks.md`, and
+   `stakeholder-review-index.md`
 
 ---
 
@@ -417,6 +426,25 @@ node .specify/scripts/node/generate-issues.js "$FEATURE_DIR"
 
 This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
 
+### 6.5 Update Working Backwards PR/FAQ Delivery Plan
+
+Before the approval gate:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - Add Delivery / Operations FAQ content from `tasks.md`,
+     `traceability.md`, `issues.md`, dependencies, phase ordering, launch
+     gates, rollback/support notes, and loop eval tasks.
+   - Update Evidence Links for `tasks.md`, `traceability.md`,
+     `loop-contract.json`, and `issues.md`.
+2. Write `{FEATURE_DIR}/prfaq-history/04-tasks.md` as an immutable snapshot.
+3. Update `{FEATURE_DIR}/stakeholder-review-index.md`.
+   - Mark Business Owner and CTO decisions that changed because of task
+     sequencing or scope boundaries.
+   - Add Delivery review ask for dependencies, protected files, MVP scope,
+     parallel work, release gates, and rollback/support plan.
+4. Do not remove or weaken the task approval gate. The PR/FAQ and review index
+   summarize what is ready; `tasks.md` remains the implementation authority.
+
 ---
 
 ## Step 7: Approval Gate
@@ -460,6 +488,9 @@ Display the task summary and request explicit approval:
   - {FEATURE_DIR}/traceability.md
   - {FEATURE_DIR}/loop-contract.json (updated if evaluation commands changed)
   - {FEATURE_DIR}/issues.md ([N] GitHub issues)
+  - {FEATURE_DIR}/working-backwards-prfaq.md
+  - {FEATURE_DIR}/prfaq-history/04-tasks.md
+  - {FEATURE_DIR}/stakeholder-review-index.md
 
 ════════════════════════════════════════════════════════════════
   APPROVAL REQUIRED BEFORE IMPLEMENTATION

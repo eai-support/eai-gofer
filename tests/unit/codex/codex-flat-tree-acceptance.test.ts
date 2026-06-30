@@ -81,7 +81,7 @@ describe('Codex agents-skills flat tree (T137 / FR-008)', () => {
       'gofer_constitution',
       'gofer_hydrate',
       '7_gofer_save',
-      '8_gofer_resume',
+      '8_gofer_branding',
     ];
     for (const stage of formerlyClaudeOnly) {
       const dir = path.join(skillsRoot, stage);

@@ -1,7 +1,7 @@
 /**
  * Unit tests for AutoHandoffTrigger terminal abstraction (Phase 2)
  *
- * Tests the sendTerminalCommand abstraction for save/clear/resume.
+ * Tests the sendTerminalCommand abstraction for save/clear/continue.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

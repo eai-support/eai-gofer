@@ -88,12 +88,12 @@ export class CheckpointValidator {
       }
     }
 
-    // Check sections
-    const expectedSections = ['# Session Handoff', 'Resume with'];
-    for (const section of expectedSections) {
-      if (!content.includes(section)) {
-        warnings.push(`Missing section: "${section}"`);
-      }
+    if (!content.includes('# Session Handoff')) {
+      warnings.push('Missing section: "# Session Handoff"');
+    }
+
+    if (!content.includes('Continue from') && !content.includes('Resume with')) {
+      warnings.push('Missing section: "Continue from checkpoint"');
     }
 
     // Check token budget (chars / 4)

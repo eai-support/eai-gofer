@@ -9,6 +9,19 @@
   Location: .specify/specs/[###-feature-name]/spec.md
 -->
 
+## Executive Summary
+
+[Three to five plain-language bullets covering the user problem, target outcome,
+highest-priority journey, success measure, and any decision still needed.]
+
+## Branding And Presentation Requirements
+
+For app delivery or stakeholder-heavy work, state whether company, client,
+consulting-firm, co-branded, or neutral presentation is required. Link to
+`.specify/memory/brand-profile.json` when available and identify any pending
+brand approvals, logo constraints, confidentiality labels, or deck requirements.
+If branding is not in scope, state `N/A`.
+
 ## Goal Ledger Alignment
 
 Keep `.specify/specs/[###-feature-name]/goal-ledger.json` aligned with this

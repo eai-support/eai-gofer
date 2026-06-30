@@ -143,7 +143,7 @@ For pre-2026 Copilot environments, execute the validation phases
 | 4   | Security Posture             | 10     | Zero hardcoded secrets, no disabled security features, no client-side keys                                                                                                             | validation-security                                                                                                        |
 | 5   | Integration Reality          | 10     | Integration tests use real dependencies where possible. Contract tests validate boundaries                                                                                             | validation-integration                                                                                                     |
 | 6   | Error Path Coverage          | 10     | Public functions tested for failure modes. No empty catch blocks                                                                                                                       | validation-correctness + validation-standards                                                                              |
-| 7   | Architecture Compliance      | 10     | File structure and patterns match plan.md and research.md                                                                                                                              | validation-standards                                                                                                       |
+| 7   | Architecture Compliance      | 10     | File structure, patterns, visual explanations, and human-facing document summaries match plan.md and research.md. Required visuals are simple, rendered or fallback-safe, and traceable to requirements, code, and EAI Platform decisions | validation-standards                                                                                                       |
 | 8   | Performance Baseline         | 5      | No synchronous I/O in async paths, no unbounded loops, no N+1 patterns                                                                                                                 | validation-performance                                                                                                     |
 | 9   | Code Hygiene                 | 10     | Zero AI slop: no TODO placeholders, no redundant comments, no magic numbers                                                                                                            | validation-standards                                                                                                       |
 | 10  | Specification Traceability   | 5      | Every user story maps to tests, every test maps to code                                                                                                                                | validation-correctness                                                                                                     |
@@ -192,7 +192,8 @@ Before starting validation, assess context window health:
 
 - If **< 50%**: Proceed normally
 - If **50-70%**: Use sub-agents heavily, minimize main context
-- If **> 70%**: Run `/7_gofer_save`, start new session, run `/8_gofer_resume`
+- If **> 70%**: Run `/7_gofer_save`, start a fresh session, read the
+  checkpoint, and continue validation
 
 Validation loads all artifacts and spawns 6 agents — context pressure is high.
 
@@ -1034,8 +1035,45 @@ category:
 **Category 7: Architecture Compliance** (10 pts)
 
 - Input: validation-standards agent report (architecture section)
-- Score 0 if: File structure deviates from plan.md without justification
+- Score 0 if: File structure deviates from plan.md without justification, OR
+  required diagrams/pictures are stale, unreadable, unrendered without fallback,
+  disconnected from the requirements/code/EAI Platform evidence they explain, OR
+  human-facing artifacts lack a plain-language executive summary
 - Score full if: All files in expected locations, patterns followed
+
+**Visual And Document Comprehension Gate** (part of Category 7, no extra points):
+
+Use this gate whenever the feature has architecture, process, security,
+workflow, data, UI, or EAI Platform behavior that a human reviewer or future AI
+loop must understand. This is benchmarked against C4-style abstraction levels,
+diagram-as-code/source-controlled visuals, 8090-style requirement/blueprint
+alignment, Marp-style narrative decks, and UI proof practices such as screenshot
+or visual-test evidence.
+
+- Executive summaries: every human-facing document starts with three to five
+  plain-language bullets that cover the decision, value, risk, evidence, and next
+  ask. Technical detail comes after the summary.
+- Purpose clarity: every visual states the question it answers, audience,
+  source inputs, and how to read it in plain language.
+- Simplicity: each diagram focuses on one decision or flow, keeps primary
+  nodes/steps to about seven or fewer where practical, and splits crowded
+  diagrams instead of making a spaghetti map.
+- Correct visual type: use context/container C4 views for system boundaries,
+  sequence/state diagrams for flows, ERD for data, value stream for process,
+  heatmaps for capability/risk priority, and screenshot/storyboard evidence for
+  UI behavior.
+- Renderability: Mermaid/D2/Structurizr-style source must render locally or
+  provide a markdown-table/text fallback; Marp decks must be valid Markdown with
+  slide frontmatter; UI visuals need screenshot, Storybook/component,
+  Playwright, or equivalent render proof.
+- Traceability: each visual links to the requirement, plan, contract, code/test,
+  EAI service/template asset, or validation evidence it summarizes.
+- Freshness: validation must check whether visuals changed or were reapproved
+  after spec, plan, code, tenant/auth, or validation changes; stale visuals fail
+  Category 7 even when the code passes.
+- Public safety: visuals must not expose tenant-private data, secrets, customer
+  identifiers, internal-only architecture names, or screenshots containing
+  private content.
 
 **Category 8: Performance Baseline** (5 pts)
 
@@ -1812,6 +1850,41 @@ blast_radius_carryovers: [N]
 - [Gray findings and suggestions]
 ```
 
+## Step 10g.5: Final Working Backwards PR/FAQ And CISO Summary
+
+After the validation report, blast-radius report, loop audit, and engineering
+review report are written:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - Mark each Press Release claim as validated, changed, or unvalidated based
+     on `validation-report.md`, `blast-radius-report.md`,
+     `goal-rebaseline-report.md`, and `loop-audit-report.md`.
+   - Fill Internal FAQ CISO / Risk with data handled, identity controls,
+     tenant boundaries, secrets handling, residual risks, validation evidence,
+     and launch gates.
+   - Update "What happens if something goes wrong?" with rollback/support
+     evidence from validation and blast-radius analysis.
+2. Write `{FEATURE_DIR}/prfaq-history/06-validate.md` as an immutable final
+   validation snapshot.
+3. Create or update `{FEATURE_DIR}/ciso-security-summary.md` from
+   `.specify/templates/ciso-security-summary-template.md` using
+   `validation-report.md`, `blast-radius-report.md`, `audit-history.md`,
+   `visuals/risk-heatmap.md`, auth/tenant evidence, secrets/data handling
+   evidence, and loop audit evidence.
+4. Refresh `{FEATURE_DIR}/business-owner-summary.md` with final validation
+   status, business value confidence, and any validated/disproven assumptions.
+5. Refresh `{FEATURE_DIR}/cto-architecture-summary.md` with validation status,
+   blast-radius verdict, and any architecture/security exceptions.
+6. Update `{FEATURE_DIR}/stakeholder-review-index.md` and make the final
+   approve/revise/defer asks explicit:
+   - Business Owner: release value, user/process impact, assumptions.
+   - CTO / Architecture: platform/architecture evidence and exceptions.
+   - CISO / Risk: controls, residual risks, security posture, launch gate.
+   - Delivery: rollout, rollback, support, and evidence completeness.
+
+If any validation gate failed, write these documents honestly with `FAIL`,
+`Pending`, or `Blocked` status; do not polish a failed feature as ready.
+
 ## Step 10h: Output Completion Banner
 
 ### If PASS (all findings resolved or no findings):
@@ -1824,6 +1897,9 @@ blast_radius_carryovers: [N]
   Cycles: [N] of 5 max
   Findings: [N] found, [N] resolved
   Report: {FEATURE_DIR}/engineering-review-report.md
+  Working Backwards PR/FAQ: {FEATURE_DIR}/working-backwards-prfaq.md
+  CISO summary: {FEATURE_DIR}/ciso-security-summary.md
+  Stakeholder review index: {FEATURE_DIR}/stakeholder-review-index.md
 
 ════════════════════════════════════════════════════════════════
   FEATURE PIPELINE COMPLETE!
@@ -1837,6 +1913,8 @@ blast_radius_carryovers: [N]
   6. /6_gofer_validate ✓ (Phase A ✓, Phase B ✓, Phase C ✓)
 
   The feature is ready for review and merge.
+  Stakeholder PR/FAQ and persona summaries are ready for Business Owner,
+  CTO/Architecture, CISO/Risk, and Delivery review.
 ════════════════════════════════════════════════════════════════
 ```
 
@@ -1850,6 +1928,9 @@ blast_radius_carryovers: [N]
   Cycles: 5 of 5 max
   Findings: [N] found, [N] resolved, [N] Gray remaining
   Report: {FEATURE_DIR}/engineering-review-report.md
+  Working Backwards PR/FAQ: {FEATURE_DIR}/working-backwards-prfaq.md
+  CISO summary: {FEATURE_DIR}/ciso-security-summary.md
+  Stakeholder review index: {FEATURE_DIR}/stakeholder-review-index.md
 
   ⚠ Gray findings remain — see report for details.
 
@@ -1882,6 +1963,9 @@ blast_radius_carryovers: [N]
   ✗ [Finding] — [severity]: [brief reason]
 
   Report: {FEATURE_DIR}/engineering-review-report.md
+  Working Backwards PR/FAQ: {FEATURE_DIR}/working-backwards-prfaq.md
+  CISO summary: {FEATURE_DIR}/ciso-security-summary.md
+  Stakeholder review index: {FEATURE_DIR}/stakeholder-review-index.md
 
   This feature requires human review of remaining findings
   before merging.

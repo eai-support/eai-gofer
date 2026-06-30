@@ -205,7 +205,7 @@ describe('ContextHealthMonitor', () => {
 
       const status = monitor.analyzeContext(input);
 
-      expect(status.recommendations.some((r) => r.includes('/8_gofer_resume'))).toBe(true);
+      expect(status.recommendations.some((r) => r.includes('session-checkpoint.md'))).toBe(true);
     });
 
     it('should include stage-specific recommendations', () => {

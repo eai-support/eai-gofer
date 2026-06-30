@@ -1712,11 +1712,12 @@ ${activeSpec.tasks
 
 ${notes || 'No additional notes.'}
 
-## Resume Command
+## Continue From Checkpoint
 
-\`\`\`
-/8_gofer_resume --feature ${activeSpec.id}
-\`\`\`
+1. Open this handoff file in a fresh session.
+2. Read \`.specify/specs/${activeSpec.id}/session-checkpoint.md\` if present.
+3. Continue from the recorded Gofer stage, usually \`/5_gofer_implement\` or
+   \`/6_gofer_validate\`.
 `;
 
       await fs.writeFile(handoffPath, handoffContent, 'utf-8');
@@ -1733,7 +1734,7 @@ ${notes || 'No additional notes.'}
             currentTask,
             stage: 'implement', // Simplified - would detect actual stage
           },
-          resumeCommand: `/8_gofer_resume --feature ${activeSpec.id}`,
+          resumeCommand: `Read ${handoffPath} and continue from the recorded Gofer stage.`,
         },
       };
     } catch (error) {

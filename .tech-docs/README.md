@@ -27,7 +27,7 @@ Optional helpers:
 
 - `/0a_problem_validation`
 - `/7_gofer_save`
-- `/8_gofer_resume`
+- `/8_gofer_branding`
 - `/9_gofer_tests`
 - `/7a_stakeholder_comms`
 - `/gofer:check-workspace`

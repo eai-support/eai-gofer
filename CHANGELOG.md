@@ -92,7 +92,7 @@ and this project adheres to
 - `/6_gofer_validate` - Validate with 6 parallel agents
 - `/7_gofer_save` - Save session checkpoint
 - `/7a_stakeholder_comms` - Generate stakeholder communications
-- `/8_gofer_resume` - Resume from checkpoint
+- `/8_gofer_branding` - Brand templates and stakeholder documents
 - `/9_gofer_tests` - Define acceptance test cases
 - `/10_gofer_cloud` - Cloud infrastructure analysis
 - `/gofer_constitution` - Create project coding principles

@@ -298,7 +298,7 @@ scenario and route them through the **unified Gofer pipeline**.
 | ----------------------------- | ------------------------------------------------------- |
 | `/0a_problem_validation`      | Optional deeper problem framing before research         |
 | `/7_gofer_save`               | Save session checkpoint mid-implementation              |
-| `/8_gofer_resume`             | Resume work from saved checkpoint                       |
+| `/8_gofer_branding`           | Brand templates and stakeholder documents               |
 | `/9_gofer_tests`              | Define acceptance test cases using DSL                  |
 | `/10_gofer_cloud`             | READ-ONLY cloud infrastructure analysis                 |
 | `/7a_stakeholder_comms`       | Optional post-validation communications package         |
@@ -338,6 +338,12 @@ ls -la .specify/memory/constitution.md 2>/dev/null
 | `loop-ledger.jsonl`     | `.specify/specs/{feature}/` | Implementation/validation iteration evidence |
 | `loop-audit-report.md`  | `.specify/specs/{feature}/` | Latest loop contract and ledger audit |
 | `goal-rebaseline-report.md` | `.specify/specs/{feature}/` | Latest closed-loop audit result |
+| `working-backwards-prfaq.md` | `.specify/specs/{feature}/` | Running product release PR/FAQ |
+| `prfaq-history/`        | `.specify/specs/{feature}/` | Immutable stage snapshots of the PR/FAQ |
+| `business-owner-summary.md` | `.specify/specs/{feature}/` | Business owner scenario, process, and value summary |
+| `cto-architecture-summary.md` | `.specify/specs/{feature}/` | CTO/EAI Platform architecture summary |
+| `ciso-security-summary.md` | `.specify/specs/{feature}/` | CISO security posture summary |
+| `stakeholder-review-index.md` | `.specify/specs/{feature}/` | Stakeholder review status and approval asks |
 | `session-checkpoint.md` | `.specify/specs/{feature}/` | Work paused (resumable)      |
 | `validation-report.md`  | `.specify/specs/{feature}/` | Feature validated            |
 | `constitution.md`       | `.specify/memory/`          | Project principles set       |
@@ -361,7 +367,7 @@ Present these options using the AskUserQuestion tool:
 | **B. Modify Existing**  | Change or extend existing functionality in the codebase  |
 | **C. Fix a Bug**        | Diagnose and fix a specific issue                        |
 | **D. Explore/Research** | Understand the codebase before making changes            |
-| **E. Resume Work**      | Continue from where I left off                           |
+| **E. Continue Work**    | Continue from where I left off                           |
 | **F. Setup Project**    | Initialize constitution and project guidelines           |
 
 ### For Existing Codebases
@@ -972,7 +978,17 @@ exists):
 
 1. Ask: **"What would you like to call this feature?"** (use AskUserQuestion)
 2. Create the spec directory: `.specify/specs/{feature-name}/`
-3. Invoke `/1_gofer_research` to start the pipeline
+3. Seed stakeholder review scaffolding from templates:
+   - `{FEATURE_DIR}/working-backwards-prfaq.md` from
+     `.specify/templates/working-backwards-prfaq-template.md`
+   - `{FEATURE_DIR}/stakeholder-review-index.md` from
+     `.specify/templates/stakeholder-review-index-template.md`
+   - `{FEATURE_DIR}/prfaq-history/00-business-scenario.md` as the initial
+     product release PR/FAQ snapshot
+   - Draft persona files only when enough context exists; otherwise let stages
+     1, 3, and 6 create the Business Owner, CTO, and CISO summaries with
+     evidence.
+4. Invoke `/1_gofer_research` to start the pipeline
 
 Output:
 
@@ -982,6 +998,7 @@ FEATURE: {feature-name}
 STARTING: /1_gofer_research
 AUTO-CHAIN: research → specify → plan → tasks → implement → validate
 NOTE: research may also create optional supporting review artifacts
+NOTE: create/update the running product release PR/FAQ and stakeholder review index from the first stage
 REASON: [explanation]
 ```
 
@@ -1014,7 +1031,7 @@ AUTO-CHAIN: disabled after research until the user asks to continue
 REASON: User wants to explore the codebase first
 ```
 
-### Route E: Resume Work
+### Route E: Continue Work
 
 Check for session checkpoints:
 
@@ -1022,7 +1039,8 @@ Check for session checkpoints:
 find .specify/specs -name "session-checkpoint.md" -type f 2>/dev/null
 ```
 
-If checkpoint found → Invoke `/8_gofer_resume`
+If checkpoint found, read the most recent checkpoint and continue from the
+stage it names. Do not invoke a separate resume command.
 
 If no checkpoint but unchecked tasks exist:
 
@@ -1033,9 +1051,9 @@ If no checkpoint but unchecked tasks exist:
 Output:
 
 ```
-ROUTING: GOFER RESUME
+ROUTING: GOFER CONTINUE
 FEATURE: {feature-name}
-COMMAND: /8_gofer_resume
+COMMAND: /5_gofer_implement or /6_gofer_validate
 CHECKPOINT: {path to checkpoint}
 REASON: Resuming from saved session
 ```
@@ -1084,13 +1102,14 @@ If the user needs to pause:
 
 1. Invoke `/7_gofer_save` to create checkpoint
 2. Document current state
-3. User can resume later with `/8_gofer_resume`
+3. User can start a fresh session, read the checkpoint, and continue from the
+   named stage
 
 If context window is filling up:
 
 1. Save progress with `/7_gofer_save`
 2. Recommend user start new conversation
-3. User runs `/8_gofer_resume` in new session
+3. User opens the checkpoint and continues from the appropriate stage
 
 ---
 
@@ -1122,6 +1141,11 @@ If context window is filling up:
 | 5     | `/5_gofer_implement`  | Code, docs, loop-ledger.jsonl      | Execute bounded check-repair loops        |
 | 6     | `/6_gofer_validate`   | Validation artifacts, loop-audit-report.md | Terminal quality gate, including review |
 
+Every stage also updates the running product release PR/FAQ:
+`working-backwards-prfaq.md`, writes an immutable snapshot in
+`prfaq-history/`, and refreshes `stakeholder-review-index.md` so the user sees
+which Business Owner, CTO/Architecture, CISO/Risk, or Delivery review is needed.
+
 ### Helper Commands
 
 | Command                        | Purpose                                          |
@@ -1129,7 +1153,7 @@ If context window is filling up:
 | `/0a_problem_validation`      | Optional deeper problem framing before research  |
 | `/7_gofer_save`               | Save session checkpoint                          |
 | `/7a_stakeholder_comms`       | Post-validation communications                   |
-| `/8_gofer_resume`             | Resume from checkpoint                           |
+| `/8_gofer_branding`           | Brand templates and stakeholder documents        |
 | `/9_gofer_tests`              | Define test cases (DSL approach)                 |
 | `/10_gofer_cloud`             | Cloud infrastructure analysis (READ-ONLY)        |
 | `/gofer_hydrate`              | Reverse-engineer spec from code                  |
@@ -1182,6 +1206,12 @@ stages to create these artifacts without re-interviewing the user:
 | `contract-pack.md` | Actors, object types, workflows/journeys, four-step AI assistance contract, permissions, tenant boundaries, APIs/events, runtime assumptions, acceptance tests |
 | `reuse-scan.md` | Existing specs, platform references, object types, APIs, workflows, modules, and the reuse/extend/create decision |
 | `audit-history.md` | Stable finding IDs, recurring-finding history, accepted exceptions, owner, expiry, and review cadence |
+| `working-backwards-prfaq.md` | Product release PR/FAQ: headline, customer problem, launch description, external FAQ, internal FAQ, evidence links, and review asks |
+| `prfaq-history/` | Stage-by-stage immutable PR/FAQ snapshots: `00-business-scenario.md` through `06-validate.md` |
+| `business-owner-summary.md` | Business scenario, process change, business case, metrics, assumptions, and Business Owner review ask |
+| `cto-architecture-summary.md` | EAI Platform/Azure architecture, auth, tenancy, data, contracts, diagrams, and CTO review ask |
+| `ciso-security-summary.md` | Security posture, identity/tenant controls, secrets/data handling, residual risk, validation evidence, and CISO review ask |
+| `stakeholder-review-index.md` | One-page index of review-ready artifacts, current status, reviewer, and approve/revise/defer response contract |
 
 Use these artifacts as decision evidence for executive, architecture, CISO,
 data, delivery, CIO, CFO, COO, and risk/compliance stakeholders.

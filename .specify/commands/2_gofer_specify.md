@@ -109,7 +109,10 @@ script problem to bypass.
 4. Review agent output, handle clarifications
 5. Optional multi-perspective review
 6. Output: `.specify/specs/{feature}/spec.md`
-7. EnterpriseAI profile output: `.specify/specs/{feature}/contract-pack.md`
+7. Stakeholder PR/FAQ output: `working-backwards-prfaq.md`,
+   `prfaq-history/02-specify.md`, `spec-summary.md`,
+   `business-owner-summary.md`, and `stakeholder-review-index.md`
+8. EnterpriseAI profile output: `.specify/specs/{feature}/contract-pack.md`
 
 ---
 
@@ -749,6 +752,40 @@ For EnterpriseAI public-facing work, the contract pack must also separate:
   AuthZ. These may inform internal implementation tasks, but must not be copied
   into public docs, generated help, templates, or app guidance.
 
+## Step 7: Update Working Backwards PR/FAQ And Business Owner Summary
+
+After `spec.md` is stabilized and before stage completion logging:
+
+1. Create or update `{FEATURE_DIR}/spec-summary.md` using
+   `.specify/templates/spec-summary-template.md` if it does not already exist.
+   If the optional `gofer:spec-summary` helper was explicitly requested, keep
+   using that helper contract; otherwise write the concise stage summary inline.
+2. Update `{FEATURE_DIR}/working-backwards-prfaq.md` from the current
+   specification.
+   - Tighten the Press Release headline, customer problem, launch description,
+     customer benefit, and "How To Get Started" around the approved product
+     behavior.
+   - Fill External FAQ with user-facing behavior, process change, included
+     scope, explicit exclusions, success measures, and fallback path.
+   - Keep Internal FAQ CTO/CISO sections as `Pending /3` or `Pending /6` where
+     the stage has not produced evidence yet.
+3. Write `{FEATURE_DIR}/prfaq-history/02-specify.md` as an immutable snapshot of
+   the updated PR/FAQ.
+4. Update `{FEATURE_DIR}/business-owner-summary.md` from
+   `.specify/templates/business-owner-summary-template.md` using
+   `problem-brief.md`, `discovery.md`, `spec-summary.md`, assumptions, value
+   stream, ROI, and business metrics when present.
+5. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask the
+   Business Owner to approve, revise, or defer:
+   - business scenario
+   - process change
+   - business case / value measures
+   - assumptions and exclusions
+
+Do not block the normal auto-chain unless the user explicitly asks to pause for
+review. The review index captures pending stakeholder decisions so downstream
+stages can reconcile them.
+
 ---
 
 ## Observability Logging
@@ -769,8 +806,10 @@ Logs to: `.specify/logs/pipeline.jsonl`
   is stabilized, run `gofer:vocabulary` inline and write
   `.specify/specs/{feature}/glossary.md` using the same artifact contract as the
   standalone helper.
-- If the operator explicitly requests the `spec-summary` selector after `spec.md`
-  is stabilized, run `gofer:spec-summary` inline and write
+- This stage creates or updates a baseline `spec-summary.md` for the
+  Business Owner summary and PR/FAQ. If the operator explicitly requests the
+  `spec-summary` selector after `spec.md` is stabilized, run
+  `gofer:spec-summary` inline to deepen or regenerate
   `.specify/specs/{feature}/spec-summary.md` using the same artifact contract as
   the standalone helper.
 - If `spec.md` is missing, continue the stage normally and report that the

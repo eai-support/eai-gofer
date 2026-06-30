@@ -82,7 +82,12 @@ const PIPELINE_STAGES: Array<{ file: string; name: string; alias: string; catego
     alias: 'gofer:comms',
     category: 'utility',
   },
-  { file: '8_gofer_resume.md', name: '8_gofer_resume', alias: 'gofer:resume', category: 'utility' },
+  {
+    file: '8_gofer_branding.md',
+    name: '8_gofer_branding',
+    alias: 'gofer:branding',
+    category: 'utility',
+  },
   { file: '9_gofer_tests.md', name: '9_gofer_tests', alias: 'gofer:tests', category: 'utility' },
   { file: '10_gofer_cloud.md', name: '10_gofer_cloud', alias: 'gofer:cloud', category: 'utility' },
   {

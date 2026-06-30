@@ -12,8 +12,15 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_business_scenario.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/templates/business-owner-summary-template.md`
+   - `.specify/templates/cto-architecture-summary-template.md`
+   - `.specify/templates/ciso-security-summary-template.md`
+   - `.specify/templates/stakeholder-review-index-template.md`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
+   - `.specify/scripts/node/gofer-loop-audit.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -123,6 +130,10 @@ This is the **first stage** of the unified Gofer pipeline. Your job is to:
 - `.specify/specs/{feature}/research.md`
 - `.specify/specs/{feature}/goal-ledger.json`
 - `.specify/specs/{feature}/loop-contract.json`
+- `.specify/specs/{feature}/working-backwards-prfaq.md`
+- `.specify/specs/{feature}/prfaq-history/01-research.md`
+- `.specify/specs/{feature}/business-owner-summary.md` (draft; mark missing inputs pending)
+- `.specify/specs/{feature}/stakeholder-review-index.md`
 - `.specify/specs/{feature}/proposal-review.md` (optional supporting review context)
 - `.specify/specs/{feature}/journeys/base-journey.md` (application delivery default)
 - `.specify/specs/{feature}/eai-preflight.md` (EAI app delivery default)
@@ -809,7 +820,31 @@ approvedAt: ''
 
 ## Step 6: Review, Discuss, and Hand Off To Specification
 
-After saving `research.md`, `goal-ledger.json`, and `proposal-review.md`:
+Before presenting the handoff, update the stakeholder-facing product release
+PR/FAQ artifacts:
+
+1. Create or update `{FEATURE_DIR}/working-backwards-prfaq.md` from
+   `.specify/templates/working-backwards-prfaq-template.md`.
+   - Fill the Press Release with the best current customer problem, launch
+     promise, customer benefit, and "How To Get Started" story from research.
+   - Fill External FAQ with researched customer/process evidence and mark
+     unknown claims as `Pending research validation` instead of inventing them.
+   - Fill Internal FAQ Business Owner and CTO sections with research options,
+     platform constraints, and architecture trade-offs.
+2. Write an immutable snapshot to
+   `{FEATURE_DIR}/prfaq-history/01-research.md`.
+3. Create or update `{FEATURE_DIR}/business-owner-summary.md` from
+   `.specify/templates/business-owner-summary-template.md` using
+   `problem-brief.md`, `discovery.md`, `research.md`, value-stream, and ROI
+   evidence when present. If `spec-summary.md` or `business-metrics.md` does
+   not exist yet, keep the relevant rows and mark status `Pending /2 or /7a`.
+4. Update `{FEATURE_DIR}/stakeholder-review-index.md` from
+   `.specify/templates/stakeholder-review-index-template.md` and mark the
+   Business Owner and CTO review asks that should be answered before or during
+   `/2_gofer_specify`.
+
+After saving `research.md`, `goal-ledger.json`, `proposal-review.md`, and the
+PR/FAQ review artifacts:
 
 1. **Present summary** to user:
    - What was found
@@ -857,6 +892,10 @@ After saving `research.md`, `goal-ledger.json`, and `proposal-review.md`:
 ✓ Research complete: {FEATURE_DIR}/research.md
 ✓ Goal ledger seeded: {FEATURE_DIR}/goal-ledger.json
 ✓ Loop contract seeded: {FEATURE_DIR}/loop-contract.json
+✓ Working Backwards PR/FAQ updated: {FEATURE_DIR}/working-backwards-prfaq.md
+✓ PR/FAQ research snapshot: {FEATURE_DIR}/prfaq-history/01-research.md
+✓ Business Owner summary draft: {FEATURE_DIR}/business-owner-summary.md
+✓ Stakeholder review index updated: {FEATURE_DIR}/stakeholder-review-index.md
 ✓ Supporting review context ready: {FEATURE_DIR}/proposal-review.md
 
 Key findings:

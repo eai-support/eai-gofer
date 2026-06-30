@@ -14,7 +14,7 @@ export const PIPELINE_STAGE_FILES = [
   '6_gofer_validate',
   '7_gofer_save',
   '7a_stakeholder_comms',
-  '8_gofer_resume',
+  '8_gofer_branding',
   '9_gofer_tests',
   '10_gofer_cloud',
   'gofer_constitution',
@@ -60,7 +60,7 @@ export const FORMERLY_CLAUDE_ONLY_STAGES = [
   'gofer_constitution',
   'gofer_hydrate',
   '7_gofer_save',
-  '8_gofer_resume',
+  '8_gofer_branding',
 ] as const;
 
 export const CROSS_CLI_SURFACES = [

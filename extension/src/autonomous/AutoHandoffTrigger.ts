@@ -41,7 +41,7 @@ export interface AutoHandoffConfig {
   autoExecuteSave: boolean;
   /** Threshold for auto-save trigger (default: 0.65 = 65%) */
   autoSaveThreshold: number;
-  /** Auto-resume in new session after save completes (default: false) */
+  /** Continue from the saved checkpoint after clear completes (default: true) */
   autoResumeAfterSave: boolean;
   /** Enable continuous slop reduction (default: true) */
   enableContinuousSlopReduction: boolean;
@@ -283,7 +283,8 @@ export class AutoHandoffTrigger implements vscode.Disposable {
    *
    * Flow:
    * 1. Send /7_gofer_save command to Claude Code terminal
-   * 2. If autoResumeAfterSave is enabled, also send /8_gofer_resume
+   * 2. If autoResumeAfterSave is enabled, clear context and send a plain
+   *    checkpoint-continuation prompt
    * 3. Log the auto-save event
    * 4. Show confirmation notification
    */
@@ -303,10 +304,10 @@ export class AutoHandoffTrigger implements vscode.Disposable {
 
     try {
       const percent = Math.round(status.utilizationPercent);
-      this.logger.info(`Context at ${percent}% — executing save/clear/resume cycle`);
+      this.logger.info(`Context at ${percent}% — executing save/clear/continue cycle`);
 
-      // Save → Clear → Resume in the same terminal (no kill/respawn needed)
-      const sent = await this.sendSaveClearResume();
+      // Save → Clear → Continue in the same terminal (no kill/respawn needed)
+      const sent = await this.sendSaveClearContinue();
 
       // Log the event
       if (this.usageLogger) {
@@ -317,14 +318,14 @@ export class AutoHandoffTrigger implements vscode.Disposable {
           status.tokensUsed,
           status.tokensLimit,
           status.utilizationPercent,
-          `auto-save: save/clear/resume at ${status.utilizationPercent.toFixed(1)}%, success=${sent}`
+          `auto-save: save/clear/continue at ${status.utilizationPercent.toFixed(1)}%, success=${sent}`
         );
       }
 
       if (sent) {
-        this.logger.info(`Context at ${percent}% — save/clear/resume completed`);
+        this.logger.info(`Context at ${percent}% — save/clear/continue completed`);
       } else {
-        this.logger.warn(`Context at ${percent}% — save/clear/resume failed, no active terminal`);
+        this.logger.warn(`Context at ${percent}% — save/clear/continue failed, no active terminal`);
       }
     } finally {
       this.pendingNotification = false;
@@ -452,7 +453,7 @@ export class AutoHandoffTrigger implements vscode.Disposable {
    *
    * Flow:
    * 1. Run SlopReducer on workspace files (removes console.log, debugger, etc.)
-   * 2. Execute save/clear/resume cycle to refresh context with clean files
+   * 2. Execute save/clear/continue cycle to refresh context with clean files
    * 3. Show notification summarizing what was done
    */
   private async autoReduceSlop(status: ContextHealthStatus): Promise<void> {
@@ -485,10 +486,10 @@ export class AutoHandoffTrigger implements vscode.Disposable {
         );
       }
 
-      // Step 2: Save → Clear → Resume in the same terminal session
+      // Step 2: Save → Clear → Continue in the same terminal session
       // This gives a fresh context window without killing the terminal
-      this.logger.info(`Context at ${percent}% — executing save/clear/resume cycle`);
-      const sent = await this.sendSaveClearResume();
+      this.logger.info(`Context at ${percent}% — executing save/clear/continue cycle`);
+      const sent = await this.sendSaveClearContinue();
 
       // Log the event
       if (this.usageLogger) {
@@ -499,7 +500,7 @@ export class AutoHandoffTrigger implements vscode.Disposable {
           status.tokensUsed,
           status.tokensLimit,
           status.utilizationPercent,
-          `auto-context-reset: ${result.totalFixes} file fixes, save/clear/resume=${sent}`
+          `auto-context-reset: ${result.totalFixes} file fixes, save/clear/continue=${sent}`
         );
       }
     } finally {
@@ -508,12 +509,12 @@ export class AutoHandoffTrigger implements vscode.Disposable {
   }
 
   /**
-   * Sends /7_gofer_save, /clear, /8_gofer_resume in sequence to the active terminal.
+   * Sends /7_gofer_save, /clear, then a plain continuation prompt to the active terminal.
    * This resets the context window without killing the terminal:
    *   1. /7_gofer_save — writes checkpoint to disk
    *   2. Wait for checkpoint file to appear on disk (confirms save completed)
    *   3. /clear — wipes Claude Code's context window
-   *   4. /8_gofer_resume — reloads from checkpoint into fresh context
+   *   4. Plain prompt — reloads from checkpoint into fresh context
    */
   /**
    * Sends a command to the Claude Code terminal.
@@ -528,9 +529,9 @@ export class AutoHandoffTrigger implements vscode.Disposable {
     }
   }
 
-  private async sendSaveClearResume(): Promise<boolean> {
+  private async sendSaveClearContinue(): Promise<boolean> {
     if (!this.hasActiveTerminal()) {
-      this.logger.warn('No Claude Code terminal available for save/clear/resume');
+      this.logger.warn('No Claude Code terminal available for save/clear/continue');
       return false;
     }
 
@@ -540,40 +541,44 @@ export class AutoHandoffTrigger implements vscode.Disposable {
 
       // Step 1: Send /7_gofer_save
       await this.sendTerminalCommand('/7_gofer_save');
-      this.logger.info('[save/clear/resume] Step 1: Sent /7_gofer_save');
+      this.logger.info('[save/clear/continue] Step 1: Sent /7_gofer_save');
 
       // Step 2: Wait for checkpoint file to appear/update (max 90 seconds)
       const checkpointDetected = await this.waitForCheckpointFile(checkpointsBefore, 90000);
       if (checkpointDetected) {
-        this.logger.info('[save/clear/resume] Step 2: Checkpoint file confirmed on disk');
+        this.logger.info('[save/clear/continue] Step 2: Checkpoint file confirmed on disk');
       } else {
         this.logger.warn(
-          '[save/clear/resume] Step 2: Checkpoint wait timed out after 90s, proceeding anyway'
+          '[save/clear/continue] Step 2: Checkpoint wait timed out after 90s, proceeding anyway'
         );
       }
 
       // Step 3: Send /clear (guard against dead terminal)
       if (!this.hasActiveTerminal()) {
-        this.logger.warn('[save/clear/resume] Terminal died during save, aborting');
+        this.logger.warn('[save/clear/continue] Terminal died during save, aborting');
         return false;
       }
       await this.sendTerminalCommand('/clear');
-      this.logger.info('[save/clear/resume] Step 3: Sent /clear');
+      this.logger.info('[save/clear/continue] Step 3: Sent /clear');
 
       // Brief pause for clear to take effect
       await new Promise<void>((resolve) => setTimeout(resolve, 2000));
 
-      // Step 4: Send /8_gofer_resume (guard against dead terminal)
+      // Step 4: Send continuation prompt (guard against dead terminal)
       if (!this.hasActiveTerminal()) {
-        this.logger.warn('[save/clear/resume] Terminal died after clear, aborting');
+        this.logger.warn('[save/clear/continue] Terminal died after clear, aborting');
         return false;
       }
-      await this.sendTerminalCommand('/8_gofer_resume');
-      this.logger.info('[save/clear/resume] Step 4: Sent /8_gofer_resume — context reset complete');
+      await this.sendTerminalCommand(
+        'Read the latest .specify/specs/*/session-checkpoint.md checkpoint, summarize the saved state, and continue from the recorded Gofer stage.'
+      );
+      this.logger.info(
+        '[save/clear/continue] Step 4: Sent checkpoint continuation prompt — context reset complete'
+      );
 
       return true;
     } catch (error) {
-      this.logger.error('[save/clear/resume] Failed', error as Error);
+      this.logger.error('[save/clear/continue] Failed', error as Error);
       return false;
     }
   }
@@ -939,7 +944,7 @@ export class AutoHandoffTrigger implements vscode.Disposable {
     lines.push('## Resume Instructions');
     lines.push('');
     lines.push('1. Start a new Claude session');
-    lines.push('2. Run `/8_gofer_resume`');
+    lines.push('2. Read `session-checkpoint.md` and continue from the recorded stage');
     lines.push('3. The session will be restored with this context');
     lines.push('');
     lines.push('---');

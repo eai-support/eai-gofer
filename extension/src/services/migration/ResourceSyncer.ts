@@ -1504,7 +1504,7 @@ This automatically chains through all stages:
 All artifacts are stored in: \`.specify/specs/{feature}/\`
 
 Optional helpers such as \`/0a_problem_validation\`, \`/7_gofer_save\`,
-\`/8_gofer_resume\`, and \`/7a_stakeholder_comms\` support the workflow without
+\`/8_gofer_branding\`, and \`/7a_stakeholder_comms\` support the workflow without
 adding extra core pipeline stages.
 
 ## Model Policy
