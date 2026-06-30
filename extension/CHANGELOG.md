@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.7] - 2026-06-30
+
+Add Gofer branding command and checkpoint continuation updates
+
 ## [3.7.6] - 2026-06-29
 
 Add loop engineering audit gates across Gofer stages.
