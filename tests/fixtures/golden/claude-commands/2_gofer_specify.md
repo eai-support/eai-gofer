@@ -4,6 +4,24 @@ description: Create feature specification informed by codebase research
 
 # Gofer Specify
 
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
+
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
 
@@ -226,7 +244,7 @@ Read these files for full context:
 
 Generate the COMPLETE spec.md following this structure:
 
-1. YAML frontmatter: id, title, status: draft, created (ISO date), updated, author: Claude
+1. YAML frontmatter: id, title, status: draft, created (ISO date), updated, author: Gofer
 2. Overview — High-level description of what this feature does and why it matters
 3. User Stories — Prioritized P1/P2/P3 with 'As a [user] I want to [action] So that [benefit]'
    - Each story MUST have checkable acceptance criteria (- [ ] format)

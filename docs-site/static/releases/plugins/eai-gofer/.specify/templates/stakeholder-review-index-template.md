@@ -33,15 +33,15 @@ mark the document content review separately from the visual/brand approval.
 
 ## Stage Snapshot
 
-| Stage                  | Snapshot path                           | What changed | Reviewer focus            |
-| ---------------------- | --------------------------------------- | ------------ | ------------------------- |
-| `/0_business_scenario` | `prfaq-history/00-business-scenario.md` | {{summary}}  | Business Owner            |
-| `/1_gofer_research`    | `prfaq-history/01-research.md`          | {{summary}}  | Business Owner / CTO      |
-| `/2_gofer_specify`     | `prfaq-history/02-specify.md`           | {{summary}}  | Business Owner            |
-| `/3_gofer_plan`        | `prfaq-history/03-plan.md`              | {{summary}}  | CTO / Architecture        |
-| `/4_gofer_tasks`       | `prfaq-history/04-tasks.md`             | {{summary}}  | Delivery                  |
-| `/5_gofer_implement`   | `prfaq-history/05-implement.md`         | {{summary}}  | Business Owner / Delivery |
-| `/6_gofer_validate`    | `prfaq-history/06-validate.md`          | {{summary}}  | CISO / Risk               |
+| Stage                | Snapshot path                           | What changed | Reviewer focus            |
+| -------------------- | --------------------------------------- | ------------ | ------------------------- |
+| `/0_gofer_start`     | `prfaq-history/00-business-scenario.md` | {{summary}}  | Business Owner            |
+| `/1_gofer_research`  | `prfaq-history/01-research.md`          | {{summary}}  | Business Owner / CTO      |
+| `/2_gofer_specify`   | `prfaq-history/02-specify.md`           | {{summary}}  | Business Owner            |
+| `/3_gofer_plan`      | `prfaq-history/03-plan.md`              | {{summary}}  | CTO / Architecture        |
+| `/4_gofer_tasks`     | `prfaq-history/04-tasks.md`             | {{summary}}  | Delivery                  |
+| `/5_gofer_implement` | `prfaq-history/05-implement.md`         | {{summary}}  | Business Owner / Delivery |
+| `/6_gofer_validate`  | `prfaq-history/06-validate.md`          | {{summary}}  | CISO / Risk               |
 
 ## Review Response Contract
 

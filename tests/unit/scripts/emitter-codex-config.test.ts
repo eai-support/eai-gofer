@@ -119,9 +119,9 @@ Specify stage body.
 
 const CLAUDE_ONLY_STAGES_FIXTURES = [
   {
-    filename: '0_business_scenario.md',
+    filename: '0_gofer_start.md',
     content: `---
-name: 0_business_scenario
+name: 0_gofer_start
 description: "Business scenario."
 title: "Business Scenario"
 category: pipeline
@@ -222,10 +222,10 @@ describe('codex-config emitter (T068)', () => {
     }
   });
 
-  it('contains 0_business_scenario', async () => {
+  it('contains 0_gofer_start', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/0_business_scenario"');
+    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/0_gofer_start"');
   });
 
   it('contains 7_gofer_save', async () => {
@@ -235,7 +235,7 @@ describe('codex-config emitter (T068)', () => {
   });
 
   it('contains formerly Claude-only fixtures when they list portable surfaces', async () => {
-    const formerlyClaudeOnlyStages = ['0_business_scenario', '7_gofer_save'];
+    const formerlyClaudeOnlyStages = ['0_gofer_start', '7_gofer_save'];
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
     for (const stage of formerlyClaudeOnlyStages) {

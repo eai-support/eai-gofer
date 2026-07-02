@@ -38,7 +38,7 @@ suite('onboarding messaging', () => {
 
     assert.ok(displayName.includes('Gofer'));
     assert.ok(description.includes('core Gofer pipeline'));
-    assert.ok(welcomeContents.includes('business scenario'));
+    assert.ok(welcomeContents.includes('Gofer Start'));
     assert.ok(welcomeContents.includes('research'));
     assert.ok(welcomeContents.includes('validate'));
   });
@@ -49,7 +49,7 @@ suite('onboarding messaging', () => {
     const extensionSource = readFile(path.join(process.cwd(), 'src', 'extension.ts'));
 
     assert.ok(extensionReadme.includes('Gofer VS Code Extension'));
-    assert.ok(extensionReadme.includes('business scenario'));
+    assert.ok(extensionReadme.includes('Gofer Start'));
     assert.ok(rootReadme.includes('business specification-driven delivery workflow'));
     assert.ok(rootReadme.includes('What Helps A Repo Get Forks And Stars'));
     assert.ok(extensionSource.includes('Gofer initialized.'));

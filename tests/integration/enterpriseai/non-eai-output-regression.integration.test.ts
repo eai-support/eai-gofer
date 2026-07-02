@@ -177,14 +177,10 @@ describe('enterpriseai non-eai output regression (root integration)', () => {
 
     const router = new CrossPlatformCommandRouter(process.cwd());
 
-    const standardClaude = await router.routeCommand('0_business_scenario', 'claude', 'standard');
-    const enterpriseClaude = await router.routeCommand(
-      '0_business_scenario',
-      'claude',
-      'enterpriseai'
-    );
-    const standardCopilot = await router.routeCommand('0_business_scenario', 'copilot', 'standard');
-    const standardCodex = await router.routeCommand('0_business_scenario', 'codex', 'standard');
+    const standardClaude = await router.routeCommand('0_gofer_start', 'claude', 'standard');
+    const enterpriseClaude = await router.routeCommand('0_gofer_start', 'claude', 'enterpriseai');
+    const standardCopilot = await router.routeCommand('0_gofer_start', 'copilot', 'standard');
+    const standardCodex = await router.routeCommand('0_gofer_start', 'codex', 'standard');
 
     const routingSnapshot = {
       claudeSyntax: standardClaude.syntax,

@@ -70,7 +70,7 @@ import { Logger as LegacyLogger } from './utils/logger';
 let logger: Logger | undefined;
 
 const ENTERPRISEAI_ONBOARDING_MESSAGE =
-  'Gofer initialized. Use the core pipeline from business scenario through validation, with multi-platform workflows available across supported hosts.';
+  'Gofer initialized. Use the core pipeline from Gofer Start through validation, with multi-platform workflows available across supported hosts.';
 
 interface CopilotAvailabilityContext {
   available: boolean;

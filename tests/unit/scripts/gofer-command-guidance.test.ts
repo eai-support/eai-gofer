@@ -34,7 +34,7 @@ describe('Gofer public execution-depth guidance', () => {
 
   it('requires running PR/FAQ and persona review artifacts across the pipeline', () => {
     const scenario = fs.readFileSync(
-      path.join(REPO_ROOT, '.specify/commands/0_business_scenario.md'),
+      path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
       'utf8'
     );
     expect(scenario).toContain('working-backwards-prfaq.md');

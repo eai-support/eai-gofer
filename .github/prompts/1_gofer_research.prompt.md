@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/1_gofer_research.md
-  canonicalChecksum: 9db86b2944816d9ab500ecf50b6d3cb81327c246e742b63573f67cf210192e23
+  canonicalChecksum: 3c8ac46aed7878b648bf178d3dc93c1532bf2102870bb288ecf2dd9e55cb8770
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -23,7 +23,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -54,6 +54,24 @@ Before doing stage/helper work:
 
 
 # Gofer Research
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -445,7 +463,7 @@ explicitly `enterpriseai`, generate:
    - Non-app runs MUST skip this artifact and record "Not applicable" in
      `research.md`.
 4. `{FEATURE_DIR}/eai-preflight.md` (EAI app delivery only, created by
-   `#0_business_scenario` when possible and updated here when missing or stale)
+   `#0_gofer_start` when possible and updated here when missing or stale)
    - Verify the safe public EAI source set used for research:
      `https://eai-tools.github.io/eai/docs/overview`,
      `https://eai-tools.github.io/eai/docs/api-reference`,
@@ -593,7 +611,7 @@ Write to `{FEATURE_DIR}/research.md`:
 ````markdown
 ---
 date: [ISO timestamp]
-researcher: Claude
+researcher: Gofer
 feature: '[Feature Name]'
 status: complete
 ---

@@ -10,7 +10,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -44,6 +44,24 @@ description: Execute tasks from tasks.md to implement the feature
 ---
 
 # Gofer Implement
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -166,7 +184,7 @@ During implementation, use these techniques to preserve context quality:
 
 ```bash
 /7_gofer_save  # Creates comprehensive checkpoint
-# Start new Claude Code session
+# Start a fresh supported AI coding app session
 # Read .specify/specs/{feature}/session-checkpoint.md
 # Continue with /5_gofer_implement or the stage named in the checkpoint
 ```
@@ -796,12 +814,15 @@ separation from `tasks.md`:
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
 - Use `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
-  `eai provision entra --force --redirect-uri <exact-callback-uri> --debug`,
+  `eai provision entra --force --redirect-uri <confirmed-callback-uri>`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
   `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded
-  by the preflight artifact instead of improvising a new sequence.
+  by the preflight artifact instead of improvising a new sequence. Use EAI
+  `--debug` flags only with explicit user approval, and never write private
+  hostnames, tenant IDs, client IDs, tokens, or raw debug output to committed
+  artifacts.
 - For v4 passive ResourceAPI search, treat `capabilities.search.fulltext`,
   `capabilities.search.hybrid`, and `capabilities.search.vector` from
   `eai resources storage doctor --tenant-id <tenant-id> --format json` as
@@ -815,7 +836,9 @@ separation from `tasks.md`:
   `/api/auth/callback/microsoft-entra-id`, match
   `EAI_ENTRA_REDIRECT_URI_MISMATCH` in the error catalog. Confirm `eai whoami`
   and tenant selection first, then use EAI Entra provisioning to register the
-  exact callback URI before asking the user to edit Azure manually.
+  confirmed callback URI before asking the user to edit Azure manually. Record
+  only a redacted callback route pattern and recovery status in implementation
+  notes or validation artifacts.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,
   AI assistance mode, contextual prefill or conversational support, completion

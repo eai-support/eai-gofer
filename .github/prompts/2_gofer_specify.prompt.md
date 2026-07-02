@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/2_gofer_specify.md
-  canonicalChecksum: 27183bf4c82d49a76270e86c79e80b923da3506cd592f5e840694704034f5417
+  canonicalChecksum: 82581b3e2a3c45d84a67feb3a7fecc9db2dda59a9f26d0f29afeb9ccc43a46cc
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -23,7 +23,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -54,6 +54,24 @@ Before doing stage/helper work:
 
 
 # Gofer Specify
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -277,7 +295,7 @@ Read these files for full context:
 
 Generate the COMPLETE spec.md following this structure:
 
-1. YAML frontmatter: id, title, status: draft, created (ISO date), updated, author: Claude
+1. YAML frontmatter: id, title, status: draft, created (ISO date), updated, author: Gofer
 2. Overview — High-level description of what this feature does and why it matters
 3. User Stories — Prioritized P1/P2/P3 with 'As a [user] I want to [action] So that [benefit]'
    - Each story MUST have checkable acceptance criteria (- [ ] format)

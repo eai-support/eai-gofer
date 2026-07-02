@@ -13,15 +13,15 @@ Copilot, and Gemini.
 
 ## Core Pipeline
 
-| Stage             | Command                | Purpose                                                      |
-| ----------------- | ---------------------- | ------------------------------------------------------------ |
-| Business Scenario | `/0_business_scenario` | Kick off the workflow, gather context, and route the work    |
-| Research          | `/1_gofer_research`    | Explore the codebase, constraints, and delivery options      |
-| Specify           | `/2_gofer_specify`     | Write the feature specification                              |
-| Plan              | `/3_gofer_plan`        | Produce architecture, data model, and contracts              |
-| Tasks             | `/4_gofer_tasks`       | Break the work into dependency-ordered execution units       |
-| Implement         | `/5_gofer_implement`   | Make code and documentation changes                          |
-| Validate          | `/6_gofer_validate`    | Run validation, blast-radius review, and final quality gates |
+| Stage       | Command              | Purpose                                                      |
+| ----------- | -------------------- | ------------------------------------------------------------ |
+| Gofer Start | `/0_gofer_start`     | Kick off the workflow, gather context, and route the work    |
+| Research    | `/1_gofer_research`  | Explore the codebase, constraints, and delivery options      |
+| Specify     | `/2_gofer_specify`   | Write the feature specification                              |
+| Plan        | `/3_gofer_plan`      | Produce architecture, data model, and contracts              |
+| Tasks       | `/4_gofer_tasks`     | Break the work into dependency-ordered execution units       |
+| Implement   | `/5_gofer_implement` | Make code and documentation changes                          |
+| Validate    | `/6_gofer_validate`  | Run validation, blast-radius review, and final quality gates |
 
 Optional helpers:
 

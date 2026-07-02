@@ -34,7 +34,7 @@ function fuzzyMatch(needle: string, haystack: string[]): string[] {
 // surfaces both, while Copilot's palette tends to show namespaced only.
 const ALL_COMMANDS: string[] = [
   // Numbered pipeline stages (file basenames)
-  '0_business_scenario',
+  '0_gofer_start',
   '0a_problem_validation',
   '1_gofer_research',
   '2_gofer_specify',

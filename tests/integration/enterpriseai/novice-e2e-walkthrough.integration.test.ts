@@ -63,7 +63,7 @@ function seedFallbackReferences(workspaceRoot: string): void {
 
 describe('enterpriseai novice e2e walkthrough (root integration)', () => {
   it('keeps novice guardrails and auto-chain guidance across discovery and research entrypoints', () => {
-    const scenarioCommand = readCommandFile('0_business_scenario.md');
+    const scenarioCommand = readCommandFile('0_gofer_start.md');
     const researchCommand = readCommandFile('1_gofer_research.md');
 
     expect(scenarioCommand).toMatch(/Novice Walkthrough Guardrail \(MANDATORY\)/);

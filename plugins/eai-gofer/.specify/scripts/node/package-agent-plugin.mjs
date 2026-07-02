@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds the installable Gofer Claude + Codex + Copilot plugin bundle.
+ * Builds the installable Gofer plugin bundle for supported AI coding apps.
  *
  * Canonical command sources live in `.specify/commands/`. This script stages a
  * portable plugin under `dist/` and, when requested, refreshes the repo-local
@@ -31,6 +31,14 @@ const COPILOT_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/copilot-marketplace.json`;
 const GEMINI_EXTENSION_URL = `${PUBLIC_PLUGIN_URL}/gemini-extension.json`;
 const PERSONAL_PATH_PATTERN =
   /(^|[\s"'])(\/Users\/[^/\s"']+|\/home\/[^/\s"']+|[A-Za-z]:\\Users\\[^\\\s"']+)/;
+const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
+  'gofer:plan',
+  'gofer:side',
+  'gofer:personality',
+  'gofer:check-workspace',
+  'gofer:bootstrap-workspace',
+  'gofer:eai-first-run',
+]);
 
 function parseArgs(argv) {
   const args = {
@@ -152,7 +160,7 @@ function buildCodexManifest(version, stages, paths = {}) {
       displayName: PLUGIN_DISPLAY_NAME,
       shortDescription: 'Spec-driven delivery workflow for agentic coding',
       longDescription:
-        'Run Gofer’s core /0_business_scenario → /6_gofer_validate workflow, with optional bootstrap, save/resume, testing, and communications helpers.',
+        'Run Gofer’s core /0_gofer_start → /6_gofer_validate workflow, with optional bootstrap, save/resume, testing, and communications helpers.',
       developerName: 'EAI Tools',
       category: 'Coding',
       capabilities: ['Interactive', 'Write'],
@@ -228,7 +236,7 @@ function buildClaudeManifest(version, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer core pipeline: /0_business_scenario through /6_gofer_validate, plus optional helper commands.',
+      'Gofer core pipeline: /0_gofer_start through /6_gofer_validate, plus optional helper commands.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -258,7 +266,7 @@ function buildBundleMarketplace(version) {
         name: PLUGIN_NAME,
         source: './plugins/eai-gofer',
         description:
-          'Gofer core pipeline from /0_business_scenario through /6_gofer_validate, with optional helper commands.',
+          'Gofer core pipeline from /0_gofer_start through /6_gofer_validate, with optional helper commands.',
         version,
         author: {
           name: 'EAI Tools',
@@ -298,7 +306,7 @@ function buildRepoMarketplace(version) {
         name: PLUGIN_NAME,
         source: './plugins/eai-gofer',
         description:
-          'Gofer core pipeline from /0_business_scenario through /6_gofer_validate, with optional helper commands.',
+          'Gofer core pipeline from /0_gofer_start through /6_gofer_validate, with optional helper commands.',
         version,
         author: {
           name: 'EAI Tools',
@@ -375,11 +383,57 @@ function buildUmbrellaSkill(version, stages) {
     .map((stage) => `- \`${stage.frontmatter.name}\` - ${stage.frontmatter.description}`)
     .join('\n');
 
-  return `---\nname: eai-gofer\ndescription: "Run the public Gofer core pipeline and helper commands in Claude, Gemini, Codex, or Copilot."\n---\n\n# Gofer\n\nVersion: ${version}\n\nUse this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, run \`/gofer:eai-first-run\` before \`/0_business_scenario\`. It is allowed to run before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, \`eai init\`, and Gofer scaffold readiness with user approval gates.\n\n## EAI CLI Discovery And Recovery\n\n- Run \`eai update --check\` before first EAI platform work when the CLI may be stale.\n- Run \`eai --describe\` before assuming command syntax.\n- If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.\n- After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.\n- Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.\n\n## Token And Cost Policy\n\n- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run \`/gofer:bootstrap-workspace\` if it is missing.\n- Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.\n- Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.\n- Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.\n- After large research, planning, implementation, or validation bursts, checkpoint artifacts and compact/clear/resume context when the host supports it.\n\n## Core Pipeline And Helpers\n\n${stageList}\n\n## Stable Local Install Path\n\nInstall or update this plugin by replacing the stable local folder:\n\n\`\`\`text\n~/plugins/eai-gofer\n\`\`\`\n\nThe public release feed is available at:\n\n\`\`\`text\n${PUBLIC_SITE_URL}/releases.json\n\`\`\`\n\nGemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same command set there.\n`;
+  return `---\nname: eai-gofer\ndescription: "Run the public Gofer core pipeline and helper commands in Claude, Gemini, Codex, or Copilot."\n---\n\n# Gofer\n\nVersion: ${version}\n\nUse this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.\n\n## Workspace First\n\nBefore stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, run \`/gofer:eai-first-run\` before \`/0_gofer_start\`. It is allowed to run before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, \`eai init\`, and Gofer scaffold readiness with user approval gates.\n\n## EAI CLI Discovery And Recovery\n\n- Run \`eai whoami\` before Gofer pipeline work and require a valid login plus an active tenant.\n- Run \`eai update --check\` before first EAI platform work when the CLI may be stale.\n- Run \`eai --describe\` before assuming command syntax.\n- If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.\n- After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.\n- Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.\n\n## Token And Cost Policy\n\n- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run \`/gofer:bootstrap-workspace\` if it is missing.\n- Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.\n- Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.\n- Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.\n- After large research, planning, implementation, or validation bursts, checkpoint artifacts and compact/clear/resume context when the host supports it.\n\n## Core Pipeline And Helpers\n\n${stageList}\n\n## Stable Local Install Path\n\nInstall or update this plugin by replacing the stable local folder:\n\n\`\`\`text\n~/plugins/eai-gofer\n\`\`\`\n\nThe public release feed is available at:\n\n\`\`\`text\n${PUBLIC_SITE_URL}/releases.json\n\`\`\`\n\nGemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same command set there.\n`;
+}
+
+function buildWorkspacePreflightSection() {
+  return `
+## Workspace Preflight
+
+Before doing stage/helper work:
+
+1. Resolve the repository root.
+2. Check the core Gofer sentinels:
+   - \`.specify/.gofer-version\`
+   - \`.specify/commands/0_gofer_start.md\`
+   - \`.specify/templates/spec-template.md\`
+   - \`.specify/templates/loop-contract-template.json\`
+   - \`.specify/templates/working-backwards-prfaq-template.md\`
+   - \`.specify/scripts/node/gofer-workspace-check.mjs\`
+   - \`.specify/scripts/node/gofer-workspace-bootstrap.mjs\`
+   - \`.specify/specs/\`
+   - \`.specify/memory/\`
+3. If the repo has the workspace checker script, prefer running:
+   - \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`
+4. If the workspace is missing or stale, ask exactly:
+   - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
+5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+6. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+`.trim();
+}
+
+function injectWorkspacePreflight(stage, body) {
+  if (WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS.has(String(stage.frontmatter.name))) {
+    return body;
+  }
+  if (body.includes('## Workspace Preflight')) {
+    return body;
+  }
+
+  const headingMatch = body.match(/^# [^\n]+\n*/);
+  if (!headingMatch) {
+    return `${buildWorkspacePreflightSection()}\n\n${body}`;
+  }
+
+  const insertAt = headingMatch[0].length;
+  return `${body.slice(0, insertAt).trimEnd()}\n\n${buildWorkspacePreflightSection()}\n\n${body
+    .slice(insertAt)
+    .replace(/^\n+/, '')}`;
 }
 
 function buildStageSkill(stage) {
-  return `---\nname: ${stage.frontmatter.name}\ndescription: ${yamlString(stage.frontmatter.description)}\n---\n\n${stage.body.trim()}\n`;
+  const body = injectWorkspacePreflight(stage, stage.body.trim());
+  return `---\nname: ${stage.frontmatter.name}\ndescription: ${yamlString(stage.frontmatter.description)}\n---\n\n${body}\n`;
 }
 
 function buildPluginReadmeBase(version) {
@@ -416,9 +470,9 @@ That host publishes:
 
 ## First EAI Platform App
 
-Run \`/gofer:eai-first-run\` before \`/0_business_scenario\` when a new user, machine, repo, tenant, or EAI app template is not ready. The command is allowed to run before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Run \`/gofer:eai-first-run\` before \`/0_gofer_start\` when a new user, machine, repo, tenant, or EAI app template is not ready. The command is allowed to run before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
 
-If \`/0_business_scenario\` is unknown in a new repo, install or update this plugin first, then run \`/gofer:eai-first-run\`.
+If \`/0_gofer_start\` is unknown in a new repo, install or update this plugin first, then run \`/gofer:eai-first-run\`.
 
 ## App-Native Surfaces And Repo Scripts
 
@@ -437,7 +491,7 @@ The clean UX rule is: use plain numbered stage commands in initialized repos, an
 
 | Stage | Command | Main output |
 | ----- | ------- | ----------- |
-| Business scenario | \`/0_business_scenario\` | Full pipeline kickoff |
+| Gofer Start | \`/0_gofer_start\` | Full pipeline kickoff |
 | Research | \`/1_gofer_research\` | \`research.md\` |
 | Specify | \`/2_gofer_specify\` | \`spec.md\` |
 | Plan | \`/3_gofer_plan\` | \`plan.md\`, \`data-model.md\`, \`contracts/\` |
@@ -507,7 +561,7 @@ codex plugin marketplace add ~/plugins/eai-gofer
 codex plugin add eai-gofer@eai-gofer
 \`\`\`
 
-The Codex plugin keeps the slash-command stage entrypoints as the primary user surface. The plugin skill registry only exposes the umbrella \`eai-gofer\` skill so Codex does not show both \`/0_business_scenario\` and \`eai-gofer:0_business_scenario\` for every stage.
+The Codex plugin keeps the slash-command stage entrypoints as the primary user surface. The plugin skill registry only exposes the umbrella \`eai-gofer\` skill so Codex does not show both \`/0_gofer_start\` and \`eai-gofer:0_gofer_start\` for every stage.
 
 ## Copilot CLI
 

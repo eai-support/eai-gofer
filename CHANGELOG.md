@@ -82,7 +82,7 @@ and this project adheres to
 
 **New Commands Available on All Platforms:**
 
-- `/0_business_scenario` - Main orchestrator (full pipeline)
+- `/0_gofer_start` - Main orchestrator (full pipeline)
 - `/0a_problem_validation` - Validate business problem
 - `/1_gofer_research` - Codebase + technology research
 - `/2_gofer_specify` - Create feature specification

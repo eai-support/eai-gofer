@@ -254,10 +254,10 @@ describe('New MCP Tool Responses (T011)', () => {
     });
 
     it('should resolve a stage command to a slash command', async () => {
-      const result = await mcpHandler.startStage('0_business_scenario');
+      const result = await mcpHandler.startStage('0_gofer_start');
 
       expect(result.success).toBe(true);
-      expect(result.command).toBe('/0_business_scenario');
+      expect(result.command).toBe('/0_gofer_start');
       expect(result).toHaveProperty('preflight');
     });
 

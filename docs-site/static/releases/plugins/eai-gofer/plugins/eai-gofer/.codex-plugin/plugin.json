@@ -9,26 +9,15 @@
   "homepage": "https://github.com/eai-tools/eai-gofer",
   "repository": "https://github.com/eai-tools/eai-gofer",
   "license": "Apache-2.0",
-  "keywords": [
-    "eai-gofer",
-    "gofer",
-    "codex",
-    "claude",
-    "copilot",
-    "gemini",
-    "spec-driven-development"
-  ],
+  "keywords": ["eai-gofer", "gofer", "codex", "claude", "copilot", "gemini", "spec-driven-development"],
   "skills": "./plugin-skills/",
   "interface": {
     "displayName": "Gofer",
     "shortDescription": "Spec-driven delivery workflow for agentic coding",
-    "longDescription": "Run Gofer’s core /0_business_scenario → /6_gofer_validate workflow, with optional bootstrap, save/resume, testing, and communications helpers.",
+    "longDescription": "Run Gofer’s core /0_gofer_start → /6_gofer_validate workflow, with optional bootstrap, save/resume, testing, and communications helpers.",
     "developerName": "EAI Tools",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/eai-tools/eai-gofer",
     "defaultPrompt": [
       "Set up my first EAI Platform app with Gofer",
@@ -42,7 +31,7 @@
   },
   "gofer": {
     "stages": [
-      "0_business_scenario",
+      "0_gofer_start",
       "0a_problem_validation",
       "1_gofer_research",
       "2_gofer_specify",

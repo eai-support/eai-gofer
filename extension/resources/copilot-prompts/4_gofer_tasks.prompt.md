@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: 2bdf1c12e6696f6dc71cd4612137fd6d127bcc5022b0c0e3ab40b6953bcf1f5f
+  canonicalChecksum: b51f23ccbb65f1ab933036ab38ab07a8332ccae44cf88ba32157725b868f8ffe
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -23,7 +23,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -54,6 +54,24 @@ Before doing stage/helper work:
 
 
 # Gofer Tasks
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->

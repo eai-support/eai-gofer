@@ -8,7 +8,7 @@ function readCommandFile(fileName: string): string {
 
 describe('enterpriseai discovery enterpriseai focus (root integration)', () => {
   it('frames discovery as EnterpriseAI-first and excludes non-EAI primary recommendations', () => {
-    const discoveryCommand = readCommandFile('0_business_scenario.md');
+    const discoveryCommand = readCommandFile('0_gofer_start.md');
 
     expect(discoveryCommand).toMatch(/EnterpriseAI-First Discovery Framing \(MANDATORY\)/);
     expect(discoveryCommand).toMatch(

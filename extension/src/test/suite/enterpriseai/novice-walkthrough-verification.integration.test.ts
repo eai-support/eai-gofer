@@ -8,7 +8,7 @@ function readRootCommandFile(fileName: string): string {
 
 suite('enterpriseai novice walkthrough verification (extension integration)', () => {
   test('keeps discovery walkthrough novice-friendly without external docs', () => {
-    const discoveryCommand = readRootCommandFile('0_business_scenario.md');
+    const discoveryCommand = readRootCommandFile('0_gofer_start.md');
 
     assert.ok(/Novice Walkthrough Guardrail \(MANDATORY\)/.test(discoveryCommand));
     assert.ok(

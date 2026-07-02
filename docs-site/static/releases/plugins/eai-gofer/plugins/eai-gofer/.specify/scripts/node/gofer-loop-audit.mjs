@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 const STAGE_ORDER = {
-  '0_business_scenario': 0,
+  '0_gofer_start': 0,
   '1_gofer_research': 1,
   '1_research': 1,
   '2_gofer_specify': 2,
@@ -162,7 +162,7 @@ function createDefaultContract(featureDir) {
     profile: 'standard',
     objective:
       'Keep feature delivery aligned with current goals, approved scope, implementation evidence, and validation gates.',
-    entryStage: '0_business_scenario',
+    entryStage: '0_gofer_start',
     maxIterations: 3,
     budget: {
       maxWallClockMinutes: null,
@@ -486,7 +486,7 @@ async function analyze(args) {
   }
 
   if (!contract) {
-    result.blockingFindings.push('loop-contract.json is missing; run gofer-loop-audit.mjs --init or rerun /0_business_scenario');
+    result.blockingFindings.push('loop-contract.json is missing; run gofer-loop-audit.mjs --init or rerun /0_gofer_start');
   } else {
     const contractResult = validateContract(contract);
     result.blockingFindings.push(...contractResult.findings);

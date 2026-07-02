@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/gofer_eai_first_run.md
-  canonicalChecksum: eb5e35e2bb0cb1ac9c73df1330eaf43168cb18704208e58824e5ea43684a9ff9
+  canonicalChecksum: 32b2814538a5b72a1f61ad39a22ab749150bcfcd581b083cde9bf57e8354770a
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -37,7 +37,7 @@ Before spawning agents, calling tools, or loading large files:
 # EAI Gofer First Run
 
 Use this command when the user is starting their first EAI Platform app, when
-`#0_business_scenario` is unavailable in a new repository, or when an EAI app
+`#0_gofer_start` is unavailable in a new repository, or when an EAI app
 build reaches the Gofer pipeline before the local machine, workspace, tenant, or
 EAI app template is ready.
 
@@ -263,18 +263,27 @@ and run the advertised equivalent of:
 eai tenant select <tenant-slug-or-id>
 ```
 
-Capture the exact callback URI from the failing browser log, for example:
+Use the failing browser log to confirm the callback route in the active session,
+for example:
 
 ```text
 https://<host>/api/auth/callback/microsoft-entra-id
 ```
 
+Record only the redacted route pattern and recovery status in Gofer artifacts.
+Keep the full callback URI in the terminal/session or user-approved local notes
+only.
+
 Ask before changing tenant-scoped identity configuration, then run the
 advertised equivalent of:
 
 ```bash
-eai provision entra --force --redirect-uri <exact-callback-uri> --debug
+eai provision entra --force --redirect-uri <confirmed-callback-uri>
 ```
+
+Use `--debug` only when the user explicitly approves it, and redact private
+hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing
+any report.
 
 After the command succeeds, retry the sign-in flow and confirm the authorize
 request uses the same registered `redirect_uri`. If the mismatch persists,
@@ -287,7 +296,7 @@ tokens, or `.env.local` values in the first-run report.
 After `eai init`, verify Gofer files exist:
 
 - `.specify/.gofer-version`
-- `.specify/commands#0_business_scenario.md`
+- `.specify/commands#0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/scripts/node/gofer-workspace-check.mjs`
 - `.specify/memory/gofer-model-policy.yaml`
@@ -368,10 +377,10 @@ When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold ar
 ready, tell the user to start:
 
 ```text
-#0_business_scenario <what you want to build>
+#0_gofer_start <what you want to build>
 ```
 
-If `#0_business_scenario` is still unknown after the plugin is installed and the
+If `#0_gofer_start` is still unknown after the plugin is installed and the
 repo is bootstrapped, explain that the host has not loaded the Gofer plugin or
 repo commands yet. Give the host-specific install/update command from the Gofer
 README, then retry this command after the host reloads.

@@ -8,7 +8,7 @@ function readRepoFile(relativePath: string): string {
 
 describe('enterpriseai eai app delivery preflight (root integration)', () => {
   it('gates EAI app delivery before journey mapping and implementation planning', () => {
-    const scenarioCommand = readRepoFile('.claude/commands/0_business_scenario.md');
+    const scenarioCommand = readRepoFile('.claude/commands/0_gofer_start.md');
     const researchCommand = readRepoFile('.claude/commands/1_gofer_research.md');
     const specifyCommand = readRepoFile('.claude/commands/2_gofer_specify.md');
     const planCommand = readRepoFile('.claude/commands/3_gofer_plan.md');
@@ -37,7 +37,10 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
     expect(scenarioCommand).toMatch(
-      /eai provision entra --force\s+--redirect-uri <exact-callback-uri> --debug/
+      /eai provision entra --force\s+--redirect-uri\s+<confirmed-callback-uri>/
+    );
+    expect(scenarioCommand).toContain(
+      'Never write exact private URLs, tenant IDs, client IDs, tokens, or debug output'
     );
     expect(scenarioCommand).toContain(
       'eai resources storage doctor --tenant-id <tenant-id> --format json'
@@ -76,7 +79,10 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(implementCommand).toContain('eai verify storage --tenant-id <tenant-id>');
     expect(implementCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
     expect(implementCommand).toContain(
-      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+      'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
+    );
+    expect(implementCommand).toMatch(
+      /Record\s+only\s+a\s+redacted\s+callback\s+route\s+pattern\s+and\s+recovery\s+status/i
     );
     expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
   });
@@ -114,7 +120,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('AADSTS50011');
     expect(catalog).toContain('/api/auth/callback/microsoft-entra-id');
     expect(catalog).toContain(
-      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+      'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
     );
+    expect(catalog).toContain('record only a redacted pattern');
+    expect(catalog).toContain('Use --debug only with explicit user approval');
   });
 });

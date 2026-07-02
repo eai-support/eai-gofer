@@ -48,7 +48,7 @@ function contract(maxIterations = 3) {
     loopId: 'loop-feature',
     profile: 'standard',
     objective: 'Keep the feature in a bounded check-repair loop.',
-    entryStage: '0_business_scenario',
+    entryStage: '0_gofer_start',
     maxIterations,
     budget: {
       maxWallClockMinutes: null,

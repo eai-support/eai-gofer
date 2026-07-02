@@ -17,7 +17,7 @@ describe('shouldExclude', () => {
   });
 
   it.each([
-    ['0_business_scenario', 'codex'],
+    ['0_gofer_start', 'codex'],
     ['gofer_constitution', 'gemini'],
     ['gofer_hydrate', 'codex'],
     ['7_gofer_save', 'copilot'],

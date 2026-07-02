@@ -16,17 +16,17 @@ and the first pipeline command can produce durable artifacts.
 After the first run, the repository should contain:
 
 - `.specify/.gofer-version`
-- `.specify/commands/0_business_scenario.md`
+- `.specify/commands/0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/memory/gofer-model-policy.yaml`
 - `.specify/specs/{feature}/business-scenario.md`
 
 Gofer commands should also be available on the host you installed:
 
-- Claude Code: `/0_business_scenario`
-- Codex: `0_business_scenario` skill
-- GitHub Copilot: `#0_business_scenario`
-- Gemini CLI: `/gofer:0_business_scenario`
+- Claude Code: `/0_gofer_start`
+- Codex: `0_gofer_start` skill
+- GitHub Copilot: `#0_gofer_start`
+- Gemini CLI: `/gofer:0_gofer_start`
 - VS Code: **Gofer: Initialize Repository** and the Gofer panel
 
 ## 1. Install A Surface
@@ -78,7 +78,7 @@ For a first EAI Platform app, run:
 
 That command checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login,
 tenant access, project folder, EAI app template readiness, and Gofer scaffold
-health before the first business scenario starts.
+health before the first Gofer Start intake begins.
 
 In VS Code, **Gofer: Initialize Repository** remains available when you only
 need the repo-owned Gofer scaffold.
@@ -99,25 +99,25 @@ This repo is missing or stale for Gofer. Initialize/update it now?
 Choose yes. Gofer should create or refresh `.specify/`, host command files, and
 the model policy template.
 
-If `/0_business_scenario` is unknown, install or update the Gofer plugin for the
-host first, then run `/gofer:eai-first-run`. The first-run command is designed
-to work before `.specify/` exists.
+If `/0_gofer_start` is unknown, install or update the Gofer plugin for the host
+first, then run `/gofer:eai-first-run`. The first-run command is designed to
+work before `.specify/` exists.
 
 ## 3. Start The First Feature
 
 Use the host-specific command syntax:
 
-| Surface        | Copy-paste first command                                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------ |
-| VS Code        | Run **Gofer: New Spec from Business Scenario** or start `/0_business_scenario` from your connected assistant |
-| Claude Code    | `/0_business_scenario I want to add passwordless login for customers`                                        |
-| Codex          | `Use the 0_business_scenario skill: I want to add passwordless login for customers`                          |
-| GitHub Copilot | `#0_business_scenario I want to add passwordless login for customers`                                        |
-| Gemini CLI     | `/gofer:0_business_scenario I want to add passwordless login for customers`                                  |
+| Surface        | Copy-paste first command                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| VS Code        | Run **Gofer: Create New Specification** or start `/0_gofer_start` from your connected assistant |
+| Claude Code    | `/0_gofer_start I want to add passwordless login for customers`                                 |
+| Codex          | `Use the 0_gofer_start skill: I want to add passwordless login for customers`                   |
+| GitHub Copilot | `#0_gofer_start I want to add passwordless login for customers`                                 |
+| Gemini CLI     | `/gofer:0_gofer_start I want to add passwordless login for customers`                           |
 
 For first EAI Platform app setup, start with `/gofer:eai-first-run` instead of
-the stage command. It will hand you back to `/0_business_scenario` once the EAI
-CLI, login, tenant, app template, and Gofer scaffold are ready.
+the stage command. It will hand you back to `/0_gofer_start` once the EAI CLI,
+login, tenant, app template, and Gofer scaffold are ready.
 
 Answer the questions Gofer asks about business value, users, constraints,
 success measures, risks, and known systems.

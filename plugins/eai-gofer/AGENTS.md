@@ -4,7 +4,7 @@
 
 ## Core Pipeline Stages
 
-### 0_business_scenario
+### 0_gofer_start
 
 Define the business problem and scenario for Gofer to analyse and solve.
 
@@ -152,10 +152,10 @@ No commands detected. Add build/test/lint scripts to your project.
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run `/0_business_scenario`
-to start the core pipeline (business scenario -> research -> specify -> plan ->
-tasks -> implement -> validate). `/6_gofer_validate` is the terminal quality
-gate and includes the final engineering review loop. Artifacts in
+This project uses Gofer for spec-driven development. Run `/0_gofer_start` to
+start the core pipeline (Gofer Start -> research -> specify -> plan -> tasks ->
+implement -> validate). `/6_gofer_validate` is the terminal quality gate and
+includes the final engineering review loop. Artifacts in
 `.specify/specs/{feature}/`.
 
 ## Core Principles

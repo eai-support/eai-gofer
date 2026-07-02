@@ -12,34 +12,51 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/gofer_eai_first_run.md
-  canonicalChecksum: eb5e35e2bb0cb1ac9c73df1330eaf43168cb18704208e58824e5ea43684a9ff9
+  canonicalChecksum: 32b2814538a5b72a1f61ad39a22ab749150bcfcd581b083cde9bf57e8354770a
   metadataSource: scripts/generate-commands.ts
 ---
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
-
 
 # EAI Gofer First Run
 
 Use this command when the user is starting their first EAI Platform app, when
-`#0_business_scenario` is unavailable in a new repository, or when an EAI app
-build reaches the Gofer pipeline before the local machine, workspace, tenant, or
-EAI app template is ready.
+`#0_gofer_start` is unavailable in a new repository, or when an EAI app build
+reaches the Gofer pipeline before the local machine, workspace, tenant, or EAI
+app template is ready.
 
 This command is intentionally allowed to run before `.specify/` exists.
 
@@ -76,26 +93,26 @@ click/command instructions and continue after the folder is open.
 
 Run only safe read/check commands first:
 
-| Tool    | POSIX check                       | PowerShell check                         |
-| ------- | --------------------------------- | ---------------------------------------- |
-| Git     | `git --version`                   | `git --version`                          |
-| Node.js | `node --version`                  | `node --version`                         |
-| npm     | `npm --version`                   | `npm --version`                          |
-| EAI CLI | `eai --version`                   | `eai --version`                          |
+| Tool     | POSIX check                          | PowerShell check                     |
+| -------- | ------------------------------------ | ------------------------------------ |
+| Git      | `git --version`                      | `git --version`                      |
+| Node.js  | `node --version`                     | `node --version`                     |
+| npm      | `npm --version`                      | `npm --version`                      |
+| EAI CLI  | `eai --version`                      | `eai --version`                      |
 | Registry | `npm config get @eai-tools:registry` | `npm config get @eai-tools:registry` |
 
 If Git, Node.js, or npm is missing, ask before installing. Use the least
 surprising platform path:
 
-| Platform            | Preferred install path                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| macOS               | Use Homebrew if already installed; otherwise use the official Git/Node installer path.  |
-| Linux               | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
-| Windows             | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.      |
-| GitHub Codespaces   | Prefer preinstalled tools and user-level npm; avoid host-level package installs.        |
+| Platform          | Preferred install path                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| macOS             | Use Homebrew if already installed; otherwise use the official Git/Node installer path. |
+| Linux             | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
+| Windows           | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.     |
+| GitHub Codespaces | Prefer preinstalled tools and user-level npm; avoid host-level package installs.       |
 
-For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell redirection
-or assume Git Bash exists unless it was detected.
+For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell
+redirection or assume Git Bash exists unless it was detected.
 
 ## Step 3: Install Or Update EAI CLI
 
@@ -226,9 +243,9 @@ eai template check --format json
 eai gofer refresh --check --format json
 ```
 
-If `eai verify`, `eai template check`, or `eai doctor --check-updates`
-returns `E001` or reports "Not in an EAI project", treat the repo as not yet
-initialized from the EAI app template and explain that clearly.
+If `eai verify`, `eai template check`, or `eai doctor --check-updates` returns
+`E001` or reports "Not in an EAI project", treat the repo as not yet initialized
+from the EAI app template and explain that clearly.
 
 If this is an empty or approved target folder, ask for final confirmation and
 run the advertised equivalent of:
@@ -263,31 +280,40 @@ and run the advertised equivalent of:
 eai tenant select <tenant-slug-or-id>
 ```
 
-Capture the exact callback URI from the failing browser log, for example:
+Use the failing browser log to confirm the callback route in the active session,
+for example:
 
 ```text
 https://<host>/api/auth/callback/microsoft-entra-id
 ```
 
+Record only the redacted route pattern and recovery status in Gofer artifacts.
+Keep the full callback URI in the terminal/session or user-approved local notes
+only.
+
 Ask before changing tenant-scoped identity configuration, then run the
 advertised equivalent of:
 
 ```bash
-eai provision entra --force --redirect-uri <exact-callback-uri> --debug
+eai provision entra --force --redirect-uri <confirmed-callback-uri>
 ```
 
+Use `--debug` only when the user explicitly approves it, and redact private
+hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing
+any report.
+
 After the command succeeds, retry the sign-in flow and confirm the authorize
-request uses the same registered `redirect_uri`. If the mismatch persists,
-check whether `AUTH_ENTRA_CLIENT_ID` or `ENTRA_CLIENT_ID` points to a different
-app registration than the one EAI provisioned. Never record client secrets,
-tokens, or `.env.local` values in the first-run report.
+request uses the same registered `redirect_uri`. If the mismatch persists, check
+whether `AUTH_ENTRA_CLIENT_ID` or `ENTRA_CLIENT_ID` points to a different app
+registration than the one EAI provisioned. Never record client secrets, tokens,
+or `.env.local` values in the first-run report.
 
 ## Step 9: Confirm Gofer Scaffold And Workspace Commands
 
 After `eai init`, verify Gofer files exist:
 
 - `.specify/.gofer-version`
-- `.specify/commands#0_business_scenario.md`
+- `.specify/commands#0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/scripts/node/gofer-workspace-check.mjs`
 - `.specify/memory/gofer-model-policy.yaml`
@@ -308,8 +334,8 @@ bundle or downloaded public bundle as the bootstrap source described by
 
 Make sure the active host is working in the initialized EAI app folder:
 
-- VS Code: open the folder in the current or a new VS Code window when `code`
-  is available; otherwise give exact UI steps.
+- VS Code: open the folder in the current or a new VS Code window when `code` is
+  available; otherwise give exact UI steps.
 - Codex: show the absolute folder path and ask the user to open that folder as
   the active Codex workspace if the host cannot switch automatically.
 - Claude Code: show the absolute folder path and ask the user to attach/open it
@@ -352,8 +378,8 @@ Each section should include:
 - EAI registry status
 - EAI CLI release status from `eai update --check`
 - EAI CLI capability source (`eai --describe` timestamp)
-- EAI capability inventory for init, tenant, app, resources, workflow,
-  template, Gofer-refresh, and blocks commands
+- EAI capability inventory for init, tenant, app, resources, workflow, template,
+  Gofer-refresh, and blocks commands
 - Login status without tokens
 - Tenant readiness without private payloads
 - Template readiness
@@ -364,14 +390,14 @@ Each section should include:
 
 ## Step 11: Start The Pipeline
 
-When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold are
-ready, tell the user to start:
+When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold
+are ready, tell the user to start:
 
 ```text
-#0_business_scenario <what you want to build>
+#0_gofer_start <what you want to build>
 ```
 
-If `#0_business_scenario` is still unknown after the plugin is installed and the
-repo is bootstrapped, explain that the host has not loaded the Gofer plugin or
-repo commands yet. Give the host-specific install/update command from the Gofer
+If `#0_gofer_start` is still unknown after the plugin is installed and the repo
+is bootstrapped, explain that the host has not loaded the Gofer plugin or repo
+commands yet. Give the host-specific install/update command from the Gofer
 README, then retry this command after the host reloads.

@@ -7,7 +7,7 @@
  */
 
 export const CANONICAL_DESCRIPTIONS = {
-  '0_business_scenario':
+  '0_gofer_start':
     'Define the business problem Gofer should solve.',
   '0a_problem_validation':
     'Validate the problem with 5 Whys and stakeholder mapping.',

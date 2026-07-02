@@ -10,7 +10,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -44,6 +44,24 @@ description: Deep codebase and technology research for feature implementation
 ---
 
 # Gofer Research
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -435,7 +453,7 @@ explicitly `enterpriseai`, generate:
    - Non-app runs MUST skip this artifact and record "Not applicable" in
      `research.md`.
 4. `{FEATURE_DIR}/eai-preflight.md` (EAI app delivery only, created by
-   `/0_business_scenario` when possible and updated here when missing or stale)
+   `/0_gofer_start` when possible and updated here when missing or stale)
    - Verify the safe public EAI source set used for research:
      `https://eai-tools.github.io/eai/docs/overview`,
      `https://eai-tools.github.io/eai/docs/api-reference`,
@@ -583,7 +601,7 @@ Write to `{FEATURE_DIR}/research.md`:
 ````markdown
 ---
 date: [ISO timestamp]
-researcher: Claude
+researcher: Gofer
 feature: '[Feature Name]'
 status: complete
 ---

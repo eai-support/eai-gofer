@@ -31,10 +31,28 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function createDirectorySymlink(
-  targetPath: string,
-  symlinkPath: string
-): Promise<boolean> {
+async function findFiles(root: string): Promise<string[]> {
+  if (!(await pathExists(root))) {
+    return [];
+  }
+
+  const results: string[] = [];
+  async function visit(current: string): Promise<void> {
+    for (const entry of await fs.readdir(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        await visit(fullPath);
+      } else if (entry.isFile()) {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  await visit(root);
+  return results;
+}
+
+async function createDirectorySymlink(targetPath: string, symlinkPath: string): Promise<boolean> {
   try {
     await fs.rm(symlinkPath, { recursive: true, force: true });
     await fs.symlink(targetPath, symlinkPath, process.platform === 'win32' ? 'junction' : 'dir');
@@ -94,6 +112,30 @@ describe('ResourceSyncer workspace sync', () => {
 
     expect(path.resolve(path.dirname(geminiCommandPath), includeTarget)).toBe(canonicalCommandPath);
     expect(await pathExists(canonicalCommandPath)).toBe(true);
+  });
+
+  it('archives legacy command entrypoints instead of deleting custom files', async (): Promise<void> => {
+    const legacyPromptPath = path.join(
+      workspace,
+      '.github',
+      'prompts',
+      '0_business_scenario.prompt.md'
+    );
+    const customPrompt = '# Custom legacy Copilot prompt\n\nKeep my local migration note.\n';
+    await fs.mkdir(path.dirname(legacyPromptPath), { recursive: true });
+    await fs.writeFile(legacyPromptPath, customPrompt, 'utf8');
+
+    await syncer.setupCopilotPrompts();
+
+    expect(await pathExists(legacyPromptPath)).toBe(false);
+    const archiveRoot = path.join(workspace, '.specify', 'logs', 'legacy-command-backups');
+    const archivedFiles = await findFiles(archiveRoot);
+    const archivedPromptPath = archivedFiles.find((filePath) =>
+      filePath.endsWith(path.join('.github', 'prompts', '0_business_scenario.prompt.md'))
+    );
+
+    expect(archivedPromptPath, 'expected archived legacy Copilot prompt').toBeTruthy();
+    expect(await fs.readFile(String(archivedPromptPath), 'utf8')).toBe(customPrompt);
   });
 
   it('createNodeScripts syncs entrypoints and helper libraries', async (): Promise<void> => {

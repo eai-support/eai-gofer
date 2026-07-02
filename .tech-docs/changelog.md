@@ -13,7 +13,7 @@ documentation updates for Gofer.
 
 ### Changed
 
-- Consolidated the core public pipeline to: `/0_business_scenario` →
+- Consolidated the core public pipeline to: `/0_gofer_start` →
   `/6_gofer_validate`
 - Removed the old standalone `6a_gofer_engineering_review` stage from the core
   public flow

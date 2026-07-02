@@ -1,6 +1,8 @@
 ---
 name: gofer:check-workspace
-description: Check whether this repo is initialized for Gofer and explain any missing or stale scaffold.
+description:
+  Check whether this repo is initialized for Gofer and explain any missing or
+  stale scaffold.
 agent: copilot-workspace
 tools:
   - Read
@@ -12,28 +14,45 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/gofer_check_workspace.md
-  canonicalChecksum: e0769c181e214c03c04ac738f5af89c1ee24addf0fe62abf1bd925c5ecd02e2b
+  canonicalChecksum: 95e354887cb2afc3c2e17c90bd10db8f166ce863c7543cde8f635d40058022f7
   metadataSource: scripts/generate-commands.ts
 ---
-
 
 # Gofer Workspace Check
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## Step 1: Resolve The Workspace Root
@@ -53,7 +72,7 @@ subdirectory. If needed, walk upward to the nearest directory containing one of:
 Inspect these paths relative to the workspace root:
 
 - `.specify/.gofer-version`
-- `.specify/commands#0_business_scenario.md`
+- `.specify/commands#0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/scripts/bash/create-new-feature.sh`
 - `.specify/scripts/node/parse-stage-command.mjs`
@@ -63,7 +82,8 @@ Inspect these paths relative to the workspace root:
 - `.specify/memory/gofer-model-policy.yaml`
 - `.specify/specs/`
 - `.specify/memory/`
-- `.specify/memory/gofer-model-policy.yaml` (create with `/gofer:bootstrap-workspace` if missing)
+- `.specify/memory/gofer-model-policy.yaml` (create with
+  `/gofer:bootstrap-workspace` if missing)
 
 ## Step 3: Check Host-Specific Files
 

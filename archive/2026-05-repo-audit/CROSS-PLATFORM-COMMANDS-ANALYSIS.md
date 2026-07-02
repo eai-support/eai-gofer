@@ -6,8 +6,8 @@ despite v1.22.0 release claims **Reporter**: douglaswross
 ## Problem Statement
 
 User expected v1.22.0 "multi-provider support" to mean Gofer slash commands
-(`/0_business_scenario`, `/1_gofer_research`, etc.) work in **Codex CLI** and
-**GitHub Copilot Chat**. Instead, commands only work fully in Claude Code.
+(`/0_gofer_start`, `/1_gofer_research`, etc.) work in **Codex CLI** and **GitHub
+Copilot Chat**. Instead, commands only work fully in Claude Code.
 
 ## Current State
 
@@ -43,7 +43,7 @@ $ codex "write hello world in Python"
 # Outputs: print("Hello world")
 
 # What it does NOT do:
-$ codex /0_business_scenario  # ❌ No slash command support
+$ codex /0_gofer_start  # ❌ No slash command support
 ```
 
 **Why Gofer commands don't work**:
@@ -63,19 +63,18 @@ GitHub Copilot Chat **does** support custom prompts (`.github/prompts/`), but:
    - Copilot prompts have workaround: "Claude Code only" sections
 
 2. **No Auto-Chaining** - Each stage must be manually invoked
-   - Claude Code: `/0_business_scenario` auto-chains through all 6 stages
+   - Claude Code: `/0_gofer_start` auto-chains through all 6 stages
    - Copilot: User must manually run `/1_gofer_research`, then
      `/2_gofer_specify`, then...
 
 3. **Simplified Prompts** - Copilot versions are stripped down
-   - Example: `/0_business_scenario` in Claude Code: 800 lines with discovery
-     flow
-   - Example: `/0_business_scenario` in Copilot: 150 lines, basic routing only
+   - Example: `/0_gofer_start` in Claude Code: 800 lines with discovery flow
+   - Example: `/0_gofer_start` in Copilot: 150 lines, basic routing only
 
 **Evidence from Copilot Prompt**:
 
 ```markdown
-# .github/prompts/0_business_scenario.prompt.md (line 59-67)
+# .github/prompts/0_gofer_start.prompt.md (line 59-67)
 
 ## Your Role
 
