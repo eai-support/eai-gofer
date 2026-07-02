@@ -169,6 +169,14 @@ VS Code and Copilot agent mode also receive repo-local customization files:
 `.github/agents/`, `.github/skills/`, `.github/prompts/`,
 `.github/instructions/`, and `.vscode/mcp.json`.
 
+Maintainer release note: stable releases publish `EnterpriseAI.gofer` to the
+Visual Studio Marketplace from GitHub Actions using Microsoft Entra workload
+identity and `vsce publish --azure-credential`. The release workflow expects
+repository variables `VSCE_AZURE_CLIENT_ID`, `VSCE_AZURE_TENANT_ID`, and
+`VSCE_AZURE_SUBSCRIPTION_ID`, with the federated identity authorized as a
+Contributor on the `EnterpriseAI` Marketplace publisher. `VSCE_PAT` is retained
+only as a legacy fallback because Azure DevOps global PATs are being retired.
+
 ### Claude Code
 
 Recommended install path:
