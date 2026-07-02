@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.10] - 2026-07-02
+
+Fix VS Code Marketplace publishing verification and Marketplace README links
+
 ## [3.7.9] - 2026-07-02
 
 Gofer Start rename, EAI preflight hardening, legacy command archival, and refreshed current public plugin bundles
