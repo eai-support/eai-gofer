@@ -42,6 +42,7 @@ const LEGACY_MANAGED_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
+const LEGACY_MANAGED_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 
 export const HOST_POLICIES = {
   auto: { required: [] },
@@ -184,20 +185,55 @@ export async function pathExists(targetPath) {
   }
 }
 
+function buildArchiveStamp() {
+  return `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
+}
+
+async function movePathPreservingAcrossDevices(sourcePath, targetPath) {
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  try {
+    await fs.rename(sourcePath, targetPath);
+  } catch (error) {
+    if (error?.code !== 'EXDEV') {
+      throw error;
+    }
+
+    await fs.cp(sourcePath, targetPath, {
+      recursive: true,
+      force: true,
+      dereference: false,
+    });
+    await fs.rm(sourcePath, { recursive: true, force: true });
+  }
+}
+
+async function archiveLegacyManagedPath(workspaceRoot, relativePath, archiveStamp, dryRun) {
+  const archiveRelativePath = path.join(LEGACY_MANAGED_ARCHIVE_ROOT, archiveStamp, relativePath);
+  if (!dryRun) {
+    await movePathPreservingAcrossDevices(
+      path.join(workspaceRoot, relativePath),
+      path.join(workspaceRoot, archiveRelativePath)
+    );
+  }
+
+  return archiveRelativePath;
+}
+
 async function removeLegacyManagedPaths(workspaceRoot, dryRun) {
-  const removed = [];
+  const archived = [];
+  const archiveStamp = buildArchiveStamp();
   for (const relativePath of LEGACY_MANAGED_PATHS) {
     const targetPath = path.join(workspaceRoot, relativePath);
     if (!(await pathExists(targetPath))) {
       continue;
     }
 
-    if (!dryRun) {
-      await fs.rm(targetPath, { recursive: true, force: true });
-    }
-    removed.push(relativePath);
+    archived.push({
+      relativePath,
+      archivePath: await archiveLegacyManagedPath(workspaceRoot, relativePath, archiveStamp, dryRun),
+    });
   }
-  return removed;
+  return archived;
 }
 
 async function resolveSourcePath(sourceRoot, relativePath) {
@@ -1076,8 +1112,12 @@ export async function bootstrapWorkspace({
     }
   }
 
-  const removedLegacyPaths = await removeLegacyManagedPaths(workspaceRoot, dryRun);
-  changed.push(...removedLegacyPaths.map((relativePath) => `${relativePath} (removed legacy)`));
+  const archivedLegacyPaths = await removeLegacyManagedPaths(workspaceRoot, dryRun);
+  changed.push(
+    ...archivedLegacyPaths.map(
+      ({ relativePath, archivePath }) => `${relativePath} (archived legacy to ${archivePath})`
+    )
+  );
 
   if (await mergeGitignore(workspaceRoot, dryRun)) {
     changed.push('.gitignore');

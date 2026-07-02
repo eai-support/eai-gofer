@@ -66,6 +66,7 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
+const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -128,19 +129,72 @@ export class ResourceSyncer implements IResourceOperations {
 
   constructor(private readonly logger: Logger) {}
 
+  private buildLegacyArchiveStamp(): string {
+    return `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
+  }
+
+  private async movePathPreservingAcrossDevices(
+    sourcePath: string,
+    targetPath: string
+  ): Promise<void> {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+    try {
+      await fs.rename(sourcePath, targetPath);
+    } catch (error) {
+      if (!isNodeErrorWithCode(error) || error.code !== 'EXDEV') {
+        throw error;
+      }
+
+      await fs.cp(sourcePath, targetPath, {
+        recursive: true,
+        force: true,
+        dereference: false,
+      });
+      await fs.rm(sourcePath, { recursive: true, force: true });
+    }
+  }
+
+  private async archiveLegacyGoferCommandPath(
+    relativePath: string,
+    archiveStamp: string
+  ): Promise<string> {
+    const archiveRelativePath = path.join(
+      LEGACY_GOFER_COMMAND_ARCHIVE_ROOT,
+      archiveStamp,
+      relativePath
+    );
+
+    await this.movePathPreservingAcrossDevices(
+      path.join(this.workspacePath, relativePath),
+      path.join(this.workspacePath, archiveRelativePath)
+    );
+
+    return archiveRelativePath;
+  }
+
   private async cleanupLegacyGoferCommandFiles(): Promise<void> {
     if (!this.workspacePath) {
       return;
     }
 
+    const archiveStamp = this.buildLegacyArchiveStamp();
     for (const relativePath of LEGACY_GOFER_COMMAND_PATHS) {
       const targetPath = path.join(this.workspacePath, relativePath);
       try {
-        await fs.rm(targetPath, { recursive: true, force: true });
+        if (!(await FileUtils.exists(targetPath))) {
+          continue;
+        }
+
+        const archivePath = await this.archiveLegacyGoferCommandPath(relativePath, archiveStamp);
+        this.logger.info('ResourceSyncer', 'Archived legacy Gofer command path', {
+          from: relativePath,
+          to: archivePath,
+        });
       } catch (error) {
         this.logger.warn(
           'ResourceSyncer',
-          `Failed to remove legacy Gofer command path ${relativePath}: ${
+          `Failed to archive legacy Gofer command path ${relativePath}: ${
             error instanceof Error ? error.message : String(error)
           }`
         );

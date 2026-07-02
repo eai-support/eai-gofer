@@ -39,34 +39,34 @@ updated: '{{iso_timestamp}}'
 
 ## Commands Run
 
-| Purpose                   | Command                                                                    | Result                |
-| ------------------------- | -------------------------------------------------------------------------- | --------------------- |
-| Install check             | `command -v eai`                                                           | {{result}}            |
-| Version check             | `eai --version`                                                            | {{result}}            |
-| Release check             | `eai update --check`                                                       | {{result}}            |
-| Capability discovery      | `eai --describe`                                                           | {{result}}            |
-| Login check               | `eai whoami`                                                               | {{result}}            |
-| Tenant check              | `eai tenant list --format json`                                            | {{result}}            |
-| Project check             | `eai verify`                                                               | {{result_or_not_run}} |
-| Template drift check      | `eai template check --format json`                                         | {{result_or_not_run}} |
-| Gofer drift check         | `eai gofer refresh --check --format json`                                  | {{result_or_not_run}} |
-| App enrollment check      | `eai app list --format json`                                               | {{result_or_not_run}} |
-| App selection             | `eai app select <key> --format json`                                       | {{result_or_not_run}} |
-| App resource provisioning | `eai app provision <key> --tenant-id <tenant-id> --select --format json`   | {{result_or_not_run}} |
-| Entra provisioning        | `eai provision entra`                                                      | {{result_or_not_run}} |
-| Entra redirect recovery   | `eai provision entra --force --redirect-uri <exact-callback-uri> --debug`  | {{result_or_not_run}} |
-| Environment pull          | `eai env pull`                                                             | {{result_or_not_run}} |
-| Object-type validation    | `eai types validate`                                                       | {{result_or_not_run}} |
-| Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`  | {{result_or_not_run}} |
-| Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                | {{result_or_not_run}} |
-| Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`               | {{result_or_not_run}} |
-| Storage status            | `eai resources storage status --tenant-id <tenant-id> --format json`       | {{result_or_not_run}} |
-| Storage doctor            | `eai resources storage doctor --tenant-id <tenant-id> --format json`       | {{result_or_not_run}} |
-| Storage verify            | `eai verify storage --tenant-id <tenant-id>`                               | {{result_or_not_run}} |
-| Resource call verify      | `eai verify calls --tenant-id <tenant-id> --resource-type <resource-type>` | {{result_or_not_run}} |
-| Workflow readiness check  | `eai workflow readiness --format json`                                     | {{result_or_not_run}} |
-| Block catalog check       | `eai blocks list --format json`                                            | {{result_or_not_run}} |
-| Block readiness check     | `eai blocks readiness --package-profile {{profile}} --format json`         | {{result_or_not_run}} |
+| Purpose                   | Command                                                                                                           | Result                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Install check             | `command -v eai`                                                                                                  | {{result}}            |
+| Version check             | `eai --version`                                                                                                   | {{result}}            |
+| Release check             | `eai update --check`                                                                                              | {{result}}            |
+| Capability discovery      | `eai --describe`                                                                                                  | {{result}}            |
+| Login check               | `eai whoami`                                                                                                      | {{result}}            |
+| Tenant check              | `eai tenant list --format json`                                                                                   | {{result}}            |
+| Project check             | `eai verify`                                                                                                      | {{result_or_not_run}} |
+| Template drift check      | `eai template check --format json`                                                                                | {{result_or_not_run}} |
+| Gofer drift check         | `eai gofer refresh --check --format json`                                                                         | {{result_or_not_run}} |
+| App enrollment check      | `eai app list --format json`                                                                                      | {{result_or_not_run}} |
+| App selection             | `eai app select <key> --format json`                                                                              | {{result_or_not_run}} |
+| App resource provisioning | `eai app provision <key> --tenant-id <tenant-id> --select --format json`                                          | {{result_or_not_run}} |
+| Entra provisioning        | `eai provision entra`                                                                                             | {{result_or_not_run}} |
+| Entra redirect recovery   | `eai provision entra --force --redirect-uri <confirmed-callback-uri>`; artifact uses redacted callback route only | {{result_or_not_run}} |
+| Environment pull          | `eai env pull`                                                                                                    | {{result_or_not_run}} |
+| Object-type validation    | `eai types validate`                                                                                              | {{result_or_not_run}} |
+| Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`                                         | {{result_or_not_run}} |
+| Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                                                       | {{result_or_not_run}} |
+| Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`                                                      | {{result_or_not_run}} |
+| Storage status            | `eai resources storage status --tenant-id <tenant-id> --format json`                                              | {{result_or_not_run}} |
+| Storage doctor            | `eai resources storage doctor --tenant-id <tenant-id> --format json`                                              | {{result_or_not_run}} |
+| Storage verify            | `eai verify storage --tenant-id <tenant-id>`                                                                      | {{result_or_not_run}} |
+| Resource call verify      | `eai verify calls --tenant-id <tenant-id> --resource-type <resource-type>`                                        | {{result_or_not_run}} |
+| Workflow readiness check  | `eai workflow readiness --format json`                                                                            | {{result_or_not_run}} |
+| Block catalog check       | `eai blocks list --format json`                                                                                   | {{result_or_not_run}} |
+| Block readiness check     | `eai blocks readiness --package-profile {{profile}} --format json`                                                | {{result_or_not_run}} |
 
 ## Template Markers
 

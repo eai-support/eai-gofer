@@ -60,13 +60,14 @@ catalog:
         - 'redirect_uri'
         - '/api/auth/callback/microsoft-entra-id'
     meaning: The live app is sending an Entra callback URL that is not registered on the selected Entra app registration.
-    likelyCause: Preview or deployed host changed, Entra provisioning has not been refreshed for the app, or the runtime client ID points at an app registration without the exact callback URI.
+    likelyCause: Preview or deployed host changed, Entra provisioning has not been refreshed for the app, or the runtime client ID points at an app registration without the confirmed callback URI.
     recovery:
       - 'eai whoami'
       - 'eai tenant list --format json'
       - 'eai tenant select <tenant-slug-or-id> when the active tenant is wrong'
-      - 'Confirm the exact callback URL from the failing browser log, usually https://<host>/api/auth/callback/microsoft-entra-id'
-      - 'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+      - 'Confirm the callback route from the failing browser log in the active session; record only a redacted pattern such as https://<app-host>/api/auth/callback/...'
+      - 'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
+      - 'Use --debug only with explicit user approval, and redact private hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing artifacts'
       - 'Retry the sign-in flow and confirm the authorize request now uses the registered redirect_uri'
       - 'If mismatch persists, align AUTH_ENTRA_CLIENT_ID or ENTRA_CLIENT_ID with the Entra app registration returned by EAI'
     nextGate: entra_redirect_registered

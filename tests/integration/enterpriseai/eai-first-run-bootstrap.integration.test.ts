@@ -36,8 +36,10 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('eai provision entra');
     expect(command).toContain('AADSTS50011');
     expect(command).toContain(
-      'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+      'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
     );
+    expect(command).toContain('Record only the redacted route pattern');
+    expect(command).toContain('Use `--debug` only when the user explicitly approves it');
     expect(command).toContain(
       'eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>'
     );

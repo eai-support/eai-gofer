@@ -255,10 +255,14 @@ with an unrelated non-EAI stack.
    - If the user provides a browser or auth log with `AADSTS50011`,
      `redirect_uri`, "reply URL specified in the request does not match", or
      `/api/auth/callback/microsoft-entra-id`, record
-     `EAI_ENTRA_REDIRECT_URI_MISMATCH` in `eai-preflight.md` and recover through
-     EAI login, tenant selection, and `eai provision entra --force
-     --redirect-uri <exact-callback-uri> --debug` before suggesting manual
-     Azure Portal edits.
+     `EAI_ENTRA_REDIRECT_URI_MISMATCH` in `eai-preflight.md` with a redacted
+     callback route pattern such as `https://<app-host>/api/auth/callback/...`.
+     Keep the exact callback URI and any debug output in the active terminal or
+     user-approved local notes only. Recover through EAI login, tenant
+     selection, and `eai provision entra --force --redirect-uri
+     <confirmed-callback-uri>` before suggesting manual Azure Portal edits. Use
+     `--debug` only when the user approves it, and redact private hostnames,
+     tenant IDs, client IDs, and tokens before writing artifacts.
 
 ### EAI Preflight Artifact
 
@@ -275,7 +279,7 @@ For EAI app delivery, create or update
 | Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |
 | Drift readiness | `eai template check` / `eai gofer refresh --check` result or `E001` explanation |
 | App enrollment | Existing app, new app to create, or blocked pending user confirmation |
-| Entra redirect readiness | Exact callback URI, tenant/client alignment state, and any `AADSTS50011` recovery command |
+| Entra redirect readiness | Redacted callback route pattern, tenant/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, tenant IDs, client IDs, tokens, or debug output to committed artifacts. |
 | Block catalog readiness | Available block commands and package profile compatibility evidence |
 | App stack policy | EAI Platform including app template first, Azure second, or approved exception |
 | Next action | Continue discovery, initialize template, request account/tenant access, or stop |

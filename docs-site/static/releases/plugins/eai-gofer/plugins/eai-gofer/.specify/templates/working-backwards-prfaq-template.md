@@ -145,15 +145,15 @@ hide uncertainty or change scope.
 
 ## Stage Change Log
 
-| Stage                  | What changed in this PR/FAQ               | Evidence | Review ask |
-| ---------------------- | ----------------------------------------- | -------- | ---------- |
-| `/0_business_scenario` | {{initial-problem-and-launch-promise}}    | {{path}} | {{ask}}    |
-| `/1_gofer_research`    | {{research-learning-and-options}}         | {{path}} | {{ask}}    |
-| `/2_gofer_specify`     | {{product-behavior-and-scope}}            | {{path}} | {{ask}}    |
-| `/3_gofer_plan`        | {{architecture-and-platform-summary}}     | {{path}} | {{ask}}    |
-| `/4_gofer_tasks`       | {{delivery-sequence-and-risk}}            | {{path}} | {{ask}}    |
-| `/5_gofer_implement`   | {{implemented-behavior-and-deltas}}       | {{path}} | {{ask}}    |
-| `/6_gofer_validate`    | {{validation-security-release-readiness}} | {{path}} | {{ask}}    |
+| Stage                | What changed in this PR/FAQ               | Evidence | Review ask |
+| -------------------- | ----------------------------------------- | -------- | ---------- |
+| `/0_gofer_start`     | {{initial-problem-and-launch-promise}}    | {{path}} | {{ask}}    |
+| `/1_gofer_research`  | {{research-learning-and-options}}         | {{path}} | {{ask}}    |
+| `/2_gofer_specify`   | {{product-behavior-and-scope}}            | {{path}} | {{ask}}    |
+| `/3_gofer_plan`      | {{architecture-and-platform-summary}}     | {{path}} | {{ask}}    |
+| `/4_gofer_tasks`     | {{delivery-sequence-and-risk}}            | {{path}} | {{ask}}    |
+| `/5_gofer_implement` | {{implemented-behavior-and-deltas}}       | {{path}} | {{ask}}    |
+| `/6_gofer_validate`  | {{validation-security-release-readiness}} | {{path}} | {{ask}}    |
 
 ## Review Ask
 

@@ -1,7 +1,8 @@
 ---
 name: gofer_constitution
-description: "Create or update project constitution with coding principles and guidelines."
-title: "Gofer Constitution"
+description:
+  'Create or update project constitution with coding principles and guidelines.'
+title: 'Gofer Constitution'
 category: utility
 surfaces:
   - claude
@@ -15,28 +16,67 @@ surfaces:
   - system-skills
 aliases: [gofer:constitution]
 ---
+
 ---
-description:
-  Create or update project constitution with coding principles and guidelines
+
+description: Create or update project constitution with coding principles and
+guidelines
+
 ---
 
 # Gofer Constitution
 
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
+
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## Source-of-Truth and Codex Distribution (FR-001, FR-010)
@@ -59,15 +99,15 @@ when updating:
    source-of-truth.**
 
 2. **Codex distribution path (FR-010)**: Codex discovers skills at
-   `.agents/skills/` (one folder per skill:
-   `.agents/skills/<stage>/SKILL.md`). This is NOT the same as
-   `.claude/skills/`, and it is the only repo-local path Codex should rely on
-   for normal Gofer installs. The constitution MUST capture that distinction
-   explicitly so future authors do not conflate the two paths or recreate
-   duplicate global Gofer bundles. The official Codex disable knob is a
-   per-skill `[[skills.config]]` entry with a `path = "/full/path/to/skill"`
-   plus `enabled = false` in `~/.codex/config.toml`; there is no global
-   skill-budget percentage key (FR-011).
+   `.agents/skills/` (one folder per skill: `.agents/skills/<stage>/SKILL.md`).
+   This is NOT the same as `.claude/skills/`, and it is the only repo-local path
+   Codex should rely on for normal Gofer installs. The constitution MUST capture
+   that distinction explicitly so future authors do not conflate the two paths
+   or recreate duplicate global Gofer bundles. The official Codex disable knob
+   is a per-skill `[[skills.config]]` entry with a
+   `path = "/full/path/to/skill"` plus `enabled = false` in
+   `~/.codex/config.toml`; there is no global skill-budget percentage key
+   (FR-011).
 
 When updating the constitution, ensure both sections survive the edit pass.
 

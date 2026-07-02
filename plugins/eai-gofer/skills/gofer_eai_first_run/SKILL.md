@@ -232,18 +232,27 @@ and run the advertised equivalent of:
 eai tenant select <tenant-slug-or-id>
 ```
 
-Capture the exact callback URI from the failing browser log, for example:
+Use the failing browser log to confirm the callback route in the active session,
+for example:
 
 ```text
 https://<host>/api/auth/callback/microsoft-entra-id
 ```
 
+Record only the redacted route pattern and recovery status in Gofer artifacts.
+Keep the full callback URI in the terminal/session or user-approved local notes
+only.
+
 Ask before changing tenant-scoped identity configuration, then run the
 advertised equivalent of:
 
 ```bash
-eai provision entra --force --redirect-uri <exact-callback-uri> --debug
+eai provision entra --force --redirect-uri <confirmed-callback-uri>
 ```
+
+Use `--debug` only when the user explicitly approves it, and redact private
+hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing
+any report.
 
 After the command succeeds, retry the sign-in flow and confirm the authorize
 request uses the same registered `redirect_uri`. If the mismatch persists, check

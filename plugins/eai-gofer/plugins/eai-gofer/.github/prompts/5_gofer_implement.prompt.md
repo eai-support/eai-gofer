@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 7a2558041bfee667b7f8eb6c4429e9b10a42f71c7cb375ea051216445fcbf92c
+  canonicalChecksum: a8b0d895da64c40145d5800c41cd1ab2219289066ec5d948f7ba70b5a4e2125e
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -844,12 +844,15 @@ separation from `tasks.md`:
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
 - Use `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
-  `eai provision entra --force --redirect-uri <exact-callback-uri> --debug`,
+  `eai provision entra --force --redirect-uri <confirmed-callback-uri>`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,
   `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
   `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded by
-  the preflight artifact instead of improvising a new sequence.
+  the preflight artifact instead of improvising a new sequence. Use EAI
+  `--debug` flags only with explicit user approval, and never write private
+  hostnames, tenant IDs, client IDs, tokens, or raw debug output to committed
+  artifacts.
 - For v4 passive ResourceAPI search, treat `capabilities.search.fulltext`,
   `capabilities.search.hybrid`, and `capabilities.search.vector` from
   `eai resources storage doctor --tenant-id <tenant-id> --format json` as
@@ -863,7 +866,9 @@ separation from `tasks.md`:
   `/api/auth/callback/microsoft-entra-id`, match
   `EAI_ENTRA_REDIRECT_URI_MISMATCH` in the error catalog. Confirm `eai whoami`
   and tenant selection first, then use EAI Entra provisioning to register the
-  exact callback URI before asking the user to edit Azure manually.
+  confirmed callback URI before asking the user to edit Azure manually. Record
+  only a redacted callback route pattern and recovery status in implementation
+  notes or validation artifacts.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,
   AI assistance mode, contextual prefill or conversational support, completion
