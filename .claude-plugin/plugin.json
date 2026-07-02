@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.7.8",
+  "version": "3.7.9",
   "description": "Gofer core pipeline: /0_gofer_start through /6_gofer_validate, plus optional helper commands.",
   "author": {
     "name": "EAI Tools",
@@ -9,6 +9,11 @@
   "homepage": "https://github.com/eai-tools/eai-gofer",
   "repository": "https://github.com/eai-tools/eai-gofer",
   "license": "Apache-2.0",
-  "keywords": ["eai-gofer", "gofer", "claude-code", "spec-driven-development"],
+  "keywords": [
+    "eai-gofer",
+    "gofer",
+    "claude-code",
+    "spec-driven-development"
+  ],
   "skills": "./.agents/skills/"
 }
