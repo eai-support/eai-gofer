@@ -117,8 +117,9 @@ jobs:
           fi
 
           if [ -z "$VSCE_PAT" ]; then
-            echo "Skipping VS Code Marketplace publish because VSCE_PAT is not configured."
-            exit 0
+            echo "::error::VSCE_PAT is required for stable releases so EnterpriseAI.gofer publishes to the VS Code Marketplace."
+            echo "::error::Configure the repository secret or publish will appear green while Marketplace users remain on an old version."
+            exit 1
           fi
 
           npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" -p "$VSCE_PAT"
