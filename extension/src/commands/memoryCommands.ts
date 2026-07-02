@@ -14,6 +14,15 @@ import { MemoryManager } from '../autonomous/MemoryManager';
 import { type Memory } from '../autonomous/memory';
 import { MemoryPanel } from '../ui/MemoryPanel';
 
+let registeredMemoryCommandDisposables: vscode.Disposable[] = [];
+
+export function disposeMemoryCommands(): void {
+  for (const disposable of registeredMemoryCommandDisposables) {
+    disposable.dispose();
+  }
+  registeredMemoryCommandDisposables = [];
+}
+
 /**
  * Registers all memory-related commands.
  *
@@ -24,47 +33,63 @@ export function registerMemoryCommands(
   context: vscode.ExtensionContext,
   memoryManager: MemoryManager
 ): void {
-  // Register "Gofer: Remember" command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.remember', async () => {
-      await rememberCommand(memoryManager);
-    })
-  );
+  // Workspace reinitialization creates a fresh MemoryManager in the same
+  // extension host. Dispose old command handlers first so VS Code does not
+  // reject duplicate command ids such as `gofer.remember`.
+  disposeMemoryCommands();
+  const disposables: vscode.Disposable[] = [];
 
-  // Register "Gofer: Search Memory" command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.searchMemory', async () => {
-      await searchMemoryCommand(memoryManager);
-    })
-  );
+  try {
+    // Register "Gofer: Remember" command
+    disposables.push(
+      vscode.commands.registerCommand('gofer.remember', async () => {
+        await rememberCommand(memoryManager);
+      })
+    );
 
-  // Register "Gofer: Forget Memory" command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.forgetMemory', async () => {
-      await forgetMemoryCommand(memoryManager);
-    })
-  );
+    // Register "Gofer: Search Memory" command
+    disposables.push(
+      vscode.commands.registerCommand('gofer.searchMemory', async () => {
+        await searchMemoryCommand(memoryManager);
+      })
+    );
 
-  // Register "Gofer: Clear Memory" command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.clearMemory', async () => {
-      await clearMemoryCommand(memoryManager);
-    })
-  );
+    // Register "Gofer: Forget Memory" command
+    disposables.push(
+      vscode.commands.registerCommand('gofer.forgetMemory', async () => {
+        await forgetMemoryCommand(memoryManager);
+      })
+    );
 
-  // Register "Gofer: View Memories" command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.viewMemories', async () => {
-      MemoryPanel.createOrShow(context.extensionUri, memoryManager);
-    })
-  );
+    // Register "Gofer: Clear Memory" command
+    disposables.push(
+      vscode.commands.registerCommand('gofer.clearMemory', async () => {
+        await clearMemoryCommand(memoryManager);
+      })
+    );
 
-  // Register "Gofer: Create Hint File" command (T072)
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.createHintFile', async () => {
-      await createHintFileCommand(context);
-    })
-  );
+    // Register "Gofer: View Memories" command
+    disposables.push(
+      vscode.commands.registerCommand('gofer.viewMemories', async () => {
+        MemoryPanel.createOrShow(context.extensionUri, memoryManager);
+      })
+    );
+
+    // Register "Gofer: Create Hint File" command (T072)
+    disposables.push(
+      vscode.commands.registerCommand('gofer.createHintFile', async () => {
+        await createHintFileCommand(context);
+      })
+    );
+  } catch (error) {
+    for (const disposable of disposables) {
+      disposable.dispose();
+    }
+    throw error;
+  }
+
+  registeredMemoryCommandDisposables = disposables;
+  context.subscriptions.push(...disposables);
 }
 
 /**
