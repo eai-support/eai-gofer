@@ -14,6 +14,143 @@ print_success() { echo -e "${GREEN}✓${NC} $1"; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
+is_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES|on|ON)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+resolve_github_repo() {
+    local remote_url
+    remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
+
+    case "$remote_url" in
+        git@github.com:*)
+            echo "${remote_url#git@github.com:}" | sed 's/\.git$//'
+            ;;
+        https://github.com/*)
+            echo "${remote_url#https://github.com/}" | sed 's/\.git$//'
+            ;;
+        *)
+            echo "eai-tools/eai-gofer"
+            ;;
+    esac
+}
+
+ensure_vscode_marketplace_publish_ready() {
+    if is_truthy "${SKIP_VSCODE_MARKETPLACE_PUBLISH:-}"; then
+        print_warning "Skipping VS Code Marketplace publish checks because SKIP_VSCODE_MARKETPLACE_PUBLISH is set."
+        return 0
+    fi
+
+    if ! command -v gh >/dev/null 2>&1; then
+        print_error "gh is required to verify VS Code Marketplace publishing configuration."
+        exit 1
+    fi
+
+    local repo
+    repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+
+    if ! gh auth status >/dev/null 2>&1; then
+        print_error "gh is not authenticated. Authenticate before running a public release."
+        exit 1
+    fi
+
+    if gh secret list --repo "$repo" 2>/dev/null | awk '{print $1}' | grep -qx "VSCE_PAT"; then
+        print_success "VS Code Marketplace publish secret VSCE_PAT is configured for $repo"
+        return 0
+    fi
+
+    print_error "VS Code Marketplace publish secret VSCE_PAT is not configured for $repo."
+    print_error "Stable releases must publish EnterpriseAI.gofer to the Visual Studio Marketplace."
+    print_error "Add the secret with: gh secret set VSCE_PAT --repo $repo"
+    print_error "Only bypass this for an intentional dry/internal release with SKIP_VSCODE_MARKETPLACE_PUBLISH=1."
+    exit 1
+}
+
+wait_for_release_workflow() {
+    local version="$1"
+    local tag_name="v$version"
+    local repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+    local run_id=""
+
+    if is_truthy "${SKIP_RELEASE_WORKFLOW_WAIT:-}"; then
+        print_warning "Skipping release workflow wait because SKIP_RELEASE_WORKFLOW_WAIT is set."
+        return 0
+    fi
+
+    print_info "Waiting for GitHub release workflow for $tag_name..."
+    for i in {1..30}; do
+        run_id=$(gh run list \
+            --repo "$repo" \
+            --workflow release.yml \
+            --branch "$tag_name" \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // ""' 2>/dev/null || true)
+
+        if [ -n "$run_id" ]; then
+            break
+        fi
+
+        print_info "Release workflow has not started yet... (attempt $i/30)"
+        sleep 10
+    done
+
+    if [ -z "$run_id" ]; then
+        print_error "Could not find release workflow run for $tag_name."
+        print_error "Check: https://github.com/$repo/actions/workflows/release.yml"
+        exit 1
+    fi
+
+    print_info "Watching release workflow run $run_id..."
+    if gh run watch "$run_id" --repo "$repo" --exit-status; then
+        print_success "GitHub release workflow completed successfully"
+    else
+        print_error "GitHub release workflow failed for $tag_name"
+        gh run view "$run_id" --repo "$repo" --log-failed || true
+        exit 1
+    fi
+}
+
+get_vscode_marketplace_version() {
+    (cd extension && npx @vscode/vsce show EnterpriseAI.gofer --json 2>/tmp/eai-gofer-vsce-show.log) \
+        | node -e "const fs=require('fs'); const input=fs.readFileSync(0,'utf8'); if (!input.trim()) process.exit(1); const data=JSON.parse(input); console.log(data.versions?.[0]?.version || '')"
+}
+
+verify_vscode_marketplace_version() {
+    local expected_version="$1"
+    local deployed_version=""
+
+    if is_truthy "${SKIP_VSCODE_MARKETPLACE_PUBLISH:-}"; then
+        print_warning "Skipping VS Code Marketplace version verification because SKIP_VSCODE_MARKETPLACE_PUBLISH is set."
+        return 0
+    fi
+
+    print_info "Verifying Visual Studio Marketplace EnterpriseAI.gofer is at v$expected_version..."
+    for i in {1..30}; do
+        deployed_version=$(get_vscode_marketplace_version || echo "")
+
+        if [ "$deployed_version" = "$expected_version" ]; then
+            print_success "VS Code Marketplace is published at v$deployed_version"
+            return 0
+        fi
+
+        print_info "Waiting for Marketplace propagation... (attempt $i/30, deployed: ${deployed_version:-MISSING}, expected: $expected_version)"
+        sleep 20
+    done
+
+    print_error "VS Code Marketplace did not update to v$expected_version."
+    print_error "Current Marketplace version: ${deployed_version:-MISSING}"
+    print_error "Inspect publish logs: https://github.com/${GITHUB_REPO:-$(resolve_github_repo)}/actions/workflows/release.yml"
+    exit 1
+}
+
 ensure_release_paths_tracked() {
     local missing=0
 
@@ -158,7 +295,9 @@ if [ ! -f "extension/package.json" ]; then
 fi
 
 CURRENT_BRANCH=$(git branch --show-current)
+GITHUB_REPO=${GITHUB_REPO:-$(resolve_github_repo)}
 ensure_release_base
+ensure_vscode_marketplace_publish_ready
 commit_all_changes "chore: pre-release commit from $CURRENT_BRANCH"
 
 if [ "$CURRENT_BRANCH" != "main" ]; then
@@ -533,6 +672,9 @@ if gh release create "v$NEW_VERSION" "./eai-gofer-$NEW_VERSION.vsix" "./dist/eai
 else
     print_warning "Failed to create GitHub release (may need manual creation)"
 fi
+
+wait_for_release_workflow "$NEW_VERSION"
+verify_vscode_marketplace_version "$NEW_VERSION"
 
 # Wait for GitHub Pages deployment
 print_info "Waiting for GitHub Pages deployment..."

@@ -335,10 +335,12 @@ stakeholder communications explaining what changed and why.
 
 ---
 
-## Marp Presentation Deck (Recommended For Stakeholder Review)
+## Marp Presentation Deck (Opt-In; EnterpriseAI Recommended)
 
-When stakeholders need a simple walkthrough, generate the general stakeholder
-deck and, for larger changes, the persona deck pack. Skip decks only for small
+Marp deck generation is opt-in for the standard Gofer workflow and is
+recommended only for `workflowProfile=enterpriseai`, where stakeholders usually
+need a simple walkthrough. When enabled, generate the general stakeholder deck
+and, for larger changes, the persona deck pack. Skip decks only for small
 docs-only or purely mechanical changes where a short Markdown summary is clearer.
 Release Notes and the Demo Script (5-minute walkthrough) remain core
 deliverables as `release-notes.md` and `demo-script.md`.

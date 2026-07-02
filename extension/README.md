@@ -37,7 +37,7 @@ Gofer pipeline.
 - `Gofer: Update Now`
 
 The authoritative command and settings contract lives in
-[`extension/package.json`](./package.json).
+[`extension/package.json`](https://github.com/eai-tools/eai-gofer/blob/main/extension/package.json).
 
 ## Configuration
 
@@ -52,6 +52,6 @@ The authoritative command and settings contract lives in
 
 For the broader project documentation, see:
 
-- [README.md](../README.md)
-- [Technical Docs Overview](../.tech-docs/overview.md)
-- [Configuration Reference](../.tech-docs/configuration.md)
+- [README.md](https://github.com/eai-tools/eai-gofer#readme)
+- [Technical Docs Overview](https://github.com/eai-tools/eai-gofer/blob/main/.tech-docs/overview.md)
+- [Configuration Reference](https://github.com/eai-tools/eai-gofer/blob/main/.tech-docs/configuration.md)

@@ -150,6 +150,8 @@ Recommended: install from the VS Code Marketplace so users receive normal
 Marketplace updates. Manual `.vsix` installs remain supported, but VS Code does
 not auto-update VSIX installs by default.
 
+- Marketplace listing:
+  [EnterpriseAI.gofer](https://marketplace.visualstudio.com/items?itemName=EnterpriseAI.gofer)
 - Marketplace docs:
   [Use extensions in Visual Studio Code](https://code.visualstudio.com/docs/getstarted/extensions)
 - Publishing/update behavior:
