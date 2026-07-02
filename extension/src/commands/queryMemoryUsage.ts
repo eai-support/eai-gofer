@@ -11,6 +11,13 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ContextBuilder } from '../autonomous/ContextBuilder';
 
+let registeredQueryMemoryUsageCommand: vscode.Disposable | undefined;
+
+export function disposeQueryMemoryUsageCommand(): void {
+  registeredQueryMemoryUsageCommand?.dispose();
+  registeredQueryMemoryUsageCommand = undefined;
+}
+
 /**
  * Registers the queryMemoryUsage command.
  */
@@ -19,11 +26,14 @@ export function registerQueryMemoryUsageCommand(
   contextBuilder: ContextBuilder | undefined,
   workspaceRoot: string
 ): void {
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.queryMemoryUsage', async () => {
+  disposeQueryMemoryUsageCommand();
+  registeredQueryMemoryUsageCommand = vscode.commands.registerCommand(
+    'gofer.queryMemoryUsage',
+    async () => {
       await queryMemoryUsageCommand(contextBuilder, workspaceRoot);
-    })
+    }
   );
+  context.subscriptions.push(registeredQueryMemoryUsageCommand);
 }
 
 /**

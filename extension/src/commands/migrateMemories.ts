@@ -9,6 +9,13 @@
 import * as vscode from 'vscode';
 import { MemoryManager } from '../autonomous/MemoryManager';
 
+let registeredMigrateMemoriesCommand: vscode.Disposable | undefined;
+
+export function disposeMigrateMemoriesCommand(): void {
+  registeredMigrateMemoriesCommand?.dispose();
+  registeredMigrateMemoriesCommand = undefined;
+}
+
 /**
  * Registers the migrateMemoriesToLayered command.
  *
@@ -19,11 +26,14 @@ export function registerMigrateMemoriesCommand(
   context: vscode.ExtensionContext,
   memoryManager: MemoryManager
 ): void {
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.migrateMemoriesToLayered', async () => {
+  disposeMigrateMemoriesCommand();
+  registeredMigrateMemoriesCommand = vscode.commands.registerCommand(
+    'gofer.migrateMemoriesToLayered',
+    async () => {
       await migrateMemoriesToLayeredCommand(memoryManager);
-    })
+    }
   );
+  context.subscriptions.push(registeredMigrateMemoriesCommand);
 }
 
 /**

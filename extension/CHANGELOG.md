@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.8] - 2026-07-02
+
+Fix VS Code initialize duplicate command registration
+
 ## [3.7.7] - 2026-06-30
 
 Add Gofer branding command and checkpoint continuation updates
