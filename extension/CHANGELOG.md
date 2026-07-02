@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.11] - 2026-07-02
+
+Fix secure Visual Studio Marketplace publishing with Entra workload identity
+
 ## [3.7.10] - 2026-07-02
 
 Fix VS Code Marketplace publishing verification and Marketplace README links
