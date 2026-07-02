@@ -2,7 +2,7 @@
 
 This file documents all Gofer pipeline commands available as agent skills.
 
-Generated: 2026-07-02T05:24:34.236Z
+Generated: 2026-07-02T06:07:24.748Z
 
 ## EAI CLI Discovery And Recovery
 
