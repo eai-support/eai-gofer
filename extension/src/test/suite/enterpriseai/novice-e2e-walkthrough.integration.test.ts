@@ -47,7 +47,7 @@ suite('enterpriseai novice e2e walkthrough (extension integration)', () => {
   });
 
   test('keeps novice guardrails and auto-chain walkthrough expectations in discovery/research entrypoints', async () => {
-    const scenarioCommand = await readRootCommandFile('0_business_scenario.md');
+    const scenarioCommand = await readRootCommandFile('0_gofer_start.md');
     const researchCommand = await readRootCommandFile('1_gofer_research.md');
 
     assert.ok(/Novice Walkthrough Guardrail \(MANDATORY\)/.test(scenarioCommand));

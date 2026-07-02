@@ -8,7 +8,7 @@ function readRepoFile(relativePath: string): string {
 
 describe('enterpriseai eai app delivery preflight (root integration)', () => {
   it('gates EAI app delivery before journey mapping and implementation planning', () => {
-    const scenarioCommand = readRepoFile('.claude/commands/0_business_scenario.md');
+    const scenarioCommand = readRepoFile('.claude/commands/0_gofer_start.md');
     const researchCommand = readRepoFile('.claude/commands/1_gofer_research.md');
     const specifyCommand = readRepoFile('.claude/commands/2_gofer_specify.md');
     const planCommand = readRepoFile('.claude/commands/3_gofer_plan.md');

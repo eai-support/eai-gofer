@@ -24,7 +24,7 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const DOCTOR_PATH = path.join(REPO_ROOT, '.specify', 'scripts', 'node', 'codex-doctor.mjs');
 
 const CLAUDE_ONLY_STAGES = new Set<string>([
-  '0_business_scenario',
+  '0_gofer_start',
   'gofer_constitution',
   'gofer_hydrate',
   '7_gofer_save',

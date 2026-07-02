@@ -13,22 +13,22 @@ function read(relativePath: string): string {
 
 describe('workspace preflight surface generation', () => {
   it('injects host-specific workspace checks into generated stage surfaces', () => {
-    expect(read('.claude/commands/0_business_scenario.md')).toContain(
+    expect(read('.claude/commands/0_gofer_start.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json'
     );
-    expect(read('extension/resources/claude-commands/0_business_scenario.md')).toContain(
+    expect(read('extension/resources/claude-commands/0_gofer_start.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json'
     );
-    expect(read('.github/prompts/0_business_scenario.prompt.md')).toContain(
+    expect(read('.github/prompts/0_gofer_start.prompt.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json'
     );
-    expect(read('.agents/skills/0_business_scenario/SKILL.md')).toContain(
+    expect(read('.agents/skills/0_gofer_start/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
-    expect(read('.system/skills/0_business_scenario/SKILL.md')).toContain(
+    expect(read('.system/skills/0_gofer_start/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
-    expect(read('.gemini/commands/gofer/0_business_scenario.md')).toContain(
+    expect(read('.gemini/commands/gofer/0_gofer_start.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host gemini --json'
     );
   });

@@ -1,7 +1,7 @@
 {
   "name": "gofer",
   "displayName": "Gofer [PREVIEW]",
-  "description": "Guide repository work from business scenario through the core Gofer pipeline to unified validation inside VS Code.",
+  "description": "Guide repository work from Gofer Start through the core Gofer pipeline to unified validation inside VS Code.",
   "version": "3.7.8",
   "publisher": "EnterpriseAI",
   "icon": "icon.png",
@@ -306,7 +306,7 @@
     "viewsWelcome": [
       {
         "view": "goferProgress",
-        "contents": "Gofer helps turn a business scenario into repository work that is easier to research, specify, plan, implement, and validate.\n\nNo `.specify` workspace was found yet.\n\n[Initialize Gofer](command:gofer.initialize)\n\nA simple way to start:\n1. Initialize the workspace\n2. Open your AI chat or CLI and run `/0_business_scenario` (or `#0_business_scenario` in Copilot)\n3. Move through the core flow: business scenario → research → specify → plan → tasks → implement → validate\n4. Treat `/6_gofer_validate` as the terminal quality gate; it includes the final engineering review loop\n\nUse **Gofer: Install Optional Developer Tools** if your preferred CLI is not installed locally."
+        "contents": "Gofer helps turn Gofer Start intake into repository work that is easier to research, specify, plan, implement, and validate.\n\nNo `.specify` workspace was found yet.\n\n[Initialize Gofer](command:gofer.initialize)\n\nA simple way to start:\n1. Initialize the workspace\n2. Open your AI chat or CLI and run `/0_gofer_start` (or `#0_gofer_start` in Copilot)\n3. Move through the core flow: Gofer Start → research → specify → plan → tasks → implement → validate\n4. Treat `/6_gofer_validate` as the terminal quality gate; it includes the final engineering review loop\n\nUse **Gofer: Install Optional Developer Tools** if your preferred CLI is not installed locally."
       },
       {
         "view": "goferAIUsage",
@@ -471,7 +471,7 @@
           ],
           "default": "auto",
           "description": "Default AI CLI for Gofer command routing",
-          "markdownDescription": "Choose which AI platform to use for Gofer slash commands across the core pipeline (`/0_business_scenario` through `/6_gofer_validate`).\n\n- **Claude**: Use `.claude/commands/*.md` files\n- **Copilot**: Use `.github/prompts/*.prompt.md` files\n- **Codex**: Use `.agents/skills/*/SKILL.md` files\n- **Gemini**: Use `.gemini/commands/gofer/*.toml` files\n- **Auto**: Automatically detect which CLI is active\n\nThis enables complete feature parity across Claude, Copilot, Codex, and Gemini.",
+          "markdownDescription": "Choose which AI platform to use for Gofer slash commands across the core pipeline (`/0_gofer_start` through `/6_gofer_validate`).\n\n- **Claude**: Use `.claude/commands/*.md` files\n- **Copilot**: Use `.github/prompts/*.prompt.md` files\n- **Codex**: Use `.agents/skills/*/SKILL.md` files\n- **Gemini**: Use `.gemini/commands/gofer/*.toml` files\n- **Auto**: Automatically detect which CLI is active\n\nThis enables complete feature parity across Claude, Copilot, Codex, and Gemini.",
           "order": 27
         },
         "gofer.workflowProfile": {

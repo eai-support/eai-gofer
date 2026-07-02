@@ -8,7 +8,7 @@ function readCommandFile(fileName: string): string {
 
 describe('enterpriseai novice walkthrough verification (root integration)', () => {
   it('keeps discovery walkthrough novice-friendly without external docs', () => {
-    const discoveryCommand = readCommandFile('0_business_scenario.md');
+    const discoveryCommand = readCommandFile('0_gofer_start.md');
 
     expect(discoveryCommand).toMatch(/Novice Walkthrough Guardrail \(MANDATORY\)/);
     expect(discoveryCommand).toMatch(

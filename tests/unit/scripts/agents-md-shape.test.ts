@@ -74,7 +74,7 @@ describe('AGENTS.md shape (T168)', () => {
     const content = fs.readFileSync(AGENTS_MD_PATH, 'utf8');
     const section = extractStageSections(content);
     for (const stage of [
-      '0_business_scenario',
+      '0_gofer_start',
       'gofer_constitution',
       'gofer_hydrate',
       '7_gofer_save',

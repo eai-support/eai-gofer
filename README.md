@@ -1,9 +1,9 @@
 # EAI Gofer
 
 EAI Gofer is a business specification-driven delivery workflow for repositories.
-It gives teams one shared pipeline from business scenario through validation,
-keeps the working artifacts in `.specify/`, and ships across VS Code, Claude
-Code, Codex, GitHub Copilot, and Gemini.
+It gives teams one shared pipeline from Gofer Start through validation, keeps
+the working artifacts in `.specify/`, and ships across VS Code, Claude Code,
+Codex, GitHub Copilot, and Gemini.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -29,10 +29,10 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
    Gofer repo scaffold before the pipeline starts.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
    Repository** in VS Code or `/gofer:bootstrap-workspace` from a CLI host.
-4. Start with `/0_business_scenario` and move through the core pipeline.
+4. Start with `/0_gofer_start` and move through the core pipeline.
 
-If `/0_business_scenario` is unknown in a new repo, the host has not loaded the
-Gofer plugin or repo commands yet. Install/update the plugin first, then run
+If `/0_gofer_start` is unknown in a new repo, the host has not loaded the Gofer
+plugin or repo commands yet. Install/update the plugin first, then run
 `/gofer:eai-first-run` to prepare the workspace and start the app build.
 
 ## App-Native Integration Model
@@ -50,25 +50,24 @@ repo-owned commands.
 | Claude Code app                 | Plugin umbrella skill for discovery; repo slash commands remain the fast path                    | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
 | Gemini CLI / Gemini Code Assist | Gemini extension commands and workspace MCP/customization where available                        | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
 
-The UX rule is: initialized repos use plain commands such as
-`/0_business_scenario`; app/plugin skills are for first-run setup, workspace
-diagnostics, explanation, and recovery. This update does not add AWS/Kiro
-app-integration support.
+The UX rule is: initialized repos use plain commands such as `/0_gofer_start`;
+app/plugin skills are for first-run setup, workspace diagnostics, explanation,
+and recovery. This update does not add AWS/Kiro app-integration support.
 
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
 see the [5-minute first run guide](./.tech-docs/first-run.md).
 
 ## Core Pipeline
 
-| Stage             | Command                | Main output                                    |
-| ----------------- | ---------------------- | ---------------------------------------------- |
-| Business scenario | `/0_business_scenario` | Full pipeline kickoff                          |
-| Research          | `/1_gofer_research`    | `research.md`                                  |
-| Specify           | `/2_gofer_specify`     | `spec.md`                                      |
-| Plan              | `/3_gofer_plan`        | `plan.md`, `data-model.md`, `contracts/`       |
-| Tasks             | `/4_gofer_tasks`       | `tasks.md`, `traceability.md`, `issues.md`     |
-| Implement         | `/5_gofer_implement`   | Code and documentation changes                 |
-| Validate          | `/6_gofer_validate`    | Validation artifacts and final review evidence |
+| Stage       | Command              | Main output                                    |
+| ----------- | -------------------- | ---------------------------------------------- |
+| Gofer Start | `/0_gofer_start`     | Full pipeline kickoff                          |
+| Research    | `/1_gofer_research`  | `research.md`                                  |
+| Specify     | `/2_gofer_specify`   | `spec.md`                                      |
+| Plan        | `/3_gofer_plan`      | `plan.md`, `data-model.md`, `contracts/`       |
+| Tasks       | `/4_gofer_tasks`     | `tasks.md`, `traceability.md`, `issues.md`     |
+| Implement   | `/5_gofer_implement` | Code and documentation changes                 |
+| Validate    | `/6_gofer_validate`  | Validation artifacts and final review evidence |
 
 `/6_gofer_validate` is the terminal quality gate. The previous standalone
 engineering-review stage is now folded into validation.

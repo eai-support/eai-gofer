@@ -46,7 +46,7 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('eai doctor --check-updates');
     expect(command).toContain('E001');
     expect(command).toContain('.specify/logs/eai-first-run-report.md');
-    expect(command).toContain('/0_business_scenario <what you want to build>');
+    expect(command).toContain('/0_gofer_start <what you want to build>');
   });
 
   it('exposes the first-run command on every generated host surface', () => {

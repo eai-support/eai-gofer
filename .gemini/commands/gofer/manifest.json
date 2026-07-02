@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "generated": "2026-07-02T03:58:13.993Z",
+  "generated": "2026-07-02T04:51:33.345Z",
   "commands": [
-    "0_business_scenario",
+    "0_gofer_start",
     "0a_problem_validation",
     "10_gofer_cloud",
     "1_gofer_research",

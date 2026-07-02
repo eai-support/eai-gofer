@@ -8,7 +8,7 @@ function readRepoFile(relativePath: string): string {
 
 describe('enterpriseai ui-first app-delivery guidance (root integration)', () => {
   it('keeps shared numbered stages while adding app-delivery-only preview and service-fit gates', () => {
-    const scenarioCommand = readRepoFile('.claude/commands/0_business_scenario.md');
+    const scenarioCommand = readRepoFile('.claude/commands/0_gofer_start.md');
     const researchCommand = readRepoFile('.claude/commands/1_gofer_research.md');
     const planCommand = readRepoFile('.claude/commands/3_gofer_plan.md');
     const tasksCommand = readRepoFile('.claude/commands/4_gofer_tasks.md');

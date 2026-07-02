@@ -33,9 +33,9 @@ interface ParseResult {
  */
 const PIPELINE_STAGES: Array<{ file: string; name: string; alias: string; category: string }> = [
   {
-    file: '0_business_scenario.md',
-    name: '0_business_scenario',
-    alias: 'gofer:scenario',
+    file: '0_gofer_start.md',
+    name: '0_gofer_start',
+    alias: 'gofer:start',
     category: 'pipeline',
   },
   {

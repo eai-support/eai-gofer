@@ -9,12 +9,12 @@ interchangeably with Gofer!
 
 Gofer now supports **4 AI CLIs** with automatic command synchronization:
 
-| CLI              | Directory           | Invocation                   | Auto-Generated       |
-| ---------------- | ------------------- | ---------------------------- | -------------------- |
-| **Claude Code**  | `.claude/commands/` | `/0_business_scenario`       | ✅ Yes (bundled)     |
-| **Codex**        | `.agents/skills/`   | `$ $0_business_scenario`     | ✅ Yes (from Claude) |
-| **Gemini**       | `.gemini/commands/` | `/gofer:0_business_scenario` | ✅ Yes (from Claude) |
-| **Copilot Chat** | `.github/prompts/`  | `#0_business_scenario`       | ✅ Yes (bundled)     |
+| CLI              | Directory           | Invocation             | Auto-Generated                |
+| ---------------- | ------------------- | ---------------------- | ----------------------------- |
+| **Claude Code**  | `.claude/commands/` | `/0_gofer_start`       | ✅ Yes (bundled)              |
+| **Codex**        | `.agents/skills/`   | `$0_gofer_start`       | ✅ Yes (from command sources) |
+| **Gemini**       | `.gemini/commands/` | `/gofer:0_gofer_start` | ✅ Yes (from command sources) |
+| **Copilot Chat** | `.github/prompts/`  | `#0_gofer_start`       | ✅ Yes (bundled)              |
 
 ---
 
@@ -139,16 +139,16 @@ All CLIs access the same Gofer commands with platform-specific syntax:
 
 ```bash
 # Claude Code CLI
-/0_business_scenario "Add user authentication"
+/0_gofer_start "Add user authentication"
 
 # Codex CLI
-$ $0_business_scenario "Add user authentication"
+$0_gofer_start "Add user authentication"
 
 # Gemini CLI (uses same skills as Codex)
-$ $0_business_scenario "Add user authentication"
+/gofer:0_gofer_start "Add user authentication"
 
 # GitHub Copilot Chat (in VSCode)
-#0_business_scenario "Add user authentication"
+#0_gofer_start "Add user authentication"
 ```
 
 ---
@@ -179,15 +179,15 @@ After Gofer initializes your workspace:
 ```bash
 # Claude commands
 ls -la .claude/commands/
-# Should show: 0_business_scenario.md, 1_gofer_research.md, etc.
+# Should show: 0_gofer_start.md, 1_gofer_research.md, etc.
 
 # Codex/Gemini skills
 ls -la .agents/skills/
-# Should show subdirectories: 0_business_scenario/, 1_gofer_research/, etc.
+# Should show subdirectories: 0_gofer_start/, 1_gofer_research/, etc.
 
 # Copilot prompts
 ls -la .github/prompts/
-# Should show: 0_business_scenario.prompt.md, 1_gofer_research.prompt.md, etc.
+# Should show: 0_gofer_start.prompt.md, 1_gofer_research.prompt.md, etc.
 ```
 
 ### 2. Test Each CLI
@@ -210,7 +210,7 @@ codex "Use $ $0 to triage my feature"
 
 ```bash
 cd your-workspace
-gemini "/gofer:0_business_scenario Add user authentication"
+gemini "/gofer:0_gofer_start Add user authentication"
 ```
 
 **Copilot (in VSCode):**
@@ -293,7 +293,7 @@ not `~/.codex/skills/`.
 ls -la .gemini/commands/gofer/
 
 # Restart Gemini from the repo after template generation
-gemini "/gofer:0_business_scenario Test discovery"
+gemini "/gofer:0_gofer_start Test discovery"
 ```
 
 ### Copilot: Prompts Not Appearing

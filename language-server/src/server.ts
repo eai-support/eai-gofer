@@ -576,7 +576,7 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
                     command: {
                       type: 'string',
                       description:
-                        'Stage/helper command name such as 0_business_scenario or /6_gofer_validate',
+                        'Stage/helper command name such as 0_gofer_start or /6_gofer_validate',
                     },
                     feature: {
                       type: 'string',

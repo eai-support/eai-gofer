@@ -172,7 +172,7 @@ npm run gofer:codex-doctor                          # Diagnostic tool
 
 - Based on CLAUDE.md, the project follows a structured workflow with autonomous
   bug fixing and self-improvement loops
-- Uses Gofer's own pipeline for development (`/0_business_scenario` → research →
+- Uses Gofer's own pipeline for development (`/0_gofer_start` → research →
   specify → plan → tasks → implement → validate)
 - Specifications stored in `.specify/specs/` directory
 - Constitution principles defined in `.specify/memory/constitution.md`
@@ -249,10 +249,10 @@ gofer/
    - Define protected boundaries if needed
 
 5. **Let AI Implement**
-   - In Claude Code: `/0_business_scenario Add user authentication`
-   - In GitHub Copilot: `#0_business_scenario Add user authentication`
-   - In OpenAI Codex: Ask to use the `0_business_scenario` skill
-   - In Gemini CLI: `/gofer:0_business_scenario Add user authentication`
+   - In Claude Code: `/0_gofer_start Add user authentication`
+   - In GitHub Copilot: `#0_gofer_start Add user authentication`
+   - In OpenAI Codex: Ask to use the `0_gofer_start` skill
+   - In Gemini CLI: `/gofer:0_gofer_start Add user authentication`
    - Pipeline auto-chains through all stages
 
 ## Key Features

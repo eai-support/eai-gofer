@@ -85,7 +85,7 @@ describe('Gofer workspace bootstrap scripts', () => {
 
     for (const relativePath of [
       '.specify/.gofer-version',
-      '.specify/commands/0_business_scenario.md',
+      '.specify/commands/0_gofer_start.md',
       '.specify/references/platform/README.md',
       '.specify/references/platform/eai.md',
       '.specify/references/platform/eai-repo-contract.md',
@@ -235,7 +235,7 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.claude/skills/eai-gofer/SKILL.md',
       '.github/agents/gofer-business.agent.md',
       '.github/skills/eai-gofer/SKILL.md',
-      '.agents/skills/0_business_scenario/SKILL.md',
+      '.agents/skills/0_gofer_start/SKILL.md',
       '.gemini/extension.json',
     ]) {
       expect(

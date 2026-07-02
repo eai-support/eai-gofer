@@ -1,6 +1,6 @@
 ---
 date: '[ISO timestamp]'
-researcher: Claude
+researcher: Gofer
 feature: '[Feature Name]'
 status: complete
 codebase_type: '[greenfield | brownfield]'
@@ -8,7 +8,7 @@ codebase_type: '[greenfield | brownfield]'
 
 <!--
   This template is filled in by /1_gofer_research (or legacy /1_research_codebase).
-  Recommended: Use /0_business_scenario to auto-chain the entire pipeline.
+  Recommended: Use /0_gofer_start to auto-chain the entire pipeline.
   Location: .specify/specs/[###-feature-name]/research.md
   Pair this with proposal-review.md before /2_gofer_specify runs.
 -->

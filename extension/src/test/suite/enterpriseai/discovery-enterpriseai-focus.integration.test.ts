@@ -8,7 +8,7 @@ function readRootCommandFile(fileName: string): string {
 
 suite('enterpriseai discovery enterpriseai focus (extension integration)', () => {
   test('frames discovery as EnterpriseAI-first and excludes non-EAI primary recommendations', () => {
-    const discoveryCommand = readRootCommandFile('0_business_scenario.md');
+    const discoveryCommand = readRootCommandFile('0_gofer_start.md');
 
     assert.ok(/EnterpriseAI-First Discovery Framing \(MANDATORY\)/.test(discoveryCommand));
     assert.ok(

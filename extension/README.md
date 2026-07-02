@@ -1,9 +1,9 @@
 # EAI Gofer VS Code Extension
 
 EAI Gofer brings the business specification-driven workflow into VS Code. It
-keeps repository work visible from business scenario through validation, mirrors
-the repo-owned `.specify/` scaffold, and packages the resources needed by the
-EAI Gofer pipeline.
+keeps repository work visible from Gofer Start through validation, mirrors the
+repo-owned `.specify/` scaffold, and packages the resources needed by the EAI
+Gofer pipeline.
 
 ## What It Does
 
@@ -22,10 +22,10 @@ EAI Gofer pipeline.
 
 1. Open the Command Palette and run **Gofer: Initialize Repository**.
 2. Optional: run **Gofer: Install Optional Developer Tools**.
-3. Start with `/0_business_scenario` in slash-command CLIs or
-   `#0_business_scenario` in Copilot Chat.
+3. Start with `/0_gofer_start` in slash-command CLIs or `#0_gofer_start` in
+   Copilot Chat.
 4. Progress through the core pipeline:
-   `business scenario -> research -> specify -> plan -> tasks -> implement -> validate`.
+   `Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate`.
 
 ## Common Commands
 

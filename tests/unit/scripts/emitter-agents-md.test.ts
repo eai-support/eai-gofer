@@ -108,7 +108,7 @@ Create a feature specification.
 `;
 
 const CLAUDE_ONLY_STAGE = `---
-name: 0_business_scenario
+name: 0_gofer_start
 description: "Define the business problem and scenario for Gofer to analyse and solve."
 title: "Business Scenario"
 category: pipeline
@@ -162,7 +162,7 @@ beforeAll(async () => {
   );
   await writeFile(path.join(tmpRoot, '.specify', 'commands', '2_gofer_specify.md'), SPECIFY_STAGE);
   await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '0_business_scenario.md'),
+    path.join(tmpRoot, '.specify', 'commands', '0_gofer_start.md'),
     CLAUDE_ONLY_STAGE
   );
   await writeFile(path.join(tmpRoot, '.specify', 'commands', '7_gofer_save.md'), GOFER_SAVE_STAGE);
@@ -223,7 +223,7 @@ describe('agents-md emitter (T067)', () => {
     expect(content).toContain('# Gofer Research');
   });
 
-  it('contains 0_business_scenario', async () => {
+  it('contains 0_gofer_start', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
     expect(content).toContain('Business Scenario');

@@ -10,7 +10,7 @@
   <text x="62" y="170" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">checking .specify scaffold...</text>
   <text x="62" y="208" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">created .specify/memory/gofer-model-policy.yaml</text>
   <text x="62" y="246" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">synced Claude, Codex, Copilot, Gemini commands</text>
-  <text x="62" y="308" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">$ /0_business_scenario Add passwordless login</text>
+  <text x="62" y="308" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22">$ /0_gofer_start Add passwordless login</text>
   <text x="62" y="350" fill="#fde68a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">Gofer asks business, user, risk, and success questions</text>
   <text x="62" y="388" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">writes .specify/specs/passwordless-login/business-scenario.md</text>
   <text x="62" y="426" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20">continues to research, specify, plan, tasks, implement, validate</text>

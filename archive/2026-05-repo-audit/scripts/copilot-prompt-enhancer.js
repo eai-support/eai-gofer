@@ -17,7 +17,7 @@ const copilotPromptsDir = path.join(workspaceRoot, '.github', 'prompts');
 
 // Pipeline sequence for auto-chain injection
 const PIPELINE_SEQUENCE = [
-  '0_business_scenario',
+  '0_gofer_start',
   '0a_problem_validation',
   '1_gofer_research',
   '2_gofer_specify',

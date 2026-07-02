@@ -57,6 +57,16 @@ interface ManagedFileState {
   executable: boolean;
 }
 
+const LEGACY_GOFER_COMMAND_PATHS = [
+  path.join('.specify', 'commands', '0_business_scenario.md'),
+  path.join('.claude', 'commands', '0_business_scenario.md'),
+  path.join('.github', 'prompts', '0_business_scenario.prompt.md'),
+  path.join('.agents', 'skills', '0_business_scenario'),
+  path.join('.system', 'skills', '0_business_scenario'),
+  path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
+  path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
+];
+
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
 }
@@ -117,6 +127,26 @@ export class ResourceSyncer implements IResourceOperations {
   private specifyPath: string = '';
 
   constructor(private readonly logger: Logger) {}
+
+  private async cleanupLegacyGoferCommandFiles(): Promise<void> {
+    if (!this.workspacePath) {
+      return;
+    }
+
+    for (const relativePath of LEGACY_GOFER_COMMAND_PATHS) {
+      const targetPath = path.join(this.workspacePath, relativePath);
+      try {
+        await fs.rm(targetPath, { recursive: true, force: true });
+      } catch (error) {
+        this.logger.warn(
+          'ResourceSyncer',
+          `Failed to remove legacy Gofer command path ${relativePath}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+  }
 
   /**
    * Initialize with workspace paths
@@ -410,6 +440,7 @@ export class ResourceSyncer implements IResourceOperations {
   }
 
   public async setupClaudeCommands(): Promise<void> {
+    await this.cleanupLegacyGoferCommandFiles();
     await this.copyBundledResources(
       'Claude commands',
       'claude-commands',
@@ -450,6 +481,8 @@ export class ResourceSyncer implements IResourceOperations {
   public async setupCopilotPrompts(): Promise<void> {
     const promptsDir = path.join(this.workspacePath, '.github', 'prompts');
 
+    await this.cleanupLegacyGoferCommandFiles();
+
     // Migration safety: audit deprecated prompts but do not delete user files.
     await this.cleanupOldCopilotPrompts(promptsDir, false);
 
@@ -482,6 +515,7 @@ export class ResourceSyncer implements IResourceOperations {
 
   public async setupGeminiCommands(): Promise<void> {
     this.logger.info('ResourceSyncer', 'Copying Gemini CLI extension commands');
+    await this.cleanupLegacyGoferCommandFiles();
     await this.syncCanonicalCommands();
     await this.syncBundledDirectory(
       'Gemini CLI commands',
@@ -497,6 +531,7 @@ export class ResourceSyncer implements IResourceOperations {
     );
 
     try {
+      await this.cleanupLegacyGoferCommandFiles();
       const { CommandGenerator } = await import('../../council/CommandGenerator');
       const generator = new CommandGenerator(this.workspacePath);
       const workflowProfile = this.resolveWorkflowProfileForGeneration();
@@ -1478,7 +1513,7 @@ This folder contains all project specifications for AI-driven feature developmen
 Run the unified Gofer pipeline with a single command:
 
 \`\`\`
-/0_business_scenario Add user authentication with OAuth2 and JWT
+/0_gofer_start Add user authentication with OAuth2 and JWT
 \`\`\`
 
 This automatically chains through all stages:
@@ -1493,7 +1528,7 @@ This automatically chains through all stages:
 
 | Stage | Command | Output |
 |-------|---------|--------|
-| 0. Business scenario | \`/0_business_scenario\` | Pipeline kickoff |
+| 0. Business scenario | \`/0_gofer_start\` | Pipeline kickoff |
 | 1. Research | \`/1_gofer_research\` | research.md |
 | 2. Specify | \`/2_gofer_specify\` | spec.md |
 | 3. Plan | \`/3_gofer_plan\` | plan.md, data-model.md, contracts/ |
@@ -1797,6 +1832,7 @@ AI agents validate code against the constitution before and during the final
   }
 
   public async syncCanonicalCommands(): Promise<void> {
+    await this.cleanupLegacyGoferCommandFiles();
     await this.syncBundledDirectory(
       'canonical Gofer commands',
       'specify-commands',

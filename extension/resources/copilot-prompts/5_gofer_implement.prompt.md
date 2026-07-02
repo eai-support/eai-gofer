@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 62feace20c1de887568dc4373932ef5de58198bf35e8194eabe6b364cbad2063
+  canonicalChecksum: 7a2558041bfee667b7f8eb6c4429e9b10a42f71c7cb375ea051216445fcbf92c
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -23,7 +23,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/templates/working-backwards-prfaq-template.md`
@@ -54,6 +54,24 @@ Before doing stage/helper work:
 
 
 # Gofer Implement
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -176,7 +194,7 @@ During implementation, use these techniques to preserve context quality:
 
 ```bash
 #7_gofer_save  # Creates comprehensive checkpoint
-# Start new Claude Code session
+# Start a fresh supported AI coding app session
 # Read .specify/specs/{feature}/session-checkpoint.md
 # Continue with #5_gofer_implement or the stage named in the checkpoint
 ```

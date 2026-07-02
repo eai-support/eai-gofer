@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/gofer_eai_first_run.md
-  canonicalChecksum: eb5e35e2bb0cb1ac9c73df1330eaf43168cb18704208e58824e5ea43684a9ff9
+  canonicalChecksum: 0bc1a440bc50b406b046634299368e874bbcf6eaa020aea18d0b4b1ceee57b08
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -37,7 +37,7 @@ Before spawning agents, calling tools, or loading large files:
 # EAI Gofer First Run
 
 Use this command when the user is starting their first EAI Platform app, when
-`#0_business_scenario` is unavailable in a new repository, or when an EAI app
+`#0_gofer_start` is unavailable in a new repository, or when an EAI app
 build reaches the Gofer pipeline before the local machine, workspace, tenant, or
 EAI app template is ready.
 
@@ -287,7 +287,7 @@ tokens, or `.env.local` values in the first-run report.
 After `eai init`, verify Gofer files exist:
 
 - `.specify/.gofer-version`
-- `.specify/commands#0_business_scenario.md`
+- `.specify/commands#0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/scripts/node/gofer-workspace-check.mjs`
 - `.specify/memory/gofer-model-policy.yaml`
@@ -368,10 +368,10 @@ When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold ar
 ready, tell the user to start:
 
 ```text
-#0_business_scenario <what you want to build>
+#0_gofer_start <what you want to build>
 ```
 
-If `#0_business_scenario` is still unknown after the plugin is installed and the
+If `#0_gofer_start` is still unknown after the plugin is installed and the
 repo is bootstrapped, explain that the host has not loaded the Gofer plugin or
 repo commands yet. Give the host-specific install/update command from the Gofer
 README, then retry this command after the host reloads.

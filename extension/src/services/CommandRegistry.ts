@@ -697,7 +697,7 @@ priority: "P1"
 
 <!--
   To generate a complete implementation, use the Gofer pipeline in Claude Code:
-  /0_business_scenario ${specTitle}
+  /0_gofer_start ${specTitle}
 
   Or run individual stages:
   /1_gofer_research  → Creates research.md

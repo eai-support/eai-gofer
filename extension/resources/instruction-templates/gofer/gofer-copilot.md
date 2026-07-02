@@ -1,5 +1,5 @@
-This project uses Gofer for spec-driven development. Run `/0_business_scenario`
-to start the core pipeline: business scenario -> research -> specify -> plan ->
+This project uses Gofer for spec-driven development. Run `/0_gofer_start` to
+start the core pipeline: business scenario -> research -> specify -> plan ->
 tasks -> implement -> validate.
 
 Key commands: `/1_gofer_research`, `/2_gofer_specify`, `/3_gofer_plan`,

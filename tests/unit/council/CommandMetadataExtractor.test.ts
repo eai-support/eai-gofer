@@ -161,7 +161,7 @@ description: [unterminated
       vi.mocked(fs.readFileSync).mockReturnValue(malformed);
 
       const metadata = extractor.extractFromClaudeCommandSync(
-        '/repo/.claude/commands/0_business_scenario.md'
+        '/repo/.claude/commands/0_gofer_start.md'
       );
       expect(metadata.description).toBe('Body Title');
       expect(metadata.platform).toBe('claude');

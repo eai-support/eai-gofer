@@ -1,13 +1,8 @@
 ---
-name: 0_business_scenario
-description: "Define the business problem and scenario for Gofer to analyse and solve."
+description: Start Gofer, confirm EAI readiness, and orchestrate the unified pipeline
 ---
 
----
-description: Triage business scenario and orchestrate the unified Gofer pipeline
----
-
-# Gofer Orchestrator
+# Gofer Start
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -33,7 +28,7 @@ Before doing stage/helper work:
 1. Resolve the repository root.
 2. Check the core Gofer sentinels:
    - `.specify/.gofer-version`
-   - `.specify/commands/0_business_scenario.md`
+   - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/scripts/bash/create-new-feature.sh`
@@ -56,6 +51,24 @@ Before doing stage/helper work:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
 7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## EAI App Delivery Preflight
 
@@ -124,7 +137,7 @@ with an unrelated non-EAI stack.
      runs `eai init <project-name> --skip-prompts --company-tenant
      <active-tenant-id>` when approved, verifies Gofer files, and then returns
      here.
-   - If `/0_business_scenario` is unavailable in a new repo, the user should run
+   - If `/0_gofer_start` is unavailable in a new repo, the user should run
      the plugin-level `/gofer:eai-first-run` command after installing or
      updating the Gofer plugin.
 3. **Install or update the EAI CLI when needed**
@@ -272,7 +285,7 @@ scenario and route them through the **unified Gofer pipeline**.
 │                    UNIFIED GOFER PIPELINE                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  0. /0_business_scenario → kickoff, routing, discovery          │
+│  0. /0_gofer_start → Gofer Start, routing, discovery       │
 │     Business scenario intake + optional problem validation       │
 │                         ↓ AUTO                                   │
 │  1. /1_gofer_research    → research.md                           │
@@ -502,7 +515,7 @@ After completing discovery questions, create
 ---
 feature: '[Feature Name]'
 created: '[ISO timestamp]'
-discoveredBy: Claude + [User]
+discoveredBy: Gofer + [User]
 status: complete
 ---
 
@@ -927,7 +940,7 @@ If `{FEATURE_DIR}/loop-contract.json` is missing, initialize it before routing
 past discovery:
 
 ```bash
-node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 0_business_scenario --init --json
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 0_gofer_start --init --json
 ```
 
 Do not ask the user about loop initialization unless the command fails or would
@@ -1096,7 +1109,7 @@ The unified Gofer pipeline automatically chains commands:
 /6_gofer_validate completes → pipeline complete
 ```
 
-**The user only needs to run `/0_business_scenario` once** - the orchestrator
+**The user only needs to run `/0_gofer_start` once** - the orchestrator
 handles everything else automatically.
 
 ---
@@ -1138,7 +1151,7 @@ If context window is filling up:
 
 | Stage | Command               | Main output                        | Description                               |
 | ----- | --------------------- | ---------------------------------- | ----------------------------------------- |
-| 0     | `/0_business_scenario`| Full pipeline kickoff              | Business scenario intake and routing      |
+| 0     | `/0_gofer_start`| Full pipeline kickoff              | Business scenario intake and routing      |
 | 1     | `/1_gofer_research`   | research.md                        | Research and supporting review prep       |
 | 2     | `/2_gofer_specify`    | spec.md                            | Feature specification                     |
 | 3     | `/3_gofer_plan`       | plan.md, data-model.md, contracts/ | Technical architecture and contracts      |

@@ -3,7 +3,7 @@
   "loopId": "{{featureId}}",
   "profile": "standard",
   "objective": "Keep feature delivery aligned with current goals, approved scope, implementation evidence, and validation gates.",
-  "entryStage": "0_business_scenario",
+  "entryStage": "0_gofer_start",
   "maxIterations": 3,
   "budget": {
     "maxWallClockMinutes": null,
