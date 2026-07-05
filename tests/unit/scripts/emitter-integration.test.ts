@@ -81,7 +81,7 @@ This is the research stage body content.
  * Formerly Claude-only stages now appear on all surfaces.
  */
 const CLAUDE_ONLY_STAGE_CONTENT = `---
-name: 0_business_scenario
+name: 0_gofer_start
 description: "Define the business problem and scenario for Gofer to analyse and solve."
 title: "Business Scenario"
 category: pipeline
@@ -115,7 +115,7 @@ beforeAll(async () => {
     ALL_SURFACE_STAGE_CONTENT
   );
   await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '0_business_scenario.md'),
+    path.join(tmpRoot, '.specify', 'commands', '0_gofer_start.md'),
     CLAUDE_ONLY_STAGE_CONTENT
   );
 });
@@ -232,28 +232,28 @@ describe('generate-commands emitters (integration)', () => {
       expect(CLAUDE_ONLY_STAGES).toEqual([]);
     });
 
-    it('does not exclude 0_business_scenario from copilot', () => {
-      expect(shouldExclude('0_business_scenario', 'copilot')).toBe(false);
+    it('does not exclude 0_gofer_start from copilot', () => {
+      expect(shouldExclude('0_gofer_start', 'copilot')).toBe(false);
     });
 
-    it('does not exclude 0_business_scenario from github-prompts', () => {
-      expect(shouldExclude('0_business_scenario', 'github-prompts')).toBe(false);
+    it('does not exclude 0_gofer_start from github-prompts', () => {
+      expect(shouldExclude('0_gofer_start', 'github-prompts')).toBe(false);
     });
 
-    it('does not exclude 0_business_scenario from agents-skills', () => {
-      expect(shouldExclude('0_business_scenario', 'agents-skills')).toBe(false);
+    it('does not exclude 0_gofer_start from agents-skills', () => {
+      expect(shouldExclude('0_gofer_start', 'agents-skills')).toBe(false);
     });
 
-    it('does not exclude 0_business_scenario from system-skills', () => {
-      expect(shouldExclude('0_business_scenario', 'system-skills')).toBe(false);
+    it('does not exclude 0_gofer_start from system-skills', () => {
+      expect(shouldExclude('0_gofer_start', 'system-skills')).toBe(false);
     });
 
-    it('does NOT exclude 0_business_scenario from claude', () => {
-      expect(shouldExclude('0_business_scenario', 'claude')).toBe(false);
+    it('does NOT exclude 0_gofer_start from claude', () => {
+      expect(shouldExclude('0_gofer_start', 'claude')).toBe(false);
     });
 
-    it('does NOT exclude 0_business_scenario from claude-mirror', () => {
-      expect(shouldExclude('0_business_scenario', 'claude-mirror')).toBe(false);
+    it('does NOT exclude 0_gofer_start from claude-mirror', () => {
+      expect(shouldExclude('0_gofer_start', 'claude-mirror')).toBe(false);
     });
 
     it('does NOT exclude 1_gofer_research from any surface', () => {
@@ -295,8 +295,8 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits 0_business_scenario.md to .claude/commands/ (claude-only stage IS allowed on claude)', async () => {
-      const outPath = path.join(tmpRoot, '.claude', 'commands', '0_business_scenario.md');
+    it('emits 0_gofer_start.md to .claude/commands/ (claude-only stage IS allowed on claude)', async () => {
+      const outPath = path.join(tmpRoot, '.claude', 'commands', '0_gofer_start.md');
       expect(await fileExists(outPath)).toBe(true);
     });
 
@@ -326,13 +326,13 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits 0_business_scenario.md to extension/resources/claude-commands/ (allowed on claude-mirror)', async () => {
+    it('emits 0_gofer_start.md to extension/resources/claude-commands/ (allowed on claude-mirror)', async () => {
       const outPath = path.join(
         tmpRoot,
         'extension',
         'resources',
         'claude-commands',
-        '0_business_scenario.md'
+        '0_gofer_start.md'
       );
       expect(await fileExists(outPath)).toBe(true);
     });
@@ -368,13 +368,13 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits 0_business_scenario to copilot-prompts/', async () => {
+    it('emits 0_gofer_start to copilot-prompts/', async () => {
       const outPath = path.join(
         tmpRoot,
         'extension',
         'resources',
         'copilot-prompts',
-        '0_business_scenario.prompt.md'
+        '0_gofer_start.prompt.md'
       );
       expect(await fileExists(outPath)).toBe(true);
     });
@@ -407,8 +407,8 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits 0_business_scenario to .github/prompts/', async () => {
-      const outPath = path.join(tmpRoot, '.github', 'prompts', '0_business_scenario.prompt.md');
+    it('emits 0_gofer_start to .github/prompts/', async () => {
+      const outPath = path.join(tmpRoot, '.github', 'prompts', '0_gofer_start.prompt.md');
       expect(await fileExists(outPath)).toBe(true);
     });
 
@@ -434,8 +434,8 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits SKILL.md for 0_business_scenario', async () => {
-      const outPath = path.join(tmpRoot, '.agents', 'skills', '0_business_scenario', 'SKILL.md');
+    it('emits SKILL.md for 0_gofer_start', async () => {
+      const outPath = path.join(tmpRoot, '.agents', 'skills', '0_gofer_start', 'SKILL.md');
       expect(await fileExists(outPath)).toBe(true);
     });
 
@@ -472,8 +472,8 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(outPath)).toBe(true);
     });
 
-    it('emits SKILL.md for 0_business_scenario', async () => {
-      const outPath = path.join(tmpRoot, '.system', 'skills', '0_business_scenario', 'SKILL.md');
+    it('emits SKILL.md for 0_gofer_start', async () => {
+      const outPath = path.join(tmpRoot, '.system', 'skills', '0_gofer_start', 'SKILL.md');
       expect(await fileExists(outPath)).toBe(true);
     });
 
@@ -500,7 +500,7 @@ describe('generate-commands emitters (integration)', () => {
 
   describe('surface parity (T043)', () => {
     it('formerly Claude-only stages are present on all portable surfaces', async () => {
-      const formerlyClaudeOnlyStages = ['0_business_scenario'];
+      const formerlyClaudeOnlyStages = ['0_gofer_start'];
       const portableSurfaces = [
         {
           surface: 'copilot',

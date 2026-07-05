@@ -65,7 +65,7 @@ this gate order:
 2. Dependency install
 3. Login and tenant selection
 4. App list/create/select
-5. `eai vertical provision`
+5. `eai app provision`
 6. `eai provision entra` when required
 7. `eai env pull` when required
 8. `eai types validate`
@@ -103,9 +103,12 @@ messages, and `/api/auth/callback/microsoft-entra-id` callback errors as EAI
 identity provisioning problems first. Confirm login and tenant with `eai whoami`
 and `eai tenant list --format json`, select the correct tenant if needed, then
 run the advertised equivalent of
-`eai provision entra --force --redirect-uri <exact-callback-uri> --debug`. Use
-Azure Portal edits only when the installed EAI CLI does not advertise an Entra
-provisioning path or the CLI reports an operator-only block.
+`eai provision entra --force --redirect-uri <confirmed-callback-uri>`. Record
+only a redacted callback route in Gofer artifacts. Use `--debug` only with
+explicit user approval, and redact private hostnames, tenant IDs, client IDs,
+tokens, and raw debug output before writing artifacts. Use Azure Portal edits
+only when the installed EAI CLI does not advertise an Entra provisioning path or
+the CLI reports an operator-only block.
 
 ## Privacy And Safety
 

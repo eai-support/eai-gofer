@@ -31,7 +31,7 @@ export interface GenerateEnterpriseAiPlanAndTasksRequest {
   marketAnalysisSummary?: MarketAnalysisSummaryMetadata;
 }
 
-export type IntegrationMapComponent = 'vertical-app' | 'eai-services' | 'deployment-target';
+export type IntegrationMapComponent = 'app' | 'eai-services' | 'deployment-target';
 export type DeploymentConvention =
   | 'branch-naming'
   | 'environment-targeting'
@@ -117,7 +117,7 @@ export interface GenerateEnterpriseAiPlanAndTasksOptions {
 }
 
 const ENTERPRISEAI_INTEGRATION_COMPONENTS: readonly IntegrationMapComponent[] = [
-  'vertical-app',
+  'app',
   'eai-services',
   'deployment-target',
 ];

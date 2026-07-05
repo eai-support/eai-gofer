@@ -70,7 +70,7 @@ import { Logger as LegacyLogger } from './utils/logger';
 let logger: Logger | undefined;
 
 const ENTERPRISEAI_ONBOARDING_MESSAGE =
-  'Gofer initialized. Use the core pipeline from business scenario through validation, with multi-platform workflows available across supported hosts.';
+  'Gofer initialized. Use the core pipeline from Gofer Start through validation, with multi-platform workflows available across supported hosts.';
 
 interface CopilotAvailabilityContext {
   available: boolean;
@@ -489,7 +489,7 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
     if (state.autoHandoffTrigger) {
       state.autoHandoffTrigger.setContextBuilder(contextBuilder);
 
-      // Wire SlopReducer to AutoHandoffTrigger (enables auto-reduce before save/clear/resume)
+      // Wire SlopReducer to AutoHandoffTrigger (enables auto-reduce before save/clear/continue)
       const { SlopReducer } = await import('./autonomous/SlopReducer');
       const slopReducer = new SlopReducer(workspacePath);
       state.autoHandoffTrigger.setSlopReducer(slopReducer);

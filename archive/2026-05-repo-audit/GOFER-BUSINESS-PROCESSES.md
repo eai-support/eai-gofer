@@ -65,7 +65,7 @@ Version: 1.0 Generated: 2026-03-18 Total Processes: 127
 
 | ID   | Process                                                                 | Method | Description                                              | PTY Required? |
 | ---- | ----------------------------------------------------------------------- | ------ | -------------------------------------------------------- | ------------- |
-| A1.1 | **Start unified pipeline from business scenario**                       | 🟡 SKL | Run `/0_business_scenario` to auto-chain all stages      | ❌ No         |
+| A1.1 | **Start unified pipeline with Gofer Start**                             | 🟡 SKL | Run `/0_gofer_start` to auto-chain all stages            | ❌ No         |
 | A1.2 | **Auto-chain research → specify → plan → tasks → implement → validate** | 🟡 SKL | Pipeline automatically chains through all 7 stages       | ❌ No         |
 | A1.3 | **Monitor pipeline progress in real-time**                              | 🔵 CMD | Watch status bar and progress panel for stage completion | ❌ No         |
 | A1.4 | **Pause pipeline execution mid-stage**                                  | 🔴 PTY | Send ESC signal to Claude Code terminal                  | ✅ **YES**    |

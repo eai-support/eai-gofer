@@ -67,6 +67,10 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/plugins/eai-gofer/plugin.json',
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
+        'eai-gofer/.vscode/mcp.json',
+        'eai-gofer/.claude/skills/eai-gofer/SKILL.md',
+        'eai-gofer/.github/agents/gofer-business.agent.md',
+        'eai-gofer/.github/skills/eai-gofer/SKILL.md',
         'eai-gofer/.specify/references/platform/README.md',
         'eai-gofer/.specify/references/platform/eai.md',
         'eai-gofer/.specify/references/platform/eai-repo-contract.md',
@@ -132,6 +136,10 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('gemini extensions install https://github.com/eai-tools/eai-gofer');
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
+      expect(readme).toContain('App-Native Surfaces And Repo Scripts');
+      expect(readme).toContain('Codex App / Codex IDE');
+      expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
+      expect(readme).toContain('Claude Code app');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
       expect(umbrellaSkill).toContain('eai publicapi');

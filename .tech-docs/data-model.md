@@ -63,7 +63,7 @@ design where each spec has its own directory containing all related artifacts
 │       ├── c4-context.md
 │       └── ...
 ├── commands/                   # Canonical command definitions
-│   ├── 0_business_scenario.md
+│   ├── 0_gofer_start.md
 │   ├── 1_gofer_research.md
 │   └── ...
 ├── hooks/                      # Git hooks and automation

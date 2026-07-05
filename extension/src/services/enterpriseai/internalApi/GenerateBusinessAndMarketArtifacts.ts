@@ -241,7 +241,7 @@ function buildMarketAnalysisSummary(
 }
 
 function buildDirectionRationale(problemSummary: string): string {
-  return `EnterpriseAI vertical app delivery is the selected direction because it maps directly to the identified business problem ("${problemSummary}") while preserving deployment governance, reusable integration patterns, and student-friendly implementation guidance.`;
+  return `EnterpriseAI app delivery is the selected direction because it maps directly to the identified business problem ("${problemSummary}") while preserving deployment governance, reusable integration patterns, and student-friendly implementation guidance.`;
 }
 
 function buildBusinessAnalysisContent(
@@ -263,7 +263,7 @@ function buildBusinessAnalysisContent(
     directionRationale,
     '',
     '## Recommended EnterpriseAI Outcome',
-    'Deliver an EnterpriseAI vertical application with explicit architecture approvals and deployment readiness checks.',
+    'Deliver an EnterpriseAI app with explicit architecture approvals and deployment readiness checks.',
     '',
   ].join('\n');
 }

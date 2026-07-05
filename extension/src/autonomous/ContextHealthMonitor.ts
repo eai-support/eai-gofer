@@ -419,7 +419,7 @@ export class ContextHealthMonitor extends EventEmitter {
       breakdown.conversation > LIMITS.CONVERSATION_WARNING_THRESHOLD
     ) {
       recommendations.push(
-        'Long conversation history. Consider starting a new session with /8_gofer_resume.'
+        'Long conversation history. Consider saving a checkpoint and starting a fresh session from session-checkpoint.md.'
       );
     }
 

@@ -180,6 +180,20 @@ export class GoferMigrator {
   }
 
   /**
+   * Setup Claude skills from bundled resources
+   */
+  public async setupClaudeSkills(): Promise<void> {
+    await this.resourceSyncer.setupClaudeSkills();
+  }
+
+  /**
+   * Setup GitHub Copilot custom agents
+   */
+  public async setupCopilotAgents(): Promise<void> {
+    await this.resourceSyncer.setupCopilotAgents();
+  }
+
+  /**
    * Setup GitHub Copilot prompts
    */
   public async setupCopilotPrompts(): Promise<void> {
@@ -191,6 +205,13 @@ export class GoferMigrator {
    */
   public async setupCopilotInstructions(): Promise<void> {
     await this.resourceSyncer.setupCopilotInstructions();
+  }
+
+  /**
+   * Setup GitHub Copilot agent skills
+   */
+  public async setupCopilotSkills(): Promise<void> {
+    await this.resourceSyncer.setupCopilotSkills();
   }
 
   /**
@@ -300,6 +321,13 @@ export class GoferMigrator {
   }
 
   /**
+   * Copy bundled public references
+   */
+  public async copyBundledReferences(): Promise<void> {
+    await this.resourceSyncer.copyBundledReferences();
+  }
+
+  /**
    * Verify path migration was successful
    *
    * @returns True if all paths have been migrated correctly
@@ -345,11 +373,15 @@ export class GoferMigrator {
 
     // Copy all resources
     await this.resourceSyncer.copyBundledTemplates();
+    await this.resourceSyncer.copyBundledReferences();
     await this.resourceSyncer.ensureDefaultModelPolicy();
     await this.resourceSyncer.setupClaudeCommands();
     await this.resourceSyncer.setupClaudeAgents();
+    await this.resourceSyncer.setupClaudeSkills();
+    await this.resourceSyncer.setupCopilotAgents();
     await this.resourceSyncer.setupCopilotPrompts();
     await this.resourceSyncer.setupCopilotInstructions();
+    await this.resourceSyncer.setupCopilotSkills();
     await this.resourceSyncer.setupGeminiCommands();
     await this.resourceSyncer.setupCodexSkills(); // Generate repo-local Codex skills
     await this.resourceSyncer.createBashScripts();
@@ -411,11 +443,14 @@ export class GoferMigrator {
     const criticalPaths = [
       { path: path.join(this.workspacePath, '.claude', 'commands'), name: 'Claude commands' },
       { path: path.join(this.workspacePath, '.claude', 'agents'), name: 'Claude agents' },
+      { path: path.join(this.workspacePath, '.claude', 'skills'), name: 'Claude skills' },
+      { path: path.join(this.workspacePath, '.github', 'agents'), name: 'Copilot agents' },
       { path: path.join(this.workspacePath, '.github', 'prompts'), name: 'Copilot prompts' },
       {
         path: path.join(this.workspacePath, '.github', 'instructions'),
         name: 'Copilot instructions',
       },
+      { path: path.join(this.workspacePath, '.github', 'skills'), name: 'Copilot skills' },
       { path: path.join(this.workspacePath, '.gemini', 'extension.json'), name: 'Gemini commands' },
       {
         path: path.join(this.workspacePath, '.gemini', 'commands', 'gofer'),
@@ -440,6 +475,7 @@ export class GoferMigrator {
         name: 'Hook scripts',
       },
       { path: path.join(this.specifyPath, 'templates'), name: 'Templates' },
+      { path: path.join(this.specifyPath, 'references', 'platform'), name: 'Public references' },
       { path: path.join(this.workspacePath, 'AGENTS.md'), name: 'AI instructions' },
       { path: path.join(this.workspacePath, 'CLAUDE.md'), name: 'AI instructions' },
     ];
@@ -521,6 +557,16 @@ export class GoferMigrator {
           await this.resourceSyncer.setupClaudeAgents();
         }
 
+        if (missing.includes('Claude skills')) {
+          reportProgress('Syncing Claude skills');
+          await this.resourceSyncer.setupClaudeSkills();
+        }
+
+        if (missing.includes('Copilot agents')) {
+          reportProgress('Syncing Copilot agents');
+          await this.resourceSyncer.setupCopilotAgents();
+        }
+
         if (missing.includes('Copilot prompts')) {
           reportProgress('Syncing Copilot prompts');
           await this.resourceSyncer.setupCopilotPrompts();
@@ -529,6 +575,11 @@ export class GoferMigrator {
         if (missing.includes('Copilot instructions')) {
           reportProgress('Syncing Copilot instructions');
           await this.resourceSyncer.setupCopilotInstructions();
+        }
+
+        if (missing.includes('Copilot skills')) {
+          reportProgress('Syncing Copilot skills');
+          await this.resourceSyncer.setupCopilotSkills();
         }
 
         if (missing.includes('Gemini commands')) {
@@ -564,6 +615,11 @@ export class GoferMigrator {
         if (missing.includes('Templates')) {
           reportProgress('Syncing Templates');
           await this.resourceSyncer.copyBundledTemplates();
+        }
+
+        if (missing.includes('Public references')) {
+          reportProgress('Syncing Public references');
+          await this.resourceSyncer.copyBundledReferences();
         }
 
         if (missing.includes('AI instructions')) {

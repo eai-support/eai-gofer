@@ -70,11 +70,13 @@ const CACHE_TTL_MS = 30_000;
 
 export class ClaudeCodeContextScanner {
   private workspacePath: string;
+  private homePath: string;
   private cachedResult: ScanResult | null = null;
   private cacheTimestamp: number = 0;
 
-  constructor(workspacePath: string) {
+  constructor(workspacePath: string, homePath: string = os.homedir()) {
     this.workspacePath = workspacePath;
+    this.homePath = homePath;
   }
 
   /**
@@ -84,7 +86,7 @@ export class ClaudeCodeContextScanner {
   private getProjectDir(): string {
     const normalized = this.workspacePath.replace(/\\/g, '/');
     const encoded = normalized.replace(/\//g, '-');
-    return path.join(os.homedir(), '.claude', 'projects', encoded);
+    return path.join(this.homePath, '.claude', 'projects', encoded);
   }
 
   /** Estimate tokens from byte count (consistent with codebase convention) */
@@ -125,7 +127,7 @@ export class ClaudeCodeContextScanner {
   /** Build a FileTokenInfo from an absolute path */
   private fileInfo(filePath: string, bytes: number, relativeTo?: string): FileTokenInfo {
     let displayPath: string;
-    const home = os.homedir();
+    const home = this.homePath;
     if (relativeTo && filePath.startsWith(relativeTo)) {
       displayPath = path.relative(relativeTo, filePath);
     } else if (filePath.startsWith(home)) {
@@ -155,7 +157,7 @@ export class ClaudeCodeContextScanner {
    */
   scanClaudeMdAndRules(): CategoryBreakdown {
     const files: FileTokenInfo[] = [];
-    const home = os.homedir();
+    const home = this.homePath;
 
     // CLAUDE.md hierarchy
     const claudeMdPaths = [

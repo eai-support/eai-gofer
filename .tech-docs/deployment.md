@@ -130,11 +130,12 @@ flowchart TB
      - `eai-gofer-X.Y.Z.vsix`
      - `eai-gofer-agent-plugin-X.Y.Z.zip`
      - `gofer-vX.Y.Z.tar.gz` (source)
-   - Publish to VS Code Marketplace (if `VSCE_PAT` configured)
+   - Publish to VS Code Marketplace with `VSCE_PAT`
 
 **Required Secrets:**
 
-- `VSCE_PAT` - VS Code Marketplace Personal Access Token (optional)
+- `VSCE_PAT` - VS Code Marketplace Personal Access Token for
+  `EnterpriseAI.gofer` (required for stable public releases)
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions
 
 #### Pages Pipeline (`.github/workflows/pages.yml`)
@@ -227,7 +228,7 @@ flowchart TB
 6. **Monitor Release Pipeline**
    - Watch GitHub Actions for release workflow
    - Verify assets uploaded to GitHub Release
-   - Verify VS Code Marketplace publish (if configured)
+   - Verify VS Code Marketplace publish
 
 ### Automated Deployment (Recommended)
 
@@ -244,7 +245,7 @@ flowchart TB
    - Package VSIX and ZIP
    - Create GitHub Release
    - Upload release assets
-   - Publish to VS Code Marketplace (if `VSCE_PAT` set)
+   - Publish to VS Code Marketplace with `VSCE_PAT`
    - Deploy documentation site
 
 ## Release Assets

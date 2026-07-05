@@ -56,6 +56,19 @@ function buildSpec(): string {
 `;
 }
 
+function buildTemplateSpec(): string {
+  return `# Feature Specification: [FEATURE NAME]
+
+**Feature Branch**: \`[###-feature-name]\`
+
+## Requirements
+
+<!-- ACTION REQUIRED -->
+
+- **FR-001**: System MUST [specific capability]
+`;
+}
+
 function buildTraceability(
   codeEvidence = 'src/example.ts',
   testEvidence = 'tests/example.test.ts'
@@ -126,7 +139,7 @@ function buildGoalLedger(featureDir: string): string {
         {
           assumptionId: 'A1',
           owner: 'team',
-          expiresAt: '2026-06-30T00:00:00Z',
+          expiresAt: '2099-01-01T00:00:00Z',
           revalidateTrigger: 'Goal changes',
           reopenStage: '1_research',
         },
@@ -155,7 +168,7 @@ function createFeatureFixture(workspaceRoot: string): string {
     padMarkdown('# Tasks\n\n- [ ] T001 Maintain goal ledger')
   );
   writeFile(path.join(featureDir, 'traceability.md'), buildTraceability());
-  writeFile(path.join(featureDir, 'assumptions.md'), buildAssumptions('2026-06-30T00:00:00Z'));
+  writeFile(path.join(featureDir, 'assumptions.md'), buildAssumptions('2099-01-01T00:00:00Z'));
   writeFile(path.join(featureDir, 'goal-ledger.json'), buildGoalLedger(featureDir));
   writeFile(path.join(featureDir, 'validation-report.md'), padMarkdown('# Validation Report'));
   writeFile(path.join(workspaceRoot, 'src', 'example.ts'), 'export const example = true;\n');
@@ -245,6 +258,17 @@ describe('gofer-closed-loop-audit.mjs', () => {
     expect(result.exitCode).toBe(1);
     expect(result.payload.status).toBe('fail');
     expect(result.payload.recommendedStartStage).toBe('4_tasks');
+  });
+
+  it('reopens specify when spec.md is still the bootstrap template', async () => {
+    writeFile(path.join(featureDir, 'spec.md'), buildTemplateSpec());
+
+    const result = await runAudit(workspaceRoot, featureDir, ['--strict']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.payload.status).toBe('fail');
+    expect(result.payload.recommendedStartStage).toBe('2_specify');
+    expect(JSON.stringify(result.payload.blockingFindings)).toContain('spec.md is template');
   });
 
   it('reopens research when an assumption drift control has expired', async () => {

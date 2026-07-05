@@ -100,7 +100,7 @@ Validate the business problem before design.
 `;
 
 const CLAUDE_ONLY_STAGE = `---
-name: 0_business_scenario
+name: 0_gofer_start
 description: "Define the business problem and scenario for Gofer to analyse and solve."
 title: "Business Scenario"
 category: pipeline
@@ -133,7 +133,7 @@ beforeAll(async () => {
     PROBLEM_VALIDATION_STAGE
   );
   await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '0_business_scenario.md'),
+    path.join(tmpRoot, '.specify', 'commands', '0_gofer_start.md'),
     CLAUDE_ONLY_STAGE
   );
 
@@ -169,13 +169,13 @@ describe('gemini emitter (T065)', () => {
     expect(content).not.toContain('category: pipeline');
   });
 
-  it('emits formerly Claude-only stage 0_business_scenario', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_business_scenario.md');
+  it('emits formerly Claude-only stage 0_gofer_start', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.md');
     expect(await fileExists(outPath)).toBe(true);
   });
 
-  it('emits TOML for formerly Claude-only stage 0_business_scenario', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_business_scenario.toml');
+  it('emits TOML for formerly Claude-only stage 0_gofer_start', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.toml');
     expect(await fileExists(outPath)).toBe(true);
   });
 });
@@ -210,7 +210,7 @@ describe('gemini manifest (T066)', () => {
     const manifest = JSON.parse(await readFile(manifestPath));
     expect(manifest.commands).toContain('1_gofer_research');
     expect(manifest.commands).toContain('0a_problem_validation');
-    expect(manifest.commands).toContain('0_business_scenario');
+    expect(manifest.commands).toContain('0_gofer_start');
   });
 
   it('manifest.commands is sorted alphabetically', async () => {
@@ -220,17 +220,17 @@ describe('gemini manifest (T066)', () => {
     expect(manifest.commands).toEqual(sorted);
   });
 
-  it('manifest.commands includes 0_business_scenario', async () => {
+  it('manifest.commands includes 0_gofer_start', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toContain('0_business_scenario');
+    expect(manifest.commands).toContain('0_gofer_start');
   });
 
   it('manifest.commands contains no excluded stages because exclusions are empty', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
     expect(manifest.commands).toEqual([
-      '0_business_scenario',
+      '0_gofer_start',
       '0a_problem_validation',
       '1_gofer_research',
     ]);

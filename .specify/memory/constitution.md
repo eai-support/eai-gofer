@@ -134,22 +134,24 @@ Gofer consists of three coordinated components:
   detection)
 - Manages UI (tree views, commands, progress panels)
 - Launches Language Server as child process
-- Auto-creates `.vscode/mcp.json` for Claude Code integration
+- Auto-creates provider-neutral `.vscode/mcp.json` for VS Code/Copilot, Claude
+  Code, Codex, Gemini, and compatible agent apps
 
 **Language Server** (`/language-server/`):
 
-- Dual protocol: LSP (extension ↔ server) + MCP (Claude ↔ tools)
-- Exposes 6 MCP tools: `get_specs`, `get_next_task`, `execute_task`,
-  `update_task_status`, `validate_code`, `run_tests`
+- Dual protocol: LSP (extension ↔ server) + MCP (agent app ↔ repo tools)
+- Exposes the current Gofer MCP tool set for specs, tasks, context health,
+  workspace check/bootstrap, pipeline state, validation, EAI error explanation,
+  and artifact reads
 - Loads specs from `.specify/specs/` using GitHub Spec Kit parser
 - Stateless design, all state in filesystem
 
-**Orchestrator Process** (`/src/`):
+**Repo-Owned Pipeline Scripts** (`/.specify/scripts/`):
 
-- Coordinates Engineer and Test agents via Claude API
-- Manages task dependencies and execution workflows
-- Monitors file changes with Chokidar
-- Integrates Playwright for E2E testing
+- Remain the executable source of truth for Gofer stages, workspace checks,
+  bootstrap, hooks, context management, validation helpers, and release checks
+- Are called or explained by app plugins, skills, agents, and MCP tools instead
+  of duplicating workflow logic per host
 
 ### Dependency Management
 
@@ -331,10 +333,10 @@ and MUST NOT be conflated.
   canonical Gofer stages MUST be ≤2048 bytes (≤2KB). Codex preloads ~2% of
   context for skill name+description text; over-budget triggers a global drop of
   ALL skill descriptions, not per-bundle eviction (NFR-004, SC-006).
-- **Per-CLI exclusion**: 5 Claude-only stages (`0_business_scenario`,
-  `gofer_constitution`, `gofer_hydrate`, `7_gofer_save`, `8_gofer_resume`) are
-  NOT emitted to Codex / Gemini / Copilot / GitHub-prompts surfaces (FR-007,
-  SC-012).
+- **Per-CLI parity**: Numbered stages, utilities, and helper commands are
+  emitted to Claude, Codex, Gemini, Copilot, VS Code, GitHub prompts, agent
+  skills, and system skills unless their frontmatter explicitly says otherwise
+  (FR-007, SC-012).
 - **Flat tree**: Codex skill files emit at depth ≤2 from `.agents/skills/`; no
   `<tenant>/<stage>/` nesting (FR-008).
 - **No fictional config keys**: The official Codex disable knob is per-skill

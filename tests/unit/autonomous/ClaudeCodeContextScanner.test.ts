@@ -14,13 +14,16 @@ import { ClaudeCodeContextScanner } from '../../../extension/src/autonomous/Clau
 describe('ClaudeCodeContextScanner', () => {
   let tempDir: string;
   let workspacePath: string;
+  let homePath: string;
   let scanner: ClaudeCodeContextScanner;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scanner-test-'));
     workspacePath = path.join(tempDir, 'workspace');
+    homePath = path.join(tempDir, 'home');
     fs.mkdirSync(workspacePath, { recursive: true });
-    scanner = new ClaudeCodeContextScanner(workspacePath);
+    fs.mkdirSync(homePath, { recursive: true });
+    scanner = new ClaudeCodeContextScanner(workspacePath, homePath);
   });
 
   afterEach(() => {

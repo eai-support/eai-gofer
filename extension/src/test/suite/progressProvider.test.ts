@@ -307,7 +307,7 @@ created: "2025-10-22"
       const specId = '011-enterpriseai-deploy-gate-blocked';
       await setWorkflowProfile('enterpriseai');
       await createTestSpecWithTasks(specId, 'EnterpriseAI Deploy Gate', 'in_progress', [
-        { id: 'T001', desc: 'Deploy vertical app to EnterpriseAI production', status: 'pending' },
+        { id: 'T001', desc: 'Deploy app to EnterpriseAI production', status: 'pending' },
       ]);
 
       await progressProvider.getChildren();
@@ -327,14 +327,14 @@ created: "2025-10-22"
 
       const tasksPath = path.join(tempDir, '.specify', 'specs', specId, 'tasks.md');
       const tasksContent = await fs.readFile(tasksPath, 'utf-8');
-      assert.ok(tasksContent.includes('- [ ] T001 Deploy vertical app to EnterpriseAI production'));
+      assert.ok(tasksContent.includes('- [ ] T001 Deploy app to EnterpriseAI production'));
     });
 
     test('should allow deployment task completion when required deployment files exist', async () => {
       const specId = '012-enterpriseai-deploy-gate-pass';
       await setWorkflowProfile('enterpriseai');
       await createTestSpecWithTasks(specId, 'EnterpriseAI Deploy Gate Pass', 'in_progress', [
-        { id: 'T001', desc: 'Deploy vertical app to EnterpriseAI production', status: 'pending' },
+        { id: 'T001', desc: 'Deploy app to EnterpriseAI production', status: 'pending' },
       ]);
 
       await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
@@ -349,7 +349,7 @@ created: "2025-10-22"
 
       const tasksPath = path.join(tempDir, '.specify', 'specs', specId, 'tasks.md');
       const tasksContent = await fs.readFile(tasksPath, 'utf-8');
-      assert.ok(tasksContent.includes('- [x] T001 Deploy vertical app to EnterpriseAI production'));
+      assert.ok(tasksContent.includes('- [x] T001 Deploy app to EnterpriseAI production'));
     });
 
     test('should block completion for deployment readiness tasks identified by runtime evidence keywords', async () => {

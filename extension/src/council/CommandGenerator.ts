@@ -1,6 +1,6 @@
 /**
  * Command Generator for Cross-Platform Command Parity
- * Feature 028: Generates Codex and Copilot command files from Claude CLI reference
+ * Feature 028: Generates Codex and Copilot command files from the canonical command mirror
  */
 
 import * as fs from 'fs';
@@ -12,13 +12,15 @@ import { CommandMetadataExtractor } from './CommandMetadataExtractor';
 
 export type CommandWorkflowProfile = 'standard' | 'enterpriseai';
 
+const LEGACY_COMMAND_FILE_STEMS = new Set(['0_business_scenario']);
+
 export interface CommandGenerationOptions {
   workflowProfileOverride?: CommandWorkflowProfile;
   metadataSource?: string;
 }
 
 /**
- * Generates platform-specific command files from Claude CLI reference implementation
+ * Generates platform-specific command files from the canonical command mirror.
  */
 export class CommandGenerator {
   private extractor: CommandMetadataExtractor;
@@ -51,10 +53,10 @@ export class CommandGenerator {
       throw new Error('Claude commands directory not found: ' + claudeCommandsDir);
     }
 
-    // Find all Claude command files
     const files = await fs.promises.readdir(claudeCommandsDir);
     const commandFiles = files
       .filter((file) => file.endsWith('.md'))
+      .filter((file) => !LEGACY_COMMAND_FILE_STEMS.has(path.basename(file, '.md')))
       .map((file) => path.join(claudeCommandsDir, file));
 
     const generatedPaths: string[] = [];
@@ -104,7 +106,7 @@ export class CommandGenerator {
   /**
    * Generate a Codex CLI skill file
    *
-   * @param sourceMetadata Source metadata from Claude command
+   * @param sourceMetadata Source metadata from the command mirror
    * @param dryRun Preview mode
    * @returns Output file path
    */
@@ -183,7 +185,7 @@ export class CommandGenerator {
   }
 
   private getLegacyCodexSkillDirs(fileStem: string, commandName: string): string[] {
-    return [
+    const legacyDirs = [
       path.join(this.workspacePath, '.agents', 'skills', commandName),
       path.join(this.workspacePath, '.agents', 'skills', 'gofer', fileStem),
       path.join(this.workspacePath, '.agents', 'skills', 'gofer', commandName),
@@ -191,12 +193,23 @@ export class CommandGenerator {
       path.join(this.workspacePath, '.system', 'skills', 'gofer', fileStem),
       path.join(this.workspacePath, '.system', 'skills', 'gofer', commandName),
     ];
+
+    if (fileStem === '0_gofer_start' || commandName === '0_gofer_start') {
+      legacyDirs.push(
+        path.join(this.workspacePath, '.agents', 'skills', '0_business_scenario'),
+        path.join(this.workspacePath, '.agents', 'skills', 'gofer', '0_business_scenario'),
+        path.join(this.workspacePath, '.system', 'skills', '0_business_scenario'),
+        path.join(this.workspacePath, '.system', 'skills', 'gofer', '0_business_scenario')
+      );
+    }
+
+    return legacyDirs;
   }
 
   /**
    * Generate a Copilot Chat prompt file
    *
-   * @param sourceMetadata Source metadata from Claude command
+   * @param sourceMetadata Source metadata from the command mirror
    * @param dryRun Preview mode
    * @returns Output file path
    */
@@ -207,7 +220,10 @@ export class CommandGenerator {
     const promptsDir = path.join(this.workspacePath, '.github', 'prompts');
     const fileStem = this.toCommandFileStem(sourceMetadata.name);
     const promptPath = path.join(promptsDir, fileStem + '.prompt.md');
-    const legacyPromptPath = path.join(promptsDir, sourceMetadata.name + '.prompt.md');
+    const legacyPromptPaths = [path.join(promptsDir, sourceMetadata.name + '.prompt.md')];
+    if (fileStem === '0_gofer_start' || sourceMetadata.name === '0_gofer_start') {
+      legacyPromptPaths.push(path.join(promptsDir, '0_business_scenario.prompt.md'));
+    }
 
     // Transform content for Copilot
     const transformedContent = this.transformContent(sourceMetadata.content, 'claude', 'copilot');
@@ -243,8 +259,10 @@ export class CommandGenerator {
 
       // Write prompt file
       await fs.promises.writeFile(promptPath, promptContent, 'utf8');
-      if (legacyPromptPath !== promptPath) {
-        await fs.promises.rm(legacyPromptPath, { recursive: true, force: true });
+      for (const legacyPromptPath of legacyPromptPaths) {
+        if (legacyPromptPath !== promptPath) {
+          await fs.promises.rm(legacyPromptPath, { recursive: true, force: true });
+        }
       }
     }
 
@@ -293,7 +311,7 @@ export class CommandGenerator {
     // Transform command invocation syntax
     if (toPlatform === 'codex') {
       // Codex skills keep canonical slash-command references. Rewriting them
-      // corrupts file paths such as .specify/commands/0_business_scenario.md.
+      // corrupts file paths such as .specify/commands/0_gofer_start.md.
       void stageCommandPattern;
       void helperCommandPattern;
     } else if (toPlatform === 'copilot') {
@@ -413,7 +431,7 @@ The next stage will read the artifacts from this stage and continue the workflow
    */
   private getNextCommand(currentCommand: string): string | null {
     const pipeline = [
-      '0_business_scenario',
+      '0_gofer_start',
       '0a_problem_validation',
       '1_gofer_research',
       '2_gofer_specify',

@@ -8,25 +8,41 @@ vi.mock('vscode-languageserver');
 /**
  * Tests for MCP tool registration (Phase 1 of Memory System Integration Sweep).
  *
- * T010: Verify all 11 MCP tools appear in capabilities.
- * T011: Verify each of the 5 new MCP tools returns valid responses.
+ * T010: Verify all MCP tools appear in capabilities.
+ * T011: Verify each app/native bridge tool returns valid responses.
  */
 
-// The 11 MCP tools that should be registered in server.ts onInitialize
+// The MCP tools that should be registered in server.ts onInitialize
 const ALL_MCP_TOOL_NAMES = [
-  // Original 6 tools
   'gofer_get_specs',
   'gofer_get_next_task',
   'gofer_execute_task',
   'gofer_update_task_status',
   'gofer_validate_code',
   'gofer_run_tests',
-  // 5 newly registered tools (Phase 1)
   'gofer_expand_observation',
   'gofer_get_context_health',
   'gofer_get_research_index',
   'gofer_load_research_chunk',
   'gofer_trigger_handoff',
+  'gofer_peek_observation',
+  'gofer_fold_observation',
+  'gofer_grep_observations',
+  'gofer_context_peek',
+  'gofer_context_grep',
+  'gofer_context_fold',
+  'gofer_context_expand',
+  'gofer_context_undo',
+  'gofer_context_history',
+  'gofer_check_slop',
+  'gofer_context_repl',
+  'gofer_check_workspace',
+  'gofer_bootstrap_workspace',
+  'gofer_get_pipeline_state',
+  'gofer_start_stage',
+  'gofer_validate_branch',
+  'gofer_explain_eai_error',
+  'gofer_open_artifact',
 ];
 
 describe('MCP Tool Registration (T010)', () => {
@@ -36,13 +52,13 @@ describe('MCP Tool Registration (T010)', () => {
    * import, we test the tool definitions structurally via a snapshot of
    * the expected tool names.
    */
-  it('should define all 11 MCP tools', () => {
+  it('should define all MCP tools without duplicates', () => {
     // Verify the complete list of expected tools
-    expect(ALL_MCP_TOOL_NAMES).toHaveLength(11);
+    expect(ALL_MCP_TOOL_NAMES).toHaveLength(29);
 
     // Verify no duplicates
     const uniqueNames = new Set(ALL_MCP_TOOL_NAMES);
-    expect(uniqueNames.size).toBe(11);
+    expect(uniqueNames.size).toBe(29);
   });
 
   it('should have all tools prefixed with gofer_', () => {
@@ -51,7 +67,7 @@ describe('MCP Tool Registration (T010)', () => {
     }
   });
 
-  it('should include all 5 new observation/context/research/handoff tools', () => {
+  it('should include observation/context/research/handoff tools', () => {
     const newTools = [
       'gofer_expand_observation',
       'gofer_get_context_health',
@@ -60,6 +76,21 @@ describe('MCP Tool Registration (T010)', () => {
       'gofer_trigger_handoff',
     ];
     for (const tool of newTools) {
+      expect(ALL_MCP_TOOL_NAMES).toContain(tool);
+    }
+  });
+
+  it('should include app-native repo script bridge tools', () => {
+    const bridgeTools = [
+      'gofer_check_workspace',
+      'gofer_bootstrap_workspace',
+      'gofer_get_pipeline_state',
+      'gofer_start_stage',
+      'gofer_validate_branch',
+      'gofer_explain_eai_error',
+      'gofer_open_artifact',
+    ];
+    for (const tool of bridgeTools) {
       expect(ALL_MCP_TOOL_NAMES).toContain(tool);
     }
   });
@@ -193,6 +224,48 @@ describe('New MCP Tool Responses (T011)', () => {
         expect(result).toHaveProperty('success');
         // Should not throw for any valid reason
       }
+    });
+  });
+
+  describe('app-native bridge tools', () => {
+    it('should report workspace check results without throwing', async () => {
+      const result = await mcpHandler.checkWorkspace('codex');
+
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('status');
+    });
+
+    it('should dry-run workspace bootstrap without throwing', async () => {
+      const result = await mcpHandler.bootstrapWorkspace({
+        host: 'codex',
+        dryRun: true,
+        includeMirrors: false,
+      });
+
+      expect(result).toHaveProperty('success');
+    });
+
+    it('should return pipeline state even when no specs exist', async () => {
+      const result = await mcpHandler.getPipelineState();
+
+      expect(result.success).toBe(true);
+      expect(result).toHaveProperty('states');
+      expect(result).toHaveProperty('artifacts');
+    });
+
+    it('should resolve a stage command to a slash command', async () => {
+      const result = await mcpHandler.startStage('0_gofer_start');
+
+      expect(result.success).toBe(true);
+      expect(result.command).toBe('/0_gofer_start');
+      expect(result).toHaveProperty('preflight');
+    });
+
+    it('should reject path traversal when opening artifacts', async () => {
+      const result = await mcpHandler.openArtifact('../secret.txt');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('escapes workspace root');
     });
   });
 });

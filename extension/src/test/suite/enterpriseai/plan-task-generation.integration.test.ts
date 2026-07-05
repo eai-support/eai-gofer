@@ -14,7 +14,7 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
     const tasksCommand = readRootCommandFile('4_gofer_tasks.md');
 
     assert.ok(/EnterpriseAI Integration Map Requirements/.test(specifyCommand));
-    assert.ok(/Vertical App -> EAI Services -> Deployment Target/.test(specifyCommand));
+    assert.ok(/App -> EAI Services -> Deployment Target/.test(specifyCommand));
 
     assert.ok(
       /EnterpriseAI Deployment Convention and EAI CLI Pinning Requirements/.test(planCommand)
@@ -23,7 +23,7 @@ suite('enterpriseai plan/task generation (extension integration)', () => {
 
     assert.ok(/Ordered Runnable Task-Generation Guidance/.test(tasksCommand));
     assert.ok(/real EAI app gates before any claim of seeding/.test(tasksCommand));
-    assert.ok(/App resource provisioning -> `eai vertical provision`/.test(tasksCommand));
+    assert.ok(/App resource provisioning -> `eai app provision`/.test(tasksCommand));
     assert.ok(/pinned `eai major\.minor` deployment tasks/i.test(tasksCommand));
   });
 

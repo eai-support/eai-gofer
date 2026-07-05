@@ -77,11 +77,11 @@ describe('Codex agents-skills flat tree (T137 / FR-008)', () => {
   it('formerly Claude-only stages are emitted to agents-skills', () => {
     const skillsRoot = path.join(tmp, '.agents/skills');
     const formerlyClaudeOnly = [
-      '0_business_scenario',
+      '0_gofer_start',
       'gofer_constitution',
       'gofer_hydrate',
       '7_gofer_save',
-      '8_gofer_resume',
+      '8_gofer_branding',
     ];
     for (const stage of formerlyClaudeOnly) {
       const dir = path.join(skillsRoot, stage);

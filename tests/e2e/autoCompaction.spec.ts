@@ -24,7 +24,7 @@ import { describe, it, expect } from 'vitest';
  * 3. AutonomousDriver executes tasks sequentially
  * 4. Context grows with each completed task
  * 5. At the auto-save threshold, Gofer sends `/7_gofer_save`
- * 6. If enabled, Gofer follows with `/8_gofer_resume`
+ * 6. If enabled, Gofer follows with a checkpoint continuation prompt
  * 7. Execution continues with a fresh context window
  * 8. Process repeats if needed for very large specs
  */

@@ -58,21 +58,17 @@ suite('enterpriseai non-eai routing regression (extension integration)', () => {
     const workspaceRoot = path.resolve(process.cwd(), '..');
     const router = new CrossPlatformCommandRouter(workspaceRoot);
 
-    const standardClaude = await router.routeCommand('0_business_scenario', 'claude', 'standard');
-    const enterpriseClaude = await router.routeCommand(
-      '0_business_scenario',
-      'claude',
-      'enterpriseai'
-    );
-    const standardCodex = await router.routeCommand('0_business_scenario', 'codex', 'standard');
-    const standardCopilot = await router.routeCommand('0_business_scenario', 'copilot', 'standard');
+    const standardClaude = await router.routeCommand('0_gofer_start', 'claude', 'standard');
+    const enterpriseClaude = await router.routeCommand('0_gofer_start', 'claude', 'enterpriseai');
+    const standardCodex = await router.routeCommand('0_gofer_start', 'codex', 'standard');
+    const standardCopilot = await router.routeCommand('0_gofer_start', 'copilot', 'standard');
 
     assert.strictEqual(normalizeWorkflowProfile(undefined), 'standard');
     assert.strictEqual(normalizeWorkflowProfile('unexpected-value'), 'standard');
 
-    assert.strictEqual(standardClaude.syntax, '/0_business_scenario');
-    assert.strictEqual(standardCodex.syntax, '$ $0_business_scenario');
-    assert.strictEqual(standardCopilot.syntax, '#0_business_scenario');
+    assert.strictEqual(standardClaude.syntax, '/0_gofer_start');
+    assert.strictEqual(standardCodex.syntax, '/0_gofer_start');
+    assert.strictEqual(standardCopilot.syntax, '#0_gofer_start');
     assert.strictEqual(standardClaude.filePath, enterpriseClaude.filePath);
     assert.strictEqual(standardClaude.profileMatched, true);
 

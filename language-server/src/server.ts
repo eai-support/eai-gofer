@@ -515,6 +515,128 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
                   required: ['operations'],
                 },
               },
+              // ── Native app / repo-script bridge tools ──
+              {
+                name: 'gofer_check_workspace',
+                description:
+                  'Run the repo-owned Gofer workspace checker and report missing or stale scaffold files',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    host: {
+                      type: 'string',
+                      description:
+                        'Host surface to check: auto, codex, claude, copilot, gemini, vscode',
+                    },
+                  },
+                  required: [],
+                },
+              },
+              {
+                name: 'gofer_bootstrap_workspace',
+                description:
+                  'Run the repo-owned Gofer workspace bootstrap script to create or refresh scaffold files',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    host: {
+                      type: 'string',
+                      description:
+                        'Host surface to bootstrap: auto, codex, claude, copilot, gemini, vscode',
+                    },
+                    includeMirrors: {
+                      type: 'boolean',
+                      description: 'Copy host-specific command, skill, agent, and prompt mirrors',
+                    },
+                    dryRun: {
+                      type: 'boolean',
+                      description: 'Preview changes without writing files',
+                    },
+                  },
+                  required: [],
+                },
+              },
+              {
+                name: 'gofer_get_pipeline_state',
+                description:
+                  'Read current Gofer pipeline state, active feature, and available artifacts from .specify',
+                parameters: {
+                  type: 'object',
+                  properties: {},
+                  required: [],
+                },
+              },
+              {
+                name: 'gofer_start_stage',
+                description:
+                  'Resolve a Gofer stage command and return the safest next user-facing invocation for the active app',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    command: {
+                      type: 'string',
+                      description:
+                        'Stage/helper command name such as 0_gofer_start or /6_gofer_validate',
+                    },
+                    feature: {
+                      type: 'string',
+                      description: 'Optional feature directory/name to pass through as context',
+                    },
+                  },
+                  required: ['command'],
+                },
+              },
+              {
+                name: 'gofer_validate_branch',
+                description:
+                  'Summarize local branch state and recommend the Gofer validation commands/tests to run before review',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    base: {
+                      type: 'string',
+                      description:
+                        'Optional base branch to compare against, defaults to origin/main',
+                    },
+                  },
+                  required: [],
+                },
+              },
+              {
+                name: 'gofer_explain_eai_error',
+                description:
+                  'Explain an EAI CLI/platform error using eai errors explain when available, with repo catalog fallback',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    codeOrReason: {
+                      type: 'string',
+                      description: 'EAI error code, message, or reason to explain',
+                    },
+                  },
+                  required: ['codeOrReason'],
+                },
+              },
+              {
+                name: 'gofer_open_artifact',
+                description:
+                  'Read a Gofer artifact inside the workspace with path traversal protection and size limiting',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    path: {
+                      type: 'string',
+                      description:
+                        'Workspace-relative artifact path, for example .specify/specs/feature/spec.md',
+                    },
+                    maxBytes: {
+                      type: 'number',
+                      description: 'Maximum bytes to return; defaults to 20000',
+                    },
+                  },
+                  required: ['path'],
+                },
+              },
             ],
           },
         },
@@ -842,6 +964,44 @@ connection.onRequest(
         case 'gofer_context_repl':
           result = await mcpToolHandler.contextRepl(
             args.operations as Array<Record<string, unknown>>
+          );
+          break;
+
+        case 'gofer_check_workspace':
+          result = await mcpToolHandler.checkWorkspace(args.host as string | undefined);
+          break;
+
+        case 'gofer_bootstrap_workspace':
+          result = await mcpToolHandler.bootstrapWorkspace({
+            host: args.host as string | undefined,
+            includeMirrors: args.includeMirrors as boolean | undefined,
+            dryRun: args.dryRun as boolean | undefined,
+          });
+          break;
+
+        case 'gofer_get_pipeline_state':
+          result = await mcpToolHandler.getPipelineState();
+          break;
+
+        case 'gofer_start_stage':
+          result = await mcpToolHandler.startStage(
+            args.command as string,
+            args.feature as string | undefined
+          );
+          break;
+
+        case 'gofer_validate_branch':
+          result = await mcpToolHandler.validateBranch(args.base as string | undefined);
+          break;
+
+        case 'gofer_explain_eai_error':
+          result = await mcpToolHandler.explainEaiError(args.codeOrReason as string);
+          break;
+
+        case 'gofer_open_artifact':
+          result = await mcpToolHandler.openArtifact(
+            args.path as string,
+            args.maxBytes as number | undefined
           );
           break;
 

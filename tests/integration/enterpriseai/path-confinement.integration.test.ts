@@ -8,7 +8,7 @@ describe('enterpriseai path confinement protections (root integration)', () => {
     await expect(
       propagateCanonicalMirrors({
         changeSetId: 'chg_path_001',
-        canonicalSources: [path.resolve(process.cwd(), '.specify/commands/0_business_scenario.md')],
+        canonicalSources: [path.resolve(process.cwd(), '.specify/commands/0_gofer_start.md')],
         targetMirrors: ['copilot'],
         runParityValidation: false,
       })
@@ -17,7 +17,7 @@ describe('enterpriseai path confinement protections (root integration)', () => {
     await expect(
       propagateCanonicalMirrors({
         changeSetId: 'chg_path_002',
-        canonicalSources: ['.specify/commands/0_business_scenario.md'],
+        canonicalSources: ['.specify/commands/0_gofer_start.md'],
         targetMirrors: [path.resolve(process.cwd(), '.github/prompts')],
         runParityValidation: false,
       })

@@ -2,6 +2,50 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.12] - 2026-07-05
+
+Admin Portal app schema readiness guidance
+
+## [3.7.11] - 2026-07-02
+
+Fix secure Visual Studio Marketplace publishing with Entra workload identity
+
+## [3.7.10] - 2026-07-02
+
+Fix VS Code Marketplace publishing verification and Marketplace README links
+
+## [3.7.9] - 2026-07-02
+
+Gofer Start rename, EAI preflight hardening, legacy command archival, and refreshed current public plugin bundles
+
+## [3.7.8] - 2026-07-02
+
+Fix VS Code initialize duplicate command registration
+
+## [3.7.7] - 2026-06-30
+
+Add Gofer branding command and checkpoint continuation updates
+
+## [3.7.6] - 2026-06-29
+
+Add loop engineering audit gates across Gofer stages.
+
+## [3.7.5] - 2026-06-29
+
+Require material specs before downstream Gofer stages; update all host command surfaces and validation checks.
+
+## [3.7.4] - 2026-06-28
+
+Finish app terminology in stakeholder artifacts
+
+## [3.7.3] - 2026-06-28
+
+Rename vertical terminology to app
+
+## [3.7.2] - 2026-06-28
+
+App-native Gofer integrations for Codex, Claude, GitHub Copilot, Gemini, and VS Code, with provider-neutral MCP bridge tools and deterministic agent plugin packaging.
+
 ## [3.7.1] - 2026-06-23
 
 Patch release: fix Gofer workspace refresh version detection, package EAI platform references into agent plugins, and preserve slash-command routing across Claude, Codex, Copilot, Gemini, and VS Code.

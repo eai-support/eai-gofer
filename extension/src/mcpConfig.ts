@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import { Logger } from './utils/logger';
 
 interface MCPWorkspaceConfig {
+  servers?: Record<string, unknown>;
   mcp?: {
     servers?: Record<string, unknown>;
   };
@@ -27,38 +28,8 @@ export class MCPConfigHelper {
 
   /**
    * Create or update .vscode/mcp.json with Gofer MCP server configuration
-   * T042, T083: Only create if provider supports MCP (Claude only)
    */
   async createOrUpdateConfig(): Promise<void> {
-    // T083: Check if current provider supports MCP (Claude only)
-    const goferConfig = vscode.workspace.getConfiguration('gofer');
-    const defaultCLI = goferConfig.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
-    const cliProvider = goferConfig.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      'cliProvider',
-      'auto'
-    );
-
-    // MCP is only supported by Claude Code CLI
-    const effectiveProvider = defaultCLI !== 'auto' ? defaultCLI : cliProvider;
-
-    if (effectiveProvider === 'codex') {
-      this.logger.info('Skipping MCP setup - Codex CLI does not support MCP servers');
-      return;
-    }
-
-    if (effectiveProvider === 'copilot') {
-      this.logger.info('Skipping MCP setup - GitHub Copilot Chat does not support MCP servers');
-      return;
-    }
-
-    if (effectiveProvider === 'gemini') {
-      this.logger.info('Skipping MCP setup - Gemini CLI does not support MCP servers');
-      return;
-    }
-
     const vscodeDir = path.join(this.workspacePath, '.vscode');
     const mcpConfigPath = path.join(vscodeDir, 'mcp.json');
 
@@ -74,17 +45,11 @@ export class MCPConfigHelper {
       path.join('language-server', 'dist', 'server.js')
     );
 
-    // MCP configuration
-    const mcpConfig = {
-      mcp: {
-        servers: {
-          gofer: {
-            command: 'node',
-            args: [serverPath],
-            description: 'Gofer - Spec-driven development orchestrator',
-          },
-        },
-      },
+    const goferServer = {
+      type: 'stdio',
+      command: 'node',
+      args: [serverPath],
+      description: 'Gofer - Spec-driven development orchestrator',
     };
 
     // Check if file already exists
@@ -96,16 +61,26 @@ export class MCPConfigHelper {
       // File doesn't exist or is invalid, will create new
     }
 
-    // Merge configurations
+    // VS Code's current workspace MCP shape is top-level `servers`.
+    // Preserve any legacy `mcp.servers` entries, but remove an older Gofer
+    // entry there so we don't expose duplicate tools.
+    const legacyMcp = existingConfig.mcp
+      ? {
+          ...existingConfig.mcp,
+          servers: { ...(existingConfig.mcp.servers ?? {}) },
+        }
+      : undefined;
+    if (legacyMcp?.servers) {
+      delete legacyMcp.servers.gofer;
+    }
+
     const mergedConfig = {
       ...existingConfig,
-      mcp: {
-        ...existingConfig.mcp,
-        servers: {
-          ...existingConfig.mcp?.servers,
-          gofer: mcpConfig.mcp.servers.gofer,
-        },
+      servers: {
+        ...(existingConfig.servers ?? {}),
+        gofer: goferServer,
       },
+      ...(legacyMcp && Object.keys(legacyMcp.servers ?? {}).length > 0 ? { mcp: legacyMcp } : {}),
     };
 
     // Write configuration
@@ -150,7 +125,7 @@ export class MCPConfigHelper {
       const content = await fs.readFile(mcpConfigPath, 'utf-8');
       const config = JSON.parse(content);
 
-      const configured = !!config.mcp?.servers?.gofer;
+      const configured = !!(config.servers?.gofer || config.mcp?.servers?.gofer);
 
       return { exists: true, configured, authDelegatedToCli: true };
     } catch {
@@ -167,7 +142,7 @@ export class MCPConfigHelper {
     if (!status.configured) {
       const choice = await vscode.window.showInformationMessage(
         '🤖 Gofer MCP Tools Available!\n\n' +
-          'Configure MCP to enable Claude Code and GitHub Copilot integration?',
+          'Configure workspace MCP to enable Gofer tools in VS Code, Copilot, Claude Code, and compatible agent apps?',
         { modal: false },
         'Configure Now',
         'Learn More',

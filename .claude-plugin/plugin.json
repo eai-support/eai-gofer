@@ -1,7 +1,7 @@
 {
   "name": "eai-gofer",
-  "version": "3.7.1",
-  "description": "Gofer core pipeline: /0_business_scenario through /6_gofer_validate, plus optional helper commands.",
+  "version": "3.7.12",
+  "description": "Gofer core pipeline: /0_gofer_start through /6_gofer_validate, plus optional helper commands.",
   "author": {
     "name": "EAI Tools",
     "url": "https://github.com/eai-tools/eai-gofer"

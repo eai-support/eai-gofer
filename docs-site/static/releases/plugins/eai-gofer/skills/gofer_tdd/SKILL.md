@@ -5,6 +5,46 @@ description: "Guide a red-green-refactor loop tied to spec acceptance criteria."
 
 # Gofer TDD
 
+## Workspace Preflight
+
+Before doing stage/helper work:
+
+1. Resolve the repository root.
+2. Check the core Gofer sentinels:
+   - `.specify/.gofer-version`
+   - `.specify/commands/0_gofer_start.md`
+   - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/scripts/node/gofer-workspace-check.mjs`
+   - `.specify/scripts/node/gofer-workspace-bootstrap.mjs`
+   - `.specify/specs/`
+   - `.specify/memory/`
+3. If the repo has the workspace checker script, prefer running:
+   - `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json`
+4. If the workspace is missing or stale, ask exactly:
+   - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
+5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+6. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
+
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
 

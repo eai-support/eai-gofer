@@ -17,7 +17,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
     const tasksCommand = readCommandFile('4_gofer_tasks.md');
 
     expect(specifyCommand).toContain('EnterpriseAI Integration Map Requirements');
-    expect(specifyCommand).toContain('Vertical App -> EAI Services -> Deployment Target');
+    expect(specifyCommand).toContain('App -> EAI Services -> Deployment Target');
 
     expect(planCommand).toContain(
       'EnterpriseAI Deployment Convention and EAI CLI Pinning Requirements'
@@ -26,7 +26,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
 
     expect(tasksCommand).toContain('Ordered Runnable Task-Generation Guidance');
     expect(tasksCommand).toContain('real EAI app gates before any claim of seeding');
-    expect(tasksCommand).toContain('App resource provisioning -> `eai vertical provision`');
+    expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toMatch(/Pinned `eai major\.minor` deployment tasks/i);
   });
 
@@ -102,7 +102,7 @@ describe('enterpriseai plan/task generation (root integration)', () => {
 
     expect(result.response.metadata.integrationMap.included).toBe(true);
     expect(result.response.metadata.integrationMap.components).toEqual([
-      'vertical-app',
+      'app',
       'eai-services',
       'deployment-target',
     ]);

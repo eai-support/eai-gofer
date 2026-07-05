@@ -3,11 +3,51 @@ name: 4_gofer_tasks
 description: "Break down the implementation plan into dependency-ordered, parallelisable tasks."
 ---
 
+## Workspace Preflight
+
+Before doing stage/helper work:
+
+1. Resolve the repository root.
+2. Check the core Gofer sentinels:
+   - `.specify/.gofer-version`
+   - `.specify/commands/0_gofer_start.md`
+   - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/scripts/node/gofer-workspace-check.mjs`
+   - `.specify/scripts/node/gofer-workspace-bootstrap.mjs`
+   - `.specify/specs/`
+   - `.specify/memory/`
+3. If the repo has the workspace checker script, prefer running:
+   - `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json`
+4. If the workspace is missing or stale, ask exactly:
+   - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
+5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+6. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
 ---
 description: Generate actionable task breakdown from implementation plan
 ---
 
 # Gofer Tasks
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -63,10 +103,20 @@ This command expects in `.specify/specs/{feature}/`:
 - `spec.md` - Feature specification (from /2_gofer_specify)
 - `plan.md` - Implementation plan (from /3_gofer_plan)
 - `goal-ledger.json` - Goal and re-loop contract (from /1 and /2)
+- `loop-contract.json` - Bounded evaluation and stop-condition contract (from /1 and /3)
 
 If missing, prompt user to run the prerequisite stage.
 
 ---
+
+## Spec Artifact Guard
+
+Before task generation, `.specify/scripts/bash/check-prerequisites.sh --json`
+must confirm that `{FEATURE_DIR}/spec.md` exists, is non-empty, and is not the
+unfilled spec template. If the helper reports `spec.md` as missing, empty, or
+`template`, stop and run `/2_gofer_specify` before generating tasks. Do not
+infer tasks from `plan.md` alone because acceptance criteria and protected
+boundaries live in the spec.
 
 ## Outline
 
@@ -77,7 +127,9 @@ If missing, prompt user to run the prerequisite stage.
 5. Engineer review gate
 6. Optional multi-perspective review
 7. Approval gate
-8. Output: `tasks.md`, `traceability.md`, `issues.md`
+8. Output: `tasks.md`, `traceability.md`, `issues.md`,
+   `working-backwards-prfaq.md`, `prfaq-history/04-tasks.md`, and
+   `stakeholder-review-index.md`
 
 ---
 
@@ -111,6 +163,8 @@ Task generation dispatches agents — keep main context lightweight.
    directly):
    - Note feature name from FEATURE_DIR
    - Note which optional docs exist: data-model.md, contracts/, quickstart.md
+   - Note whether `loop-contract.json` exists. If missing, initialize it with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --init --json`
    - Note the tasks template path: `.specify/templates/tasks-template.md`
 
 ---
@@ -135,6 +189,7 @@ Read these files for full context:
 - {FEATURE_DIR}/data-model.md — Entity definitions (read if exists)
 - {FEATURE_DIR}/contracts/ — API contracts (read all .md files if exists)
 - {FEATURE_DIR}/research.md — Technology decisions (read if exists)
+- {FEATURE_DIR}/loop-contract.json — eval commands, max iterations, stop conditions, and human escalation rules
 - .specify/templates/tasks-template.md — Task template structure
 
 Generate tasks.md organized by user story to enable independent implementation:
@@ -165,6 +220,10 @@ Include these sections:
 4. All phases with tasks
 5. Parallel Execution Guide: Which [P] tasks can run concurrently
 6. Implementation Strategy: MVP first, incremental delivery, polish last
+7. Loop Evidence Tasks:
+   - Task(s) to run each loop-contract eval command at the right phase boundary
+   - Task(s) to append `loop-ledger.jsonl` records after each check-repair cycle
+   - Task(s) to stop and escalate if maxIterations or stop conditions trigger
 
 Validation checks before writing:
 - Every plan phase has at least one task (GAP-02)
@@ -172,6 +231,9 @@ Validation checks before writing:
 - Every acceptance criterion maps to at least one task (GAP-03)
 - Every data model entity has implementing tasks
 - Every API contract endpoint has implementing tasks
+- Every loop-contract eval command maps to at least one task or verification
+  checklist item
+- Every implementation phase explains what ledger evidence will be recorded
 - Task file paths match plan.md File Structure section
 - For CLI-driven platform mutations, task order must reflect authoritative
   store setup before orchestrator writes, orchestrator writes before CLI
@@ -200,6 +262,7 @@ Read these files:
 - {FEATURE_DIR}/spec.md — User stories, acceptance criteria, functional requirements
 - {FEATURE_DIR}/plan.md — Implementation phases, components
 - {FEATURE_DIR}/goal-ledger.json — goals, metrics, delivery states, re-loop triggers
+- {FEATURE_DIR}/loop-contract.json — loop eval commands, max iterations, stop conditions, and escalation rules
 - {FEATURE_DIR}/tasks.md — Task breakdown (read after Agent 1 writes it)
 - {FEATURE_DIR}/data-model.md — Entity definitions (read if exists)
 - {FEATURE_DIR}/contracts/ — API contracts (read if exists)
@@ -224,12 +287,16 @@ Generate {FEATURE_DIR}/traceability.md with:
 6. API Contract Coverage (if contracts/ exists):
    | Endpoint | Contract File | Implementing Task(s) |
 
-7. Coverage Summary:
+7. Loop Evidence Coverage:
+   | Eval Command | Phase Boundary | Task IDs | Ledger Evidence | Stop/Escalation Rule |
+
+8. Coverage Summary:
    - Plan Phases: N/N covered
    - User Stories: N/N covered
    - Acceptance Criteria: N/N covered
    - Requirements with code targets: N/N covered
    - Requirements with test targets: N/N covered
+   - Loop eval commands: N/N covered
    - Data Entities: N/N covered
    - API Endpoints: N/N covered
    - Status: VALIDATION PASSED or VALIDATION FAILED
@@ -363,6 +430,25 @@ node .specify/scripts/node/generate-issues.js "$FEATURE_DIR"
 
 This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
 
+### 6.5 Update Working Backwards PR/FAQ Delivery Plan
+
+Before the approval gate:
+
+1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
+   - Add Delivery / Operations FAQ content from `tasks.md`,
+     `traceability.md`, `issues.md`, dependencies, phase ordering, launch
+     gates, rollback/support notes, and loop eval tasks.
+   - Update Evidence Links for `tasks.md`, `traceability.md`,
+     `loop-contract.json`, and `issues.md`.
+2. Write `{FEATURE_DIR}/prfaq-history/04-tasks.md` as an immutable snapshot.
+3. Update `{FEATURE_DIR}/stakeholder-review-index.md`.
+   - Mark Business Owner and CTO decisions that changed because of task
+     sequencing or scope boundaries.
+   - Add Delivery review ask for dependencies, protected files, MVP scope,
+     parallel work, release gates, and rollback/support plan.
+4. Do not remove or weaken the task approval gate. The PR/FAQ and review index
+   summarize what is ready; `tasks.md` remains the implementation authority.
+
 ---
 
 ## Step 7: Approval Gate
@@ -404,7 +490,11 @@ Display the task summary and request explicit approval:
   Files created:
   - {FEATURE_DIR}/tasks.md
   - {FEATURE_DIR}/traceability.md
+  - {FEATURE_DIR}/loop-contract.json (updated if evaluation commands changed)
   - {FEATURE_DIR}/issues.md ([N] GitHub issues)
+  - {FEATURE_DIR}/working-backwards-prfaq.md
+  - {FEATURE_DIR}/prfaq-history/04-tasks.md
+  - {FEATURE_DIR}/stakeholder-review-index.md
 
 ════════════════════════════════════════════════════════════════
   APPROVAL REQUIRED BEFORE IMPLEMENTATION
@@ -486,7 +576,7 @@ deploy-doctor evidence exist before any deploy command runs.
      tenant-admin membership with `eai tenant list --format json`, initialize
      the EAI app template with `eai init <app-name> --skip-prompts
      --company-tenant <tenant-id>` when confirmed, and confirm app enrollment
-     with `eai vertical list/create/select`.
+     with `eai app list/create/select`.
    - Do not emit object-type, UI, implementation, deployment, or service-fit
      tasks until EAI readiness is `ready` or explicitly deferred by the user.
    - Never invent tenant IDs, app keys, app URLs, or platform capabilities.
@@ -561,7 +651,7 @@ precondition to downstream implementation tasks:
 `tasks.md` MUST also include:
 
 - EAI readiness unblock -> `eai-preflight.md` before any remote platform task.
-- App resource provisioning -> `eai vertical provision` before any claim of
+- App resource provisioning -> `eai app provision` before any claim of
   object-type seeding or preview readiness.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.

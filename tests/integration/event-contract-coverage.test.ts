@@ -256,7 +256,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
       await propagateCanonicalMirrors(
         {
           changeSetId: 'chg_evt_008',
-          canonicalSources: ['.specify/commands/0_business_scenario.md'],
+          canonicalSources: ['.specify/commands/0_gofer_start.md'],
           targetMirrors: ['copilot', 'codex', 'gemini'],
           runParityValidation: true,
         },
@@ -278,7 +278,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
         {
           releaseId: 'rel_evt_009',
           surfaces: ['README.md', 'extension/README.md', 'extension/package.json'],
-          primaryMessage: 'EnterpriseAI-first vertical app delivery',
+          primaryMessage: 'EnterpriseAI-first app delivery',
           preserveMultiPlatformSection: true,
         },
         {

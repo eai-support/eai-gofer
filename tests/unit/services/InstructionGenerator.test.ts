@@ -158,7 +158,7 @@ describe('InstructionGenerator', () => {
 
       // Gofer pipeline mention
       expect(content).toContain('Gofer');
-      expect(content).toContain('/0_business_scenario');
+      expect(content).toContain('/0_gofer_start');
     });
   });
 
@@ -177,7 +177,7 @@ describe('InstructionGenerator', () => {
       const info = makeProjectInfo();
       const content = await generator.generateClaudeMd(info);
 
-      expect(content).toContain('/0_business_scenario');
+      expect(content).toContain('/0_gofer_start');
       expect(content).toContain('/7_gofer_save');
       expect(content).toContain('Gofer Pipeline');
     });
@@ -242,7 +242,7 @@ describe('InstructionGenerator', () => {
       // Core principles and Gofer info
       expect(content).toContain('Simplicity First');
       expect(content).toContain('Gofer Pipeline');
-      expect(content).toContain('/0_business_scenario');
+      expect(content).toContain('/0_gofer_start');
     });
 
     it('CLAUDE.md contains workflow orchestration and references AGENTS.md', async () => {
@@ -250,7 +250,7 @@ describe('InstructionGenerator', () => {
       const content = await generator.generateClaudeMd(info);
 
       expect(content).toContain('@AGENTS.md');
-      expect(content).toContain('/0_business_scenario');
+      expect(content).toContain('/0_gofer_start');
       expect(content).toContain('Workflow Orchestration');
     });
   });

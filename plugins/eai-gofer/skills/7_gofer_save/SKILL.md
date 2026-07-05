@@ -3,11 +3,51 @@ name: 7_gofer_save
 description: "Save session state and create a handoff checkpoint for resumption in a new context."
 ---
 
+## Workspace Preflight
+
+Before doing stage/helper work:
+
+1. Resolve the repository root.
+2. Check the core Gofer sentinels:
+   - `.specify/.gofer-version`
+   - `.specify/commands/0_gofer_start.md`
+   - `.specify/templates/spec-template.md`
+   - `.specify/templates/loop-contract-template.json`
+   - `.specify/templates/working-backwards-prfaq-template.md`
+   - `.specify/scripts/node/gofer-workspace-check.mjs`
+   - `.specify/scripts/node/gofer-workspace-bootstrap.mjs`
+   - `.specify/specs/`
+   - `.specify/memory/`
+3. If the repo has the workspace checker script, prefer running:
+   - `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json`
+4. If the workspace is missing or stale, ask exactly:
+   - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
+5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+6. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
 ---
 description: Save session progress with comprehensive checkpoint for resumption
 ---
 
 # Gofer Save
+
+## EAI Platform Session Preflight
+
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and every other stack only by explicit exception.
+2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
+   and an active tenant is visible.
+3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
+   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
+   approve login/setup before continuing.
+4. For EAI app delivery, do not continue into research, specification, planning,
+   tasks, implementation, or validation until
+   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
+   app-readiness, and next-action evidence.
+5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+   Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -215,7 +255,8 @@ From tasks.md Protected Files section:
 ```bash
 cd [repo path]
 git checkout [branch]
-/8_gofer_resume
+# Read .specify/specs/[feature]/session-checkpoint.md
+# Continue with /5_gofer_implement or the stage recorded in the checkpoint
 ```
 
 ### Manual Resume Steps
@@ -252,7 +293,9 @@ Add checkpoint marker to tasks.md:
 ```markdown
 ## Checkpoint: [ISO timestamp]
 
-Progress saved at task [TaskID]. Resume with `/8_gofer_resume`.
+Progress saved at task [TaskID]. Resume by reading
+`session-checkpoint.md` in a fresh session and continuing from the recorded
+stage.
 ````
 
 ---
@@ -276,7 +319,7 @@ Progress saved at task [TaskID]. Resume with `/8_gofer_resume`.
   - Tests: [passing/failing/not run]
 
   To resume:
-  /8_gofer_resume
+  Read {FEATURE_DIR}/session-checkpoint.md in a fresh session
 
   Or manually:
   cd [repo] && git checkout [branch]
@@ -360,8 +403,7 @@ This ensures the resume session starts with clean context.
 
 This command works with:
 
-- `/8_gofer_resume` - Paired resume command
 - `/5_gofer_implement` - Can resume implementation
 - `/6_gofer_validate` - Can validate partial progress
-- `/0_business_scenario` - Detects saved sessions
+- `/0_gofer_start` - Detects saved sessions
 - `check-context-health.sh` - Triggers save at thresholds

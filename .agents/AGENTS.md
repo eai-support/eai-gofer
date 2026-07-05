@@ -2,7 +2,7 @@
 
 This file documents all Gofer pipeline commands available as agent skills.
 
-Generated: 2026-06-23T00:48:25.343Z
+Generated: 2026-07-05T00:45:45.735Z
 
 ## EAI CLI Discovery And Recovery
 
@@ -14,17 +14,17 @@ Generated: 2026-06-23T00:48:25.343Z
 
 ## Commands
 
-### Business Scenario
+### Gofer Start
 ---
-description: Triage business scenario and orchestrate the unified Gofer pipeline
+description: Start Gofer, confirm EAI readiness, and orchestrate the unified pipeline
 ---
 
-# Gofer Orchestrator
+# Gofer Start
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
 
-Before spawning agents,...
+Before spawning agents, c...
 
 ### Problem Validation
 ---
@@ -35,7 +35,7 @@ description:
 
 # Gofer Problem Validation
 
-## Token And...
+## EAI Platf...
 
 ### Gofer Cloud
 ---
@@ -45,10 +45,9 @@ description:
 
 # Gofer Cloud
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, ...
+Before any Gofer stage/helper command does pipeline wo...
 
 ### Gofer Research
 ---
@@ -57,10 +56,11 @@ description: Deep codebase and technology research for feature implementation
 
 # Gofer Research
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, callin...
+Before any Gofer stage/helper command does pipeline work:
+
+1...
 
 ### Gofer Specify
 ---
@@ -69,10 +69,11 @@ description: Create feature specification informed by codebase research
 
 # Gofer Specify
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools...
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat...
 
 ### Gofer Plan
 ---
@@ -82,10 +83,9 @@ description:
 
 # Gofer Plan
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, ca...
+Before any Gofer stage/helper command does pipeline work...
 
 ### Gofer Tasks
 ---
@@ -94,10 +94,11 @@ description: Generate actionable task breakdown from implementation plan
 
 # Gofer Tasks
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools,...
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat ...
 
 ### Gofer Implement
 ---
@@ -106,10 +107,11 @@ description: Execute tasks from tasks.md to implement the feature
 
 # Gofer Implement
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or...
+Before any Gofer stage/helper command does pipeline work:
+
+1. Treat dur...
 
 ### Gofer Validate
 ---
@@ -120,8 +122,9 @@ description:
 
 # Gofer Validate
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -...
+## EAI Platform Session Preflight
+
+Before any Gofer stage/hel...
 
 ### Gofer Save
 ---
@@ -130,10 +133,11 @@ description: Save session progress with comprehensive checkpoint for resumption
 
 # Gofer Save
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling ...
+Before any Gofer stage/helper command does pipeline work:
+
+1. ...
 
 ### Stakeholder Communications
 ---
@@ -144,20 +148,20 @@ description:
 
 # Gofer Stakeholder Communications
 
-## Token An...
+## EAI Plat...
 
-### Gofer Resume
+### Gofer Branding
 ---
 description:
-  Resume work from saved session checkpoint with full context restoration
+  Create or update a repo-owned brand profile and apply it to Gofer document,
+  deck, and stakeholder templates.
 ---
 
-# Gofer Resume
+# Gofer Branding
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents,...
+Before any G...
 
 ### Gofer Tests
 ---
@@ -168,10 +172,9 @@ description:
 
 # Gofer Tests
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawnin...
+Before any Gofer stage/helper command does p...
 
 ### Gofer Workspace Bootstrap
 
@@ -203,29 +206,28 @@ description:
 
 # Gofer Constitution
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawni...
+Before any Gofer stage/helper command does ...
 
 ### Gofer Diagnose
 
 # Gofer Diagnose
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or loading large files:
+Before any Gofer stage/helper command does pipeline work:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` a...
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and...
 
 ### EAI First Run
 
 # EAI Gofer First Run
 
 Use this command when the user is starting their first EAI Platform app, when
-`/0_business_scenario` is unavailable in a new repository, or when an EAI app
-build reaches the Go...
+`/0_gofer_start` is unavailable in a new repository, or when an EAI app
+build reaches the Gofer pi...
 
 ### Gofer Hydrate
 ---
@@ -234,10 +236,11 @@ description: Reverse-engineer specification from existing code (Hydration)
 
 # Gofer Hydrate
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling to...
+Before any Gofer stage/helper command does pipeline work:
+
+1. Tr...
 
 ### Gofer Personality
 
@@ -276,42 +279,42 @@ Before spawning agents, calling tools, or loading large files:
 
 # Gofer Spec Summary
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or loading large files:
+Before any Gofer stage/helper command does pipeline work:
 
-1. Treat `.specify/memory/gofer-model-policy.yam...
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+  ...
 
 ### Gofer TDD
 
 # Gofer TDD
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or loading large files:
+Before any Gofer stage/helper command does pipeline work:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the...
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and ever...
 
 ### Gofer Vocabulary
 
 # Gofer Vocabulary
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or loading large files:
+Before any Gofer stage/helper command does pipeline work:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml`...
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   a...
 
 ### Gofer Zoom Out
 
 # Gofer Zoom Out
 
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
+## EAI Platform Session Preflight
 
-Before spawning agents, calling tools, or loading large files:
+Before any Gofer stage/helper command does pipeline work:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` a...
+1. Treat durable delivery as EAI Platform delivery by default, with Azure second
+   and...

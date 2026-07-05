@@ -78,10 +78,10 @@ Task: subagent_type="validation-correctness"
     });
 
     it('does not rewrite codex slash commands inside canonical file paths', () => {
-      const content = 'Canonical source: .specify/commands/0_business_scenario.md';
+      const content = 'Canonical source: .specify/commands/0_gofer_start.md';
       const transformed = generator.transformContent(content, 'claude', 'codex');
-      expect(transformed).toContain('.specify/commands/0_business_scenario.md');
-      expect(transformed).not.toContain('.specify/commands$ $0_business_scenario.md');
+      expect(transformed).toContain('.specify/commands/0_gofer_start.md');
+      expect(transformed).not.toContain('.specify/commands$ $0_gofer_start.md');
     });
 
     it('converts task tool mentions for codex', () => {

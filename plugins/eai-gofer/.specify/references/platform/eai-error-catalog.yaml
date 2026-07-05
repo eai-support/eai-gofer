@@ -60,13 +60,14 @@ catalog:
         - 'redirect_uri'
         - '/api/auth/callback/microsoft-entra-id'
     meaning: The live app is sending an Entra callback URL that is not registered on the selected Entra app registration.
-    likelyCause: Preview or deployed host changed, Entra provisioning has not been refreshed for the app, or the runtime client ID points at an app registration without the exact callback URI.
+    likelyCause: Preview or deployed host changed, Entra provisioning has not been refreshed for the app, or the runtime client ID points at an app registration without the confirmed callback URI.
     recovery:
       - 'eai whoami'
       - 'eai tenant list --format json'
       - 'eai tenant select <tenant-slug-or-id> when the active tenant is wrong'
-      - 'Confirm the exact callback URL from the failing browser log, usually https://<host>/api/auth/callback/microsoft-entra-id'
-      - 'eai provision entra --force --redirect-uri <exact-callback-uri> --debug'
+      - 'Confirm the callback route from the failing browser log in the active session; record only a redacted pattern such as https://<app-host>/api/auth/callback/...'
+      - 'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
+      - 'Use --debug only with explicit user approval, and redact private hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing artifacts'
       - 'Retry the sign-in flow and confirm the authorize request now uses the registered redirect_uri'
       - 'If mismatch persists, align AUTH_ENTRA_CLIENT_ID or ENTRA_CLIENT_ID with the Entra app registration returned by EAI'
     nextGate: entra_redirect_registered
@@ -114,10 +115,10 @@ catalog:
         - 'select app first'
         - 'app key required'
     meaning: App-scoped work started before selecting the target app.
-    likelyCause: '`eai vertical select` has not been run for the active tenant.'
+    likelyCause: '`eai app select` has not been run for the active tenant.'
     recovery:
-      - 'eai vertical list --format json'
-      - 'eai vertical select <key> --format json'
+      - 'eai app list --format json'
+      - 'eai app select <key> --format json'
     nextGate: app_selected
   - errorId: EAI_PROVISION_REQUIRED_FOR_TYPES
     match:
@@ -125,9 +126,9 @@ catalog:
         - 'App resources must be provisioned before publishing object types'
         - '409'
     meaning: Object types cannot be published until app resources are provisioned.
-    likelyCause: '`eai types seed` ran before `eai vertical provision` completed.'
+    likelyCause: '`eai types seed` ran before `eai app provision` completed.'
     recovery:
-      - 'eai vertical provision <key> --tenant-id <tenant-id> --select --format json'
+      - 'eai app provision <key> --tenant-id <tenant-id> --select --format json'
       - 'eai types validate'
       - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json'
     nextGate: types_publish_ready
@@ -146,6 +147,22 @@ catalog:
       - 'eai verify storage --tenant-id <tenant-id>'
       - 'eai resources schema --tenant-id <tenant-id> --format json'
     nextGate: schema_storage_ready
+  - errorId: EAI_RESOURCE_SEARCH_EMBEDDING_REQUIRED
+    match:
+      containsAny:
+        - 'resource_search_embedding_required'
+        - 'search_embedding_required'
+        - 'Search vector embedding endpoint is not configured'
+        - 'Configure Azure OpenAI embedding endpoint and deployment before vector or hybrid search'
+    meaning: Full-text resource search can be available on the v4 passive ResourceAPI surface while hybrid or vector search is not ready yet.
+    likelyCause: The app or agent used the default hybrid v4 passive ResourceAPI search path before storage doctor reported semantic search readiness.
+    recovery:
+      - 'eai resources storage doctor --tenant-id <tenant-id> --format json'
+      - 'If capabilities.search.fulltext is true, retry with eai resources search "<query>" --fulltext --tenant-id <tenant-id>'
+      - 'Use --hybrid or --vector only after capabilities.search.hybrid or capabilities.search.vector is true'
+      - 'If semantic search is required for the scenario, record a platform capability gap in service-fit-matrix.md'
+      - 'Do not apply this fallback to legacy v1/v3 or active ResourceAPI behavior'
+    nextGate: resource_search_mode_selected
   - errorId: EAI_WORKFLOW_NOT_READY
     match:
       containsAny:

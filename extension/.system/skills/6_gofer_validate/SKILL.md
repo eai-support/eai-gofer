@@ -114,8 +114,8 @@ Before starting validation, assess context window health:
 
 - If **< 50%**: Proceed normally
 - If **50-70%**: Use sub-agents heavily, minimize main context
-- If **> 70%**: Run `$ $7_gofer_save`, start new session, run
-  `$ $8_gofer_resume`
+- If **> 70%**: Run `$ $7_gofer_save`, start a fresh session, read the
+  checkpoint, and continue validation
 
 Validation loads all artifacts and spawns 6 agents — context pressure is high.
 

@@ -59,7 +59,7 @@ function validateResolvedReferences(value: unknown): string[] {
 
   if (!legacyTemplate && !verticalTemplate) {
     errors.push(
-      'resolvedReferences.verticalTemplate must be a non-empty string (resolvedReferences.eaiAppTemplate is accepted as a legacy alias).'
+      'resolvedReferences.eaiAppTemplate must be a non-empty string (resolvedReferences.verticalTemplate is accepted as a legacy alias).'
     );
   }
 
