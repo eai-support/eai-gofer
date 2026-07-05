@@ -37,6 +37,51 @@ function walkFiles(root: string): string[] {
   return results;
 }
 
+function walkRelativePaths(root: string): string[] {
+  const results: string[] = [];
+
+  function visit(current: string): void {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      results.push(path.relative(root, fullPath).split(path.sep).join('/'));
+      if (entry.isDirectory()) {
+        visit(fullPath);
+      }
+    }
+  }
+
+  visit(root);
+  return results;
+}
+
+function findWindowsUnsafePaths(paths: string[]): string[] {
+  const forbiddenSegmentChars = new Set(['<', '>', ':', '"', '\\', '|', '?', '*']);
+  const reservedBasename = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+  const hasForbiddenChar = (segment: string): boolean => {
+    for (const char of segment) {
+      if (forbiddenSegmentChars.has(char) || char.charCodeAt(0) < 32) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  return paths.filter((relativePath) => {
+    if (relativePath.length > 240) {
+      return true;
+    }
+
+    return relativePath
+      .split('/')
+      .filter(Boolean)
+      .some(
+        (segment) =>
+          hasForbiddenChar(segment) || /[ .]$/.test(segment) || reservedBasename.test(segment)
+      );
+  });
+}
+
 describe('Gofer agent plugin package', () => {
   it('packages a zip with Claude, Codex, Copilot, and Gemini install metadata', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
@@ -57,6 +102,12 @@ describe('Gofer agent plugin package', () => {
       expect(fs.existsSync(pluginRoot)).toBe(true);
 
       const zipListing = execFileSync('unzip', ['-l', zipPath], { encoding: 'utf8' });
+      const zipEntries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
+        .split('\n')
+        .filter(Boolean);
+      expect(findWindowsUnsafePaths(walkRelativePaths(pluginRoot))).toEqual([]);
+      expect(findWindowsUnsafePaths(zipEntries)).toEqual([]);
+
       for (const required of [
         'eai-gofer/plugin.json',
         'eai-gofer/.codex-plugin/plugin.json',
