@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.13] - 2026-07-06
+
+Windows-portable agent plugin package paths
+
 ## [3.7.12] - 2026-07-05
 
 Admin Portal app schema readiness guidance
