@@ -2,22 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export type RepositoryLanguage =
-  | 'typescript'
-  | 'javascript'
-  | 'python'
-  | 'go'
-  | 'rust'
-  | 'java'
-  | 'unknown';
+  'typescript' | 'javascript' | 'python' | 'go' | 'rust' | 'java' | 'unknown';
 export type RepositoryFramework =
-  | 'react'
-  | 'nextjs'
-  | 'vite'
-  | 'express'
-  | 'fastapi'
-  | 'django'
-  | 'node'
-  | 'unknown';
+  'react' | 'nextjs' | 'vite' | 'express' | 'fastapi' | 'django' | 'node' | 'unknown';
 
 export interface RepositoryAtlas {
   root: string;

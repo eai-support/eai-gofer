@@ -22,10 +22,7 @@ export type GoferRiskLabel =
   | 'unknown';
 
 export type GoferExecutionProfileOverrideStatus =
-  | 'none'
-  | 'deeper-accepted'
-  | 'shallower-requires-approval'
-  | 'shallower-approved';
+  'none' | 'deeper-accepted' | 'shallower-requires-approval' | 'shallower-approved';
 
 export interface GoferExecutionProfileOptions {
   requestedProfile?: GoferExecutionProfile | null;

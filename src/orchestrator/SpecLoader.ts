@@ -130,11 +130,7 @@ export class SpecLoader {
         const validStatuses = ['draft', 'in_progress', 'testing', 'completed', 'failed'];
         if (validStatuses.includes(statusValue)) {
           metadata.status = statusValue as
-            | 'draft'
-            | 'in_progress'
-            | 'testing'
-            | 'completed'
-            | 'failed';
+            'draft' | 'in_progress' | 'testing' | 'completed' | 'failed';
         }
         continue;
       }
