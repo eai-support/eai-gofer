@@ -29,6 +29,9 @@ const CLAUDE_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/claude-marketplace.json`;
 const CODEX_PLUGIN_MANIFEST_URL = `${PUBLIC_PLUGIN_URL}/codex-plugin.json`;
 const COPILOT_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/copilot-marketplace.json`;
 const GEMINI_EXTENSION_URL = `${PUBLIC_PLUGIN_URL}/gemini-extension.json`;
+const WINDOWS_FORBIDDEN_SEGMENT_CHARS = new Set(['<', '>', ':', '"', '\\', '|', '?', '*']);
+const WINDOWS_RESERVED_BASENAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+const WINDOWS_SAFE_RELATIVE_PATH_LIMIT = 240;
 const PERSONAL_PATH_PATTERN =
   /(^|[\s"'])(\/Users\/[^/\s"']+|\/home\/[^/\s"']+|[A-Za-z]:\\Users\\[^\\\s"']+)/;
 const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
@@ -674,6 +677,69 @@ async function walkFiles(root) {
   return files;
 }
 
+async function walkRelativePaths(root) {
+  const relativePaths = [];
+
+  async function visit(current) {
+    const entries = await fs.readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      relativePaths.push(path.relative(root, fullPath).split(path.sep).join('/'));
+      if (entry.isDirectory()) {
+        await visit(fullPath);
+      }
+    }
+  }
+
+  await visit(root);
+  return relativePaths;
+}
+
+function describeWindowsUnsafePath(relativePath) {
+  if (relativePath.length > WINDOWS_SAFE_RELATIVE_PATH_LIMIT) {
+    return `longer than ${WINDOWS_SAFE_RELATIVE_PATH_LIMIT} characters`;
+  }
+
+  const segments = relativePath.split('/').filter(Boolean);
+  for (const segment of segments) {
+    if (hasWindowsForbiddenSegmentChar(segment)) {
+      return `segment "${segment}" contains a Windows-forbidden character`;
+    }
+    if (/[ .]$/.test(segment)) {
+      return `segment "${segment}" ends with a dot or space`;
+    }
+    if (WINDOWS_RESERVED_BASENAME.test(segment)) {
+      return `segment "${segment}" is a Windows reserved device name`;
+    }
+  }
+
+  return null;
+}
+
+function hasWindowsForbiddenSegmentChar(segment) {
+  for (const char of segment) {
+    if (WINDOWS_FORBIDDEN_SEGMENT_CHARS.has(char) || char.charCodeAt(0) < 32) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function assertWindowsPortablePaths(pluginRoot) {
+  const offenders = [];
+  for (const relativePath of await walkRelativePaths(pluginRoot)) {
+    const reason = describeWindowsUnsafePath(relativePath);
+    if (reason) {
+      offenders.push(`${relativePath} (${reason})`);
+    }
+  }
+
+  if (offenders.length > 0) {
+    throw new Error(`Plugin package contains Windows-unsafe paths: ${offenders.join(', ')}`);
+  }
+}
+
 async function assertNoPersonalPaths(pluginRoot) {
   const files = await walkFiles(pluginRoot);
   const offenders = [];
@@ -851,6 +917,7 @@ async function main() {
   await fs.rm(stageParent, { recursive: true, force: true });
   await fs.rm(zipPath, { force: true });
   await writePluginFolder(pluginRoot, root, version, stages);
+  await assertWindowsPortablePaths(pluginRoot);
   await assertNoPersonalPaths(pluginRoot);
   await execFileAsync('zip', ['-qr', zipPath, PLUGIN_NAME], { cwd: stageParent });
 
