@@ -142,9 +142,17 @@ jobs:
 
           if [ -n "$VSCE_AZURE_CLIENT_ID" ] && [ -n "$VSCE_AZURE_TENANT_ID" ] && [ -n "$VSCE_AZURE_SUBSCRIPTION_ID" ]; then
             echo "Publishing EnterpriseAI.gofer with Microsoft Entra ID workload identity."
-            npx @vscode/vsce verify-pat EnterpriseAI --azure-credential
-            npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" --azure-credential
-            exit 0
+            if npx @vscode/vsce verify-pat EnterpriseAI --azure-credential \
+              && npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" --azure-credential; then
+              exit 0
+            fi
+
+            if [ -n "$VSCE_PAT" ]; then
+              echo "::warning::Microsoft Entra Marketplace publish failed; falling back to legacy VSCE_PAT. Add the managed identity reported above as a Contributor on the EnterpriseAI Marketplace publisher before removing this fallback."
+            else
+              echo "::error::Microsoft Entra Marketplace publish failed and no VSCE_PAT fallback is configured."
+              exit 1
+            fi
           fi
 
           if [ -n "$VSCE_PAT" ]; then
