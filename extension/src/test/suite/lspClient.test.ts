@@ -28,7 +28,7 @@ suite('LSPClient Integration Test Suite', () => {
 
   suiteTeardown(async () => {
     // Clean up temporary directory
-    await fs.rmdir(tempDir, { recursive: true }).catch(() => {});
+    await fs.rm(tempDir, { recursive: true, force: true });
   });
 
   suite('LSP Client Creation', () => {
