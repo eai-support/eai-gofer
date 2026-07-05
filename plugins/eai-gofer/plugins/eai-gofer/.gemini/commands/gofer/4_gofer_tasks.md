@@ -661,7 +661,9 @@ precondition to downstream implementation tasks:
 
 - EAI readiness unblock -> `eai-preflight.md` before any remote platform task.
 - App resource provisioning -> `eai app provision` before any claim of
-  object-type seeding or preview readiness.
+  object-type seeding or preview readiness; it must verify Admin Portal app-control-plane
+  schema readiness for tenant enrollment, service enablement, vertical activation,
+  product config, and shared workflow config/target/metric object types.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.
 - Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`

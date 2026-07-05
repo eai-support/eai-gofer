@@ -790,6 +790,9 @@ separation from `tasks.md`:
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
 - Use `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
+  confirm the result includes Admin Portal app-control-plane schema readiness,
+  rerun it before object-type publish if `vertical-product-config`,
+  `vertical-service-activation`, or shared workflow config/target/metric schemas are missing,
   `eai provision entra --force --redirect-uri <confirmed-callback-uri>`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,
