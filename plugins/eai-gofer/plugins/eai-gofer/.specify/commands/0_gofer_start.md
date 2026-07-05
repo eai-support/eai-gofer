@@ -232,7 +232,7 @@ with an unrelated non-EAI stack.
    - Record the selected app key with `eai app select <key> --format json`
      when available.
    - Do not claim platform readiness from app creation alone. Later stages must
-     keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json` (must report Admin Portal app-control-plane schema readiness for `tenant-vertical-enrollment`, `tenant-service-enablement`, `vertical-service-activation`, `vertical-product-config`, and shared workflow config/target/metric object types),
+     keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
      `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
