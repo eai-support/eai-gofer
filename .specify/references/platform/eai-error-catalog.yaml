@@ -71,6 +71,24 @@ catalog:
       - 'Tell the affected app user to sign out and sign back in because Auth.js session or JWT role data may be cached'
       - 'Do not edit databases or cloud portals directly unless EAI guidance reports an operator-only block'
     nextGate: tenant_member_role_verified
+  - errorId: EAI_APP_TOKEN_TENANT_CONTEXT_REQUIRED
+    match:
+      containsAny:
+        - 'app_token_tenant_context_required'
+        - 'MISSING_TENANT'
+        - 'Tenant context required for app tokens'
+    meaning: An app-token or service-identity platform user lookup reached EAI but did not carry the required tenant context.
+    likelyCause: The caller used a root platform user or membership route such as /v4/platform/users/by-email or /v4/platform/users/{oid}/memberships instead of the tenant-scoped /v4/platform/tenants/{tenantId}/... route family, or the target environment has not deployed the matching PublicAPI/AdminAPI tenant-scoped routing hardening.
+    recovery:
+      - 'Run eai errors explain app_token_tenant_context_required --format json when advertised'
+      - 'eai whoami'
+      - 'eai tenant list --format json'
+      - 'Do not start by changing tenant members, role definitions, Entra configuration, databases, or cloud portals'
+      - 'Retry user lookup through /v4/platform/tenants/<tenant-id>/users/by-email?email=<email>'
+      - 'Retry membership lookup through /v4/platform/tenants/<tenant-id>/users/<oid>/memberships'
+      - 'Keep tenant member and role-definition reads on /v4/platform/tenants/<tenant-id>/members and /v4/platform/tenants/<tenant-id>/role-definitions'
+      - 'If tenant-scoped routes still return MISSING_TENANT, capture redacted route shape, HTTP status, server code, CLI version, active tenant slug, and deployed PublicAPI/AdminAPI versions for platform support'
+    nextGate: tenant_scoped_platform_route_verified
   - errorId: EAI_ENTRA_REDIRECT_URI_MISMATCH
     match:
       containsAny:
