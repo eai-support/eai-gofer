@@ -559,6 +559,8 @@ function buildEaiRepoContractSection(projectInfo) {
 - If CLI, login, tenant, template, or Gofer readiness is missing or stale, run \`/gofer:eai-first-run\` before building.
 - Use \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\`, \`eai template check --format json\`, \`eai gofer refresh --check --format json\`, and \`eai workflow readiness --format json\` when the CLI advertises them before assuming the repo is current.
 - After any \`eai\` command error, use \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
+- If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
+- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.
 - Build on EAI Platform first and Azure second. Treat non-EAI runtimes as explicit exceptions only.
 - Keep provisioning, types seed, schema/storage health, workflow readiness, and preview as separate gates.`;
 }

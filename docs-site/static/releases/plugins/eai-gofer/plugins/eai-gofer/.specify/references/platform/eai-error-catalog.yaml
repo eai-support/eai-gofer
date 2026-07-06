@@ -51,6 +51,26 @@ catalog:
       - 'eai tenant select <tenant-slug>'
       - 'eai whoami'
     nextGate: tenant_ready
+  - errorId: EAI_USER_INVITE_EXTERNAL_SERVICE_EXISTING_MEMBER
+    match:
+      containsAny:
+        - 'user_invite_external_service_existing_member'
+        - 'EXTERNAL_SERVICE_ERROR'
+        - 'Invite failed'
+        - 'eai user invite'
+        - '502'
+    meaning: A tenant member invite or role assignment reached an external service failure, and the target person may already exist as a direct tenant member with the wrong role.
+    likelyCause: The invite/add path failed after, or despite, an existing tenant member record. Retrying the same invite may not change the member role.
+    recovery:
+      - 'Run eai errors explain user_invite_external_service_existing_member --format json when advertised'
+      - 'eai whoami'
+      - 'eai user roles --tenant <tenant-id> --format json'
+      - 'eai user list --tenant <tenant-id> --search <email> --format json'
+      - 'If an existing direct member is present and the user approves, run eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+      - 'Verify the member read-back with eai user list --tenant <tenant-id> --search <email> --format json'
+      - 'Tell the affected app user to sign out and sign back in because Auth.js session or JWT role data may be cached'
+      - 'Do not edit databases or cloud portals directly unless EAI guidance reports an operator-only block'
+    nextGate: tenant_member_role_verified
   - errorId: EAI_ENTRA_REDIRECT_URI_MISMATCH
     match:
       containsAny:
