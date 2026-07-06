@@ -830,6 +830,20 @@ separation from `tasks.md`:
   affected app user to sign out and sign back in because Auth.js session or JWT
   role data may be cached. Do not edit databases or cloud portals directly
   unless EAI guidance reports an operator-only block.
+- If platform user lookup or membership prerequisite calls fail with
+  `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
+  required for app tokens", treat it as a tenant-scoped route/context issue
+  before treating it as a tenant-member data issue. Run `eai errors explain
+  app_token_tenant_context_required --format json` when advertised, confirm
+  `eai whoami` and `eai tenant list --format json`, and retry through
+  `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
+  `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
+  `/v4/platform/tenants/<tenant-id>/members`, and
+  `/v4/platform/tenants/<tenant-id>/role-definitions`. Do not change Entra,
+  databases, tenant members, or role definitions until the tenant-scoped route
+  check is complete; if it still fails, escalate with redacted route shape,
+  status, server code, CLI version, active tenant slug, and deployed
+  PublicAPI/AdminAPI versions if visible.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,
   AI assistance mode, contextual prefill or conversational support, completion

@@ -157,6 +157,30 @@ eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-adm
 Then verify the read-back and tell the affected app user to sign out and sign
 back in because Auth.js session or JWT role data may be cached.
 
+If platform user lookup or membership prerequisite calls fail with
+`MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
+required for app tokens", do not start by changing tenant members, role
+definitions, Entra configuration, databases, or cloud portals. Run:
+
+```bash
+eai errors explain app_token_tenant_context_required --format json
+eai whoami
+eai tenant list --format json
+```
+
+Then retry through tenant-scoped V4 platform routes:
+
+```text
+/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>
+/v4/platform/tenants/<tenant-id>/users/<oid>/memberships
+/v4/platform/tenants/<tenant-id>/members
+/v4/platform/tenants/<tenant-id>/role-definitions
+```
+
+If those still fail, escalate with redacted route shape, HTTP status, server
+code, CLI version, active tenant slug, and deployed PublicAPI/AdminAPI versions
+if visible.
+
 Specifically note whether the installed CLI advertises the commands needed for:
 
 - app scaffolding via `eai init`

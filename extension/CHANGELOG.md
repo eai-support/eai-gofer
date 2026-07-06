@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.15] - 2026-07-06
+
+Add tenant context error recovery guidance
+
 ## [3.7.14] - 2026-07-06
 
 Add EAI operational error recovery guidance.
