@@ -120,6 +120,30 @@ inventing a workaround:
 eai errors explain <code-or-reason> --format json
 ```
 
+If `eai errors explain` is unavailable, use the installed Gofer fallback catalog
+at `.specify/references/platform/eai-error-catalog.yaml` once the repo exists,
+or report that live EAI guidance is unavailable and stop before mutating
+tenant/app state. Always run read-only diagnostics before mutating fixes.
+
+For tenant member/admin operations, if `eai user invite` fails with
+`EXTERNAL_SERVICE_ERROR`, a 5xx response, or
+`user_invite_external_service_existing_member`, check for an existing direct
+member with:
+
+```bash
+eai user list --tenant <tenant-id> --search <email> --format json
+```
+
+Use role repair only after the existing member ID is verified and the user
+approves the role change:
+
+```bash
+eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json
+```
+
+Then verify the read-back and tell the affected app user to sign out and sign
+back in because Auth.js session or JWT role data may be cached.
+
 Specifically note whether the installed CLI advertises the commands needed for:
 
 - app scaffolding via `eai init`

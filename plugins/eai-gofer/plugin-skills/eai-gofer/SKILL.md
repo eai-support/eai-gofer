@@ -5,7 +5,7 @@ description: "Run the public Gofer core pipeline and helper commands in Claude, 
 
 # Gofer
 
-Version: 3.7.13
+Version: 3.7.14
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -24,6 +24,8 @@ If the user is starting a first EAI Platform app, run `/gofer:eai-first-run` bef
 - Run `eai --describe` before assuming command syntax.
 - If advertised, run `eai agent guide --format json` before planning or fixing EAI workflows.
 - After any `eai` error, run `eai errors explain <code-or-reason> --format json` before guessing remediation.
+- If `eai errors explain` is unavailable, match `.specify/references/platform/eai-error-catalog.yaml`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
+- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
 
 ## Token And Cost Policy

@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_gofer_start.md
-  canonicalChecksum: 3c00de07f5b3dff70c6a3441c2613a98078bdcf10c041cb7132c1c5a40edd1df
+  canonicalChecksum: 5745e1467f2b1361b2d7dd6e1cc2d077cb5d157b5f96b951732e250b40f67a57
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -182,6 +182,19 @@ with an unrelated non-EAI stack.
      `eai errors explain <code-or-reason> --format json` before proposing a
      fix, and prefer the CLI's public-safe recovery commands over guessed
      platform internals.
+   - If the CLI does not advertise `eai errors explain`, match the failure
+     against `.specify/references/platform/eai-error-catalog.yaml`, run the
+     listed read-only diagnostics before mutating fixes, and stop at the retry
+     or escalation condition instead of looping.
+   - For tenant member/admin changes, if `eai user invite` fails with
+     `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
+     `user_invite_external_service_existing_member`, check for an existing
+     direct member with `eai user list --tenant <tenant-id> --search <email>
+     --format json`; use `eai user role set --tenant <tenant-id> --member-id
+     <member-id> --role tenant-admin --format json` only after read-only
+     evidence and user approval, verify the read-back, and tell the affected
+     app user to sign out and sign back in because Auth.js session or JWT role
+     data may be cached.
    - Use JSON only where the CLI advertises it. `eai tenant list --format json`
      is suitable for automation; `eai whoami` may be plain text on current
      versions.

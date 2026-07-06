@@ -1146,6 +1146,8 @@ Generated: ${timestamp}
 - Run \`eai --describe\` before assuming command syntax.
 - If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.
 - After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
+- If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
+- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.
 - Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.
 
 ## Commands

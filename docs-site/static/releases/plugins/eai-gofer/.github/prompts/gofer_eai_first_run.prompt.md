@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/gofer_eai_first_run.md
-  canonicalChecksum: 32b2814538a5b72a1f61ad39a22ab749150bcfcd581b083cde9bf57e8354770a
+  canonicalChecksum: 692e05735ca54dccd981b1dd805817d556b8a9288c8ff398f71e22ec0c211185
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -150,6 +150,30 @@ inventing a workaround:
 ```bash
 eai errors explain <code-or-reason> --format json
 ```
+
+If `eai errors explain` is unavailable, use the installed Gofer fallback catalog
+at `.specify/references/platform/eai-error-catalog.yaml` once the repo exists,
+or report that live EAI guidance is unavailable and stop before mutating
+tenant/app state. Always run read-only diagnostics before mutating fixes.
+
+For tenant member/admin operations, if `eai user invite` fails with
+`EXTERNAL_SERVICE_ERROR`, a 5xx response, or
+`user_invite_external_service_existing_member`, check for an existing direct
+member with:
+
+```bash
+eai user list --tenant <tenant-id> --search <email> --format json
+```
+
+Use role repair only after the existing member ID is verified and the user
+approves the role change:
+
+```bash
+eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json
+```
+
+Then verify the read-back and tell the affected app user to sign out and sign
+back in because Auth.js session or JWT role data may be cached.
 
 Specifically note whether the installed CLI advertises the commands needed for:
 
