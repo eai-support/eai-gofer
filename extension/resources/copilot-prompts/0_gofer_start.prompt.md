@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_gofer_start.md
-  canonicalChecksum: 49733045583c87ee94bb8dbce23a416600d86648ab90c1eddabfdd1ca6c87e78
+  canonicalChecksum: d2b49b77400a49c5ac8b881c3371e32956f28d946bb68f8b8ab80cfb883a3a07
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -157,11 +157,12 @@ with an unrelated non-EAI stack.
      updating the Gofer plugin.
 3. **Install or update the EAI CLI when needed**
    - Check `git --version`, `node --version`, `npm --version`, `npm config get
-     @eai-tools:registry`, and `eai --version`.
+     @enterpriseai:registry`, and `eai --version`.
    - If `eai` is missing and the user approves, install it:
      ```bash
-     npm config set @eai-tools:registry https://eai-tools.github.io/eai/registry/ --location=user
-     npm install -g @eai-tools/cli
+     npm install -g eai-cli
+     # If npmjs is unavailable:
+     npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/
      eai --version
      ```
    - On Windows, use the same npm commands in PowerShell and avoid shell

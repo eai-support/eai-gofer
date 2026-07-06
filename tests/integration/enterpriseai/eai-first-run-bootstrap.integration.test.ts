@@ -22,11 +22,11 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('git --version');
     expect(command).toContain('node --version');
     expect(command).toContain('npm --version');
-    expect(command).toContain('npm config get @eai-tools:registry');
+    expect(command).toContain('npm config get @enterpriseai:registry');
+    expect(command).toContain('npm install -g eai-cli');
     expect(command).toContain(
-      'npm config set @eai-tools:registry https://eai-tools.github.io/eai/registry/ --location=user'
+      'npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/'
     );
-    expect(command).toContain('npm install -g @eai-tools/cli');
     expect(command).toContain('eai update --check');
     expect(command).toContain('eai --describe');
     expect(command).toContain('eai agent guide --format json');
