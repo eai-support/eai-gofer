@@ -187,12 +187,18 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('gemini extensions install https://github.com/eai-tools/eai-gofer');
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
+      expect(readme).toContain(
+        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+      );
       expect(readme).toContain('App-Native Surfaces And Repo Scripts');
       expect(readme).toContain('Codex App / Codex IDE');
       expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
       expect(readme).toContain('Claude Code app');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
+      expect(umbrellaSkill).toContain(
+        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+      );
       expect(umbrellaSkill).toContain('eai publicapi');
 
       for (const command of FULL_COMMAND_FILES) {
