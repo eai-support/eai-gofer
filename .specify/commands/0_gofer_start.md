@@ -184,6 +184,19 @@ with an unrelated non-EAI stack.
      `eai errors explain <code-or-reason> --format json` before proposing a
      fix, and prefer the CLI's public-safe recovery commands over guessed
      platform internals.
+   - If the CLI does not advertise `eai errors explain`, match the failure
+     against `.specify/references/platform/eai-error-catalog.yaml`, run the
+     listed read-only diagnostics before mutating fixes, and stop at the retry
+     or escalation condition instead of looping.
+   - For tenant member/admin changes, if `eai user invite` fails with
+     `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
+     `user_invite_external_service_existing_member`, check for an existing
+     direct member with `eai user list --tenant <tenant-id> --search <email>
+     --format json`; use `eai user role set --tenant <tenant-id> --member-id
+     <member-id> --role tenant-admin --format json` only after read-only
+     evidence and user approval, verify the read-back, and tell the affected
+     app user to sign out and sign back in because Auth.js session or JWT role
+     data may be cached.
    - Use JSON only where the CLI advertises it. `eai tenant list --format json`
      is suitable for automation; `eai whoami` may be plain text on current
      versions.

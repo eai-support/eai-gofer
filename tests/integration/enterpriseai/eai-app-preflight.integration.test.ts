@@ -125,4 +125,18 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('record only a redacted pattern');
     expect(catalog).toContain('Use --debug only with explicit user approval');
   });
+
+  it('catalogs tenant member invite external-service failures as an EAI-led recovery path', () => {
+    const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
+
+    expect(catalog).toContain('EAI_USER_INVITE_EXTERNAL_SERVICE_EXISTING_MEMBER');
+    expect(catalog).toContain('user_invite_external_service_existing_member');
+    expect(catalog).toContain('EXTERNAL_SERVICE_ERROR');
+    expect(catalog).toContain('eai user list --tenant <tenant-id> --search <email> --format json');
+    expect(catalog).toContain(
+      'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+    );
+    expect(catalog).toContain('Auth.js session or JWT role data may be cached');
+    expect(catalog).toContain('Do not edit databases or cloud portals directly');
+  });
 });

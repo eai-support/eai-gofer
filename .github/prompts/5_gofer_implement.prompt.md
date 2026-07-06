@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: a8b0d895da64c40145d5800c41cd1ab2219289066ec5d948f7ba70b5a4e2125e
+  canonicalChecksum: d1731d3b2a54e165aab4226e2d3a3f428581385128fa9c3971faf185f8b5fb88
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -816,6 +816,12 @@ separation from `tasks.md`:
 - Carry forward the last completed gate, blocked gate, and next recovery
   command from `eai-preflight.md` whenever provisioning, object-type publish,
   schema/storage health, workflow readiness, or preview readiness changes.
+- After any failed `eai` command, run `eai errors explain <code-or-reason>
+  --format json` when advertised before proposing a fix. If the command is not
+  advertised, match `.specify/references/platform/eai-error-catalog.yaml`. Run
+  read-only diagnostics before mutating fixes, ask for approval before tenant
+  membership or admin changes, and stop at the guidance retry/escalation
+  condition instead of repeatedly rerunning the same command.
 - Treat resource provisioning, object-type publish, schema/storage health, and preview readiness as separate gates even when the CLI reports progress in a single run.
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
@@ -845,6 +851,15 @@ separation from `tasks.md`:
   confirmed callback URI before asking the user to edit Azure manually. Record
   only a redacted callback route pattern and recovery status in implementation
   notes or validation artifacts.
+- If `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
+  `user_invite_external_service_existing_member`, treat it as a tenant-member
+  recovery flow: run `eai user list --tenant <tenant-id> --search <email>
+  --format json`, use `eai user role set --tenant <tenant-id> --member-id
+  <member-id> --role tenant-admin --format json` only when an existing direct
+  member is verified and the user approves, verify the read-back, and tell the
+  affected app user to sign out and sign back in because Auth.js session or JWT
+  role data may be cached. Do not edit databases or cloud portals directly
+  unless EAI guidance reports an operator-only block.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,
   AI assistance mode, contextual prefill or conversational support, completion
