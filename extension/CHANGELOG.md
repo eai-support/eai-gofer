@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.17] - 2026-07-07
+
+Document V4 document and workflow file guidance
+
 ## [3.7.16] - 2026-07-06
 
 Update public npm install guidance
