@@ -205,6 +205,8 @@ describe('InstructionGenerator', () => {
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(agents).toContain('sign out and sign back in');
+      expect(agents).toContain('app_token_tenant_context_required');
+      expect(agents).toContain('/v4/platform/tenants/<tenant-id>/...');
       expect(claude).toContain('## EAI Repo Contract');
       expect(claude).toContain('eai agent guide --format json');
       expect(claude).toContain('eai workflow readiness --format json');

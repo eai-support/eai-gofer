@@ -180,6 +180,19 @@ with an unrelated non-EAI stack.
      evidence and user approval, verify the read-back, and tell the affected
      app user to sign out and sign back in because Auth.js session or JWT role
      data may be cached.
+   - If platform user lookup or membership prerequisite calls fail with
+     `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
+     required for app tokens", run `eai errors explain
+     app_token_tenant_context_required --format json` when advertised. Do not
+     start by changing tenant members, role definitions, Entra configuration,
+     databases, or cloud portals. Confirm `eai whoami` and `eai tenant list
+     --format json`, then retry through tenant-scoped V4 platform routes:
+     `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
+     `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
+     `/v4/platform/tenants/<tenant-id>/members`, and
+     `/v4/platform/tenants/<tenant-id>/role-definitions`. If those still fail,
+     escalate with redacted route shape, status, server code, CLI version,
+     active tenant slug, and deployed PublicAPI/AdminAPI versions if visible.
    - Use JSON only where the CLI advertises it. `eai tenant list --format json`
      is suitable for automation; `eai whoami` may be plain text on current
      versions.

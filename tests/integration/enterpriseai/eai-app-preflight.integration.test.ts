@@ -139,4 +139,17 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('Auth.js session or JWT role data may be cached');
     expect(catalog).toContain('Do not edit databases or cloud portals directly');
   });
+
+  it('catalogs app-token missing tenant context as a tenant-scoped route recovery path', () => {
+    const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
+
+    expect(catalog).toContain('EAI_APP_TOKEN_TENANT_CONTEXT_REQUIRED');
+    expect(catalog).toContain('app_token_tenant_context_required');
+    expect(catalog).toContain('MISSING_TENANT');
+    expect(catalog).toContain('Tenant context required for app tokens');
+    expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>');
+    expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/<oid>/memberships');
+    expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/role-definitions');
+    expect(catalog).toContain('Do not start by changing tenant members');
+  });
 });
