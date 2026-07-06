@@ -1,14 +1,14 @@
 ---
 name: gofer:eai-first-run
-description: 'Prepare a new machine or repo for the first EAI Gofer app build.'
+description: "Prepare a new machine or repo for the first EAI Gofer app build."
 ---
 
 # EAI Gofer First Run
 
 Use this command when the user is starting their first EAI Platform app, when
-`/0_gofer_start` is unavailable in a new repository, or when an EAI app build
-reaches the Gofer pipeline before the local machine, workspace, tenant, or EAI
-app template is ready.
+`/0_gofer_start` is unavailable in a new repository, or when an EAI app
+build reaches the Gofer pipeline before the local machine, workspace, tenant, or
+EAI app template is ready.
 
 This command is intentionally allowed to run before `.specify/` exists.
 
@@ -45,26 +45,26 @@ click/command instructions and continue after the folder is open.
 
 Run only safe read/check commands first:
 
-| Tool     | POSIX check                             | PowerShell check                        |
-| -------- | --------------------------------------- | --------------------------------------- |
-| Git      | `git --version`                         | `git --version`                         |
-| Node.js  | `node --version`                        | `node --version`                        |
-| npm      | `npm --version`                         | `npm --version`                         |
-| EAI CLI  | `eai --version`                         | `eai --version`                         |
+| Tool    | POSIX check                       | PowerShell check                         |
+| ------- | --------------------------------- | ---------------------------------------- |
+| Git     | `git --version`                   | `git --version`                          |
+| Node.js | `node --version`                  | `node --version`                         |
+| npm     | `npm --version`                   | `npm --version`                          |
+| EAI CLI | `eai --version`                   | `eai --version`                          |
 | Registry | `npm config get @enterpriseai:registry` | `npm config get @enterpriseai:registry` |
 
 If Git, Node.js, or npm is missing, ask before installing. Use the least
 surprising platform path:
 
-| Platform          | Preferred install path                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| macOS             | Use Homebrew if already installed; otherwise use the official Git/Node installer path. |
-| Linux             | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
-| Windows           | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.     |
-| GitHub Codespaces | Prefer preinstalled tools and user-level npm; avoid host-level package installs.       |
+| Platform            | Preferred install path                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| macOS               | Use Homebrew if already installed; otherwise use the official Git/Node installer path.  |
+| Linux               | Prefer existing devcontainer tools; otherwise detect `apt`, `dnf`, `yum`, or `zypper`. |
+| Windows             | Prefer `winget`; fall back to the official Git for Windows and Node.js installers.      |
+| GitHub Codespaces   | Prefer preinstalled tools and user-level npm; avoid host-level package installs.        |
 
-For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell
-redirection or assume Git Bash exists unless it was detected.
+For Windows, use PowerShell-safe syntax. Do not emit POSIX-only shell redirection
+or assume Git Bash exists unless it was detected.
 
 ## Step 3: Install Or Update EAI CLI
 
@@ -79,8 +79,7 @@ eai --version
 
 Use the same commands in PowerShell. Do not edit `.npmrc` by shell redirection.
 
-Use the static fallback command only when npmjs is unavailable. If
-`npm config get @enterpriseai:registry` already equals
+Use the static fallback command only when npmjs is unavailable. If `npm config get @enterpriseai:registry` already equals
 `https://eai-tools.github.io/eai/registry/`, do not rewrite it. If it points
 somewhere else, show the current value and ask before changing it.
 
@@ -245,9 +244,9 @@ eai template check --format json
 eai gofer refresh --check --format json
 ```
 
-If `eai verify`, `eai template check`, or `eai doctor --check-updates` returns
-`E001` or reports "Not in an EAI project", treat the repo as not yet initialized
-from the EAI app template and explain that clearly.
+If `eai verify`, `eai template check`, or `eai doctor --check-updates`
+returns `E001` or reports "Not in an EAI project", treat the repo as not yet
+initialized from the EAI app template and explain that clearly.
 
 If this is an empty or approved target folder, ask for final confirmation and
 run the advertised equivalent of:
@@ -305,10 +304,10 @@ hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing
 any report.
 
 After the command succeeds, retry the sign-in flow and confirm the authorize
-request uses the same registered `redirect_uri`. If the mismatch persists, check
-whether `AUTH_ENTRA_CLIENT_ID` or `ENTRA_CLIENT_ID` points to a different app
-registration than the one EAI provisioned. Never record client secrets, tokens,
-or `.env.local` values in the first-run report.
+request uses the same registered `redirect_uri`. If the mismatch persists,
+check whether `AUTH_ENTRA_CLIENT_ID` or `ENTRA_CLIENT_ID` points to a different
+app registration than the one EAI provisioned. Never record client secrets,
+tokens, or `.env.local` values in the first-run report.
 
 ## Step 9: Confirm Gofer Scaffold And Workspace Commands
 
@@ -336,8 +335,8 @@ bundle or downloaded public bundle as the bootstrap source described by
 
 Make sure the active host is working in the initialized EAI app folder:
 
-- VS Code: open the folder in the current or a new VS Code window when `code` is
-  available; otherwise give exact UI steps.
+- VS Code: open the folder in the current or a new VS Code window when `code`
+  is available; otherwise give exact UI steps.
 - Codex: show the absolute folder path and ask the user to open that folder as
   the active Codex workspace if the host cannot switch automatically.
 - Claude Code: show the absolute folder path and ask the user to attach/open it
@@ -380,8 +379,8 @@ Each section should include:
 - EAI registry status
 - EAI CLI release status from `eai update --check`
 - EAI CLI capability source (`eai --describe` timestamp)
-- EAI capability inventory for init, tenant, app, resources, workflow, template,
-  Gofer-refresh, and blocks commands
+- EAI capability inventory for init, tenant, app, resources, workflow,
+  template, Gofer-refresh, and blocks commands
 - Login status without tokens
 - Tenant readiness without private payloads
 - Template readiness
@@ -392,14 +391,14 @@ Each section should include:
 
 ## Step 11: Start The Pipeline
 
-When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold
-are ready, tell the user to start:
+When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold are
+ready, tell the user to start:
 
 ```text
 /0_gofer_start <what you want to build>
 ```
 
-If `/0_gofer_start` is still unknown after the plugin is installed and the repo
-is bootstrapped, explain that the host has not loaded the Gofer plugin or repo
-commands yet. Give the host-specific install/update command from the Gofer
+If `/0_gofer_start` is still unknown after the plugin is installed and the
+repo is bootstrapped, explain that the host has not loaded the Gofer plugin or
+repo commands yet. Give the host-specific install/update command from the Gofer
 README, then retry this command after the host reloads.
