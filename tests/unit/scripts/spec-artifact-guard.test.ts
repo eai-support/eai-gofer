@@ -17,6 +17,22 @@ const CHECK_PREREQUISITES = path.join(
 );
 const SETUP_PLAN = path.join(REPO_ROOT, '.specify', 'scripts', 'bash', 'setup-plan.sh');
 
+function isolatedGitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const key of [
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_COMMON_DIR',
+    'GIT_DIR',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_PREFIX',
+    'GIT_WORK_TREE',
+  ]) {
+    delete env[key];
+  }
+  return env;
+}
+
 function writeFile(targetPath: string, content: string): void {
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.writeFileSync(targetPath, content, 'utf8');
@@ -25,6 +41,7 @@ function writeFile(targetPath: string, content: string): void {
 function runScript(workspaceRoot: string, scriptPath: string, args: string[]) {
   const result = spawnSync('bash', [scriptPath, ...args], {
     cwd: workspaceRoot,
+    env: isolatedGitEnv(),
     encoding: 'utf8',
   });
 
@@ -69,9 +86,14 @@ describe('spec artifact guard scripts', () => {
 
   beforeEach(() => {
     workspaceRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-spec-guard-')));
-    execFileSync('git', ['init', '-q'], { cwd: workspaceRoot, stdio: 'ignore' });
+    execFileSync('git', ['init', '-q'], {
+      cwd: workspaceRoot,
+      env: isolatedGitEnv(),
+      stdio: 'ignore',
+    });
     execFileSync('git', ['checkout', '-b', '001-spec-guard'], {
       cwd: workspaceRoot,
+      env: isolatedGitEnv(),
       stdio: 'ignore',
     });
 

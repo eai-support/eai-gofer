@@ -265,9 +265,9 @@ The command:
 - checks Git, Node.js, npm, the scoped EAI npm registry, and `eai --version`
 - asks before installing Git, Node.js, npm, EAI CLI, opening browser login, or
   changing tenant/project state
-- uses
-  `npm config set @eai-tools:registry https://eai-tools.github.io/eai/registry/ --location=user`
-  and `npm install -g @eai-tools/cli` when EAI CLI installation is approved
+- uses `npm install -g eai-cli` when EAI CLI installation is approved, with
+  `npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/`
+  as the static-registry fallback when npmjs is unavailable
 - runs `eai update --check`, `eai --describe`, `eai whoami`, and
   `eai tenant list --format json` before assuming CLI syntax or tenant readiness
 - runs `eai agent guide --format json` when advertised, and after `eai` errors

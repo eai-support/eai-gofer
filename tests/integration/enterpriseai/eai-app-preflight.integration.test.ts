@@ -22,7 +22,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /App delivery in EAI Gofer means EAI Platform\s+delivery by default/
     );
     expect(scenarioCommand).toContain('/gofer:eai-first-run');
-    expect(scenarioCommand).toContain('npm install -g @eai-tools/cli');
+    expect(scenarioCommand).toContain('npm install -g eai-cli');
     expect(scenarioCommand).toContain('eai update --check');
     expect(scenarioCommand).toContain('eai login');
     expect(scenarioCommand).toContain('eai tenant list --format json');
