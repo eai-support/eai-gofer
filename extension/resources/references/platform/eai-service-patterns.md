@@ -8,6 +8,9 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 
 - App browser code calls the local BFF at `/api/eai/...`.
 - App streaming calls use `/api/eai/stream/...`.
+- Tenant app data-plane access is signed-in-user/OBO access through the BFF. Do
+  not add app-only `client_credentials` access for ordinary ResourceAPI reads,
+  writes, files, or search.
 - The CLI may call PublicAPI directly because `eai login` provides the user
   token.
 - Prefer named template SDK hooks and named `eai` commands before custom calls.
@@ -28,6 +31,11 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 | Documents            | `useDocuments().upload/classify/ragIndex`                                         | `eai docs upload`, `eai docs classify`, `eai docs index`                                                                                                              | Use when the file should be processed, classified, indexed, or exposed to AI/RAG context.                                         |
 | Chat                 | `useChat(workflowId, stage).send/stream`                                          | `eai chat send`, `eai chat stream`                                                                                                                                    | Use v4 chat shape with `message`, `conversation_id`, and `params`.                                                                |
 | Advanced PublicAPI   | BFF/server helper                                                                 | `eai publicapi <method> /v4/...`                                                                                                                                      | Use only when named SDK/CLI support is missing.                                                                                   |
+
+If work must continue after the user leaves the page, have the signed-in user
+request a platform workflow/job and pass tenant, app, user, and purpose context
+into that workflow. Do not give the tenant app a broad service identity for
+normal data-plane access.
 
 ## Storage Backend Rules
 

@@ -708,8 +708,10 @@ eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
 ```
 
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
-PublicAPI/BFF reachability, service-identity requirements, and declared smoke
-tests must pass before deployment is complete.
+signed-in-user/OBO PublicAPI BFF reachability, and declared smoke tests must pass
+before deployment is complete. Tenant apps must not add app-only
+`client_credentials` access for ordinary ResourceAPI reads, writes, files, or
+search.
 
 ### Gate behaviour
 
