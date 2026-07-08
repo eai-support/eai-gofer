@@ -77,7 +77,7 @@ catalog:
         - 'app_token_tenant_context_required'
         - 'MISSING_TENANT'
         - 'Tenant context required for app tokens'
-    meaning: An app-token or service-identity platform user lookup reached EAI but did not carry the required tenant context.
+    meaning: A platform automation app-token user lookup reached EAI but did not carry the required tenant context.
     likelyCause: The caller used a root platform user or membership route such as /v4/platform/users/by-email or /v4/platform/users/{oid}/memberships instead of the tenant-scoped /v4/platform/tenants/{tenantId}/... route family, or the target environment has not deployed the matching PublicAPI/AdminAPI tenant-scoped routing hardening.
     recovery:
       - 'Run eai errors explain app_token_tenant_context_required --format json when advertised'
