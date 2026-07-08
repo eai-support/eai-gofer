@@ -1,0 +1,28 @@
+name: Issue Attachment Moderation
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  moderate-unsafe-attachments:
+    name: Moderate unsafe issue attachments
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    env:
+      EAI_ATTACHMENT_MODERATION_ACTION: delete-comment
+      EAI_ATTACHMENT_MODERATION_TRUSTED_ASSOCIATIONS: OWNER,MEMBER,COLLABORATOR
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Moderate unsafe attachments
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/issue-attachment-moderation.cjs
