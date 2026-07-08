@@ -4,6 +4,10 @@ title: '[Bug]: '
 labels:
   - bug
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Paste commands, sanitized logs, and text snippets directly into this form. Do not attach ZIPs, scripts, installers, binaries, or fix archives; unsolicited executable/archive attachments may be removed by maintainers.
   - type: dropdown
     id: surface
     attributes:
@@ -61,4 +65,4 @@ body:
     id: logs
     attributes:
       label: Logs or screenshots
-      description: Paste logs or attach screenshots if safe to share.
+      description: Paste logs or attach screenshots if safe to share. Do not attach ZIPs, scripts, installers, binaries, or fix archives.
