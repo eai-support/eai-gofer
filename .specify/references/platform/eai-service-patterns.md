@@ -8,8 +8,8 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 
 - App browser code calls the local BFF at `/api/eai/...`.
 - App streaming calls use `/api/eai/stream/...`.
-- Tenant app data-plane access is signed-in-user/OBO access through the BFF. Do
-  not add app-only `client_credentials` access for ordinary ResourceAPI reads,
+- Tenant app data-plane access is user-delegated access through the BFF. Do not
+  add app-only `client_credentials` access for ordinary ResourceAPI reads,
   writes, files, or search.
 - The CLI may call PublicAPI directly because `eai login` provides the user
   token.
