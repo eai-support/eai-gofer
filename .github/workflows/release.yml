@@ -107,66 +107,6 @@ jobs:
       - name: Package Agent Plugin
         run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
 
-      - name: Azure Login for VS Code Marketplace Publish
-        if: steps.version.outputs.prerelease != 'true' && vars.VSCE_AZURE_CLIENT_ID != '' && vars.VSCE_AZURE_TENANT_ID != '' && vars.VSCE_AZURE_SUBSCRIPTION_ID != ''
-        uses: azure/login@v2
-        with:
-          client-id: ${{ vars.VSCE_AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.VSCE_AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
-
-      - name: Resolve VS Marketplace Identity
-        if: steps.version.outputs.prerelease != 'true' && vars.VSCE_AZURE_CLIENT_ID != '' && vars.VSCE_AZURE_TENANT_ID != '' && vars.VSCE_AZURE_SUBSCRIPTION_ID != ''
-        run: |
-          marketplace_identity_id="$(az rest \
-            --uri https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
-            --resource 499b84ac-1321-427f-aa17-267ca6975798 \
-            --query id \
-            --output tsv)"
-
-          echo "::notice title=VS Marketplace managed identity::If publish is unauthorized, add this managed identity resource ID as a Contributor on the EnterpriseAI Marketplace publisher: $marketplace_identity_id"
-
-      - name: Publish VS Code Marketplace Extension
-        working-directory: ./extension
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          VSCE_AZURE_CLIENT_ID: ${{ vars.VSCE_AZURE_CLIENT_ID }}
-          VSCE_AZURE_TENANT_ID: ${{ vars.VSCE_AZURE_TENANT_ID }}
-          VSCE_AZURE_SUBSCRIPTION_ID: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
-          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        run: |
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            echo "Skipping VS Code Marketplace publish for prerelease."
-            exit 0
-          fi
-
-          if [ -n "$VSCE_AZURE_CLIENT_ID" ] && [ -n "$VSCE_AZURE_TENANT_ID" ] && [ -n "$VSCE_AZURE_SUBSCRIPTION_ID" ]; then
-            echo "Publishing EnterpriseAI.gofer with Microsoft Entra ID workload identity."
-            if npx @vscode/vsce verify-pat EnterpriseAI --azure-credential \
-              && npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" --azure-credential; then
-              exit 0
-            fi
-
-            if [ -n "$VSCE_PAT" ]; then
-              echo "::warning::Microsoft Entra Marketplace publish failed; falling back to legacy VSCE_PAT. Add the managed identity reported above as a Contributor on the EnterpriseAI Marketplace publisher before removing this fallback."
-            else
-              echo "::error::Microsoft Entra Marketplace publish failed and no VSCE_PAT fallback is configured."
-              exit 1
-            fi
-          fi
-
-          if [ -n "$VSCE_PAT" ]; then
-            echo "::warning::Publishing EnterpriseAI.gofer with legacy VSCE_PAT fallback. Configure Entra workload identity publishing before Azure DevOps global PAT retirement."
-            npx @vscode/vsce verify-pat EnterpriseAI -p "$VSCE_PAT"
-            npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" -p "$VSCE_PAT"
-            exit 0
-          fi
-
-          echo "::error::Stable releases must publish EnterpriseAI.gofer to the VS Code Marketplace."
-          echo "::error::Preferred setup: configure repository variables VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
-          echo "::error::Legacy fallback: configure VSCE_PAT with Marketplace Manage scope."
-          exit 1
-
       - name: Create Release Archive
         run: |
           mkdir -p release-assets/orchestrator release-assets/extension release-assets/language-server
@@ -263,3 +203,86 @@ jobs:
             dist/eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Azure Login for VS Code Marketplace Publish
+        if: steps.version.outputs.prerelease != 'true' && vars.VSCE_AZURE_CLIENT_ID != '' && vars.VSCE_AZURE_TENANT_ID != '' && vars.VSCE_AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.VSCE_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.VSCE_AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve VS Marketplace Identity
+        if: steps.version.outputs.prerelease != 'true' && vars.VSCE_AZURE_CLIENT_ID != '' && vars.VSCE_AZURE_TENANT_ID != '' && vars.VSCE_AZURE_SUBSCRIPTION_ID != ''
+        run: |
+          marketplace_identity_id="$(az rest \
+            --uri https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 \
+            --query id \
+            --output tsv)"
+
+          echo "::notice title=VS Marketplace managed identity::If publish is unauthorized, add this managed identity resource ID as a Contributor on the EnterpriseAI Marketplace publisher: $marketplace_identity_id"
+
+      - name: Publish VS Code Marketplace Extension
+        id: marketplace_publish
+        continue-on-error: true
+        working-directory: ./extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VSCE_AZURE_CLIENT_ID: ${{ vars.VSCE_AZURE_CLIENT_ID }}
+          VSCE_AZURE_TENANT_ID: ${{ vars.VSCE_AZURE_TENANT_ID }}
+          VSCE_AZURE_SUBSCRIPTION_ID: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
+          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo "Skipping VS Code Marketplace publish for prerelease."
+            exit 0
+          fi
+
+          if [ -n "$VSCE_AZURE_CLIENT_ID" ] && [ -n "$VSCE_AZURE_TENANT_ID" ] && [ -n "$VSCE_AZURE_SUBSCRIPTION_ID" ]; then
+            echo "Publishing EnterpriseAI.gofer with Microsoft Entra ID workload identity."
+            if npx @vscode/vsce verify-pat EnterpriseAI --azure-credential \
+              && npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" --azure-credential; then
+              exit 0
+            fi
+
+            if [ -n "$VSCE_PAT" ]; then
+              echo "::warning::Microsoft Entra Marketplace publish failed; falling back to legacy VSCE_PAT. Add the managed identity reported above as a Contributor on the EnterpriseAI Marketplace publisher before removing this fallback."
+            else
+              echo "::error::Microsoft Entra Marketplace publish failed and no VSCE_PAT fallback is configured."
+              exit 1
+            fi
+          fi
+
+          if [ -n "$VSCE_PAT" ]; then
+            echo "::warning::Publishing EnterpriseAI.gofer with legacy VSCE_PAT fallback. Configure Entra workload identity publishing before Azure DevOps global PAT retirement."
+            npx @vscode/vsce verify-pat EnterpriseAI -p "$VSCE_PAT"
+            npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" -p "$VSCE_PAT"
+            exit 0
+          fi
+
+          echo "::error::Stable releases must publish EnterpriseAI.gofer to the VS Code Marketplace."
+          echo "::error::Preferred setup: configure repository variables VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
+          echo "::error::Legacy fallback: configure VSCE_PAT with Marketplace Manage scope."
+          exit 1
+
+      - name: Summarize VS Code Marketplace Status
+        if: always() && steps.version.outputs.prerelease != 'true'
+        run: |
+          if [ "${{ steps.marketplace_publish.outcome }}" = "success" ]; then
+            {
+              echo "## VS Code Marketplace"
+              echo
+              echo "Marketplace publish succeeded."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## VS Code Marketplace"
+              echo
+              echo "Marketplace publish failed, but the GitHub Release and public Gofer feed were published successfully."
+              echo
+              echo "Next fixes:"
+              echo "- Add the managed identity shown in the workflow logs as a Contributor on the EnterpriseAI Marketplace publisher."
+              echo "- Or rotate the legacy VSCE_PAT with Marketplace Manage scope while the Entra path is being repaired."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
