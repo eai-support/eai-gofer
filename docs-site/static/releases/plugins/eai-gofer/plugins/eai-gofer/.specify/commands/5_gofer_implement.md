@@ -747,37 +747,39 @@ separation from `tasks.md`:
 
 - Run the spec-derived tests before implementation and record the expected
   failure when the implementation is missing or incomplete.
-- Implement only against the approved `contract-pack.md`, `context-bundle.md`,
+- Implement only against the reviewed `contract-pack.md`, `context-bundle.md`,
   `reuse-scan.md`, `journeys/base-journey.md`, `plan.md`, and `goal-ledger.json`.
-- For application delivery, stop and return to the preview loop if
-  `{FEATURE_DIR}/ui-approval.md` is missing or not approved. App-delivery runs
-  MUST NOT continue as though the UI is settled when approval has not been
-  recorded.
+- For application delivery, run the preview loop as soon as there is a visible
+  UI and after every UI-facing change. App-delivery runs MUST NOT report UI
+  work complete without `ui-review-log.md` and `ui-show-and-tell.md` evidence
+  showing what opened, what screenshot/browser evidence exists, and what user
+  feedback or unresolved UX questions remain.
 - For application delivery, use the EAI App Template already installed in the
   workspace as the default UI lego-block source. Any create-new UI concept must
-  be justified in the approved plan and approval artifacts.
+  be justified in the plan and show-and-tell artifacts.
 - For application delivery, implement on EAI Platform first, including the EAI
   app template, and Azure second: use the EAI scaffold, PublicAPI/object
   types/workflows/block catalog, ResourceAPI/`eai resources schema`, tenant/app
   enrollment, provisioning, diagnostics, and Azure-compatible
   deployment/supporting services before any non-EAI exception. Do not introduce a
   non-EAI primary runtime, database, hosting platform, or app stack unless
-  `plan.md`, `service-fit-matrix.md`, and approval artifacts record it as an
+  `plan.md`, `service-fit-matrix.md`, and decision artifacts record it as an
   explicit exception.
 - Before implementing UI, run or inspect `eai --describe`, `eai blocks list`,
   `eai blocks describe <id>` for every selected block, and
   `eai resources schema --format json`. Implementation notes must cite the block IDs,
   required resources, bindings, package lane, coupling status, Storybook story
-  IDs, theme override points, and any approved custom-block exception.
+  IDs, theme override points, and any explicit custom-block exception.
 - Reject unknown component names during implementation unless `tasks.md` and
-  `ui-approval.md` explicitly authorize a custom extension block and manifest.
+  `ui-show-and-tell.md` explicitly record a custom extension block, manifest,
+  and user-visible rationale.
 - Treat package-profile, block-porting, source-platform decoupling, and public-readiness
   tasks as first-class implementation tasks, not polish. Update
   `{FEATURE_DIR}/goal-ledger.json` whenever a task changes an owner, target
   metric, delivery state, promotion criterion, or re-loop trigger. External and
   hybrid profile work is incomplete until package exports, Storybook stories,
   theme overrides, consumer smoke checks, and unsupported custom-block
-  exceptions are resolved or explicitly deferred by approval artifacts.
+  exceptions are resolved or explicitly deferred by decision artifacts.
 - Do not let public or hybrid package lanes import source-platform internals directly.
   Use `eai resources schema`, an adapter boundary, or an approved
   restricted-source exception; record the coupling status in implementation
@@ -863,20 +865,22 @@ separation from `tasks.md`:
   `--url <preview-url>` when a server is already running. Report the opened URL and
   screenshot path to the user quickly. Append the run, self-review, and any
   known visual risks to `{FEATURE_DIR}/ui-review-log.md`.
-- For application delivery, before showing any new MVP preview to the
-  stakeholder, confirm that the latest UI-facing change has opened in a browser
-  and has screenshot, local render proof, or Playwright-style self-review
-  evidence in `{FEATURE_DIR}/ui-review-log.md`.
-- For application delivery, after UI approval and before treating platform
-  selection as complete, update `{FEATURE_DIR}/service-fit-matrix.md` with
+- For application delivery, show each new MVP preview to the user as quickly as
+  possible after the latest UI-facing change opens in a browser and has
+  screenshot, local render proof, or Playwright-style self-review evidence in
+  `{FEATURE_DIR}/ui-review-log.md`. Update `{FEATURE_DIR}/ui-show-and-tell.md`
+  with the URL, screenshot, user feedback, changes made, and open UX questions.
+- For application delivery, after the first concrete UI direction is visible
+  and before treating platform selection as complete, update
+  `{FEATURE_DIR}/service-fit-matrix.md` with
   tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
   select`, `eai resources schema --format json`, `eai workflow readiness
   --format json`, `eai verify calls --format json`, or equivalent approved
   platform evidence. The matrix must distinguish
   accessible now, purchasable but unavailable now, and unavailable without new
   platform work.
-- For non-app work, skip the preview, approval, branding, and service-fit gates
-  while preserving the same numbered stage flow.
+- For non-app work, skip the preview, show-and-tell, branding, and service-fit
+  gates while preserving the same numbered stage flow.
 - Do not add extra user-facing app steps unless `plan.md` records why they
   cannot be combined, automated, or handled by generative AI assistance.
 - Re-run the same tests and validation checks after implementation.
