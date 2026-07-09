@@ -8,6 +8,22 @@ import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_PREVIEW_PORTS = [3000, 5173, 4173, 6006, 8080, 8000];
 export const PREVIEW_SCRIPT_PRIORITY = ['dev', 'start', 'preview', 'serve', 'storybook', 'docs:dev'];
+export const UI_REVIEW_LOG_COLUMNS = [
+  'Time',
+  'Change Trigger',
+  'Command',
+  'URL',
+  'Browser Target',
+  'Screenshot',
+  'Package Lane',
+  'Coupling Status',
+  'Storybook Story IDs',
+  'Theme Override Points',
+  'Self-Review',
+  'Stakeholder Feedback',
+  'Changes Accepted',
+  'Open Issues',
+];
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -146,6 +162,25 @@ export function sanitizePreviewUrl(value) {
   return parsed.href;
 }
 
+function resolveRedirectTarget(baseUrl, location) {
+  try {
+    return new URL(location, baseUrl).href;
+  } catch {
+    return null;
+  }
+}
+
+function isSafePreviewRedirect(baseUrl, location) {
+  const target = resolveRedirectTarget(baseUrl, location);
+  if (!target) return false;
+  try {
+    sanitizePreviewUrl(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function markdownCell(value) {
   return String(value ?? '')
     .replace(/\r\n/g, '\n')
@@ -184,9 +219,16 @@ export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 
         timer = setTimeout(() => controller.abort(), Math.min(intervalMs, 5000));
         const response = await fetch(url, {
           method: 'GET',
-          redirect: 'follow',
+          redirect: 'manual',
           signal: controller.signal,
         });
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('location');
+          if (location && !isSafePreviewRedirect(url, location)) {
+            lastError = 'Unsafe redirect from local preview URL';
+            continue;
+          }
+        }
         if (response.status < 500) {
           return { ok: true, urlIndex: index, status: response.status };
         }
@@ -232,13 +274,45 @@ async function openBrowser(url, mode) {
 
   const { command, args } = buildOpenBrowserCommand(url);
   try {
-    const child = spawn(command, args, {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
+    return await new Promise((resolve) => {
+      let settled = false;
+      const child = spawn(command, args, {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve({
+          attempted: true,
+          command: [command, ...args].join(' '),
+          ...result,
+        });
+      };
+
+      const timer = setTimeout(() => {
+        child.unref();
+        finish({ ok: true, reason: 'browser opener still running after launch window' });
+      }, 1500);
+
+      child.once('error', (error) => {
+        clearTimeout(timer);
+        finish({ ok: false, error: error.message });
+      });
+
+      child.once('exit', (code, signal) => {
+        clearTimeout(timer);
+        if (code === 0) {
+          finish({ ok: true, reason: 'browser opener exited successfully' });
+          return;
+        }
+        finish({
+          ok: false,
+          error: `browser opener exited with ${code === null ? `signal ${signal}` : `code ${code}`}`,
+        });
+      });
     });
-    child.unref();
-    return { attempted: true, ok: true, command: [command, ...args].join(' ') };
   } catch (error) {
     return { attempted: true, ok: false, error: error.message };
   }
@@ -263,6 +337,7 @@ async function captureScreenshot(url, outputPath) {
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     await page.goto(safeUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    sanitizePreviewUrl(page.url());
     await page.screenshot({ path: outputPath, fullPage: true });
     return { ok: true, path: outputPath };
   } catch (error) {
@@ -270,6 +345,85 @@ async function captureScreenshot(url, outputPath) {
   } finally {
     await browser?.close().catch(() => {});
   }
+}
+
+export function buildReviewLogRow({
+  time = new Date().toISOString(),
+  change,
+  command,
+  url,
+  browserTarget,
+  screenshotPath,
+  packageLane = 'unspecified',
+  couplingStatus = 'pending service-fit validation',
+  storybookStoryIds = 'not recorded',
+  themeOverridePoints = 'not recorded',
+  selfReview,
+  stakeholderFeedback = 'pending',
+  changesAccepted = 'pending stakeholder review',
+  openIssues,
+}) {
+  return [
+    time,
+    change,
+    command,
+    url,
+    browserTarget,
+    screenshotPath ?? 'not captured',
+    packageLane,
+    couplingStatus,
+    storybookStoryIds,
+    themeOverridePoints,
+    selfReview,
+    stakeholderFeedback,
+    changesAccepted,
+    openIssues,
+  ]
+    .map(markdownCell)
+    .join(' | ');
+}
+
+function buildReviewLogHeader() {
+  const separator = UI_REVIEW_LOG_COLUMNS.map(() => '---');
+  return [
+    '# UI Review Log',
+    '',
+    `| ${UI_REVIEW_LOG_COLUMNS.join(' | ')} |`,
+    `| ${separator.join(' | ')} |`,
+  ].join('\n') + '\n';
+}
+
+function buildPreviewSelfReview({ browser, screenshotPath, status, notes }) {
+  const browserStatus =
+    browser?.attempted === false
+      ? 'Browser opening disabled by option.'
+      : browser?.ok
+        ? 'Browser opener launched successfully.'
+        : `Browser opener failed: ${browser?.error ?? 'unknown error'}.`;
+  const screenshotStatus = screenshotPath
+    ? `Screenshot captured at ${screenshotPath}.`
+    : `Screenshot not captured: ${notes}`;
+  return `${browserStatus} ${screenshotStatus} Status: ${status}.`;
+}
+
+function buildPreviewOpenIssues({ browser, screenshotPath, status, notes }) {
+  const issues = [];
+  if (browser?.attempted !== false && !browser?.ok) {
+    issues.push('Browser opener failed; use URL manually or rerun with --no-open.');
+  }
+  if (!screenshotPath) {
+    issues.push(`Screenshot missing: ${notes}`);
+  }
+  if (status === 'blocked') {
+    issues.push('Preview URL did not become reachable before timeout.');
+  }
+  return issues.length > 0 ? issues.join(' ') : 'none';
+}
+
+function buildBrowserTargetLabel(openMode, browser) {
+  if (openMode === 'none') return 'none';
+  if (browser?.ok) return `${openMode} (${browser.reason ?? 'opened'})`;
+  return `${openMode} (failed)`;
 }
 
 async function appendReviewLog({
@@ -281,31 +435,34 @@ async function appendReviewLog({
   screenshotPath,
   status,
   notes,
+  browser = null,
+  packageLane,
+  couplingStatus,
+  storybookStoryIds,
+  themeOverridePoints,
+  stakeholderFeedback,
+  changesAccepted,
 }) {
   if (!reviewLogPath) return null;
 
   await fs.mkdir(path.dirname(reviewLogPath), { recursive: true });
   const handle = await fs.open(reviewLogPath, 'a+', 0o600);
-  const header =
-    [
-      '# UI Review Log',
-      '',
-      '| Time | Change Trigger | Command | URL | Browser Target | Screenshot | Status | Notes |',
-      '| ---- | -------------- | ------- | --- | -------------- | ---------- | ------ | ----- |',
-    ].join('\n') + '\n';
-
-  const row = [
-    new Date().toISOString(),
+  const header = buildReviewLogHeader();
+  const row = buildReviewLogRow({
     change,
     command,
     url,
     browserTarget,
-    screenshotPath ?? 'not captured',
-    status,
-    notes,
-  ]
-    .map(markdownCell)
-    .join(' | ');
+    screenshotPath,
+    packageLane,
+    couplingStatus,
+    storybookStoryIds,
+    themeOverridePoints,
+    selfReview: buildPreviewSelfReview({ browser, screenshotPath, status, notes }),
+    stakeholderFeedback,
+    changesAccepted,
+    openIssues: buildPreviewOpenIssues({ browser, screenshotPath, status, notes }),
+  });
 
   try {
     const stats = await handle.stat();
@@ -468,6 +625,11 @@ export async function runUiPreview(rawOptions) {
       screenshotPath: null,
       status: 'blocked',
       notes: 'No candidate URL became reachable before timeout.',
+      browser: {
+        attempted: rawOptions.open !== 'none',
+        ok: false,
+        error: 'preview URL not reachable',
+      },
     });
     return report;
   }
@@ -488,15 +650,21 @@ export async function runUiPreview(rawOptions) {
     change: rawOptions.change,
     command: commandInfo.command ?? 'existing URL',
     url: selectedUrl,
-    browserTarget: rawOptions.open,
+    browserTarget: buildBrowserTargetLabel(rawOptions.open, browser),
     screenshotPath: screenshot.path,
-    status: screenshot.ok || !rawOptions.screenshot ? 'shown' : 'shown-without-screenshot',
+    status:
+      browser.ok && (screenshot.ok || !rawOptions.screenshot)
+        ? 'shown'
+        : 'shown-with-open-issues',
     notes: screenshot.ok ? 'Preview opened and screenshot captured.' : screenshot.error,
+    browser,
   });
+  const status =
+    browser.ok && (screenshot.ok || !rawOptions.screenshot) ? 'shown' : 'shown-with-open-issues';
 
   return {
     ...baseReport,
-    status: 'shown',
+    status,
     selectedUrl,
     browser,
     screenshot,

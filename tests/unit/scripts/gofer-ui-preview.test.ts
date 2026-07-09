@@ -16,7 +16,18 @@ describe('gofer-ui-preview helper', () => {
       url: string,
       platform?: NodeJS.Platform
     ) => { command: string; args: string[] };
+    buildReviewLogRow: (row: {
+      time?: string;
+      change?: string;
+      command?: string;
+      url?: string;
+      browserTarget?: string;
+      screenshotPath?: string | null;
+      selfReview?: string;
+      openIssues?: string;
+    }) => string;
     sanitizePreviewUrl: (value: string) => string;
+    UI_REVIEW_LOG_COLUMNS: string[];
     parseArgs: (argv: string[]) => {
       featureDir: string | null;
       command: string | null;
@@ -126,5 +137,23 @@ describe('gofer-ui-preview helper', () => {
     expect(args.json).toBe(true);
     expect(args.dryRun).toBe(true);
     expect(preview.markdownCell('one\\two|three\nfour')).toBe('one\\\\two\\|three<br>four');
+  });
+
+  it('writes review-log rows that match the 14-column template contract', () => {
+    const row = preview.buildReviewLogRow({
+      time: '2026-07-09T00:00:00.000Z',
+      change: 'button polish',
+      command: 'npm run dev',
+      url: 'http://localhost:5173/',
+      browserTarget: 'auto',
+      screenshotPath: '.specify/specs/example/preview/ui-preview.png',
+      selfReview: 'Looks correct.',
+      openIssues: 'none',
+    });
+
+    expect(preview.UI_REVIEW_LOG_COLUMNS).toHaveLength(14);
+    expect(row.split(' | ')).toHaveLength(preview.UI_REVIEW_LOG_COLUMNS.length);
+    expect(row).toContain('button polish');
+    expect(row).toContain('pending stakeholder review');
   });
 });
