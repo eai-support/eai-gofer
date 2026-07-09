@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.18] - 2026-07-09
+
+Add fast UI preview loop for Gofer app delivery
+
 ## [3.7.17] - 2026-07-07
 
 Document V4 document and workflow file guidance

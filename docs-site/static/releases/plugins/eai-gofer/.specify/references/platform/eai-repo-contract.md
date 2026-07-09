@@ -45,6 +45,16 @@ Before app-delivery research, planning, implementation, or validation:
    - `eai gofer refresh --check --format json`
    - `eai workflow readiness --format json` when advertised by the CLI
 
+## Tenant Data Access Rule
+
+Tenant apps access EAI data as the signed-in user. Browser code calls the local
+BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's session
+token. Do not add app-only `client_credentials` helpers, `EAI_SERVICE_*`, or
+`OBO_*` credentials for normal ResourceAPI reads, writes, files, or search. If
+work must continue after the user leaves the page, create/request a platform
+workflow/job from the signed-in user flow and pass tenant, app, user, and
+purpose context into it.
+
 ## Stack Policy
 
 For application delivery:

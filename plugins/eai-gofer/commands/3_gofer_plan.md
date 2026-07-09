@@ -806,6 +806,13 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - record override points for theme tokens, `presentationConfig`, copy,
      data/action bindings, and client extension blocks
    - capture whether client branding/logos are in scope
+   - record the preview command or URL, expected local URL, and browser target
+     strategy for integrated-browser first and external-browser fallback
+   - require this helper after every UI-facing change, with `--command` or
+     `--url` when auto-detection is not sufficient:
+     ```bash
+     node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+     ```
    - require screenshot, local render proof, or Playwright-style self-review
      evidence before stakeholder presentation
    - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and require

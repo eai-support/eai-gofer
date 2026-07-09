@@ -22,6 +22,7 @@ export const CORE_SENTINELS = [
   path.join('.specify', 'scripts', 'bash', 'create-new-feature.sh'),
   path.join('.specify', 'scripts', 'node', 'parse-stage-command.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-loop-audit.mjs'),
+  path.join('.specify', 'scripts', 'node', 'gofer-ui-preview.mjs'),
   path.join('.specify', 'scripts', 'hooks', 'post-tool-use.mjs'),
   path.join('.specify', 'scripts', 'powershell', 'install-optional-tools.ps1'),
   path.join('.specify', 'references', 'platform', 'README.md'),
