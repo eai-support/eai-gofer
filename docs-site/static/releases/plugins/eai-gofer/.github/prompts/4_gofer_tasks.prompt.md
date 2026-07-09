@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: b51f23ccbb65f1ab933036ab38ab07a8332ccae44cf88ba32157725b868f8ffe
+  canonicalChecksum: 50b2b9817a35c2c1d82d51a1c0df3d96cba8f5fda8ea17807ac56cdf7b3cd4e1
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -693,6 +693,14 @@ precondition to downstream implementation tasks:
     status, Storybook story IDs, and theme override points from the approved
     preview brief
   - apply approved branding/logo work when in scope
+  - record or confirm the preview command/URL before the first UI task
+  - run the preview helper after every UI-facing change, using `--command` or
+    `--url` when needed:
+    ```bash
+    node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+    ```
+  - report the opened preview URL and screenshot path to the user quickly after
+    each preview refresh
   - collect screenshot or Playwright-style self-review evidence
   - update `ui-review-log.md`
   - block downstream work until `ui-approval.md` is approved

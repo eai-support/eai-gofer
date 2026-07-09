@@ -21,6 +21,36 @@ status: draft
 | Must-have interactions                    | {{interactions}} |
 | Explicitly out of scope for first preview | {{out-of-scope}} |
 
+## Fast Preview Runtime
+
+- **Preview command**: {{preview-command-or-url}}
+- **Primary preview URL**: {{preview-url}}
+- **Browser target**: integrated browser when the host app supports it;
+  otherwise open the system browser.
+- **Change trigger**: after every UI-facing change to page layout, component
+  choice, theme, copy, data binding, or interaction behavior, run:
+
+  ```bash
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --open auto --screenshot --change "{{change-summary}}"
+  ```
+
+- **Fallback when auto-detection is wrong**:
+
+  ```bash
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --command "{{preview-command}}" --open auto --screenshot --change "{{change-summary}}"
+  ```
+
+- **Existing server fallback**:
+
+  ```bash
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --url {{preview-url}} --open auto --screenshot --change "{{change-summary}}"
+  ```
+
+- **Ready-to-show definition**: local URL opened, screenshot captured or a clear
+  Playwright/browser limitation recorded, self-review notes appended to
+  `ui-review-log.md`, and known visual risks called out before asking the user
+  for feedback.
+
 ## Package Profile
 
 | Field                   | Decision                                                             |
@@ -61,5 +91,9 @@ status: draft
 
 - [ ] Local render proof captured
 - [ ] Screenshot or Playwright-style self-review captured
+- [ ] Preview opened in an integrated or external browser with
+      `gofer-ui-preview.mjs`
+- [ ] `ui-review-log.md` records every UI-facing change since the previous user
+      review
 - [ ] Brief-to-preview mismatch list recorded
 - [ ] Open visual risks called out before stakeholder review
