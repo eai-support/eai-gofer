@@ -154,6 +154,6 @@ describe('gofer-ui-preview helper', () => {
     expect(preview.UI_REVIEW_LOG_COLUMNS).toHaveLength(14);
     expect(row.split(' | ')).toHaveLength(preview.UI_REVIEW_LOG_COLUMNS.length);
     expect(row).toContain('button polish');
-    expect(row).toContain('pending stakeholder review');
+    expect(row).toContain('pending user feedback');
   });
 });

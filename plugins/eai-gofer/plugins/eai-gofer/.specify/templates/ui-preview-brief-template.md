@@ -64,19 +64,19 @@ status: draft
 
 | Constraint                    | Decision                                          |
 | ----------------------------- | ------------------------------------------------- |
-| Default layout / blocks       | {{approved-template-blocks}}                      |
+| Default layout / blocks       | {{selected-template-blocks}}                      |
 | Block catalog evidence        | {{eai-blocks-list-and-describe-evidence}}         |
 | Resource bindings             | {{eai-resources-schema-bindings}}                 |
 | Storybook story IDs           | {{storybook-story-ids-or-exceptions}}             |
 | Theme override points         | {{theme-presentation-copy-data-action-overrides}} |
-| Allowed create-new exceptions | {{approved-exceptions-or-none}}                   |
+| Allowed create-new exceptions | {{shown-exceptions-or-none}}                      |
 | Accessibility baseline        | {{expectation}}                                   |
 
 ## Block Porting And source platform Decoupling
 
-| Block ID     | Package Lane | Storybook Story ID | Coupling Status | Porting Decision                | Theme Override Points     | Custom-Block Exception    |
-| ------------ | ------------ | ------------------ | --------------- | ------------------------------- | ------------------------- | ------------------------- |
-| {{block-id}} | {{lane}}     | {{story-id-or-na}} | {{status}}      | Reuse / Port / Custom Exception | {{tokens-slots-css-vars}} | {{none-or-approval-path}} |
+| Block ID     | Package Lane | Storybook Story ID | Coupling Status | Porting Decision                | Theme Override Points     | Custom-Block Exception  |
+| ------------ | ------------ | ------------------ | --------------- | ------------------------------- | ------------------------- | ----------------------- |
+| {{block-id}} | {{lane}}     | {{story-id-or-na}} | {{status}}      | Reuse / Port / Custom Exception | {{tokens-slots-css-vars}} | {{none-or-review-path}} |
 
 ## Branding Inputs
 

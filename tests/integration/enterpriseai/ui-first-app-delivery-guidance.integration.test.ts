@@ -18,7 +18,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(scenarioCommand).toContain('Shared Numbered Stage Contract');
     expect(scenarioCommand).toContain('UI-First App-Delivery Default');
     expect(scenarioCommand).toContain('EAI App Template');
-    expect(scenarioCommand).toContain('service-fit gate');
+    expect(scenarioCommand).toContain('service-fit review');
     expect(scenarioCommand).toContain('gofer-ui-preview.mjs');
     expect(scenarioCommand).toContain('after every');
     expect(scenarioCommand).toContain('UI-facing change');
@@ -35,7 +35,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(researchCommand).toContain('theme override points');
 
     expect(planCommand).toContain('ui-review-log.md');
-    expect(planCommand).toContain('ui-approval.md');
+    expect(planCommand).toContain('ui-show-and-tell.md');
     expect(planCommand).toContain('service-fit-matrix.md');
     expect(planCommand).toContain('preview command or URL');
     expect(planCommand).toContain('gofer-ui-preview.mjs');
@@ -47,7 +47,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(planCommand).toContain('package-profile');
 
     expect(tasksCommand).toContain('App-Delivery Preconditions Inside Shared Stages');
-    expect(tasksCommand).toContain('ui-approval.md');
+    expect(tasksCommand).toContain('ui-show-and-tell.md');
     expect(tasksCommand).toContain('service-fit-matrix.md');
     expect(tasksCommand).toContain('EAI App Template');
     expect(tasksCommand).toContain('package lane');
@@ -58,7 +58,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(tasksCommand).toContain('external/internal/hybrid');
     expect(tasksCommand).toContain('eai resources schema --format json');
 
-    expect(implementCommand).toContain('ui-approval.md');
+    expect(implementCommand).toContain('ui-show-and-tell.md');
     expect(implementCommand).toContain('ui-review-log.md');
     expect(implementCommand).toContain('service-fit-matrix.md');
     expect(implementCommand).toContain('For non-app work, skip the preview');
@@ -69,7 +69,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(implementCommand).toContain('source-platform internals');
 
     expect(validateCommand).toContain('ui-review-log.md');
-    expect(validateCommand).toContain('ui-approval.md');
+    expect(validateCommand).toContain('ui-show-and-tell.md');
     expect(validateCommand).toContain('service-fit-matrix.md');
     expect(validateCommand).toContain('equivalent opened-browser evidence');
     expect(validateCommand).toContain('latest preview-helper run');
@@ -78,11 +78,11 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(validateCommand).toContain('theme override points');
   });
 
-  it('ships app-delivery templates for preview, approval, and service-fit artifacts', () => {
+  it('ships app-delivery templates for preview, show-and-tell, and service-fit artifacts', () => {
     const canonicalTemplates = [
       '.specify/templates/ui-preview-brief-template.md',
       '.specify/templates/ui-review-log-template.md',
-      '.specify/templates/ui-approval-template.md',
+      '.specify/templates/ui-show-and-tell-template.md',
       '.specify/templates/service-fit-matrix-template.md',
       '.specify/templates/contract-pack-template.md',
       '.specify/templates/reuse-scan-template.md',

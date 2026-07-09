@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/0_gofer_start.md
-  canonicalChecksum: c2a75b6780898e5aa327fab5957b860a38b51968681cd7ae4b3ad78d82402f44
+  canonicalChecksum: a743e231bfc5326fae2b1bc33c92884b0126e5ed5d0f345ef07d966a9dd8cc4c
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -267,7 +267,8 @@ with an unrelated non-EAI stack.
      preview/runtime readiness.
    - Provision storage, Entra app registration, environment sync, object types,
      and deployment only in the later plan/tasks/implement stages after the
-     business scenario and UI approval gates are complete.
+     business scenario, UI show-and-tell evidence, and service-fit evidence are
+     complete.
 8. **Check template block and platform knowledge for research**
    - Run or plan to run `eai blocks list --format json`, `eai blocks readiness
      --package-profile <external|internal|hybrid> --format json`, and `eai
@@ -705,7 +706,7 @@ remove existing non-app functionality or fork Gofer into unrelated products.
 
 | Mode | Stage Behavior |
 | ---- | -------------- |
-| Application delivery | Shared stages gain EAI Platform/Azure stack enforcement, a UI-first interview, an EAI App Template constrained preview loop, preview self-review, optional branding intake, an explicit UI approval gate, and a post-approval EnterpriseAI service-fit gate before plan/tasks are finalized |
+| Application delivery | Shared stages gain EAI Platform/Azure stack enforcement, a UI-first interview, an EAI App Template constrained preview loop, preview self-review, optional branding intake, continuous UI show-and-tell, and EnterpriseAI service-fit review before plan/tasks are finalized |
 | Non-app work | Shared stages preserve the current research, documentation, exploration, bug-fix, migration, audit, and other non-app workflows without app-only preview, branding, or service-fit requirements |
 
 ---
@@ -739,7 +740,7 @@ For app delivery, the default early process is:
    from an unconstrained custom UI. As soon as a local preview can run, open it
    in the integrated browser when the host supports it or the external system
    browser otherwise.
-3. **Preview self-review, fast browser loop, and approval** — after every
+3. **Preview self-review and continuous show-and-tell loop** — after every
    UI-facing change to layout, component choice, theme, copy, data binding, or
    interaction behavior, run:
 
@@ -750,11 +751,14 @@ For app delivery, the default early process is:
    If auto-detection is wrong, pass `--command "<preview command>"`; if a server
    is already running, pass `--url <preview-url>`. Report the preview URL and
    screenshot path to the user quickly, append the run to `ui-review-log.md`,
-   and iterate until the UI is explicitly approved.
-4. **EnterpriseAI service-fit gate** — after UI approval, review which
-   platform services are accessible now, purchasable but unavailable now, or
-   unsupported, and lock that decision before plan/tasks are treated as
-   complete.
+   update `ui-show-and-tell.md`, ask for fast feedback, and keep showing the
+   user the current UI as often as useful. Pause only when the user asks for
+   changes or a real business, security, platform, or release decision is
+   required.
+4. **EnterpriseAI service-fit review** — once the first concrete UI direction is
+   visible, review which platform services are accessible now, purchasable but
+   unavailable now, or unsupported, and lock that decision before plan/tasks are
+   treated as complete.
 
 ### AI-Readable Blocks Bridge Intake
 
@@ -801,8 +805,9 @@ Based on the discovery answers, extract:
    - Identify which actor performs each step
    - State the business goal and completion outcome for each step
    - Note which generative AI assistance improves that step
-   - For app delivery, default the steps to: brief -> preview -> approval ->
-     service fit unless the user clearly needs a different four-step shape
+   - For app delivery, default the steps to: brief -> preview -> show-and-tell
+     feedback -> service fit unless the user clearly needs a different
+     four-step shape
 
 3. **Touchpoints**: Where do interactions happen?
    - UI touchpoints (screens, buttons)
@@ -1275,7 +1280,7 @@ stages to create these artifacts without re-interviewing the user:
 | `journeys/base-journey.md` | Application classification, four-step-or-fewer AI-augmented customer journey, step goals, AI assistance, context used, controls, completion criteria |
 | `ui-preview-brief.md` | App-delivery-only preview brief: target screens, EAI App Template component constraints, branding inputs, preview command or URL, browser strategy, and preview validation expectations |
 | `ui-review-log.md` | App-delivery-only iteration log: every UI-facing change, helper command, opened URL, screenshot/browser evidence, requested changes, accepted changes, unresolved issues |
-| `ui-approval.md` | App-delivery-only approval gate: approved preview, latest opened URL, helper run evidence, approved branding, approved component exceptions, approver and timestamp |
+| `ui-show-and-tell.md` | App-delivery-only show-and-tell record: latest opened URL, helper run evidence, screenshot/browser evidence, user feedback, branding notes, component exceptions, and unresolved UX issues |
 | `service-fit-matrix.md` | App-delivery-only service selection evidence: desired platform capability, evidence source, accessible now vs purchasable vs unavailable, selected direction |
 | `eai-preflight.md` | App-delivery-only EAI readiness evidence: CLI install/version, login status, tenant role, template initialization state, app enrollment readiness, block catalog readiness, and next action |
 | `context-bundle.md` | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, tenant assumptions, API surfaces, deployment assumptions, validation criteria |
@@ -1297,7 +1302,7 @@ AI-augmented journey as the default scope spine. If a later stage expands beyond
 four user-facing steps, it must explain why the extra complexity is necessary
 and whether generative AI could combine or automate the additional steps.
 Non-app work keeps the same numbered stages without requiring the app-delivery
-preview, branding, approval, or service-fit artifacts.
+preview, branding, show-and-tell, or service-fit artifacts.
 
 ### Novice Walkthrough Guardrail (MANDATORY)
 

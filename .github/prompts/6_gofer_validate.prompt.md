@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/6_gofer_validate.md
-  canonicalChecksum: 2d97ec87e73b72c7dfa56cc978af7840967929fdfd6905d09a413bfe93659dc4
+  canonicalChecksum: d6c87b1ed8c64004673010513342c9b1948a00e54481ab61f229f07bb02910d1
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -2108,9 +2108,11 @@ For application delivery, validation MUST also check
 - Each preview entry records the changed surface, preview command or URL,
   opened local URL, browser target, screenshot path or clear capture limitation,
   and pre-presentation self-review notes before stakeholder feedback.
-- `{FEATURE_DIR}/ui-approval.md` records the approved preview, latest opened
-  preview URL, latest preview-helper run, approved branding/logo decisions, any
-  approved EAI App Template exceptions, the approver, and approval timestamp.
+- `{FEATURE_DIR}/ui-show-and-tell.md` records the latest opened preview URL,
+  latest preview-helper run, screenshot/browser evidence, user feedback,
+  branding/logo notes, any EAI App Template exceptions, changes made from
+  feedback, and unresolved UX issues. This is show-and-tell evidence, not a
+  blocking sign-off point.
 - `{FEATURE_DIR}/service-fit-matrix.md` records each desired platform
   capability, the evidence source used to evaluate it, and whether it is
   accessible now, purchasable but unavailable now, or unavailable without new
@@ -2121,13 +2123,13 @@ For application delivery, validation MUST also check
   unmanaged database, or unrelated SaaS dependency is rejected unless it is
   recorded as an approved integration/migration/exception with rationale, owner,
   expiry, and validation evidence.
-- The approved external/internal/hybrid profile choice, package lane, coupling
+- The selected external/internal/hybrid profile choice, package lane, coupling
   status, Storybook story IDs, theme override points, public-readiness target,
-  and custom-block exceptions are present in the preview/approval/service-fit
+  and custom-block exceptions are present in the preview/show-and-tell/service-fit
   artifacts and match the delivered implementation.
 - Validation confirms that app-delivery runs used EAI App Template blocks by
-  default and that any create-new UI concept was explicitly approved rather
-  than silently introduced.
+  default and that any create-new UI concept was explicitly shown to the user,
+  recorded with rationale, and not silently introduced.
 - Validation confirms that block-porting tasks produced the expected package
   surface and that public or hybrid lanes do not directly depend on source platform
   internals unless an approved restricted-source exception is recorded.
@@ -2136,7 +2138,7 @@ For application delivery, validation MUST also check
   in scope.
 
 For explicit non-app work, validation MUST treat `ui-preview-brief.md`,
-`ui-review-log.md`, `ui-approval.md`, and `service-fit-matrix.md` as
+`ui-review-log.md`, `ui-show-and-tell.md`, and `service-fit-matrix.md` as
 **not applicable** rather than as missing blocking artifacts.
 
 ### Log Summary Entry
