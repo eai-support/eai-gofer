@@ -447,9 +447,15 @@ explicitly `enterpriseai`, generate:
      and what still prevents public consumption.
    - Branding inputs: whether client styling, logos, colors, copy tone, or
      other corporate-brand artifacts must be applied.
-   - Preview validation plan: what screenshot, browser-render, or
-     Playwright-style self-review evidence must exist before Gofer presents the
-     preview to the stakeholder.
+   - Fast preview runtime: the preview command or URL, expected local URL,
+     integrated-browser vs external-browser fallback, and the exact invocation
+     to run after every UI-facing change:
+     ```bash
+     node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+     ```
+   - Preview validation plan: what opened-browser, screenshot, browser-render,
+     or Playwright-style self-review evidence must exist before Gofer presents
+     the preview to the stakeholder.
    - Non-app runs MUST skip this artifact and record "Not applicable" in
      `research.md`.
 4. `{FEATURE_DIR}/eai-preflight.md` (EAI app delivery only, created by

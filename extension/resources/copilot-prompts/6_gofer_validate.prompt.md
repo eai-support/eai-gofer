@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/6_gofer_validate.md
-  canonicalChecksum: c375a15f7dcaaf7b6908f43521bb54b226d6890935ffb7624b34efd956ef9a69
+  canonicalChecksum: 2d97ec87e73b72c7dfa56cc978af7840967929fdfd6905d09a413bfe93659dc4
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -2102,13 +2102,15 @@ For application delivery, validation MUST also check
 - Each journey step preserves its business goal, AI assistance mode, data/context
   used, completion signal, human controls, evidence/confidence display, audit
   trail, and fallback/escalation path.
-- `{FEATURE_DIR}/ui-review-log.md` contains at least one pre-presentation
-  self-review entry for each preview round that was shown to the stakeholder,
-  with screenshot, local render proof, Playwright-style evidence, or an
-  explicit reasoned exception.
-- `{FEATURE_DIR}/ui-approval.md` records the approved preview, approved
-  branding/logo decisions, any approved EAI App Template exceptions, the
-  approver, and approval timestamp.
+- `{FEATURE_DIR}/ui-review-log.md` contains a `gofer-ui-preview.mjs` run or
+  equivalent opened-browser evidence for every UI-facing change after the first
+  preview command/URL was established.
+- Each preview entry records the changed surface, preview command or URL,
+  opened local URL, browser target, screenshot path or clear capture limitation,
+  and pre-presentation self-review notes before stakeholder feedback.
+- `{FEATURE_DIR}/ui-approval.md` records the approved preview, latest opened
+  preview URL, latest preview-helper run, approved branding/logo decisions, any
+  approved EAI App Template exceptions, the approver, and approval timestamp.
 - `{FEATURE_DIR}/service-fit-matrix.md` records each desired platform
   capability, the evidence source used to evaluate it, and whether it is
   accessible now, purchasable but unavailable now, or unavailable without new

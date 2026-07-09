@@ -19,11 +19,16 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(scenarioCommand).toContain('UI-First App-Delivery Default');
     expect(scenarioCommand).toContain('EAI App Template');
     expect(scenarioCommand).toContain('service-fit gate');
+    expect(scenarioCommand).toContain('gofer-ui-preview.mjs');
+    expect(scenarioCommand).toContain('after every');
+    expect(scenarioCommand).toContain('UI-facing change');
     expect(scenarioCommand).toContain('Non-app work');
 
     expect(researchCommand).toContain('ui-preview-brief.md');
     expect(researchCommand).toContain('EAI App Template constraint map');
     expect(researchCommand).toContain('Preview validation plan');
+    expect(researchCommand).toContain('Fast preview runtime');
+    expect(researchCommand).toContain('gofer-ui-preview.mjs');
     expect(researchCommand).toContain('external/internal/hybrid profile');
     expect(researchCommand).toContain('source-platform decoupling');
     expect(researchCommand).toContain('Storybook story IDs');
@@ -32,6 +37,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(planCommand).toContain('ui-review-log.md');
     expect(planCommand).toContain('ui-approval.md');
     expect(planCommand).toContain('service-fit-matrix.md');
+    expect(planCommand).toContain('preview command or URL');
+    expect(planCommand).toContain('gofer-ui-preview.mjs');
     expect(planCommand).toContain('eai --describe');
     expect(planCommand).toContain('eai resources schema');
     expect(planCommand).toContain('eai verify calls --format');
@@ -46,6 +53,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(tasksCommand).toContain('package lane');
     expect(tasksCommand).toContain('coupling status');
     expect(tasksCommand).toContain('custom-block exceptions');
+    expect(tasksCommand).toContain('record or confirm the preview command/URL');
+    expect(tasksCommand).toContain('report the opened preview URL and screenshot path');
     expect(tasksCommand).toContain('external/internal/hybrid');
     expect(tasksCommand).toContain('eai resources schema --format json');
 
@@ -53,6 +62,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(implementCommand).toContain('ui-review-log.md');
     expect(implementCommand).toContain('service-fit-matrix.md');
     expect(implementCommand).toContain('For non-app work, skip the preview');
+    expect(implementCommand).toContain('after every UI-facing change');
+    expect(implementCommand).toContain('Report the opened URL and');
     expect(implementCommand).toContain('public-readiness');
     expect(implementCommand).toContain('eai resources schema --format json');
     expect(implementCommand).toContain('source-platform internals');
@@ -60,6 +71,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(validateCommand).toContain('ui-review-log.md');
     expect(validateCommand).toContain('ui-approval.md');
     expect(validateCommand).toContain('service-fit-matrix.md');
+    expect(validateCommand).toContain('equivalent opened-browser evidence');
+    expect(validateCommand).toContain('latest preview-helper run');
     expect(validateCommand).toContain('For explicit non-app work');
     expect(validateCommand).toContain('Storybook story IDs');
     expect(validateCommand).toContain('theme override points');
@@ -86,5 +99,16 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     for (const templatePath of mirroredTemplates) {
       expect(fs.existsSync(path.join(process.cwd(), templatePath))).toBe(true);
     }
+  });
+
+  it('ships the repo-owned fast preview helper into extension resources', () => {
+    expect(
+      fs.existsSync(path.join(process.cwd(), '.specify/scripts/node/gofer-ui-preview.mjs'))
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(process.cwd(), 'extension/resources/node-scripts/gofer-ui-preview.mjs')
+      )
+    ).toBe(true);
   });
 });
