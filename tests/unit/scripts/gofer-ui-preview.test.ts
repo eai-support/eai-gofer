@@ -16,6 +16,7 @@ describe('gofer-ui-preview helper', () => {
       url: string,
       platform?: NodeJS.Platform
     ) => { command: string; args: string[] };
+    sanitizePreviewUrl: (value: string) => string;
     parseArgs: (argv: string[]) => {
       featureDir: string | null;
       command: string | null;
@@ -68,7 +69,7 @@ describe('gofer-ui-preview helper', () => {
 
   it('uses explicit URLs or infers likely local preview ports from commands', () => {
     expect(preview.buildCandidateUrls({ explicitUrl: 'http://localhost:4321' })).toEqual([
-      'http://localhost:4321',
+      'http://localhost:4321/',
     ]);
 
     expect(
@@ -82,16 +83,25 @@ describe('gofer-ui-preview helper', () => {
   it('builds cross-platform browser open commands', () => {
     expect(preview.buildOpenBrowserCommand('http://localhost:3000', 'darwin')).toEqual({
       command: 'open',
-      args: ['http://localhost:3000'],
+      args: ['http://localhost:3000/'],
     });
     expect(preview.buildOpenBrowserCommand('http://localhost:3000', 'win32')).toEqual({
-      command: 'cmd',
-      args: ['/c', 'start', '', 'http://localhost:3000'],
+      command: 'explorer.exe',
+      args: ['http://localhost:3000/'],
     });
     expect(preview.buildOpenBrowserCommand('http://localhost:3000', 'linux')).toEqual({
       command: 'xdg-open',
-      args: ['http://localhost:3000'],
+      args: ['http://localhost:3000/'],
     });
+  });
+
+  it('only allows browser opening for local loopback preview URLs', () => {
+    expect(preview.sanitizePreviewUrl('http://127.0.0.1:5173')).toBe('http://127.0.0.1:5173/');
+    expect(preview.sanitizePreviewUrl('https://app.localhost:3000/path')).toBe(
+      'https://app.localhost:3000/path'
+    );
+    expect(() => preview.sanitizePreviewUrl('https://example.com')).toThrow(/local loopback URL/);
+    expect(() => preview.sanitizePreviewUrl('javascript:alert(1)')).toThrow(/http or https/);
   });
 
   it('parses CLI flags and escapes markdown table cells', () => {
@@ -115,6 +125,6 @@ describe('gofer-ui-preview helper', () => {
     expect(args.timeoutMs).toBe(5000);
     expect(args.json).toBe(true);
     expect(args.dryRun).toBe(true);
-    expect(preview.markdownCell('one|two\nthree')).toBe('one\\|two<br>three');
+    expect(preview.markdownCell('one\\two|three\nfour')).toBe('one\\\\two\\|three<br>four');
   });
 });

@@ -101,7 +101,7 @@ export function extractPortsFromCommand(command = '') {
 }
 
 export function buildCandidateUrls({ explicitUrl = null, command = null, ports = DEFAULT_PREVIEW_PORTS } = {}) {
-  if (explicitUrl?.trim()) return [explicitUrl.trim()];
+  if (explicitUrl?.trim()) return [sanitizePreviewUrl(explicitUrl)];
 
   const commandPorts = extractPortsFromCommand(command ?? '');
   const orderedPorts = [...new Set([...commandPorts, ...ports])];
@@ -109,15 +109,51 @@ export function buildCandidateUrls({ explicitUrl = null, command = null, ports =
 }
 
 export function buildOpenBrowserCommand(url, platform = process.platform) {
-  if (platform === 'darwin') return { command: 'open', args: [url] };
-  if (platform === 'win32') return { command: 'cmd', args: ['/c', 'start', '', url] };
-  return { command: 'xdg-open', args: [url] };
+  const safeUrl = sanitizePreviewUrl(url);
+  if (platform === 'darwin') return { command: 'open', args: [safeUrl] };
+  if (platform === 'win32') return { command: 'explorer.exe', args: [safeUrl] };
+  return { command: 'xdg-open', args: [safeUrl] };
+}
+
+function isLoopbackHostname(hostname) {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized === '[::1]'
+  );
+}
+
+export function sanitizePreviewUrl(value) {
+  let parsed;
+  try {
+    parsed = new URL(String(value ?? '').trim());
+  } catch {
+    throw new Error(`Preview URL is invalid: ${value}`);
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error(`Preview URL must use http or https: ${parsed.protocol}`);
+  }
+  if (!isLoopbackHostname(parsed.hostname)) {
+    throw new Error(`Preview URL must be a local loopback URL: ${parsed.hostname}`);
+  }
+
+  parsed.username = '';
+  parsed.password = '';
+  return parsed.href;
 }
 
 export function markdownCell(value) {
   return String(value ?? '')
-    .replace(/\r?\n/g, '<br>')
-    .replace(/\|/g, '\\|')
+    .replace(/\r\n/g, '\n')
+    .replace(/[\\|\r\n]/g, (character) => {
+      if (character === '\\') return '\\\\';
+      if (character === '|') return '\\|';
+      return '<br>';
+    })
     .trim();
 }
 
@@ -135,11 +171,13 @@ export function resolveFeatureLogPaths(workspaceRoot, featureDir = null) {
 }
 
 export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 750) {
+  const safeUrls = urls.map((url) => sanitizePreviewUrl(url));
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
 
   while (Date.now() <= deadline) {
-    for (const url of urls) {
+    for (let index = 0; index < safeUrls.length; index += 1) {
+      const url = safeUrls[index];
       let timer = null;
       try {
         const controller = new AbortController();
@@ -150,7 +188,7 @@ export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 
           signal: controller.signal,
         });
         if (response.status < 500) {
-          return { ok: true, url, status: response.status };
+          return { ok: true, urlIndex: index, status: response.status };
         }
         lastError = `HTTP ${response.status} from ${url}`;
       } catch (error) {
@@ -162,7 +200,7 @@ export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
-  return { ok: false, url: null, status: null, error: lastError ?? 'No candidate URL responded' };
+  return { ok: false, urlIndex: null, status: null, error: lastError ?? 'No candidate URL responded' };
 }
 
 async function startPreviewServer(command, workspaceRoot, logPath, pidPath) {
@@ -207,6 +245,7 @@ async function openBrowser(url, mode) {
 }
 
 async function captureScreenshot(url, outputPath) {
+  const safeUrl = sanitizePreviewUrl(url);
   let chromium;
   try {
     ({ chromium } = await import('playwright'));
@@ -223,7 +262,7 @@ async function captureScreenshot(url, outputPath) {
   try {
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(safeUrl, { waitUntil: 'networkidle', timeout: 30000 });
     await page.screenshot({ path: outputPath, fullPage: true });
     return { ok: true, path: outputPath };
   } catch (error) {
@@ -246,23 +285,14 @@ async function appendReviewLog({
   if (!reviewLogPath) return null;
 
   await fs.mkdir(path.dirname(reviewLogPath), { recursive: true });
-  const exists = await fs
-    .access(reviewLogPath)
-    .then(() => true)
-    .catch(() => false);
-
-  if (!exists) {
-    await fs.writeFile(
-      reviewLogPath,
-      [
-        '# UI Review Log',
-        '',
-        '| Time | Change Trigger | Command | URL | Browser Target | Screenshot | Status | Notes |',
-        '| ---- | -------------- | ------- | --- | -------------- | ---------- | ------ | ----- |',
-      ].join('\n') + '\n',
-      'utf8'
-    );
-  }
+  const handle = await fs.open(reviewLogPath, 'a+', 0o600);
+  const header =
+    [
+      '# UI Review Log',
+      '',
+      '| Time | Change Trigger | Command | URL | Browser Target | Screenshot | Status | Notes |',
+      '| ---- | -------------- | ------- | --- | -------------- | ---------- | ------ | ----- |',
+    ].join('\n') + '\n';
 
   const row = [
     new Date().toISOString(),
@@ -277,7 +307,15 @@ async function appendReviewLog({
     .map(markdownCell)
     .join(' | ');
 
-  await fs.appendFile(reviewLogPath, `| ${row} |\n`, 'utf8');
+  try {
+    const stats = await handle.stat();
+    if (stats.size === 0) {
+      await handle.writeFile(header, 'utf8');
+    }
+    await handle.writeFile(`| ${row} |\n`, 'utf8');
+  } finally {
+    await handle.close();
+  }
   return reviewLogPath;
 }
 
@@ -429,17 +467,18 @@ export async function runUiPreview(rawOptions) {
       browserTarget: rawOptions.open,
       screenshotPath: null,
       status: 'blocked',
-      notes: readiness.error,
+      notes: 'No candidate URL became reachable before timeout.',
     });
     return report;
   }
 
-  const browser = await openBrowser(readiness.url, rawOptions.open);
+  const selectedUrl = candidateUrls[readiness.urlIndex];
+  const browser = await openBrowser(selectedUrl, rawOptions.open);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   let screenshot = { ok: false, path: null, error: 'Screenshot disabled' };
   if (rawOptions.screenshot) {
     screenshot = await captureScreenshot(
-      readiness.url,
+      selectedUrl,
       path.join(paths.previewDir, `ui-preview-${timestamp}.png`)
     );
   }
@@ -448,7 +487,7 @@ export async function runUiPreview(rawOptions) {
     reviewLogPath: paths.reviewLogPath,
     change: rawOptions.change,
     command: commandInfo.command ?? 'existing URL',
-    url: readiness.url,
+    url: selectedUrl,
     browserTarget: rawOptions.open,
     screenshotPath: screenshot.path,
     status: screenshot.ok || !rawOptions.screenshot ? 'shown' : 'shown-without-screenshot',
@@ -458,7 +497,7 @@ export async function runUiPreview(rawOptions) {
   return {
     ...baseReport,
     status: 'shown',
-    selectedUrl: readiness.url,
+    selectedUrl,
     browser,
     screenshot,
     reviewLogPath,
