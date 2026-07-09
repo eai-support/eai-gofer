@@ -42,6 +42,10 @@ resolve_github_repo() {
     esac
 }
 
+should_enforce_vscode_marketplace_publish() {
+    is_truthy "${ENFORCE_VSCODE_MARKETPLACE_PUBLISH:-}"
+}
+
 ensure_vscode_marketplace_publish_ready() {
     if is_truthy "${SKIP_VSCODE_MARKETPLACE_PUBLISH:-}"; then
         print_warning "Skipping VS Code Marketplace publish checks because SKIP_VSCODE_MARKETPLACE_PUBLISH is set."
@@ -49,8 +53,14 @@ ensure_vscode_marketplace_publish_ready() {
     fi
 
     if ! command -v gh >/dev/null 2>&1; then
-        print_error "gh is required to verify VS Code Marketplace publishing configuration."
-        exit 1
+        if should_enforce_vscode_marketplace_publish; then
+            print_error "gh is required to verify VS Code Marketplace publishing configuration."
+            exit 1
+        fi
+
+        print_warning "gh is not available, so VS Code Marketplace publishing readiness could not be verified."
+        print_warning "Core public release assets will still be published."
+        return 0
     fi
 
     has_github_config_name() {
@@ -63,8 +73,14 @@ ensure_vscode_marketplace_publish_ready() {
     repo="${GITHUB_REPO:-$(resolve_github_repo)}"
 
     if ! gh auth status >/dev/null 2>&1; then
-        print_error "gh is not authenticated. Authenticate before running a public release."
-        exit 1
+        if should_enforce_vscode_marketplace_publish; then
+            print_error "gh is not authenticated. Authenticate before running a public release."
+            exit 1
+        fi
+
+        print_warning "gh is not authenticated, so VS Code Marketplace publishing readiness could not be verified."
+        print_warning "Core public release assets will still be published."
+        return 0
     fi
 
     local github_variables github_secrets
@@ -84,11 +100,16 @@ ensure_vscode_marketplace_publish_ready() {
         return 0
     fi
 
-    print_error "Stable releases must publish EnterpriseAI.gofer to the Visual Studio Marketplace."
-    print_error "Preferred setup: configure VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID repository variables for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
-    print_error "Legacy fallback: add VSCE_PAT with Marketplace Manage scope using: gh secret set VSCE_PAT --repo $repo"
-    print_error "Only bypass this for an intentional dry/internal release with SKIP_VSCODE_MARKETPLACE_PUBLISH=1."
-    exit 1
+    if should_enforce_vscode_marketplace_publish; then
+        print_error "Stable releases must publish EnterpriseAI.gofer to the Visual Studio Marketplace."
+        print_error "Preferred setup: configure VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID repository variables for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
+        print_error "Legacy fallback: add VSCE_PAT with Marketplace Manage scope using: gh secret set VSCE_PAT --repo $repo"
+        print_error "Only bypass this for an intentional dry/internal release with SKIP_VSCODE_MARKETPLACE_PUBLISH=1."
+        exit 1
+    fi
+
+    print_warning "No VS Code Marketplace publishing credentials were found for $repo."
+    print_warning "Core public release assets will still be published."
 }
 
 wait_for_release_workflow() {
@@ -163,10 +184,17 @@ verify_vscode_marketplace_version() {
         sleep 20
     done
 
-    print_error "VS Code Marketplace did not update to v$expected_version."
-    print_error "Current Marketplace version: ${deployed_version:-MISSING}"
-    print_error "Inspect publish logs: https://github.com/${GITHUB_REPO:-$(resolve_github_repo)}/actions/workflows/release.yml"
-    exit 1
+    if should_enforce_vscode_marketplace_publish; then
+        print_error "VS Code Marketplace did not update to v$expected_version."
+        print_error "Current Marketplace version: ${deployed_version:-MISSING}"
+        print_error "Inspect publish logs: https://github.com/${GITHUB_REPO:-$(resolve_github_repo)}/actions/workflows/release.yml"
+        exit 1
+    fi
+
+    print_warning "VS Code Marketplace did not update to v$expected_version."
+    print_warning "Current Marketplace version: ${deployed_version:-MISSING}"
+    print_warning "The GitHub Release and public Gofer feed are authoritative for eai gofer refresh."
+    print_warning "Inspect publish logs: https://github.com/${GITHUB_REPO:-$(resolve_github_repo)}/actions/workflows/release.yml"
 }
 
 ensure_release_paths_tracked() {
