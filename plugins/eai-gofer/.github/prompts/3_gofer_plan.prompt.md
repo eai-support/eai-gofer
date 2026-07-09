@@ -14,7 +14,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/3_gofer_plan.md
-  canonicalChecksum: 56c6c9430cb7b8688f026caf2b5edfc09d4c8eda072f8672212902bc3bfae1af
+  canonicalChecksum: 3bdd8b9812ef9f2efda9dcf12b9ef087d2312527154d5b68915b754f24be63ec
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -847,7 +847,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and keep
      `{FEATURE_DIR}/ui-show-and-tell.md` current with the latest opened preview,
      screenshot evidence, user feedback, accepted revisions, and unresolved UX
-     questions. Do not treat this as a blocking sign-off point.
+     questions. Do not treat this as release approval or a blocking gate.
 10. **EnterpriseAI service-fit handoff** — for app delivery, the plan MUST
     produce or update `{FEATURE_DIR}/service-fit-matrix.md` after a concrete UI
     direction is visible and before tasks are treated as complete. The matrix

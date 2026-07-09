@@ -10,7 +10,7 @@ status: active
 ## Purpose
 
 This file records what Gofer showed the user, how quickly it was shown, what
-feedback came back, and what changed next. It is not a blocking sign-off point.
+feedback came back, and what changed next. It is not release approval.
 
 ## Latest Preview
 

@@ -627,7 +627,7 @@ evidence:
 - If `{FEATURE_DIR}/ui-show-and-tell.md` or `{FEATURE_DIR}/ui-review-log.md` is
   missing, emit early preview/show-and-tell tasks before or alongside the first
   UI tasks so the user sees the UI quickly. Do **not** suppress downstream
-  implementation only because a UI sign-off artifact is missing.
+  implementation only because show-and-tell evidence is still being gathered.
 - If `{FEATURE_DIR}/service-fit-matrix.md` is missing or does not distinguish
   accessible now vs purchasable vs unavailable platform capabilities, emit a
   blocking service-fit task group before normal build tasks.

@@ -818,7 +818,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and keep
      `{FEATURE_DIR}/ui-show-and-tell.md` current with the latest opened preview,
      screenshot evidence, user feedback, accepted revisions, and unresolved UX
-     questions. Do not treat this as a blocking sign-off point.
+     questions. Do not treat this as release approval or a blocking gate.
 10. **EnterpriseAI service-fit handoff** — for app delivery, the plan MUST
    produce or update `{FEATURE_DIR}/service-fit-matrix.md` after a concrete UI
    direction is visible and

@@ -2098,8 +2098,8 @@ For application delivery, validation MUST also check
 - `{FEATURE_DIR}/ui-show-and-tell.md` records the latest opened preview URL,
   latest preview-helper run, screenshot/browser evidence, user feedback,
   branding/logo notes, any EAI App Template exceptions, changes made from
-  feedback, and unresolved UX issues. This is show-and-tell evidence, not a
-  blocking sign-off point.
+  feedback, and unresolved UX issues. This is show-and-tell evidence, not
+  release approval.
 - `{FEATURE_DIR}/service-fit-matrix.md` records each desired platform
   capability, the evidence source used to evaluate it, and whether it is
   accessible now, purchasable but unavailable now, or unavailable without new

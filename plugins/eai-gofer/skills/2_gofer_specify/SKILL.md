@@ -308,7 +308,7 @@ Generate the COMPLETE spec.md following this structure:
 12. Goal Ledger Alignment — Goal IDs, outcomes, metrics/targets, linked stories, linked requirements
 13. Loop Contract Alignment — loop objective, success criteria, required eval commands, max-iteration stop rules, and human escalation triggers
 14. AI-Augmented 4-Step Journey — required for app delivery, not applicable for explicit non-app work
-15. UI Preview And Approval Gate — required for app delivery, not applicable for explicit non-app work
+15. UI Preview And Show-And-Tell Loop — required for app delivery, not applicable for explicit non-app work
 16. EAI Platform/Azure App Stack Policy — required for app delivery, not applicable for explicit non-app work
 17. EnterpriseAI Service Fit — required for app delivery, not applicable for explicit non-app work
 18. EnterpriseAI Contract Pack Summary — actors, object types, workflows, permissions, APIs/events, runtime assumptions, acceptance tests
@@ -357,7 +357,7 @@ If ui-preview-brief.md exists, use it to:
   opened-browser proof, or Playwright-style checks before stakeholder presentation
 - Require a versioned `ui-review-log.md` and `ui-show-and-tell.md` before
   downstream planning/tasks are treated as complete. This is continuous
-  visibility and feedback evidence, not a blocking sign-off point.
+  visibility, user feedback, and follow-up evidence, not release approval.
 
 If service-fit-matrix.md exists, use it to:
 - Separate desired platform capabilities into accessible now, purchasable but

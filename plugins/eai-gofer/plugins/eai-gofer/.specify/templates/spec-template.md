@@ -141,7 +141,7 @@ _Example of marking unclear requirements:_
 - **App stack policy**: [EAI Platform including app template first, Azure second
   | approved non-EAI exception | not applicable]
 
-## UI Preview & Approval Gate _(application delivery only)_
+## UI Preview & Show-And-Tell Loop _(application delivery only)_
 
 - **First MVP preview**: [what must be shown first]
 - **Profile choice**: [external / internal / hybrid]

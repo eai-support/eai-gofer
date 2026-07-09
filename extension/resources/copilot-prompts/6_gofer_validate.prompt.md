@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/6_gofer_validate.md
-  canonicalChecksum: d6c87b1ed8c64004673010513342c9b1948a00e54481ab61f229f07bb02910d1
+  canonicalChecksum: 35ab443919aa38ea6683180e028d296c702291f28a6b2f4268555dd9b2eebaa4
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -2111,8 +2111,8 @@ For application delivery, validation MUST also check
 - `{FEATURE_DIR}/ui-show-and-tell.md` records the latest opened preview URL,
   latest preview-helper run, screenshot/browser evidence, user feedback,
   branding/logo notes, any EAI App Template exceptions, changes made from
-  feedback, and unresolved UX issues. This is show-and-tell evidence, not a
-  blocking sign-off point.
+  feedback, and unresolved UX issues. This is show-and-tell evidence, not
+  release approval.
 - `{FEATURE_DIR}/service-fit-matrix.md` records each desired platform
   capability, the evidence source used to evaluate it, and whether it is
   accessible now, purchasable but unavailable now, or unavailable without new
