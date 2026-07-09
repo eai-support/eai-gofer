@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/2_gofer_specify.md
-  canonicalChecksum: 9397bb959a3fd31d8026f4427cc6cd458cbe5ca02da7eee3324d1b44fd5635bc
+  canonicalChecksum: ef3821cd02f2f422e03497979eb96a50e26dc65e27e1c88711b7b933ea64d640
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -310,7 +310,7 @@ Generate the COMPLETE spec.md following this structure:
 12. Goal Ledger Alignment — Goal IDs, outcomes, metrics/targets, linked stories, linked requirements
 13. Loop Contract Alignment — loop objective, success criteria, required eval commands, max-iteration stop rules, and human escalation triggers
 14. AI-Augmented 4-Step Journey — required for app delivery, not applicable for explicit non-app work
-15. UI Preview And Approval Gate — required for app delivery, not applicable for explicit non-app work
+15. UI Preview And Show-And-Tell Loop — required for app delivery, not applicable for explicit non-app work
 16. EAI Platform/Azure App Stack Policy — required for app delivery, not applicable for explicit non-app work
 17. EnterpriseAI Service Fit — required for app delivery, not applicable for explicit non-app work
 18. EnterpriseAI Contract Pack Summary — actors, object types, workflows, permissions, APIs/events, runtime assumptions, acceptance tests
@@ -334,7 +334,7 @@ If journeys/base-journey.md exists and is classified as app delivery, use it to:
   editability, and accessibility at each AI-assisted step
 
 If ui-preview-brief.md exists, use it to:
-- Require the first MVP preview to stay inside the approved EAI App Template
+- Require the first MVP preview to stay inside the selected EAI App Template
   blocks before any create-new UI concept is proposed
 - Require the specification to preserve the selected external/internal/hybrid
   profile choice, package lane, coupling status, public-readiness target, and
@@ -342,7 +342,7 @@ If ui-preview-brief.md exists, use it to:
 - Require every proposed UI building block to cite an `eai blocks describe`
   result by stable ID; ambiguous display names are not acceptable
 - Require any unknown UI component to be recorded as a custom-block exception
-  with manifest shape, component owner, data/resource binding, and approval path
+  with manifest shape, component owner, data/resource binding, and review path
 - Require Storybook story IDs and theme override points for every reusable or
   ported block; if no story exists, make story creation or an approved exception
   part of the requirements
@@ -357,8 +357,9 @@ If ui-preview-brief.md exists, use it to:
   agent reports the change as complete
 - Require preview self-review evidence such as screenshot, local render proof,
   opened-browser proof, or Playwright-style checks before stakeholder presentation
-- Require a versioned `ui-review-log.md` and explicit `ui-approval.md` before
-  downstream planning/tasks are treated as complete
+- Require a versioned `ui-review-log.md` and `ui-show-and-tell.md` before
+  downstream planning/tasks are treated as complete. This is continuous
+  visibility, user feedback, and follow-up evidence, not release approval.
 
 If service-fit-matrix.md exists, use it to:
 - Separate desired platform capabilities into accessible now, purchasable but
@@ -383,7 +384,7 @@ Rules:
 - Prefer explicit user-approved directions in proposal-review.md when present; otherwise treat it as advisory context
 - Each functional requirement must include Validation and Integration references
 - Explicit non-app work MUST keep the shared numbered stages but MUST NOT be
-  forced to create app-only preview, approval, branding, or service-fit
+  forced to create app-only preview, show-and-tell, branding, or service-fit
   sections beyond marking them "Not applicable"
 
 Write the complete specification to {FEATURE_DIR}/spec.md.
@@ -783,7 +784,7 @@ When `workflowProfile` is explicitly `enterpriseai`, generate
 | Actors | Business users, administrators, approvers, external systems, support roles |
 | Object Types | Reused, extended, and newly proposed EnterpriseAI object types with owners |
 | Workflows and Journeys | External user journeys and internal orchestration flows as separate views; app delivery must include the four-step-or-fewer AI-augmented journey |
-| UI Preview and Approval | For app delivery: preview brief, EAI App Template constraints, branding inputs, preview validation evidence expectations, review-log requirements, approval gate rules; for non-app work: mark not applicable |
+| UI Preview and Show-and-Tell | For app delivery: preview brief, EAI App Template constraints, branding inputs, preview validation evidence expectations, review-log requirements, and fast user feedback rules; for non-app work: mark not applicable |
 | EAI App Delivery Preflight | For EAI app delivery: CLI version/install state, account/login state, tenant role, template initialization readiness, app enrollment readiness, block catalog readiness, and blocked/deferred decisions |
 | EAI Platform/Azure Stack Policy | For app delivery: EAI Platform as primary app substrate, Azure as preferred cloud/supporting substrate, custom code constrained to the EAI template, and non-EAI stacks only as approved exceptions |
 | AI Assistance Contract | Step goal, assistance mode, context used, generated output, user controls, confidence/evidence, audit trail, completion signal, and escalation for each app step |

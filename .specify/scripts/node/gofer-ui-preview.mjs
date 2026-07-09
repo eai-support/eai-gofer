@@ -21,7 +21,7 @@ export const UI_REVIEW_LOG_COLUMNS = [
   'Theme Override Points',
   'Self-Review',
   'Stakeholder Feedback',
-  'Changes Accepted',
+  'User Feedback Applied',
   'Open Issues',
 ];
 
@@ -360,7 +360,7 @@ export function buildReviewLogRow({
   themeOverridePoints = 'not recorded',
   selfReview,
   stakeholderFeedback = 'pending',
-  changesAccepted = 'pending stakeholder review',
+  changesAccepted = 'pending user feedback',
   openIssues,
 }) {
   return [
