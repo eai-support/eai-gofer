@@ -687,6 +687,14 @@ precondition to downstream implementation tasks:
     status, Storybook story IDs, and theme override points from the approved
     preview brief
   - apply approved branding/logo work when in scope
+  - record or confirm the preview command/URL before the first UI task
+  - run the preview helper after every UI-facing change, using `--command` or
+    `--url` when needed:
+    ```bash
+    node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+    ```
+  - report the opened preview URL and screenshot path to the user quickly after
+    each preview refresh
   - collect screenshot or Playwright-style self-review evidence
   - update `ui-review-log.md`
   - block downstream work until `ui-approval.md` is approved

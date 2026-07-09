@@ -316,8 +316,13 @@ If ui-preview-brief.md exists, use it to:
   `eai resources schema`, an adapter, or an explicit restricted-source exception
 - Carry forward branding/logo requirements as explicit scope, not as implied
   polish
+- Require a fast preview runtime with a command or URL, local preview address,
+  and integrated-browser/external-browser fallback
+- Require `gofer-ui-preview.mjs` to run after every UI-facing change and record
+  the opened URL, screenshot/browser evidence, and self-review notes before the
+  agent reports the change as complete
 - Require preview self-review evidence such as screenshot, local render proof,
-  or Playwright-style checks before stakeholder presentation
+  opened-browser proof, or Playwright-style checks before stakeholder presentation
 - Require a versioned `ui-review-log.md` and explicit `ui-approval.md` before
   downstream planning/tasks are treated as complete
 

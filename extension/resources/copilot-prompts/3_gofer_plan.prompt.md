@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/3_gofer_plan.md
-  canonicalChecksum: 509ac99f326d64be668588439436215d80808244661c2096db75068eb1fc372f
+  canonicalChecksum: 688bec8860ca51f18a389a8bc388b4d7683c9093a746dc593ef9857036021a10
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -817,6 +817,13 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - record override points for theme tokens, `presentationConfig`, copy,
      data/action bindings, and client extension blocks
    - capture whether client branding/logos are in scope
+   - record the preview command or URL, expected local URL, and browser target
+     strategy for integrated-browser first and external-browser fallback
+   - require this helper after every UI-facing change, with `--command` or
+     `--url` when auto-detection is not sufficient:
+     ```bash
+     node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+     ```
    - require screenshot, local render proof, or Playwright-style self-review
      evidence before stakeholder presentation
    - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and require

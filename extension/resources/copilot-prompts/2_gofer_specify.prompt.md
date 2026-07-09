@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/2_gofer_specify.md
-  canonicalChecksum: 82581b3e2a3c45d84a67feb3a7fecc9db2dda59a9f26d0f29afeb9ccc43a46cc
+  canonicalChecksum: 9397bb959a3fd31d8026f4427cc6cd458cbe5ca02da7eee3324d1b44fd5635bc
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -350,8 +350,13 @@ If ui-preview-brief.md exists, use it to:
   `eai resources schema`, an adapter, or an explicit restricted-source exception
 - Carry forward branding/logo requirements as explicit scope, not as implied
   polish
+- Require a fast preview runtime with a command or URL, local preview address,
+  and integrated-browser/external-browser fallback
+- Require `gofer-ui-preview.mjs` to run after every UI-facing change and record
+  the opened URL, screenshot/browser evidence, and self-review notes before the
+  agent reports the change as complete
 - Require preview self-review evidence such as screenshot, local render proof,
-  or Playwright-style checks before stakeholder presentation
+  opened-browser proof, or Playwright-style checks before stakeholder presentation
 - Require a versioned `ui-review-log.md` and explicit `ui-approval.md` before
   downstream planning/tasks are treated as complete
 

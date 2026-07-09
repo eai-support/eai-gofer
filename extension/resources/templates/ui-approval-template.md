@@ -10,6 +10,9 @@ status: pending
 ## Approved Preview
 
 - **Preview reference**: {{preview-ref}}
+- **Latest opened preview URL**: {{preview-url}}
+- **Latest `gofer-ui-preview.mjs` run**: {{preview-helper-run-or-log-row}}
+- **Screenshot / browser evidence**: {{screenshot-or-browser-evidence}}
 - **Approver**: {{approver}}
 - **Approved at**: {{timestamp}}
 

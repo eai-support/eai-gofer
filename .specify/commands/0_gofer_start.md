@@ -51,6 +51,7 @@ Before doing stage/helper work:
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
    - `.specify/scripts/node/gofer-loop-audit.mjs`
+   - `.specify/scripts/node/gofer-ui-preview.mjs`
    - `.specify/scripts/hooks/post-tool-use.mjs`
    - `.specify/scripts/powershell/install-optional-tools.ps1`
    - `.specify/templates/gofer-model-policy.yaml`
@@ -737,10 +738,21 @@ For app delivery, the default early process is:
    must be applied.
 2. **Constrained MVP preview** — generate the first preview from the EAI App Template
    Template blocks already installed in the project by `eai`, rather than
-   from an unconstrained custom UI.
-3. **Preview self-review and approval** — use screenshot or Playwright-style
-   local review before showing the preview, then iterate with the stakeholder
-   until the UI is explicitly approved.
+   from an unconstrained custom UI. As soon as a local preview can run, open it
+   in the integrated browser when the host supports it or the external system
+   browser otherwise.
+3. **Preview self-review, fast browser loop, and approval** — after every
+   UI-facing change to layout, component choice, theme, copy, data binding, or
+   interaction behavior, run:
+
+   ```bash
+   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+   ```
+
+   If auto-detection is wrong, pass `--command "<preview command>"`; if a server
+   is already running, pass `--url <preview-url>`. Report the preview URL and
+   screenshot path to the user quickly, append the run to `ui-review-log.md`,
+   and iterate until the UI is explicitly approved.
 4. **EnterpriseAI service-fit gate** — after UI approval, review which
    platform services are accessible now, purchasable but unavailable now, or
    unsupported, and lock that decision before plan/tasks are treated as
@@ -1263,9 +1275,9 @@ stages to create these artifacts without re-interviewing the user:
 | Artifact | Required Content |
 | -------- | ---------------- |
 | `journeys/base-journey.md` | Application classification, four-step-or-fewer AI-augmented customer journey, step goals, AI assistance, context used, controls, completion criteria |
-| `ui-preview-brief.md` | App-delivery-only preview brief: target screens, EAI App Template component constraints, branding inputs, preview validation expectations |
-| `ui-review-log.md` | App-delivery-only iteration log: preview evidence, requested changes, accepted changes, unresolved issues |
-| `ui-approval.md` | App-delivery-only approval gate: approved preview, approved branding, approved component exceptions, approver and timestamp |
+| `ui-preview-brief.md` | App-delivery-only preview brief: target screens, EAI App Template component constraints, branding inputs, preview command or URL, browser strategy, and preview validation expectations |
+| `ui-review-log.md` | App-delivery-only iteration log: every UI-facing change, helper command, opened URL, screenshot/browser evidence, requested changes, accepted changes, unresolved issues |
+| `ui-approval.md` | App-delivery-only approval gate: approved preview, latest opened URL, helper run evidence, approved branding, approved component exceptions, approver and timestamp |
 | `service-fit-matrix.md` | App-delivery-only service selection evidence: desired platform capability, evidence source, accessible now vs purchasable vs unavailable, selected direction |
 | `eai-preflight.md` | App-delivery-only EAI readiness evidence: CLI install/version, login status, tenant role, template initialization state, app enrollment readiness, block catalog readiness, and next action |
 | `context-bundle.md` | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, tenant assumptions, API surfaces, deployment assumptions, validation criteria |

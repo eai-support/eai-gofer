@@ -877,9 +877,20 @@ separation from `tasks.md`:
 - Preserve dual-state delivery discipline: when a capability stays in `mock` or
   `hybrid`, record why, what promotion criteria remain, and what validation
   evidence is still required before it can move to `live`.
+- For application delivery, after every UI-facing change to page layout,
+  component choice, theme, copy, data binding, or interaction behavior, run the
+  preview helper before reporting the task complete:
+  ```bash
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+  ```
+  Use `--command "<preview command>"` when auto-detection is wrong, or
+  `--url <preview-url>` when a server is already running. Report the opened URL and
+  screenshot path to the user quickly. Append the run, self-review, and any
+  known visual risks to `{FEATURE_DIR}/ui-review-log.md`.
 - For application delivery, before showing any new MVP preview to the
-  stakeholder, collect screenshot, local render proof, or Playwright-style
-  self-review evidence and append it to `{FEATURE_DIR}/ui-review-log.md`.
+  stakeholder, confirm that the latest UI-facing change has opened in a browser
+  and has screenshot, local render proof, or Playwright-style self-review
+  evidence in `{FEATURE_DIR}/ui-review-log.md`.
 - For application delivery, after UI approval and before treating platform
   selection as complete, update `{FEATURE_DIR}/service-fit-matrix.md` with
   tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
