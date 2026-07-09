@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/5_gofer_implement.md
-  canonicalChecksum: 514a1c3925a1f45a1c54cdab6d8c819f4673fcb9d8a9a67ff2363d67b233fb3e
+  canonicalChecksum: c94ee443fb7636856619ee79ba436e415f361fe42accf08290c6a727980feac1
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -755,7 +755,7 @@ eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
 ```
 
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
-signed-in-user/OBO PublicAPI BFF reachability, and declared smoke tests must pass
+user-delegated PublicAPI BFF reachability, and declared smoke tests must pass
 before deployment is complete. Tenant apps must not add app-only
 `client_credentials` access for ordinary ResourceAPI reads, writes, files, or
 search.
