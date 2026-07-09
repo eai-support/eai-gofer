@@ -44,16 +44,14 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should
-     still keep the core scaffold healthy
+   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json`
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-6. If the user says yes, run the Gofer workspace bootstrap helper and then
-   resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on
-   the repo-owned scaffold.
+6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
 
 # Gofer Specify
 
@@ -76,38 +74,20 @@ Before any Gofer stage/helper command does pipeline work:
    Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
-
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
-   truth for simple, medium, hard, and arbiter model routing. If it is missing,
-   run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
-     synthesis, validation, and security; Opus for high-risk arbitration or
-     release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
-     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
-     for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
-     default research synthesis; Pro for large-context architecture or high-risk
-     arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before
-     choosing a paid/high-tier picker model for hard security, architecture, or
-     release gates.
-3. Keep raw tool output out of the main conversation context. Save stable
-   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
-   summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes:
-   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
-   stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or
-   validation bursts, checkpoint the durable artifacts and compact/clear/resume
-   context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence,
-contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## User Input
@@ -125,10 +105,10 @@ research. Keep labels generic: `docs-only`, `single-repo-code`, `cross-repo`,
 `api-contract`, `auth-security`, `data-model`, `infra-config`,
 `release-critical`, `broad-fanout`, `unknown-blast-radius`, `unknown`.
 
-Also read `execution-profile.md` when present. Keep the same `effectiveProfile`
-unless new evidence changes the risk labels; if that happens, update the file
-and explain the new `profileFloor`, `effectiveProfile`, and reason in
-`traceability.md`.
+Also read `execution-profile.md` when present. Keep the same
+`effectiveProfile` unless new evidence changes the risk labels; if that
+happens, update the file and explain the new `profileFloor`,
+`effectiveProfile`, and reason in `traceability.md`.
 
 - **fast** specs should be short and scoped, with no new optional artifact set
   unless research found implementation risk.
@@ -160,17 +140,18 @@ If these don't exist, prompt user to run `#1_gofer_research` first.
 
 ## Spec Artifact Guarantee
 
-This stage is the first point where the placeholder `spec.md` created by feature
-bootstrap becomes a real feature specification. Before this command finishes or
-auto-chains to `#3_gofer_plan`, verify that `{FEATURE_DIR}/spec.md` exists, is
-non-empty, and no longer contains the raw template placeholders such as
-`[FEATURE NAME]`, `[###-feature-name]`, `[Describe this user journey]`,
-`System MUST [specific capability]`, or `ACTION REQUIRED`. If the check fails,
-write or repair `spec.md` immediately and do not continue to planning.
+This stage is the first point where the placeholder `spec.md` created by
+feature bootstrap becomes a real feature specification. Before this command
+finishes or auto-chains to `#3_gofer_plan`, verify that
+`{FEATURE_DIR}/spec.md` exists, is non-empty, and no longer contains the raw
+template placeholders such as `[FEATURE NAME]`, `[###-feature-name]`,
+`[Describe this user journey]`, `System MUST [specific capability]`, or
+`ACTION REQUIRED`. If the check fails, write or repair `spec.md` immediately and
+do not continue to planning.
 
-Downstream stages use repo scripts that fail on missing, empty, or
-still-template specs. Treat that failure as a required return to
-`#2_gofer_specify`, not as a script problem to bypass.
+Downstream stages use repo scripts that fail on missing, empty, or still-template
+specs. Treat that failure as a required return to `#2_gofer_specify`, not as a
+script problem to bypass.
 
 ## Outline
 
@@ -241,11 +222,10 @@ Before starting specification, assess context window health:
 
 ## Step 1.25: Optional Proposal Review Context
 
-`proposal-review.md` is optional supporting context between research and
-specification.
+`proposal-review.md` is optional supporting context between research and specification.
 
-- If `proposal-review.md` is missing: continue using `research.md` as the source
-  of truth.
+- If `proposal-review.md` is missing: continue using `research.md` as the
+  source of truth.
 - If `proposal-review.md` exists: capture any business-scenario guidance,
   architecture direction, selected option, and user overrides it records.
 - If `proposal-review.md` records a clear user-approved direction: treat that as
@@ -472,9 +452,8 @@ After both agents complete:
    - All user stories have acceptance criteria
    - Success criteria are measurable and technology-agnostic
    - Dependencies reference correct codebase components from research
-
-- Scenario and architecture choices from proposal-review.md are reflected
-- Research traceability matrix is complete
+  - Scenario and architecture choices from proposal-review.md are reflected
+   - Research traceability matrix is complete
 
 2. **Check research coverage** — From the validator agent:
    - If MISSING items found: Edit spec.md to add missing coverage
@@ -734,6 +713,7 @@ Sequence Diagrams: {FEATURE_DIR}/sequence-diagrams/
 Selected Option: Option {N} - {Name}
 ```
 
+
 ---
 
 ## Guidelines
@@ -770,8 +750,8 @@ remain opt-in and migration-only.
 
 When the workflow profile is `enterpriseai`, `spec.md` MUST include an explicit
 **Integration Map** section that traces the flow from end-user interaction to
-the deployed EnterpriseAI app and back. The map must be expressed as an ordered
-dependency chain following the pattern:
+the deployed EnterpriseAI app and back. The map must be
+expressed as an ordered dependency chain following the pattern:
 
 ```
 App -> EAI Services -> Deployment Target
@@ -779,11 +759,11 @@ App -> EAI Services -> Deployment Target
 
 At minimum the map must name:
 
-1. **App**: the student-facing or business-facing app being delivered (maps to
-   the `eai-app-template` reference).
-2. **EAI Services**: the EnterpriseAI platform services the app consumes (maps
-   to the current public platform documentation or explicitly provided project
-   references).
+1. **App**: the student-facing or business-facing app being
+   delivered (maps to the `eai-app-template` reference).
+2. **EAI Services**: the EnterpriseAI platform services the app consumes
+   (maps to the current public platform documentation or explicitly provided
+   project references).
 3. **Deployment Target**: the deployment environment and pipeline that will host
    the running app (maps to the configured deployment documentation for the
    target project).
@@ -799,25 +779,25 @@ stage can bind implementation tasks directly to specification clauses.
 When `workflowProfile` is explicitly `enterpriseai`, generate
 `{FEATURE_DIR}/contract-pack.md` with these required sections:
 
-| Section                           | Required Content                                                                                                                                                                                                       |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Actors                            | Business users, administrators, approvers, external systems, support roles                                                                                                                                             |
-| Object Types                      | Reused, extended, and newly proposed EnterpriseAI object types with owners                                                                                                                                             |
-| Workflows and Journeys            | External user journeys and internal orchestration flows as separate views; app delivery must include the four-step-or-fewer AI-augmented journey                                                                       |
-| UI Preview and Show-and-Tell      | For app delivery: preview brief, EAI App Template constraints, branding inputs, preview validation evidence expectations, review-log requirements, and fast user feedback rules; for non-app work: mark not applicable |
-| EAI App Delivery Preflight        | For EAI app delivery: CLI version/install state, account/login state, tenant role, template initialization readiness, app enrollment readiness, block catalog readiness, and blocked/deferred decisions                |
-| EAI Platform/Azure Stack Policy   | For app delivery: EAI Platform as primary app substrate, Azure as preferred cloud/supporting substrate, custom code constrained to the EAI template, and non-EAI stacks only as approved exceptions                    |
-| AI Assistance Contract            | Step goal, assistance mode, context used, generated output, user controls, confidence/evidence, audit trail, completion signal, and escalation for each app step                                                       |
-| EnterpriseAI Service Fit          | For app delivery: desired capabilities, evidence source, accessible now vs purchasable vs unavailable classification, selected direction, and blocked-capability handling                                              |
-| Public Platform Boundary          | Public docs/help/CLI/PublicAPI behavior the builder may rely on; private platform details intentionally excluded; upgrade/operator-required paths expressed as product-safe user actions                               |
-| Permissions and Tenant Boundaries | Identity, authorization, policy, isolation, and tenant assumptions                                                                                                                                                     |
-| APIs and Events                   | ResourceAPI surfaces, events, payload ownership, and contract-test hooks                                                                                                                                               |
-| Deployment and Runtime            | Environment, config, observability, rollback, and operating assumptions                                                                                                                                                |
-| Acceptance Tests                  | Business, security, data, architecture, operational, and regression checks                                                                                                                                             |
+| Section | Required Content |
+| ------- | ---------------- |
+| Actors | Business users, administrators, approvers, external systems, support roles |
+| Object Types | Reused, extended, and newly proposed EnterpriseAI object types with owners |
+| Workflows and Journeys | External user journeys and internal orchestration flows as separate views; app delivery must include the four-step-or-fewer AI-augmented journey |
+| UI Preview and Show-and-Tell | For app delivery: preview brief, EAI App Template constraints, branding inputs, preview validation evidence expectations, review-log requirements, and fast user feedback rules; for non-app work: mark not applicable |
+| EAI App Delivery Preflight | For EAI app delivery: CLI version/install state, account/login state, tenant role, template initialization readiness, app enrollment readiness, block catalog readiness, and blocked/deferred decisions |
+| EAI Platform/Azure Stack Policy | For app delivery: EAI Platform as primary app substrate, Azure as preferred cloud/supporting substrate, custom code constrained to the EAI template, and non-EAI stacks only as approved exceptions |
+| AI Assistance Contract | Step goal, assistance mode, context used, generated output, user controls, confidence/evidence, audit trail, completion signal, and escalation for each app step |
+| EnterpriseAI Service Fit | For app delivery: desired capabilities, evidence source, accessible now vs purchasable vs unavailable classification, selected direction, and blocked-capability handling |
+| Public Platform Boundary | Public docs/help/CLI/PublicAPI behavior the builder may rely on; private platform details intentionally excluded; upgrade/operator-required paths expressed as product-safe user actions |
+| Permissions and Tenant Boundaries | Identity, authorization, policy, isolation, and tenant assumptions |
+| APIs and Events | ResourceAPI surfaces, events, payload ownership, and contract-test hooks |
+| Deployment and Runtime | Environment, config, observability, rollback, and operating assumptions |
+| Acceptance Tests | Business, security, data, architecture, operational, and regression checks |
 
 The contract pack must link every new object type/API/workflow back to
-`reuse-scan.md` and must flag any "create new" decision that lacks evidence. For
-EnterpriseAI public-facing work, the contract pack must also separate:
+`reuse-scan.md` and must flag any "create new" decision that lacks evidence.
+For EnterpriseAI public-facing work, the contract pack must also separate:
 
 - **Public builder knowledge**: EAI CLI commands, PublicAPI responses, template
   configuration, support documentation, and user-safe statuses such as
@@ -881,8 +861,8 @@ Logs to: `.specify/logs/pipeline.jsonl`
   is stabilized, run `gofer:vocabulary` inline and write
   `.specify/specs/{feature}/glossary.md` using the same artifact contract as the
   standalone helper.
-- This stage creates or updates a baseline `spec-summary.md` for the Business
-  Owner summary and PR/FAQ. If the operator explicitly requests the
+- This stage creates or updates a baseline `spec-summary.md` for the
+  Business Owner summary and PR/FAQ. If the operator explicitly requests the
   `spec-summary` selector after `spec.md` is stabilized, run
   `gofer:spec-summary` inline to deepen or regenerate
   `.specify/specs/{feature}/spec-summary.md` using the same artifact contract as
@@ -892,14 +872,13 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - These selectors are optional and do not change stage progress, routing, or
   pipeline state.
 
+
 ## Pipeline Continuation
 
 This completes the 2_gofer_specify stage. To continue the Gofer pipeline:
 
 **Next Command:** `#3_gofer_plan`
 
-The next stage will read the artifacts from this stage and continue the workflow
-automatically.
+The next stage will read the artifacts from this stage and continue the workflow automatically.
 
-**Note:** Copilot Chat supports context preservation. Your conversation history
-will be maintained as you progress through pipeline stages.
+**Note:** Copilot Chat supports context preservation. Your conversation history will be maintained as you progress through pipeline stages.

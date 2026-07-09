@@ -141,7 +141,7 @@ empty, or `template`, stop and run `/2_gofer_specify`; do not create or refresh
    `stakeholder-review-index.md`
 9. EnterpriseAI profile output: task-ready references to `context-bundle.md`,
    `contract-pack.md`, `reuse-scan.md`, `audit-history.md`, and for app
-   delivery `ui-review-log.md`, `ui-approval.md`, and
+   delivery `ui-review-log.md`, `ui-show-and-tell.md`, and
    `service-fit-matrix.md`, including public-readiness, block-porting, source platform
    decoupling, Storybook, theme override, and package-profile decisions
 10. Dynamic-only output: `workflow-dag.md` with shards, inputs, outputs,
@@ -181,7 +181,7 @@ Planning dispatches multiple agents — keep main context lightweight.
    - Note feature name from FEATURE_DIR
    - Note whether `discovery.md`, `.specify/memory/constitution.md` exist
    - Note whether `ui-preview-brief.md`, `ui-review-log.md`,
-     `ui-approval.md`, and `service-fit-matrix.md` exist
+     `ui-show-and-tell.md`, and `service-fit-matrix.md` exist
    - Note external/internal/hybrid profile choice, package lane, coupling
      status, Storybook story IDs, theme override points, custom-block
      exceptions, and public-readiness status when app delivery applies
@@ -220,7 +220,7 @@ Read these files for full context:
 - {FEATURE_DIR}/loop-contract.json — bounded loop objective, evaluation commands, max iterations, stop conditions, and escalation rules
 - {FEATURE_DIR}/ui-preview-brief.md — app-delivery preview brief (read if exists, skip if not)
 - {FEATURE_DIR}/ui-review-log.md — app-delivery preview iteration history (read if exists, skip if not)
-- {FEATURE_DIR}/ui-approval.md — app-delivery approval state (read if exists, skip if not)
+- {FEATURE_DIR}/ui-show-and-tell.md — app-delivery show-and-tell state, latest opened preview, and user feedback (read if exists, skip if not)
 - {FEATURE_DIR}/service-fit-matrix.md — app-delivery capability selections (read if exists, skip if not)
 - .specify/templates/plan-template.md — Plan template structure
 - .specify/memory/constitution.md — Project principles (read if exists)
@@ -795,11 +795,11 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    completion signal, user controls, audit trail, and fallback/escalation path.
    If the plan expands beyond four user-facing steps, document why those steps
    cannot be combined, automated, or handled by the AI assistant.
-9. **UI-first approval gate handoff** — for app delivery, reference
+9. **UI-first show-and-tell handoff** — for app delivery, reference
    `{FEATURE_DIR}/ui-preview-brief.md` and require the planning stage to lock
    the preview loop before plan/tasks are considered complete. The plan MUST:
    - keep the first preview constrained to EAI App Template blocks unless an
-     approved extension is recorded
+     explicit extension exception is recorded
    - cite `eai blocks describe <id>` evidence for every selected block ID,
      plus the ResourceAPI/Object Type fields from `eai resources schema` that
      feed each block
@@ -815,10 +815,13 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
      ```
    - require screenshot, local render proof, or Playwright-style self-review
      evidence before stakeholder presentation
-   - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and require
-     explicit stakeholder approval in `{FEATURE_DIR}/ui-approval.md`
+   - update `{FEATURE_DIR}/ui-review-log.md` for each iteration and keep
+     `{FEATURE_DIR}/ui-show-and-tell.md` current with the latest opened preview,
+     screenshot evidence, user feedback, accepted revisions, and unresolved UX
+     questions. Do not treat this as release approval or a blocking gate.
 10. **EnterpriseAI service-fit handoff** — for app delivery, the plan MUST
-   produce or update `{FEATURE_DIR}/service-fit-matrix.md` after UI approval and
+   produce or update `{FEATURE_DIR}/service-fit-matrix.md` after a concrete UI
+   direction is visible and
    before tasks are treated as complete. The matrix must distinguish:
    - accessible now
    - purchasable but unavailable now
@@ -850,12 +853,14 @@ Plan both:
 - **AI-augmented app process**: for application delivery, the four-step-or-fewer
   journey with AI assistance, contextual prefill, conversational support,
   completion checks, and human controls at each step.
-- **App-delivery preview and approval loop**: for application delivery, the
+- **App-delivery preview and show-and-tell loop**: for application delivery, the
   local preview creation, self-review, stakeholder feedback, branding updates,
-  and approval-gate behavior that must occur before plan/tasks are finalized.
-- **EnterpriseAI service-fit gate**: for application delivery, the post-approval
+  and rapid browser/screenshot evidence that must occur before plan/tasks are
+  finalized.
+- **EnterpriseAI service-fit gate**: for application delivery, the post-preview
   capability-selection discussion that binds chosen platform services to the
-  approved UI and distinguishes accessible now vs purchasable vs unavailable.
+  visible UI direction and distinguishes accessible now vs purchasable vs
+  unavailable.
 - **Internal orchestration flows**: platform services, ResourceAPI calls,
   events, data movement, tenant boundaries, deployment steps, and observability.
 

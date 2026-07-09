@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.7.18",
+  "version": "3.7.19",
   "description": "Gofer core pipeline: /0_gofer_start through /6_gofer_validate, plus optional helper commands.",
   "author": {
     "name": "EAI Tools",

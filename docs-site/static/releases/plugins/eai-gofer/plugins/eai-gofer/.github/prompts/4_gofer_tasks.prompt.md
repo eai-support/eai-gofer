@@ -12,7 +12,7 @@ argument-hint: feature-name-or-description
 gofer:
   workflowProfile: standard
   canonicalSource: .specify/commands/4_gofer_tasks.md
-  canonicalChecksum: 50b2b9817a35c2c1d82d51a1c0df3d96cba8f5fda8ea17807ac56cdf7b3cd4e1
+  canonicalChecksum: c98934a9b2aa0bee208bd676489505cea7aceef0d4d6eb3f0ec63b46d9b999cc
   metadataSource: scripts/generate-commands.ts
 ---
 
@@ -628,12 +628,14 @@ The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to sca
 
 ### App-Delivery Preconditions Inside Shared Stages
 
-For **application delivery**, task generation MUST treat the UI-first gate as a
-precondition to downstream implementation tasks:
+For **application delivery**, task generation MUST treat the UI-first
+show-and-tell loop as early implementation scaffolding and fast feedback
+evidence:
 
-- If `{FEATURE_DIR}/ui-approval.md` does not exist or is not approved, emit
-  only the blocking preview/approval tasks needed to reach approval; do **not**
-  emit downstream implementation tasks as if the UI were already settled.
+- If `{FEATURE_DIR}/ui-show-and-tell.md` or `{FEATURE_DIR}/ui-review-log.md` is
+  missing, emit early preview/show-and-tell tasks before or alongside the first
+  UI tasks so the user sees the UI quickly. Do **not** suppress downstream
+  implementation only because show-and-tell evidence is still being gathered.
 - If `{FEATURE_DIR}/service-fit-matrix.md` is missing or does not distinguish
   accessible now vs purchasable vs unavailable platform capabilities, emit a
   blocking service-fit task group before normal build tasks.
@@ -647,7 +649,7 @@ precondition to downstream implementation tasks:
   `eai --describe`, `eai blocks list`, `eai blocks describe <id>` for selected
   blocks, and `eai resources schema --format json`; task notes must cite block
   IDs, resource fields, data/action bindings, package lane, coupling status,
-  Storybook story IDs, theme override points, and approved custom-block
+  Storybook story IDs, theme override points, and explicit custom-block
   exceptions.
 - Add package-profile tasks that lock the external/internal/hybrid profile
   choice and the package lane before any public, shared, or app-local block
@@ -664,7 +666,7 @@ precondition to downstream implementation tasks:
   accessibility/theming contracts, consumer smoke tests, and unsupported
   custom-block exceptions.
 - For **non-app work**, keep the shared numbered stages but skip these
-  preview/approval/service-fit prerequisites.
+  preview/show-and-tell/service-fit prerequisites.
 
 ### EnterpriseAI Contract, Reuse, and Red/Green Tasks
 
@@ -686,13 +688,13 @@ precondition to downstream implementation tasks:
   four-or-fewer journey steps covering user experience, chatbot/voice/
   accessibility/translation support, contextual prefill, completion validation,
   human review, audit trail, and fallback/escalation.
-- App-delivery preview/approval tasks that:
+- App-delivery preview/show-and-tell tasks that:
   - build the first MVP from EAI App Template blocks
   - select only known `eai blocks` IDs unless a custom-block exception exists
   - preserve package lane, external/internal/hybrid profile choice, coupling
-    status, Storybook story IDs, and theme override points from the approved
+    status, Storybook story IDs, and theme override points from the selected
     preview brief
-  - apply approved branding/logo work when in scope
+  - apply selected branding/logo work when in scope
   - record or confirm the preview command/URL before the first UI task
   - run the preview helper after every UI-facing change, using `--command` or
     `--url` when needed:
@@ -703,7 +705,8 @@ precondition to downstream implementation tasks:
     each preview refresh
   - collect screenshot or Playwright-style self-review evidence
   - update `ui-review-log.md`
-  - block downstream work until `ui-approval.md` is approved
+  - update `ui-show-and-tell.md` with what was shown, where it opened, what the
+    user said, what changed next, and any unresolved UX issues
 - App-delivery service-fit tasks that update `service-fit-matrix.md` using
   tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
   select`, `eai resources schema --format json`, `eai workflow readiness
