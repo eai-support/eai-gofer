@@ -78,7 +78,7 @@ this gate order:
 5. `eai app provision`
 6. `eai provision entra` when required
 7. `eai env pull` when required
-8. `eai types validate`
+8. `eai types validate --tenant-key <key> --tenant-id <tenant-id>`
 9. `eai types seed`
 10. `eai types diff`
 11. `eai resources schema`
