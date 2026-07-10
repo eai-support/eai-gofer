@@ -261,7 +261,7 @@ with an unrelated non-EAI stack.
      keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate --tenant-key <key> --tenant-id <tenant-id>`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
-     `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
+     `eai types diff --tenant-key <key> --tenant-id <tenant-id>`, `eai resources schema --tenant-id <tenant-id> --format json`,
      `eai resources storage doctor --tenant-id <tenant-id> --format json`,
      `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
      preview/runtime readiness.

@@ -800,7 +800,6 @@ separation from `tasks.md`:
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
 - Use `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
-  `eai types validate --tenant-key <key> --tenant-id <tenant-id>`,
   `eai provision entra --force --redirect-uri <confirmed-callback-uri>`,
   `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
   `eai resources schema --tenant-id <tenant-id> --format json`,
