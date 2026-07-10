@@ -244,7 +244,7 @@ with an unrelated non-EAI stack.
      when available.
    - Do not claim platform readiness from app creation alone. Later stages must
      keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
-     `eai types validate`,
+     `eai types validate --tenant-key <key> --tenant-id <tenant-id>`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
      `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
      `eai resources storage doctor --tenant-id <tenant-id> --format json`,

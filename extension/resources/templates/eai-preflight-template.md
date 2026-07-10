@@ -56,7 +56,7 @@ updated: '{{iso_timestamp}}'
 | Entra provisioning        | `eai provision entra`                                                                                             | {{result_or_not_run}} |
 | Entra redirect recovery   | `eai provision entra --force --redirect-uri <confirmed-callback-uri>`; artifact uses redacted callback route only | {{result_or_not_run}} |
 | Environment pull          | `eai env pull`                                                                                                    | {{result_or_not_run}} |
-| Object-type validation    | `eai types validate`                                                                                              | {{result_or_not_run}} |
+| Object-type validation    | `eai types validate --tenant-key <key> --tenant-id <tenant-id>`                                                   | {{result_or_not_run}} |
 | Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`                                         | {{result_or_not_run}} |
 | Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                                                       | {{result_or_not_run}} |
 | Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`                                                      | {{result_or_not_run}} |
