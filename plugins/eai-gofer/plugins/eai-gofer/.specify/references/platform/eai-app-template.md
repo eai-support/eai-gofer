@@ -35,7 +35,7 @@ template for EnterpriseAI app-delivery work.
 - Use the CLI for setup and verification:
   - `eai login`
   - `eai tenant select <tenant-slug>`
-  - `eai types validate`
+  - `eai types validate --tenant-key <key> --tenant-id <tenant-id>`
   - `eai types seed --tenant-key <key> --tenant-id <tenant-id>`
   - `eai types diff --tenant-key <key> --tenant-id <tenant-id>`
   - `eai resources schema --tenant-id <tenant-id>`

@@ -23,7 +23,7 @@ updated: '{{iso_timestamp}}'
 | App enrollment ready        | {{ready       | confirmation_required | blocked                      | deferred}}                                                                         | {{app list/create/select summary}}                                 |
 | Entra redirect readiness    | {{ready       | not_required          | blocked                      | deferred}}                                                                         | {{callback URI, client ID label, and AADSTS50011 recovery status}} |
 | Resource provisioning       | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{eai app provision, entra, and storage-health evidence}}           |
-| Object-type publish         | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{eai types validate/seed/diff evidence}}                           |
+| Object-type publish         | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{tenant-aware validate / seed / diff evidence}}                    |
 | Schema and storage health   | {{not_started | in_progress           | ready                        | blocked                                                                            | deferred}}                                                         | {{resource schema, storage status/doctor, verify storage evidence}} |
 | Workflow readiness          | {{ready       | blocked               | deferred}}                   | {{eai workflow readiness evidence}}                                                |
 | Block catalog ready         | {{ready       | blocked               | deferred}}                   | {{blocks list/readiness/describe summary}}                                         |
@@ -56,7 +56,7 @@ updated: '{{iso_timestamp}}'
 | Entra provisioning        | `eai provision entra`                                                                                             | {{result_or_not_run}} |
 | Entra redirect recovery   | `eai provision entra --force --redirect-uri <confirmed-callback-uri>`; artifact uses redacted callback route only | {{result_or_not_run}} |
 | Environment pull          | `eai env pull`                                                                                                    | {{result_or_not_run}} |
-| Object-type validation    | `eai types validate`                                                                                              | {{result_or_not_run}} |
+| Object-type validation    | `eai types validate --tenant-key <key> --tenant-id <tenant-id>`                                                   | {{result_or_not_run}} |
 | Object-type publish       | `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`                                         | {{result_or_not_run}} |
 | Object-type convergence   | `eai types diff --tenant-key <key> --tenant-id <tenant-id>`                                                       | {{result_or_not_run}} |
 | Resource schema           | `eai resources schema --tenant-id <tenant-id> --format json`                                                      | {{result_or_not_run}} |
@@ -122,7 +122,8 @@ rationale, owner, expiry, and validation evidence.
 
 - If `eai types seed` fails with an app-resources/provisioning error, return to
   `eai app provision <key> --tenant-id <tenant-id> --select --format json` and
-  keep `Object-type publish` blocked.
+  `eai types validate --tenant-key <key> --tenant-id <tenant-id>`, then keep
+  `Object-type publish` blocked.
 - If `eai resources schema`, storage endpoints, app endpoints, or preview URLs
   return `503` or equivalent readiness failures, run
   `eai resources storage status --tenant-id <tenant-id> --format json`,
