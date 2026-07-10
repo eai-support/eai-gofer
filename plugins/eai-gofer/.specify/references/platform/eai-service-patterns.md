@@ -23,7 +23,7 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 | Need                 | App Pattern                                                                       | CLI Pattern                                                                                                                                                           | Notes                                                                                                                             |
 | -------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Frontend composition | `src/eai.config` layout slots plus `src/eai.blocks.tsx` registry                  | `eai gofer refresh` installs this reference pack                                                                                                                      | Keep config data-only; callbacks belong in overrides.                                                                             |
-| Data model           | Object Types in `src/eai.config/object-types.ts`                                  | `eai types validate`, `eai types seed`, `eai types diff`                                                                                                              | Object Types define ResourceAPI contracts.                                                                                        |
+| Data model           | Object Types in `src/eai.config/object-types.ts`                                  | `eai app provision`, `eai types validate --tenant-key <key> --tenant-id <tenant-id>`, `eai types seed`, `eai types diff`                                              | Object Types define ResourceAPI contracts and must use app-owned storage bindings.                                                |
 | Structured resources | `useResources(type)` / `client.resources`                                         | `eai resources list/get/create/update/delete/query`                                                                                                                   | Default for tenant business data.                                                                                                 |
 | Resource actions     | `client.resources.executeAction(type, id, action)`                                | named resources command if available; otherwise `eai publicapi post /v4/data/resources/...`                                                                           | Actions enforce object-type rules.                                                                                                |
 | Resource search      | local helper around `/v4/data/resources/{tenant}/search` if SDK support is absent | `eai resources storage doctor --format json`, then `eai resources search "query" --fulltext`; use `--hybrid` or `--vector` only when doctor reports those modes ready | V4 passive ResourceAPI search is a projection over canonical data. Fulltext can be usable before semantic search modes are ready. |
@@ -38,6 +38,13 @@ into that workflow. Do not give the tenant app a broad service identity for
 normal data-plane access.
 
 ## Storage Backend Rules
+
+Tenant app Object Types must use app-owned storage bindings. For PostgreSQL
+types, use the `tenant-postgres` alias and table names that include the
+tenant/app prefix validated by
+`eai types validate --tenant-key <key> --tenant-id <tenant-id>`. Do not invent
+storage aliases or generic table names; derive them from `eai app provision`,
+`.eai/storage-bindings.json`, and the local Object Type helper.
 
 - `postgresql`: canonical structured resource storage.
 - `documentdb`: document-model persistence when the data genuinely needs it.
