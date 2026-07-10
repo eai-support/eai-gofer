@@ -460,8 +460,8 @@ function splitMarkdownFrontmatter(content) {
  */
 function transformClaudeContent(content, toPlatform) {
   let transformed = content;
-  const stageCommandPattern = /\/(\d+[a-z]?_[a-z0-9_]+)/g;
-  const helperCommandPattern = /\/(gofer_[a-z0-9_]+)/g;
+  const stageCommandPattern = /(?<![A-Za-z0-9_.])\/(\d+[a-z]?_[a-z0-9_]+)/g;
+  const helperCommandPattern = /(?<![A-Za-z0-9_.])\/(gofer_[a-z0-9_]+)/g;
 
   transformed = transformed.replace(/\*\*AUTO-CHAIN[^]*?(?=\n##|\n---|\n\*\*|$)/g, '');
   transformed = transformed.replace(
