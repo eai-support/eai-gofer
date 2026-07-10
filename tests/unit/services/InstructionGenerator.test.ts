@@ -229,6 +229,8 @@ describe('InstructionGenerator', () => {
       expect(content).toContain('TypeScript');
       expect(content).toContain('React');
       expect(content).toContain('Gofer');
+      expect(content).toContain('#0_gofer_start');
+      expect(content).not.toContain('Run `/0_gofer_start`');
     });
 
     it('includes language-specific code quality section', async () => {

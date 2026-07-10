@@ -84,6 +84,13 @@ Task: subagent_type="validation-correctness"
       expect(transformed).not.toContain('.specify/commands$ $0_gofer_start.md');
     });
 
+    it('does not rewrite copilot prompt file paths that include slash commands', () => {
+      const content = 'Canonical source: .specify/commands/0_gofer_start.md';
+      const transformed = generator.transformContent(content, 'claude', 'copilot');
+      expect(transformed).toContain('.specify/commands/0_gofer_start.md');
+      expect(transformed).not.toContain('.specify/commands#0_gofer_start.md');
+    });
+
     it('converts task tool mentions for codex', () => {
       const transformed = generator.transformContent(sampleMetadata.content, 'claude', 'codex');
       expect(transformed).toContain('Codex CLI does not support the Task tool');
