@@ -6,18 +6,17 @@
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run `/0_gofer_start` to
-start the core pipeline: Gofer Start -> research -> specify -> plan -> tasks ->
-implement -> validate.
+This project uses Gofer for spec-driven development. In GitHub Copilot Chat, run
+`#0_gofer_start` to start the core pipeline: Gofer Start -> research -> specify
+-> plan -> tasks -> implement -> validate.
 
-Key commands: `/1_gofer_research`, `/2_gofer_specify`, `/3_gofer_plan`,
-`/4_gofer_tasks`, `/5_gofer_implement`, `/6_gofer_validate`. `/6_gofer_validate`
+Key prompts: `#1_gofer_research`, `#2_gofer_specify`, `#3_gofer_plan`,
+`#4_gofer_tasks`, `#5_gofer_implement`, `#6_gofer_validate`. `#6_gofer_validate`
 is the terminal quality gate and includes the final engineering review loop. Use
-`/7_gofer_save` for checkpoints and `/8_gofer_branding` for branded
-document/deck templates. Optional helpers like `/0a_problem_validation`,
-`/7a_stakeholder_comms`, `/gofer:check-workspace`, and
-`/gofer:bootstrap-workspace` support the workflow without adding extra core
-stages. Artifacts in `.specify/specs/{feature}/`.
+`#7_gofer_save` for checkpoints and `#8_gofer_branding` for branded
+document/deck templates. Optional helpers like `#0a_problem_validation`,
+`/gofer:check-workspace`, and `/gofer:bootstrap-workspace` support the workflow
+without adding extra core stages. Artifacts in `.specify/specs/{feature}/`.
 
 ## Token And Cost Policy
 
