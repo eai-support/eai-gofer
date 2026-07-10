@@ -345,7 +345,7 @@ tokens, or `.env.local` values in the first-run report.
 After `eai init`, verify Gofer files exist:
 
 - `.specify/.gofer-version`
-- `.specify/commands#0_gofer_start.md`
+- `.specify/commands/0_gofer_start.md`
 - `.specify/templates/spec-template.md`
 - `.specify/scripts/node/gofer-workspace-check.mjs`
 - `.specify/memory/gofer-model-policy.yaml`
