@@ -664,13 +664,8 @@ evidence:
 - EAI readiness unblock -> `eai-preflight.md` before any remote platform task.
 - App resource provisioning -> `eai app provision` before any claim of
   object-type seeding or preview readiness.
-- Storage binding validation -> after app provisioning, confirm
-  `.eai/storage-bindings.json` was written, then run
-  `eai types validate --tenant-key <key> --tenant-id <tenant-id>` and confirm
-  app-owned aliases/prefixes before publish. Agents must not invent raw
-  storage aliases or table names.
-- Object-type publish -> `eai types seed` only after provisioning, storage
-  binding validation, and local validation are complete.
+- Object-type publish -> `eai types seed` only after provisioning and
+  validation are complete.
 - Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
   before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
