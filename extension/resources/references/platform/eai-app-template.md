@@ -28,6 +28,11 @@ template for EnterpriseAI app-delivery work.
 
 - Use Object Types as the data model contract.
 - Use the template SDK and hooks for resources, documents, and chat.
+- Keep object type names in PascalCase in app code and let the shared template
+  SDK normalize route slugs.
+- Do not hand-write `/v4/data/resources/.../<type>` paths in feature code. Reuse
+  `useResources`, `client.resources`, or the shared `toObjectTypeSlug(...)`
+  helper when a slug is explicitly needed.
 - Use config slots with `{ components: [...] }`, not stale array-only slot
   examples.
 - Use `storeBindings` for data-driven props and code-level overrides for
@@ -40,6 +45,8 @@ template for EnterpriseAI app-delivery work.
   - `eai types diff --tenant-key <key> --tenant-id <tenant-id>`
   - `eai resources schema --tenant-id <tenant-id>`
   - `eai verify calls --tenant-id <tenant-id> --resource-type <type>`
+  - `eai template check --format json` to catch template drift and object-type
+    identifier drift risks before new feature work
 
 Do not describe retired templates as canonical scaffolds. The surviving public
 scaffold is the EAI App Template.

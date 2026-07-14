@@ -45,6 +45,12 @@ Before app-delivery research, planning, implementation, or validation:
    - `eai gofer refresh --check --format json`
    - `eai workflow readiness --format json` when advertised by the CLI
 
+If `eai template check --format json` reports object-type normalization
+warnings, stop and fix those before treating resource 5xx responses as storage
+or provisioning failures. The canonical rule is PascalCase names in app code,
+shared helper normalization to kebab-case route slugs, and no hand-written
+`/v4/data/resources/.../<type>` feature paths.
+
 ## Tenant Data Access Rule
 
 Tenant apps access EAI data as the signed-in user. Browser code calls the local
