@@ -1,0 +1,27 @@
+{
+  "schema": "eai.test_coverage_map.v1",
+  "repositories": {
+    "eai-gofer": {
+      "features": [
+        {
+          "id": "admin-portal-gofer-headless-contract",
+          "description": "Side-effect-free Gofer stages 0-4 contracts, governance validation, and deterministic portable repository export for Admin Portal generation and regeneration.",
+          "owned_paths": ["src/headless/**", "tests/unit/headless/**", "package.json"],
+          "required_repo_tests": [
+            "tests/unit/headless/validators.test.ts",
+            "tests/unit/headless/exportBundle.test.ts",
+            "tests/unit/headless/stageExecutor.test.ts"
+          ],
+          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_cross_service_surfaces": ["adminportal-adminapi"],
+          "required_deployed_contracts": [
+            {
+              "repository": "eai-testing-dev",
+              "path": "tests/cross-service/contracts/adminportal-adminapi/admin-portal-gofer-governance.spec.ts"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
