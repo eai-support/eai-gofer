@@ -22,12 +22,6 @@ Use this fallback when external CLI documentation is unavailable.
   - `eai workflow readiness --format json` when advertised
   - `eai provision entra` when identity callback or Entra registration setup is
     in scope
-- Treat object-type identifiers as a contract:
-  - app code uses PascalCase names
-  - v4 resource routes use kebab-case slugs derived from those names
-  - shared SDK/helpers perform the normalization
-  - feature code should not hand-write `/v4/data/resources/.../<type>` paths or
-    carry its own slugifier
 - When any `eai` command fails, run
   `eai errors explain <code-or-reason> --format json` when advertised and use
   its public-safe reasons and next commands before guessing remediation.

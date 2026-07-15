@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.22] - 2026-07-15
+
+Align release flow with protected main
+
 ## [3.7.21] - 2026-07-10
 
 Patch release for Copilot kickoff prompt sync and command path fix
