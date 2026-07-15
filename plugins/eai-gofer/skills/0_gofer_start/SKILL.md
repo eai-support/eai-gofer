@@ -301,19 +301,6 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      `eai resources search "<query>" --fulltext` until doctor reports semantic
      search modes ready. Do not apply this fallback to legacy v1/v3 or active
      ResourceAPI behavior.
-   - For tenant-scoped ResourceAPI storage failures, compare the same
-     `/v4/data/resources/<tenant-id>/...` request in four modes before
-     concluding the tenant is unprovisioned: path tenant only, `tenant` only,
-     `X-Tenant-Id` only, and both headers.
-   - If the same endpoint flips between `200` and `503` by header mode, suspect
-     a tenant-context contract mismatch before a missing install or schema
-     issue.
-   - Inspect the app BFF or proxy code before escalating a storage failure as
-     platform-only. The default app template should forward both `tenant` and
-     `X-Tenant-Id` server-authoritatively for tenant-scoped PublicAPI calls.
-   - Compare `/v4/platform/tenants/<tenant-id>/resource-metadata` with
-     `/v4/data/resources/<tenant-id>/storage`, and treat `publishedObjectTypes`
-     as operational state rather than descriptive metadata only.
    - Use the EAI scenario library to map the business problem to the common
      four-step pattern: capture demand/context, prepare the decision, execute
      and collaborate, then resolve/explain/improve.
