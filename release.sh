@@ -42,6 +42,89 @@ resolve_github_repo() {
     esac
 }
 
+latest_release_tag() {
+    git ls-remote --tags --refs origin 'v*' \
+        | awk '{print $2}' \
+        | sed 's#refs/tags/##' \
+        | sort -V \
+        | tail -n 1
+}
+
+version_gt() {
+    local left="${1:-0.0.0}"
+    local right="${2:-0.0.0}"
+
+    LEFT="$left" RIGHT="$right" node <<'EOF'
+const left = (process.env.LEFT || '0.0.0').replace(/^v/, '');
+const right = (process.env.RIGHT || '0.0.0').replace(/^v/, '');
+const parse = (value) => value.split('.').map((part) => Number.parseInt(part, 10) || 0);
+const [la, lb, lc] = parse(left);
+const [ra, rb, rc] = parse(right);
+if (la !== ra) process.exit(la > ra ? 0 : 1);
+if (lb !== rb) process.exit(lb > rb ? 0 : 1);
+if (lc !== rc) process.exit(lc > rc ? 0 : 1);
+process.exit(1);
+EOF
+}
+
+remote_tag_exists() {
+    local tag_name="$1"
+    git ls-remote --tags origin "refs/tags/${tag_name}" | grep -q .
+}
+
+local_tag_exists() {
+    local tag_name="$1"
+    git rev-parse "$tag_name" >/dev/null 2>&1
+}
+
+ensure_no_stale_local_tag() {
+    local tag_name="$1"
+    if local_tag_exists "$tag_name" && ! remote_tag_exists "$tag_name"; then
+        print_error "Local tag $tag_name exists but has not been pushed"
+        print_error "Delete or move the stale local tag before publishing this release."
+        exit 1
+    fi
+}
+
+ensure_no_existing_release_pr() {
+    local branch_name="$1"
+    local repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+    local existing_pr
+    existing_pr="$(gh pr list --repo "$repo" --head "$branch_name" --state all --json url --jq '.[0].url // ""')"
+    if [ -n "$existing_pr" ]; then
+        print_error "Release branch $branch_name already has a PR: $existing_pr"
+        exit 1
+    fi
+}
+
+create_release_pr() {
+    local branch_name="$1"
+    local version="$2"
+    local notes="$3"
+    local repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+    local body
+
+    body=$(cat <<EOF
+## Release Prep
+
+- bumps Gofer to \`$version\`
+- refreshes generated command surfaces and public release assets
+- prepares \`main\` so a follow-up \`./release.sh\` run can publish tag \`v$version\`
+
+## Release Notes
+
+$notes
+EOF
+)
+
+    gh pr create \
+        --repo "$repo" \
+        --base main \
+        --head "$branch_name" \
+        --title "chore: release v$version — $notes" \
+        --body "$body"
+}
+
 should_enforce_vscode_marketplace_publish() {
     is_truthy "${ENFORCE_VSCODE_MARKETPLACE_PUBLISH:-}"
 }
@@ -220,52 +303,34 @@ repo_has_changes() {
     [ -n "$(git status --porcelain)" ]
 }
 
-commit_all_changes() {
-    local commit_message="$1"
-
-    if ! repo_has_changes; then
-        return 0
-    fi
-
-    print_warning "Uncommitted changes detected. Creating pre-release commit..."
-    git status --short
-    echo ""
-
-    git add -A
-    git commit --no-verify -m "$commit_message"
-    print_success "Changes committed"
-    echo ""
-}
-
 ensure_release_base() {
     print_info "Fetching origin/main..."
     git fetch origin main
 
-    if [ "$CURRENT_BRANCH" = "main" ]; then
-        if git merge-base --is-ancestor origin/main HEAD; then
-            return 0
-        fi
-
-        if repo_has_changes; then
-            print_error "Local main is behind origin/main and the working tree is not clean."
-            print_error "Fast-forward main first, then rerun the release."
-            exit 1
-        fi
-
-        if git merge-base --is-ancestor HEAD origin/main; then
-            print_info "Fast-forwarding local main to origin/main..."
-            git pull --ff-only origin main
-            return 0
-        fi
-
-        print_error "Local main has diverged from origin/main."
-        print_error "Rebase or merge origin/main before releasing."
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        print_error "release.sh must be run from main after a PR merge."
         exit 1
     fi
 
+    if git merge-base --is-ancestor origin/main HEAD; then
+        return 0
+    fi
+
+    if repo_has_changes; then
+        print_error "Local main is behind origin/main and the working tree is not clean."
+        print_error "Fast-forward main first, then rerun the release."
+        exit 1
+    fi
+
+    if git merge-base --is-ancestor HEAD origin/main; then
+        print_info "Fast-forwarding local main to origin/main..."
+        git pull --ff-only origin main
+        return 0
+    fi
+
     if ! git merge-base --is-ancestor origin/main HEAD; then
-        print_error "Current branch $CURRENT_BRANCH does not contain the latest origin/main."
-        print_error "Rebase or merge origin/main into this branch before releasing."
+        print_error "Local main has diverged from origin/main."
+        print_error "Rebase or merge origin/main before releasing."
         exit 1
     fi
 }
@@ -344,17 +409,68 @@ CURRENT_BRANCH=$(git branch --show-current)
 GITHUB_REPO=${GITHUB_REPO:-$(resolve_github_repo)}
 ensure_release_base
 ensure_vscode_marketplace_publish_ready
-commit_all_changes "chore: pre-release commit from $CURRENT_BRANCH"
 
-if [ "$CURRENT_BRANCH" != "main" ]; then
-    print_info "Releasing from branch: $CURRENT_BRANCH"
-    print_info "origin/main will only be updated after validation, packaging, and tagging succeed."
-    echo ""
+if repo_has_changes; then
+    print_error "Working tree is dirty. Commit or stash changes first."
+    exit 1
 fi
 
 # Get current version
 CURRENT_VERSION=$(node -p "require('./extension/package.json').version")
 print_info "Current version: $CURRENT_VERSION"
+LATEST_TAG="$(latest_release_tag)"
+LATEST_TAG_VERSION="${LATEST_TAG#v}"
+
+if version_gt "$CURRENT_VERSION" "${LATEST_TAG_VERSION:-0.0.0}"; then
+    RELEASE_PHASE="publish"
+    NEW_VERSION="$CURRENT_VERSION"
+else
+    RELEASE_PHASE="prepare"
+fi
+
+if [ "$RELEASE_PHASE" = "publish" ]; then
+    print_info "Release mode: publish merged main"
+    TAG_NAME="v$CURRENT_VERSION"
+
+    ensure_release_paths_tracked \
+        "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix" \
+        "docs-site/static/releases/eai-gofer-latest.vsix" \
+        "docs-site/static/releases/eai-gofer-agent-plugin-$CURRENT_VERSION.zip" \
+        "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip"
+
+    if remote_tag_exists "$TAG_NAME"; then
+        print_error "Remote tag $TAG_NAME already exists"
+        exit 1
+    fi
+    ensure_no_stale_local_tag "$TAG_NAME"
+
+    print_info "Creating release tag $TAG_NAME from merged main..."
+    git tag "$TAG_NAME"
+
+    print_info "Pushing tag $TAG_NAME..."
+    if git push --no-verify origin "$TAG_NAME"; then
+        print_success "Pushed tag $TAG_NAME"
+    else
+        print_error "Failed to push tag $TAG_NAME"
+        exit 1
+    fi
+
+    wait_for_release_workflow "$CURRENT_VERSION"
+    verify_vscode_marketplace_version "$CURRENT_VERSION"
+
+    VSIX_URL="https://eai-tools.github.io/eai-gofer/releases/eai-gofer-$CURRENT_VERSION.vsix"
+    print_info "Verifying GitHub Pages release asset..."
+    HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$VSIX_URL?cachebust=$(date +%s)")
+    if [ "$HTTP_STATUS" = "200" ]; then
+        print_success "VSIX file is accessible (HTTP $HTTP_STATUS)"
+    else
+        print_warning "VSIX file returned HTTP $HTTP_STATUS - GitHub Pages may still be deploying"
+    fi
+
+    echo ""
+    print_success "Released Gofer v$CURRENT_VERSION from merged main"
+    exit 0
+fi
 
 # Calculate new version
 IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
@@ -370,6 +486,17 @@ esac
 
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
 print_success "New version: $NEW_VERSION"
+RELEASE_BRANCH="release/v$NEW_VERSION"
+
+if git show-ref --verify --quiet "refs/heads/$RELEASE_BRANCH"; then
+    print_error "Local branch $RELEASE_BRANCH already exists"
+    exit 1
+fi
+if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q .; then
+    print_error "Remote branch $RELEASE_BRANCH already exists"
+    exit 1
+fi
+ensure_no_existing_release_pr "$RELEASE_BRANCH"
 
 # Update package.json (both root and extension)
 print_info "Updating package.json files..."
@@ -687,74 +814,19 @@ $RELEASE_NOTES
 Co-Authored-By: Claude <noreply@anthropic.com>
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
-# Tag
-git tag "v$NEW_VERSION"
-print_success "Created tag v$NEW_VERSION"
+print_info "Creating release branch..."
+git checkout -b "$RELEASE_BRANCH"
+print_success "Created branch $RELEASE_BRANCH"
 
-# Push to main branch
-print_info "Pushing changes to origin/main..."
-if git push --no-verify origin HEAD:main; then
-    print_success "Pushed commits to main"
-else
-    print_error "Failed to push commits to main"
-    exit 1
-fi
+print_info "Pushing release branch..."
+git push --no-verify -u origin "$RELEASE_BRANCH"
+PR_URL="$(create_release_pr "$RELEASE_BRANCH" "$NEW_VERSION" "$RELEASE_NOTES")"
+print_success "Release prep PR created: $PR_URL"
 
-# Push tags
-print_info "Pushing tags..."
-if git push --no-verify origin "v$NEW_VERSION"; then
-    print_success "Pushed tag v$NEW_VERSION"
-else
-    print_error "Failed to push tag"
-    exit 1
-fi
-
-# Create GitHub release with VSIX attachment
-print_info "Creating GitHub release..."
-if gh release create "v$NEW_VERSION" "./eai-gofer-$NEW_VERSION.vsix" "./dist/eai-gofer-agent-plugin-$NEW_VERSION.zip" \
-    --title "v$NEW_VERSION" \
-    --notes "$RELEASE_NOTES" 2>&1; then
-    print_success "GitHub release created: v$NEW_VERSION"
-else
-    print_warning "Failed to create GitHub release (may need manual creation)"
-fi
-
-wait_for_release_workflow "$NEW_VERSION"
-verify_vscode_marketplace_version "$NEW_VERSION"
-
-# Wait for GitHub Pages deployment
-print_info "Waiting for GitHub Pages deployment..."
 echo ""
-print_info "The GitHub Pages workflow will automatically deploy when it detects changes to docs-site/"
-print_info "This typically takes 1-2 minutes."
-echo ""
-
-print_info "Checking deployment status in 30 seconds..."
-sleep 30
-
-# Verify the releases.json is updated
-EXPECTED_VERSION="$NEW_VERSION"
-print_info "Verifying GitHub Pages deployment..."
-for i in {1..6}; do
-    DEPLOYED_VERSION=$(curl -s "https://eai-tools.github.io/eai-gofer/releases.json?cachebust=$(date +%s)" | grep -o '"latest_version"[^,]*' | cut -d'"' -f4 || echo "")
-    
-    if [ "$DEPLOYED_VERSION" = "$EXPECTED_VERSION" ]; then
-        print_success "GitHub Pages deployed successfully! Latest version: $DEPLOYED_VERSION"
-        break
-    else
-        if [ $i -eq 6 ]; then
-            print_warning "GitHub Pages deployment is taking longer than expected."
-            print_warning "Current deployed version: $DEPLOYED_VERSION"
-            print_warning "Expected version: $EXPECTED_VERSION"
-            echo ""
-            print_info "The deployment may still be in progress. Check:"
-            echo "  https://github.com/eai-tools/eai-gofer/actions/workflows/pages.yml"
-            break
-        fi
-        print_info "Waiting for deployment... (attempt $i/6, deployed: $DEPLOYED_VERSION, expected: $EXPECTED_VERSION)"
-        sleep 15
-    fi
-done
+print_success "Prepared release PR for Gofer v$NEW_VERSION"
+print_info "Merge $PR_URL, fast-forward main, then rerun ./release.sh $RELEASE_TYPE \"$RELEASE_NOTES\" to publish tag v$NEW_VERSION from merged main."
+exit 0
 
 # Post-release verification: these checks are informational only and must never
 # abort the script (release artifacts are already pushed at this point).

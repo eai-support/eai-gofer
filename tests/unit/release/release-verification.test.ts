@@ -63,10 +63,7 @@ const VALID_RELEASES_JSON: ReleasesJson = {
   ],
 };
 
-const RELEASE_SCRIPT = readFileSync(
-  path.resolve(__dirname, '../../../release.sh'),
-  'utf-8'
-);
+const RELEASE_SCRIPT = readFileSync(path.resolve(__dirname, '../../../release.sh'), 'utf-8');
 
 describe('Release Verification', () => {
   describe('extractLatestVersion', () => {
@@ -235,7 +232,7 @@ TEST_EXIT=$?
 set -e`);
     });
 
-    it('should not push to origin/main before validation and release commit succeed', () => {
+    it('should not push directly to origin/main from release.sh', () => {
       const testsPassedIndex = RELEASE_SCRIPT.indexOf('print_success "Tests passed"');
       const trackedAssetsIndex = RELEASE_SCRIPT.indexOf(
         'ensure_release_paths_tracked \\\n' +
@@ -244,13 +241,18 @@ set -e`);
       const releaseCommitIndex = RELEASE_SCRIPT.indexOf(
         'git commit --no-verify -m "release: v$NEW_VERSION'
       );
-      const pushMainIndex = RELEASE_SCRIPT.indexOf('git push --no-verify origin HEAD:main');
+      const pushBranchIndex = RELEASE_SCRIPT.indexOf(
+        'git push --no-verify -u origin "$RELEASE_BRANCH"'
+      );
+      const pushTagIndex = RELEASE_SCRIPT.indexOf('git push --no-verify origin "$TAG_NAME"');
 
       expect(testsPassedIndex).toBeGreaterThan(-1);
       expect(trackedAssetsIndex).toBeGreaterThan(testsPassedIndex);
       expect(releaseCommitIndex).toBeGreaterThan(testsPassedIndex);
       expect(releaseCommitIndex).toBeGreaterThan(trackedAssetsIndex);
-      expect(pushMainIndex).toBeGreaterThan(releaseCommitIndex);
+      expect(pushBranchIndex).toBeGreaterThan(releaseCommitIndex);
+      expect(pushTagIndex).toBeGreaterThan(-1);
+      expect(RELEASE_SCRIPT).not.toContain('git push --no-verify origin HEAD:main');
       expect(RELEASE_SCRIPT).not.toContain('--force-with-lease');
     });
 
