@@ -2,10 +2,14 @@ import { createHash } from 'node:crypto';
 
 import type { GoferPortableFileInput } from './contracts.js';
 
+/** Pinned Gofer release whose portable scaffold is embedded in generated apps. */
 export const GOFER_PORTABLE_SCAFFOLD_VERSION = '3.7.21' as const;
+/** Immutable Git reference corresponding to the embedded portable scaffold. */
 export const GOFER_PORTABLE_SCAFFOLD_REF = 'v3.7.21' as const;
+/** Source commit used to produce the embedded portable scaffold inventory. */
 export const GOFER_PORTABLE_SCAFFOLD_COMMIT_SHA =
   '9695a1d85bc7698d6c6eb3c76a3d24efcdcfcc79' as const;
+/** Digest that detects drift in the pinned portable path inventory. */
 export const GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST =
   '639e7c169336cb3ac6c74c62252b4daeea90787a32ecf0d9b90f26a5c7ac4eb8' as const;
 

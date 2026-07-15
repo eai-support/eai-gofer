@@ -1,10 +1,17 @@
+/** Version discriminator shared by Gofer and Admin Portal persistence adapters. */
 export const GOFER_ADMIN_PORTAL_CONTRACT_VERSION = 'eai.gofer.admin_portal.v1' as const;
+/** Schema discriminator for the generated-repository implementation handoff. */
 export const GOFER_HANDOFF_SCHEMA_VERSION = 'eai.gofer.handoff.v1' as const;
+/** Schema discriminator for the immutable artifact manifest. */
 export const GOFER_ARTIFACT_MANIFEST_SCHEMA_VERSION = 'eai.gofer.artifacts.v1' as const;
+/** Schema discriminator for exported source lineage. */
 export const GOFER_SOURCE_MANIFEST_SCHEMA_VERSION = 'eai.gofer.sources.v1' as const;
+/** Schema discriminator for ordered decision and execution history. */
 export const GOFER_AUDIT_HISTORY_SCHEMA_VERSION = 'eai.gofer.audit_history.v1' as const;
+/** Schema discriminator for the complete portable repository bundle. */
 export const GOFER_EXPORT_BUNDLE_SCHEMA_VERSION = 'eai.gofer.export_bundle.v1' as const;
 
+/** Ordered stages supported by the governed pre-implementation pipeline. */
 export const GOFER_PIPELINE_STAGES = [
   '0_start',
   '0a_problem_validation',
@@ -14,6 +21,7 @@ export const GOFER_PIPELINE_STAGES = [
   '4_tasks',
 ] as const;
 
+/** Stages that must be approved before repository generation can proceed. */
 export const GOFER_REQUIRED_PIPELINE_STAGES = [
   '0_start',
   '1_research',
@@ -29,6 +37,7 @@ export type GoferRequiredPipelineStage = (typeof GOFER_REQUIRED_PIPELINE_STAGES)
 /** First stage a generated repository may run after the governed handoff. */
 export type GoferNextStage = '5_implement';
 
+/** Canonical artifact-kind vocabulary accepted by the headless contract. */
 export const GOFER_ARTIFACT_KINDS = [
   'discovery',
   'problem-brief',
