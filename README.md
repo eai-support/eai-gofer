@@ -12,7 +12,7 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 - Work with AI to generate what you need whether it is business case, executive
   summary, technical diagram of otherwise for you and your stakeholders to know
   what will be built, not find out it is wrong later
-- one public `gofer` / `eai-gofer` entrypoint backed by the core `0-6` delivery
+- one public `gofer` / `eai` entrypoint backed by the core `0-6` delivery
   pipeline
 - closed-loop goal reconciliation with repo-owned goal ledgers and drift checks
 - repo-owned artifacts and templates
@@ -25,15 +25,15 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 
 1. Install the VS Code extension or add the public plugin marketplace for your
    preferred CLI.
-2. Start with `/gofer` or `/eai-gofer`. Use `#gofer` in Copilot-style prompts
-   and `$gofer` in hosts that use dollar-prefixed skills.
+2. Start with `/gofer` or `/eai`. Use `#gofer` or `#eai` in Copilot-style
+   prompts and `$gofer` or `$eai` in hosts that use dollar-prefixed skills.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
    Repository** in VS Code, then refresh/restart the host command picker.
 4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
    state, and then routes the internal pipeline for you.
 
-If `/gofer` or `/eai-gofer` is unknown in a new repo, the host has not loaded
-the Gofer plugin or repo commands yet. Install/update the plugin first, then
+If `/gofer` or `/eai` is unknown in a new repo, the host has not loaded the
+Gofer plugin or repo commands yet. Install/update the plugin first, then
 refresh/restart the host command picker.
 
 ## App-Native Integration Model
@@ -44,16 +44,16 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface                         | Clean entry point                                                  | Repo integration                                                                                      |
-| ------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | `gofer` or `eai-gofer` skill                                       | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | `#gofer` or `#eai-gofer`, plus Gofer custom agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | `/gofer` or `/eai-gofer`                                           | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | `/gofer` or `/eai-gofer` Gemini extension command                  | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+| Surface                         | Clean entry point                                            | Repo integration                                                                                      |
+| ------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE           | `gofer` or `eai` skill                                       | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app    | `#gofer` or `#eai`, plus Gofer custom agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app                 | `/gofer` or `/eai`                                           | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Gemini CLI / Gemini Code Assist | `/gofer` or `/eai` Gemini extension command                  | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
 
-The UX rule is: users see only `gofer` or `eai-gofer`; Gofer keeps numbered
-stages and helpers as internal contracts under `.specify/commands/`. This update
-does not add AWS/Kiro app-integration support.
+The UX rule is: users see only `gofer` or `eai`; Gofer keeps numbered stages and
+helpers as internal contracts under `.specify/commands/`. This update does not
+add AWS/Kiro app-integration support.
 
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
 see the [5-minute first run guide](./.tech-docs/first-run.md).
@@ -209,9 +209,9 @@ References:
 - [Codex App](https://developers.openai.com/codex/app)
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 
-The Codex plugin exposes the umbrella `eai-gofer` skill rather than a second
-namespaced copy of every stage command. In an initialized repo, use the plain
-slash commands from `.agents/skills/`.
+The Codex plugin exposes only the public `gofer` and `eai` skills rather than a
+second namespaced copy of every stage command. In an initialized repo, use those
+plain skills from `.agents/skills/`.
 
 ### GitHub Copilot CLI
 

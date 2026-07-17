@@ -271,7 +271,7 @@ export class CrossPlatformCommandRouter {
    * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const publicEntrypoints = new Set(['gofer', 'eai-gofer']);
+    const publicEntrypoints = new Set(['gofer', 'eai']);
     const geminiCommand =
       publicEntrypoints.has(commandName) || commandName.startsWith('gofer:')
         ? commandName

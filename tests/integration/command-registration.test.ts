@@ -616,7 +616,7 @@ describe('Command Registration Validation', () => {
 
     expect(progressWelcome?.contents).toContain('[Start Gofer](command:gofer.run)');
     expect(progressWelcome?.contents).toContain('/gofer');
-    expect(progressWelcome?.contents).toContain('/eai-gofer');
+    expect(progressWelcome?.contents).toContain('/eai');
     expect(progressWelcome?.contents).not.toContain('/0_gofer_start');
     expect(progressWelcome?.contents).toContain(
       'research → specify → plan → tasks → implement → validate'

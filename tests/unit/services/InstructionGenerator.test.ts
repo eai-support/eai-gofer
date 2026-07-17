@@ -159,7 +159,7 @@ describe('InstructionGenerator', () => {
       // Gofer pipeline mention
       expect(content).toContain('Gofer');
       expect(content).toContain('/gofer');
-      expect(content).toContain('/eai-gofer');
+      expect(content).toContain('/eai');
       expect(content).toContain('.specify/commands/*.md');
       expect(content).not.toContain('/0_gofer_start');
     });
@@ -181,7 +181,7 @@ describe('InstructionGenerator', () => {
       const content = await generator.generateClaudeMd(info);
 
       expect(content).toContain('/gofer');
-      expect(content).toContain('/eai-gofer');
+      expect(content).toContain('/eai');
       expect(content).toContain('.specify/commands/*.md');
       expect(content).not.toContain('/7_gofer_save');
       expect(content).toContain('Gofer Pipeline');
@@ -203,7 +203,7 @@ describe('InstructionGenerator', () => {
       const copilot = await generator.generateCopilotMd(info);
 
       expect(agents).toContain('## EAI Repo Contract');
-      expect(agents).toContain('public `gofer` or `eai-gofer` entrypoint');
+      expect(agents).toContain('public `gofer` or `eai` entrypoint');
       expect(agents).toContain('.specify/commands/gofer_eai_first_run.md');
       expect(agents).toContain('eai agent guide --format json');
       expect(agents).toContain('eai errors explain <code-or-reason> --format json');
@@ -236,7 +236,7 @@ describe('InstructionGenerator', () => {
       expect(content).toContain('React');
       expect(content).toContain('Gofer');
       expect(content).toContain('#gofer');
-      expect(content).toContain('#eai-gofer');
+      expect(content).toContain('#eai');
       expect(content).not.toContain('Run `/0_gofer_start`');
     });
 

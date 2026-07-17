@@ -21,7 +21,7 @@ describe('workspace preflight surface generation', () => {
     expect(read('.claude/commands/gofer.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json'
     );
-    expect(read('extension/resources/claude-commands/eai-gofer.md')).toContain(
+    expect(read('extension/resources/claude-commands/eai.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host claude --json'
     );
     expect(read('.github/prompts/gofer.prompt.md')).toContain(
@@ -30,7 +30,7 @@ describe('workspace preflight surface generation', () => {
     expect(read('.agents/skills/gofer/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
-    expect(read('.system/skills/eai-gofer/SKILL.md')).toContain(
+    expect(read('.system/skills/eai/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
     expect(read('.gemini/commands/gofer/gofer.md')).toContain(
@@ -66,7 +66,7 @@ describe('workspace preflight surface generation', () => {
     );
 
     expect(fs.existsSync(path.join(publicPluginRoot, 'commands', 'gofer.md'))).toBe(true);
-    expect(fs.existsSync(path.join(publicPluginRoot, 'commands', 'eai-gofer.md'))).toBe(true);
+    expect(fs.existsSync(path.join(publicPluginRoot, 'commands', 'eai.md'))).toBe(true);
     for (const stalePath of [
       path.join('commands', '0_gofer_start.md'),
       path.join('commands', '0_business_scenario.md'),
@@ -88,10 +88,10 @@ describe('workspace preflight surface generation', () => {
       path.join('.gemini', 'commands', 'gofer', 'manifest.json')
     );
     expect(publicCodexManifest).toContain('"gofer"');
-    expect(publicCodexManifest).toContain('"eai-gofer"');
+    expect(publicCodexManifest).toContain('"eai"');
     expect(publicCodexManifest).not.toContain('0_business_scenario');
     expect(publicGeminiManifest).toContain('"gofer"');
-    expect(publicGeminiManifest).toContain('"eai-gofer"');
+    expect(publicGeminiManifest).toContain('"eai"');
     expect(publicGeminiManifest).not.toContain('0_gofer_start');
     expect(publicGeminiManifest).not.toContain('0_business_scenario');
 
@@ -104,7 +104,7 @@ describe('workspace preflight surface generation', () => {
     );
     const zipListing = execFileSync('unzip', ['-l', latestZip], { encoding: 'utf8' });
     expect(zipListing).toContain('eai-gofer/commands/gofer.md');
-    expect(zipListing).toContain('eai-gofer/commands/eai-gofer.md');
+    expect(zipListing).toContain('eai-gofer/commands/eai.md');
     expect(zipListing).not.toContain('eai-gofer/commands/0_gofer_start.md');
     expect(zipListing).not.toContain('0_business_scenario');
   });
