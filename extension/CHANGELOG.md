@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.25] - 2026-07-17
+
+Clarify /eai as the single Gofer entrypoint across docs and website
+
 ## [3.7.24] - 2026-07-17
 
 Add validation evidence rules and headless Admin Portal contracts
