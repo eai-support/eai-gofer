@@ -99,7 +99,7 @@ describe('Gofer agent plugin package', () => {
       const pluginRoot = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
       const umbrellaSkill = fs.readFileSync(
-        path.join(pluginRoot, 'plugin-skills', 'eai-gofer', 'SKILL.md'),
+        path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'),
         'utf8'
       );
       expect(fs.existsSync(zipPath)).toBe(true);
@@ -123,18 +123,18 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
         'eai-gofer/.vscode/mcp.json',
-        'eai-gofer/.claude/skills/eai-gofer/SKILL.md',
+        'eai-gofer/.claude/skills/eai/SKILL.md',
         'eai-gofer/.github/agents/gofer-business.agent.md',
-        'eai-gofer/.github/skills/eai-gofer/SKILL.md',
+        'eai-gofer/.github/skills/eai/SKILL.md',
         'eai-gofer/.specify/references/platform/README.md',
         'eai-gofer/.specify/references/platform/eai.md',
         'eai-gofer/.specify/references/platform/eai-repo-contract.md',
         'eai-gofer/.specify/references/platform/eai-error-catalog.yaml',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',
         'eai-gofer/commands/gofer.md',
-        'eai-gofer/commands/eai-gofer.md',
+        'eai-gofer/commands/eai.md',
         'eai-gofer/skills/gofer/SKILL.md',
-        'eai-gofer/skills/eai-gofer/SKILL.md',
+        'eai-gofer/skills/eai/SKILL.md',
       ]) {
         expect(zipListing).toContain(required);
       }
@@ -220,9 +220,7 @@ describe('Gofer agent plugin package', () => {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(false);
         expect(fs.existsSync(path.join(pluginRoot, 'skills', command, 'SKILL.md'))).toBe(false);
       }
-      expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
-        true
-      );
+      expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
       expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(true);
       expect(
         fs
@@ -279,9 +277,7 @@ describe('Gofer agent plugin package', () => {
       path: './plugins/eai-gofer',
     });
     expect(fs.existsSync(path.join(REPO_ROOT, 'gemini-extension.json'))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
-      true
-    );
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
   });
 
   it('release workflow publishes VSIX and agent plugin assets', (): void => {

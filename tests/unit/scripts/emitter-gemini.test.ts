@@ -155,8 +155,8 @@ describe('gemini emitter (T065)', () => {
     expect(await fileExists(outPath)).toBe(true);
   });
 
-  it('emits eai-gofer.md to .gemini/commands/gofer/', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai-gofer.md');
+  it('emits eai.md to .gemini/commands/gofer/', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.md');
     expect(await fileExists(outPath)).toBe(true);
   });
 
@@ -210,7 +210,7 @@ describe('gemini manifest (T066)', () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
     expect(manifest.commands).toContain('gofer');
-    expect(manifest.commands).toContain('eai-gofer');
+    expect(manifest.commands).toContain('eai');
   });
 
   it('manifest.commands is sorted alphabetically', async () => {
@@ -229,6 +229,6 @@ describe('gemini manifest (T066)', () => {
   it('manifest.commands contains only the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toEqual(['eai-gofer', 'gofer']);
+    expect(manifest.commands).toEqual(['eai', 'gofer']);
   });
 });

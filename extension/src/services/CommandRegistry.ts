@@ -699,7 +699,7 @@ priority: "P1"
   To generate a complete implementation, use the public Gofer entrypoint:
   /gofer ${specTitle}
 
-  Use /eai-gofer, #gofer, #eai-gofer, $gofer, or $eai-gofer where that syntax
+  Use /eai, #gofer, #eai, $gofer, or $eai where that syntax
   fits the host. Gofer routes internally through .specify/commands/*.md:
   1_gofer_research  → Creates research.md
   2_gofer_specify   → Updates this spec.md

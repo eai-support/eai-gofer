@@ -193,10 +193,10 @@ describe('codex-config emitter (T068)', () => {
     expect(content).toContain('path = "/full/path/to/repo/.agents/skills/gofer"');
   });
 
-  it('contains entry for eai-gofer', async () => {
+  it('contains entry for eai', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/eai-gofer"');
+    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/eai"');
   });
 
   it('does not contain stage-specific public skill entries', async () => {

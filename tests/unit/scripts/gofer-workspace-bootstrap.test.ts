@@ -282,11 +282,11 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(bootstrap.exitCode).toBe(0);
 
     for (const relativePath of [
-      '.claude/skills/eai-gofer/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
       '.github/agents/gofer-business.agent.md',
-      '.github/skills/eai-gofer/SKILL.md',
+      '.github/skills/eai/SKILL.md',
       '.agents/skills/gofer/SKILL.md',
-      '.agents/skills/eai-gofer/SKILL.md',
+      '.agents/skills/eai/SKILL.md',
       '.gemini/extension.json',
     ]) {
       expect(

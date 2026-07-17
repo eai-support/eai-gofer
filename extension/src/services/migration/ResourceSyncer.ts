@@ -67,7 +67,7 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
 const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
-const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['gofer', 'eai-gofer']);
+const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['gofer', 'eai']);
 
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -1612,7 +1612,7 @@ Run the unified Gofer pipeline with one public command:
 /gofer Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`#gofer\` in Copilot-style prompts or \`$gofer\` in hosts that use dollar-prefixed skills. \`/eai-gofer\`, \`#eai-gofer\`, and \`$eai-gofer\` are equivalent aliases.
+Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. \`/eai\`, \`#eai\`, and \`$eai\` are equivalent aliases.
 
 This automatically chains through all stages:
 1. **Research** → Explores codebase and technology

@@ -286,11 +286,9 @@ describe('generate-commands emitters (integration)', () => {
   });
 
   describe('public command emitters', () => {
-    it('emits only gofer and eai-gofer to Claude command folders', async () => {
+    it('emits only gofer and eai to Claude command folders', async () => {
       expect(await fileExists(path.join(tmpRoot, '.claude', 'commands', 'gofer.md'))).toBe(true);
-      expect(await fileExists(path.join(tmpRoot, '.claude', 'commands', 'eai-gofer.md'))).toBe(
-        true
-      );
+      expect(await fileExists(path.join(tmpRoot, '.claude', 'commands', 'eai.md'))).toBe(true);
       expect(
         await fileExists(path.join(tmpRoot, '.claude', 'commands', '1_gofer_research.md'))
       ).toBe(false);
@@ -302,7 +300,7 @@ describe('generate-commands emitters (integration)', () => {
     it('mirrors the same public commands into extension resources', async () => {
       const mirrorPath = path.join(tmpRoot, 'extension', 'resources', 'claude-commands');
       expect(await fileExists(path.join(mirrorPath, 'gofer.md'))).toBe(true);
-      expect(await fileExists(path.join(mirrorPath, 'eai-gofer.md'))).toBe(true);
+      expect(await fileExists(path.join(mirrorPath, 'eai.md'))).toBe(true);
       expect(await fileExists(path.join(mirrorPath, '1_gofer_research.md'))).toBe(false);
     });
 
@@ -329,7 +327,7 @@ describe('generate-commands emitters (integration)', () => {
     it('emits only public GitHub prompt files', async () => {
       const promptsPath = path.join(tmpRoot, '.github', 'prompts');
       expect(await fileExists(path.join(promptsPath, 'gofer.prompt.md'))).toBe(true);
-      expect(await fileExists(path.join(promptsPath, 'eai-gofer.prompt.md'))).toBe(true);
+      expect(await fileExists(path.join(promptsPath, 'eai.prompt.md'))).toBe(true);
       expect(await fileExists(path.join(promptsPath, '1_gofer_research.prompt.md'))).toBe(false);
     });
 
@@ -345,7 +343,7 @@ describe('generate-commands emitters (integration)', () => {
     it('emits only public compatibility skills', async () => {
       const skillsPath = path.join(tmpRoot, '.system', 'skills');
       expect(await fileExists(path.join(skillsPath, 'gofer', 'SKILL.md'))).toBe(true);
-      expect(await fileExists(path.join(skillsPath, 'eai-gofer', 'SKILL.md'))).toBe(true);
+      expect(await fileExists(path.join(skillsPath, 'eai', 'SKILL.md'))).toBe(true);
       expect(await fileExists(path.join(skillsPath, '1_gofer_research', 'SKILL.md'))).toBe(false);
     });
   });
@@ -354,14 +352,14 @@ describe('generate-commands emitters (integration)', () => {
     it('public entrypoints appear on all user-visible surfaces', async () => {
       const expectedPaths = [
         path.join(tmpRoot, '.claude', 'commands', 'gofer.md'),
-        path.join(tmpRoot, '.claude', 'commands', 'eai-gofer.md'),
+        path.join(tmpRoot, '.claude', 'commands', 'eai.md'),
         path.join(tmpRoot, 'extension', 'resources', 'claude-commands', 'gofer.md'),
         path.join(tmpRoot, 'extension', 'resources', 'copilot-prompts', 'gofer.prompt.md'),
         path.join(tmpRoot, '.github', 'prompts', 'gofer.prompt.md'),
         path.join(tmpRoot, '.agents', 'skills', 'gofer', 'SKILL.md'),
         path.join(tmpRoot, '.system', 'skills', 'gofer', 'SKILL.md'),
         path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.toml'),
-        path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai-gofer.toml'),
+        path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.toml'),
       ];
 
       for (const outPath of expectedPaths) {

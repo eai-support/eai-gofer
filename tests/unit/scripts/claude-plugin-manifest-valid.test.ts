@@ -60,9 +60,7 @@ describe('agent plugin manifests', () => {
     expect(manifest.agents).toBeUndefined();
     expect(manifest.commands).toBeUndefined();
     expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
-      true
-    );
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
   });
 
   it('Copilot root plugin manifest exists for direct installs', (): void => {
@@ -74,9 +72,7 @@ describe('agent plugin manifests', () => {
     expect(manifest.skills).toBe('./plugin-skills/');
     expect(manifest.agents).toBe('./.claude/agents/');
     expect(manifest.commands).toBe('./.claude/commands/');
-    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
-      true
-    );
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
   });
 
   it('Claude and Copilot marketplaces point at the repo-local plugin bundle for git/local marketplace installs', (): void => {
