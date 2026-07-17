@@ -94,13 +94,7 @@ describe('ResourceSyncer workspace sync', () => {
   it('setupGeminiCommands keeps include targets resolvable', async (): Promise<void> => {
     await syncer.setupGeminiCommands();
 
-    const geminiCommandPath = path.join(
-      workspace,
-      '.gemini',
-      'commands',
-      'gofer',
-      '6_gofer_validate.toml'
-    );
+    const geminiCommandPath = path.join(workspace, '.gemini', 'commands', 'gofer', 'gofer.toml');
     const canonicalCommandPath = path.join(
       workspace,
       '.specify',
@@ -110,7 +104,9 @@ describe('ResourceSyncer workspace sync', () => {
     const geminiContent = await fs.readFile(geminiCommandPath, 'utf8');
     const includeTarget = extractGeminiInclude(geminiContent);
 
-    expect(path.resolve(path.dirname(geminiCommandPath), includeTarget)).toBe(canonicalCommandPath);
+    expect(path.resolve(path.dirname(geminiCommandPath), includeTarget)).toBe(
+      path.join(workspace, '.gemini', 'commands', 'gofer', 'gofer.md')
+    );
     expect(await pathExists(canonicalCommandPath)).toBe(true);
   });
 

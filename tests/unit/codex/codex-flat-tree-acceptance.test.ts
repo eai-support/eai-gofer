@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync, readdirSync, cpSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { PUBLIC_ENTRYPOINT_FILES } from '../../helpers/goferCommandSet';
 
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const COMMANDS_SRC = path.join(PROJECT_ROOT, '.specify/commands');
@@ -74,19 +75,19 @@ describe('Codex agents-skills flat tree (T137 / FR-008)', () => {
     expect(existsSync(nested)).toBe(false);
   });
 
-  it('formerly Claude-only stages are emitted to agents-skills', () => {
+  it('only public entrypoints are emitted to agents-skills', () => {
     const skillsRoot = path.join(tmp, '.agents/skills');
-    const formerlyClaudeOnly = [
-      '0_gofer_start',
-      'gofer_constitution',
-      'gofer_hydrate',
-      '7_gofer_save',
-      '8_gofer_branding',
-    ];
-    for (const stage of formerlyClaudeOnly) {
+    const stageDirs = readdirSync(skillsRoot, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+
+    expect(stageDirs).toEqual([...PUBLIC_ENTRYPOINT_FILES].sort());
+    for (const stage of PUBLIC_ENTRYPOINT_FILES) {
       const dir = path.join(skillsRoot, stage);
       expect(existsSync(dir)).toBe(true);
     }
+    expect(existsSync(path.join(skillsRoot, '0_gofer_start'))).toBe(false);
   });
 
   it('depth of every SKILL.md is exactly 3 segments below project root: .agents/skills/<stage>/SKILL.md', () => {

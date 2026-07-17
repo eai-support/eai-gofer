@@ -189,6 +189,7 @@ describe('agents-md emitter (T067)', () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
     expect(content).toContain('# Gofer Agent Commands');
+    expect(content).toContain('## Public Entrypoints');
     expect(content).toContain('## Commands');
   });
 
@@ -198,56 +199,53 @@ describe('agents-md emitter (T067)', () => {
     expect(content).toMatch(/Generated: \d{4}-\d{2}-\d{2}T/);
   });
 
-  it('AGENTS.md contains section for 1_gofer_research (Gofer Research)', async () => {
+  it('AGENTS.md documents the public entrypoints', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    expect(content).toContain('### Gofer Research');
+    expect(content).toContain('`gofer` - Start or continue Gofer');
+    expect(content).toContain('`eai-gofer` - Alias');
   });
 
-  it('AGENTS.md contains section for 0a_problem_validation (Problem Validation)', async () => {
+  it('AGENTS.md contains internal contract entries for stages', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    expect(content).toContain('### Problem Validation');
+    expect(content).toContain('`1_gofer_research` - Research codebase');
+    expect(content).toContain('`0a_problem_validation` - Validate the business problem');
+    expect(content).toContain('`2_gofer_specify` - Create feature specification');
   });
 
-  it('AGENTS.md contains section for 2_gofer_specify (Gofer Specify)', async () => {
+  it('AGENTS.md does not generate old per-stage prose sections', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    expect(content).toContain('### Gofer Specify');
+    expect(content).not.toContain('### Gofer Research');
+    expect(content).not.toContain('# Gofer Research\n\nThis is the research stage body content.');
   });
 
-  it('section bodies contain a summary (first 200 chars of body)', async () => {
+  it('contains 0_gofer_start as an internal contract', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    // The body starts with "# Gofer Research\n\n..."
-    expect(content).toContain('# Gofer Research');
-  });
-
-  it('contains 0_gofer_start', async () => {
-    const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
-    const content = await readFile(outPath);
-    expect(content).toContain('Business Scenario');
+    expect(content).toContain('`0_gofer_start`');
     expect(content).not.toContain('claude-only');
   });
 
-  it('contains 7_gofer_save', async () => {
+  it('contains 7_gofer_save as an internal contract', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    expect(content).toContain('Gofer Save');
+    expect(content).toContain('`7_gofer_save`');
   });
 
-  it('contains every fixture stage with portable surfaces', async () => {
-    const expectedTitles = [
-      'Gofer Research',
-      'Problem Validation',
-      'Gofer Specify',
-      'Business Scenario',
-      'Gofer Save',
+  it('contains every fixture stage as an internal contract name', async () => {
+    const expectedContracts = [
+      '`1_gofer_research`',
+      '`0a_problem_validation`',
+      '`2_gofer_specify`',
+      '`0_gofer_start`',
+      '`7_gofer_save`',
     ];
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    for (const title of expectedTitles) {
-      expect(content).toContain(title);
+    for (const contract of expectedContracts) {
+      expect(content).toContain(contract);
     }
   });
 });

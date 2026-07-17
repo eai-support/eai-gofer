@@ -50,6 +50,10 @@ export const FULL_COMMAND_NAMES = [
   ...CONTROL_COMMANDS.map((command) => command.name),
 ] as const;
 
+export const PUBLIC_ENTRYPOINT_FILES = ['gofer', 'eai-gofer'] as const;
+
+export const PUBLIC_ENTRYPOINT_NAMES = ['gofer', 'eai-gofer'] as const;
+
 export const CANONICAL_DESCRIPTION_NAMES = [
   ...PIPELINE_STAGE_FILES,
   ...HELPER_COMMANDS.map((command) => command.name),
@@ -78,6 +82,7 @@ export const CROSS_CLI_SURFACES = [
 export const PIPELINE_STAGE_COUNT = PIPELINE_STAGE_FILES.length;
 export const CONTROL_COMMAND_COUNT = CONTROL_COMMANDS.length;
 export const FULL_COMMAND_COUNT = FULL_COMMAND_FILES.length;
+export const PUBLIC_ENTRYPOINT_COUNT = PUBLIC_ENTRYPOINT_FILES.length;
 export const CANONICAL_DESCRIPTION_COUNT = CANONICAL_DESCRIPTION_NAMES.length;
 
 export function getGeneratedCommandFileStem(commandName: string): string {

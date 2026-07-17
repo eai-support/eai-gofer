@@ -1,0 +1,2 @@
+description = "Start or continue the EAI Gofer delivery pipeline."
+prompt = "{{include: ./eai-gofer.md}}"

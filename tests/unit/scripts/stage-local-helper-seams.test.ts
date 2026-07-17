@@ -65,13 +65,6 @@ describe('stage-local helper seams', () => {
   for (const stage of STAGE_LOCAL_SEAMS) {
     it(`${stage.stageName} keeps optional helper seam contract across emitted surfaces`, (): void => {
       const sourceRelativePath = `.specify/commands/${stage.stageName}.md`;
-      const generatedRelativePaths = [
-        `.claude/commands/${stage.stageName}.md`,
-        `.github/prompts/${stage.stageName}.prompt.md`,
-        `extension/resources/copilot-prompts/${stage.stageName}.prompt.md`,
-        `.agents/skills/${stage.stageName}/SKILL.md`,
-        `.system/skills/${stage.stageName}/SKILL.md`,
-      ];
       const sourceContent = readFile(sourceRelativePath);
 
       expect(sourceContent).toContain('## Optional Helpers');
@@ -90,24 +83,14 @@ describe('stage-local helper seams', () => {
         expect(sourceContent).toContain(phrase);
       });
 
-      for (const relativePath of generatedRelativePaths) {
-        const content = readFile(relativePath);
-        expect(content).toContain('## Optional Helpers');
-        expect(content).toContain('do not change stage progress');
-        expect(content).toContain('pipeline state');
-        stage.helperNames.forEach((helperName) => {
-          expect(content).toContain(helperName);
-        });
-        stage.artifactPaths.forEach((artifactPath) => {
-          expect(content).toContain(artifactPath);
-        });
-        stage.missingInputPhrases.forEach((phrase) => {
-          expect(content).toContain(phrase);
-        });
-      }
-
-      const geminiContent = readFile(`.gemini/commands/gofer/${stage.stageName}.toml`);
-      expect(geminiContent).toContain(`../../../.specify/commands/${stage.stageName}.md`);
+      const publicWrapper = readFile('.claude/commands/gofer.md');
+      expect(publicWrapper).toContain(`\`${stage.stageName}\``);
+      expect(fs.existsSync(path.join(REPO_ROOT, `.claude/commands/${stage.stageName}.md`))).toBe(
+        false
+      );
+      expect(
+        fs.existsSync(path.join(REPO_ROOT, `.gemini/commands/gofer/${stage.stageName}.toml`))
+      ).toBe(false);
     });
   }
 });

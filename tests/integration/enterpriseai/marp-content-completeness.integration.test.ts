@@ -58,7 +58,7 @@ function seedStakeholderInputs(workspaceRoot: string): void {
 describe('enterpriseai marp content completeness (root integration)', () => {
   it('includes Marp frontmatter and all required sections in stakeholder comms template and command guidance', () => {
     const stakeholderTemplate = readFromRepo('.specify/templates/stakeholder-comms-template.md');
-    const stakeholderCommand = readFromRepo('.claude/commands/7a_stakeholder_comms.md');
+    const stakeholderCommand = readFromRepo('.specify/commands/7a_stakeholder_comms.md');
 
     expect(stakeholderTemplate).toContain('presentation.marp.md');
     expect(stakeholderTemplate).toContain('marp: true');

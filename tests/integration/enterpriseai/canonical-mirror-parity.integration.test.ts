@@ -6,7 +6,7 @@ import { createMirrorPropagationEventHandlers } from '../../../extension/src/ser
 
 describe('enterpriseai canonical mirror parity (root integration)', () => {
   it('keeps .system and .agents skill mirrors identical for generated commands', () => {
-    const commandName = '1_gofer_research';
+    const commandName = 'gofer';
     const codexPath = path.join(process.cwd(), '.system', 'skills', commandName, 'SKILL.md');
     const agentPath = path.join(process.cwd(), '.agents', 'skills', commandName, 'SKILL.md');
 

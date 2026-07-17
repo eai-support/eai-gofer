@@ -60,34 +60,38 @@ describe('control commands — surfaces and category', () => {
         expect(frontmatter.category).toBe('control');
       });
 
-      it('uses filesystem-safe generated surface paths', () => {
+      it('keeps filesystem-safe names but hides generated public surfaces', () => {
         const command = CONTROL_COMMANDS.find((entry) => entry.file === file)!;
         const generatedStem = getGeneratedCommandFileStem(command.name);
 
-        expect(existsSync(path.resolve(__dirname, `../../../.claude/commands/${generatedStem}.md`))).toBe(
-          true
-        );
+        expect(
+          existsSync(path.resolve(__dirname, `../../../.claude/commands/${generatedStem}.md`))
+        ).toBe(false);
         expect(
           existsSync(path.resolve(__dirname, `../../../.github/prompts/${generatedStem}.prompt.md`))
-        ).toBe(true);
+        ).toBe(false);
         expect(
-          existsSync(path.resolve(__dirname, `../../../.gemini/commands/gofer/${generatedStem}.toml`))
-        ).toBe(true);
+          existsSync(
+            path.resolve(__dirname, `../../../.gemini/commands/gofer/${generatedStem}.toml`)
+          )
+        ).toBe(false);
         expect(
           existsSync(path.resolve(__dirname, `../../../.agents/skills/${generatedStem}/SKILL.md`))
-        ).toBe(true);
+        ).toBe(false);
         expect(
           existsSync(path.resolve(__dirname, `../../../.system/skills/${generatedStem}/SKILL.md`))
-        ).toBe(true);
+        ).toBe(false);
 
-        expect(existsSync(path.resolve(__dirname, `../../../.claude/commands/${command.name}.md`))).toBe(
-          false
-        );
+        expect(
+          existsSync(path.resolve(__dirname, `../../../.claude/commands/${command.name}.md`))
+        ).toBe(false);
         expect(
           existsSync(path.resolve(__dirname, `../../../.github/prompts/${command.name}.prompt.md`))
         ).toBe(false);
         expect(
-          existsSync(path.resolve(__dirname, `../../../.gemini/commands/gofer/${command.name}.toml`))
+          existsSync(
+            path.resolve(__dirname, `../../../.gemini/commands/gofer/${command.name}.toml`)
+          )
         ).toBe(false);
       });
     });

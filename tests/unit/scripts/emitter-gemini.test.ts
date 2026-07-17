@@ -2,9 +2,9 @@
  * T070 — Unit tests for the Gemini emitter (T065/T066) in generate-commands.mjs.
  *
  * Verifies that:
- * 1. emitGemini writes correct files for every stage with the gemini surface
- * 2. emitGemini includes formerly Claude-only stages when they list gemini
- * 3. manifest.json contains correct stage list in alphabetical order
+ * 1. emitGemini writes the public Gofer entrypoint files only
+ * 2. internal stage contracts remain canonical under .specify/commands
+ * 3. manifest.json contains the public command list in alphabetical order
  * 4. manifest.json is valid JSON
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -150,33 +150,34 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('gemini emitter (T065)', () => {
-  it('emits 1_gofer_research.md to .gemini/commands/gofer/', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '1_gofer_research.md');
+  it('emits gofer.md to .gemini/commands/gofer/', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.md');
     expect(await fileExists(outPath)).toBe(true);
   });
 
-  it('emits 0a_problem_validation.md to .gemini/commands/gofer/', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0a_problem_validation.md');
+  it('emits eai-gofer.md to .gemini/commands/gofer/', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai-gofer.md');
     expect(await fileExists(outPath)).toBe(true);
   });
 
-  it('written file contains plain markdown body (no frontmatter)', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '1_gofer_research.md');
+  it('written file contains public wrapper guidance', async () => {
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.md');
     const content = await readFile(outPath);
-    expect(content).toContain('# Gofer Research');
-    expect(content).toContain('This is the research stage body content.');
-    expect(content).not.toContain('name: 1_gofer_research');
+    expect(content).toContain('# Gofer');
+    expect(content).toContain('## User-Facing Contract');
+    expect(content).toContain('.specify/commands/*.md');
+    expect(content).toContain('1_gofer_research');
     expect(content).not.toContain('category: pipeline');
   });
 
-  it('emits formerly Claude-only stage 0_gofer_start', async () => {
+  it('does not expose formerly Claude-only stage 0_gofer_start as a Gemini command', async () => {
     const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.md');
-    expect(await fileExists(outPath)).toBe(true);
+    expect(await fileExists(outPath)).toBe(false);
   });
 
-  it('emits TOML for formerly Claude-only stage 0_gofer_start', async () => {
+  it('does not expose TOML for 0_gofer_start', async () => {
     const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.toml');
-    expect(await fileExists(outPath)).toBe(true);
+    expect(await fileExists(outPath)).toBe(false);
   });
 });
 
@@ -205,12 +206,11 @@ describe('gemini manifest (T066)', () => {
     expect(new Date(manifest.generated).toISOString()).toBe(manifest.generated);
   });
 
-  it('manifest.commands contains all emitted stages', async () => {
+  it('manifest.commands contains the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toContain('1_gofer_research');
-    expect(manifest.commands).toContain('0a_problem_validation');
-    expect(manifest.commands).toContain('0_gofer_start');
+    expect(manifest.commands).toContain('gofer');
+    expect(manifest.commands).toContain('eai-gofer');
   });
 
   it('manifest.commands is sorted alphabetically', async () => {
@@ -220,19 +220,15 @@ describe('gemini manifest (T066)', () => {
     expect(manifest.commands).toEqual(sorted);
   });
 
-  it('manifest.commands includes 0_gofer_start', async () => {
+  it('manifest.commands does not include 0_gofer_start', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toContain('0_gofer_start');
+    expect(manifest.commands).not.toContain('0_gofer_start');
   });
 
-  it('manifest.commands contains no excluded stages because exclusions are empty', async () => {
+  it('manifest.commands contains only the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toEqual([
-      '0_gofer_start',
-      '0a_problem_validation',
-      '1_gofer_research',
-    ]);
+    expect(manifest.commands).toEqual(['eai-gofer', 'gofer']);
   });
 });

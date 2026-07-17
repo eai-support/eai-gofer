@@ -12,7 +12,7 @@
     {
       "name": "eai-gofer",
       "source": "./plugins/eai-gofer",
-      "description": "Gofer core pipeline from /0_gofer_start through /6_gofer_validate, with optional helper commands.",
+      "description": "Gofer single-entry delivery command with internal pipeline routing.",
       "version": "3.7.22",
       "author": {
         "name": "EAI Tools",
@@ -22,15 +22,7 @@
       "repository": "https://github.com/eai-tools/eai-gofer",
       "license": "Apache-2.0",
       "category": "Coding",
-      "tags": [
-        "eai-gofer",
-        "gofer",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "spec-driven-development"
-      ]
+      "tags": ["eai-gofer", "gofer", "claude", "codex", "copilot", "gemini", "spec-driven-development"]
     }
   ]
 }

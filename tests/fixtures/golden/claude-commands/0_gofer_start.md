@@ -21,6 +21,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## Workspace Preflight
 
 Before doing stage/helper work:
@@ -30,6 +57,7 @@ Before doing stage/helper work:
    - `.specify/.gofer-version`
    - `.specify/commands/0_gofer_start.md`
    - `.specify/templates/spec-template.md`
+   - `.specify/templates/build-map-template.md`
    - `.specify/templates/loop-contract-template.json`
    - `.specify/scripts/bash/create-new-feature.sh`
    - `.specify/scripts/node/parse-stage-command.mjs`
@@ -391,6 +419,7 @@ ls -la .specify/memory/constitution.md 2>/dev/null
 | `goal-rebaseline-report.md` | `.specify/specs/{feature}/` | Latest closed-loop audit result |
 | `working-backwards-prfaq.md` | `.specify/specs/{feature}/` | Running product release PR/FAQ |
 | `prfaq-history/`        | `.specify/specs/{feature}/` | Immutable stage snapshots of the PR/FAQ |
+| `build-map.md`          | `.specify/specs/{feature}/` | Plain-language picture of what is being built |
 | `business-owner-summary.md` | `.specify/specs/{feature}/` | Business owner scenario, process, and value summary |
 | `cto-architecture-summary.md` | `.specify/specs/{feature}/` | CTO/EAI Platform architecture summary |
 | `ciso-security-summary.md` | `.specify/specs/{feature}/` | CISO security posture summary |
@@ -744,6 +773,30 @@ For app delivery, the default early process is:
    visible, review which platform services are accessible now, purchasable but
    unavailable now, or unsupported, and lock that decision before plan/tasks are
    treated as complete.
+
+### Build Map Frame Of Reference
+
+For application delivery, create or update
+`.specify/specs/{feature}/build-map.md` from
+`.specify/templates/build-map-template.md` before routing into
+`/1_gofer_research`. This is the plain-language picture used in status updates.
+
+The build map must show:
+
+- The user/business process being improved.
+- The app experience being built.
+- How the app connects to EAI Platform, data/workflows, login/security,
+  integrations, and preview/release.
+- The current status of each area: not started, working, ready, blocked, or
+  needs decision.
+- The latest plain-language update: what Gofer is working on, why it matters,
+  status, and next step.
+
+When reporting progress after this point, refer back to the relevant build-map
+area instead of describing only technical files or commands. If something fails,
+update the "Issue / fix" and "Business impact" columns before continuing. For
+non-app work, record `Build map: not applicable` in the context bundle rather
+than creating app-delivery visuals.
 
 ### AI-Readable Blocks Bridge Intake
 

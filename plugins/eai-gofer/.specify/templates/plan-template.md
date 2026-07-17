@@ -56,6 +56,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ├── research.md          # Codebase research (/1_gofer_research)
 ├── journeys/
 │   └── base-journey.md  # AI-augmented app journey when app delivery applies
+├── build-map.md         # Plain-language picture of the build and current status
 ├── ui-preview-brief.md  # App-delivery preview brief when app delivery applies
 ├── ui-review-log.md     # App-delivery preview evidence and iteration log
 ├── ui-show-and-tell.md  # App-delivery show-and-tell and user feedback record

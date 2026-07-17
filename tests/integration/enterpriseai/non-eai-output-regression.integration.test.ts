@@ -16,7 +16,7 @@ interface BaselineProvenance {
 }
 
 function readCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '.claude', 'commands', fileName), 'utf8');
+  return fs.readFileSync(path.join(process.cwd(), '.specify', 'commands', fileName), 'utf8');
 }
 
 function readStandardBaselineArtifact(fileName: string): string {
@@ -177,10 +177,10 @@ describe('enterpriseai non-eai output regression (root integration)', () => {
 
     const router = new CrossPlatformCommandRouter(process.cwd());
 
-    const standardClaude = await router.routeCommand('0_gofer_start', 'claude', 'standard');
-    const enterpriseClaude = await router.routeCommand('0_gofer_start', 'claude', 'enterpriseai');
-    const standardCopilot = await router.routeCommand('0_gofer_start', 'copilot', 'standard');
-    const standardCodex = await router.routeCommand('0_gofer_start', 'codex', 'standard');
+    const standardClaude = await router.routeCommand('gofer', 'claude', 'standard');
+    const enterpriseClaude = await router.routeCommand('gofer', 'claude', 'enterpriseai');
+    const standardCopilot = await router.routeCommand('gofer', 'copilot', 'standard');
+    const standardCodex = await router.routeCommand('gofer', 'codex', 'standard');
 
     const routingSnapshot = {
       claudeSyntax: standardClaude.syntax,

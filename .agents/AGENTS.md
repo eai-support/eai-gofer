@@ -1,323 +1,95 @@
 # Gofer Agent Commands
 
-This file documents all Gofer pipeline commands available as agent skills.
+This file documents the public Gofer command surface and internal pipeline
+contracts.
 
-Generated: 2026-07-15T01:43:46.059Z
+Generated: 2026-07-17T00:06:16.826Z
+
+## Public Entrypoints
+
+- `gofer` - Start or continue Gofer from one user-facing command.
+- `eai-gofer` - Alias for the same public Gofer entrypoint.
+
+Do not expose numbered or helper stage commands in user-facing pickers. They
+remain available as internal contracts under `.specify/commands/`.
 
 ## EAI CLI Discovery And Recovery
 
-- Run `eai update --check` before first EAI platform work when the CLI may be stale.
+- Run `eai update --check` before first EAI platform work when the CLI may be
+  stale.
 - Run `eai --describe` before assuming command syntax.
-- If advertised, run `eai agent guide --format json` before planning or fixing EAI workflows.
-- After any `eai` error, run `eai errors explain <code-or-reason> --format json` before guessing remediation.
-- If `eai errors explain` is unavailable, match `.specify/references/platform/eai-error-catalog.yaml`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
-- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
-- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
+- If advertised, run `eai agent guide --format json` before planning or fixing
+  EAI workflows.
+- After any `eai` error, run `eai errors explain <code-or-reason> --format json`
+  before guessing remediation.
+- If `eai errors explain` is unavailable, match
+  `.specify/references/platform/eai-error-catalog.yaml`, run read-only
+  diagnostics before mutating fixes, and stop at the retry or escalation
+  condition.
+- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members
+  with `eai user list --tenant <tenant-id> --search <email> --format json`; use
+  `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json`
+  only after verification and user approval, then tell the app user to sign out
+  and sign back in.
+- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
+  required for app tokens" on platform user lookup or membership prerequisites,
+  run `eai errors explain app_token_tenant_context_required --format json`,
+  confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...`
+  routes before changing tenant members, Entra, role definitions, databases, or
+  cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
 
 ## Commands
 
-### Gofer Start
----
-description: Start Gofer, confirm EAI readiness, and orchestrate the unified pipeline
----
-
-# Gofer Start
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, c...
-
-### Problem Validation
----
-description:
-  Validate business problem using 5 Whys analysis, stakeholder impact mapping,
-  and market landscape research before any solution design
----
-
-# Gofer Problem Validation
-
-## EAI Platf...
-
-### Gofer Cloud
----
-description:
-  READ-ONLY cloud infrastructure analysis for Azure, AWS, GCP deployments
----
-
-# Gofer Cloud
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline wo...
-
-### Gofer Research
----
-description: Deep codebase and technology research for feature implementation
----
-
-# Gofer Research
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1...
-
-### Gofer Specify
----
-description: Create feature specification informed by codebase research
----
-
-# Gofer Specify
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat...
-
-### Gofer Plan
----
-description:
-  Generate technical implementation plan with architecture and contracts
----
-
-# Gofer Plan
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work...
-
-### Gofer Tasks
----
-description: Generate actionable task breakdown from implementation plan
----
-
-# Gofer Tasks
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat ...
-
-### Gofer Implement
----
-description: Execute tasks from tasks.md to implement the feature
----
-
-# Gofer Implement
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat dur...
-
-### Gofer Validate
----
-description:
-  Unified validation, blast-radius analysis, and engineering review (3 phases,
-  110-point rubric)
----
-
-# Gofer Validate
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/hel...
-
-### Gofer Save
----
-description: Save session progress with comprehensive checkpoint for resumption
----
-
-# Gofer Save
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. ...
-
-### Stakeholder Communications
----
-description:
-  Generate stakeholder communications package including release notes, demo
-  script, change management brief, and success metrics
----
-
-# Gofer Stakeholder Communications
-
-## EAI Plat...
-
-### Gofer Branding
----
-description:
-  Create or update a repo-owned brand profile and apply it to Gofer document,
-  deck, and stakeholder templates.
----
-
-# Gofer Branding
-
-## EAI Platform Session Preflight
-
-Before any G...
-
-### Gofer Tests
----
-description:
-  Define acceptance test cases using DSL approach before or during
-  implementation
----
-
-# Gofer Tests
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does p...
-
-### Gofer Workspace Bootstrap
-
-# Gofer Workspace Bootstrap
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, calling tools, or loading large files:
-
-1. Treat `.specify/memory/gofer-model-pol...
-
-### Gofer Workspace Check
-
-# Gofer Workspace Check
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, calling tools, or loading large files:
-
-1. Treat `.specify/memory/gofer-model-policy....
-
-### Gofer Constitution
----
-description:
-  Create or update project constitution with coding principles and guidelines
----
-
-# Gofer Constitution
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does ...
-
-### Gofer Diagnose
-
-# Gofer Diagnose
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   and...
-
-### EAI First Run
-
-# EAI Gofer First Run
-
-Use this command when the user is starting their first EAI Platform app, when
-`/0_gofer_start` is unavailable in a new repository, or when an EAI app
-build reaches the Gofer pi...
-
-### Gofer Hydrate
----
-description: Reverse-engineer specification from existing code (Hydration)
----
-
-# Gofer Hydrate
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Tr...
-
-### Gofer Personality
-
-# Gofer Personality
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, calling tools, or loading large files:
-
-1. Treat `.specify/memory/gofer-model-policy.yaml...
-
-### Gofer Plan Mode Toggle
-
-# Gofer Plan Mode Toggle
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, calling tools, or loading large files:
-
-1. Treat `.specify/memory/gofer-model-policy...
-
-### Gofer Side Conversation
-
-# Gofer Side Conversation
-
-## Token And Cost Policy
-<!-- gofer:token-cost-policy:start -->
-
-Before spawning agents, calling tools, or loading large files:
-
-1. Treat `.specify/memory/gofer-model-polic...
-
-### Gofer Spec Summary
-
-# Gofer Spec Summary
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-  ...
-
-### Gofer TDD
-
-# Gofer TDD
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   and ever...
-
-### Gofer Vocabulary
-
-# Gofer Vocabulary
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   a...
-
-### Gofer Zoom Out
-
-# Gofer Zoom Out
-
-## EAI Platform Session Preflight
-
-Before any Gofer stage/helper command does pipeline work:
-
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   and...
+- `0_gofer_start` - Start Gofer, confirm EAI readiness, and route the delivery
+  pipeline.
+- `0a_problem_validation` - Validate the business problem using 5 Whys
+  root-cause analysis and stakeholder mapping.
+- `10_gofer_cloud` - Deploy and configure the Gofer cloud integration for remote
+  pipeline execution.
+- `1_gofer_research` - Research codebase, CLI integrations, and technology
+  landscape for the target feature.
+- `2_gofer_specify` - Generate a feature specification from research findings
+  and any supporting review context.
+- `3_gofer_plan` - Create a detailed technical implementation plan with
+  architecture, data model, and contracts.
+- `4_gofer_tasks` - Break down the implementation plan into dependency-ordered,
+  parallelisable tasks.
+- `5_gofer_implement` - Execute all tasks from tasks.md phase by phase with
+  feedback loops and engineering review.
+- `6_gofer_validate` - Validate implemented work with evidence-backed scoring,
+  blast-radius analysis, and engineering review.
+- `7_gofer_save` - Save session state and create a handoff checkpoint for
+  resumption in a new context.
+- `7a_stakeholder_comms` - Generate stakeholder-facing communications: release
+  notes, demo scripts, and change briefs.
+- `8_gofer_branding` - Brand Gofer templates and stakeholder documents for a
+  company or consulting-firm look and feel.
+- `9_gofer_tests` - Generate comprehensive test suites from four testing
+  perspectives for a target component.
+- `gofer_bootstrap_workspace` - Create or update the repo-owned Gofer scaffold
+  for the current workspace.
+- `gofer_check_workspace` - Check whether this repo is initialized for Gofer and
+  explain any missing or stale scaffold.
+- `gofer_constitution` - Create or update project constitution with coding
+  principles and guidelines.
+- `gofer_diagnose` - Run a reproduce-minimize-instrument-fix loop for bugs and
+  failing tests.
+- `gofer_eai_first_run` - Prepare a new machine or repo for the first EAI Gofer
+  app build.
+- `gofer_hydrate` - Reverse-engineer specification from existing code
+  (Hydration).
+- `gofer_personality` - Set the assistant personality for this Gofer session:
+  friendly, pragmatic, or none (default).
+- `gofer_plan` - Toggle plan mode in the active CLI session for the next user
+  prompt; non-pipeline control command.
+- `gofer_side` - Open a side conversation in the active CLI without disturbing
+  the main pipeline state; resumable.
+- `gofer_spec_summary` - Generate a business-friendly summary of feature value
+  and scope.
+- `gofer_tdd` - Guide a red-green-refactor loop tied to spec acceptance
+  criteria.
+- `gofer_vocabulary` - Extract domain terminology into a canonical feature
+  glossary.
+- `gofer_zoom_out` - Show how the current feature connects to broader system
+  boundaries.

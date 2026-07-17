@@ -18,10 +18,37 @@ aliases: [gofer:first-run, gofer:eai-setup]
 
 # EAI Gofer First Run
 
-Use this command when the user is starting their first EAI Platform app, when
-`/0_gofer_start` is unavailable in a new repository, or when an EAI app
-build reaches the Gofer pipeline before the local machine, workspace, tenant, or
-EAI app template is ready.
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
+Use this internal setup contract when the user is starting their first EAI
+Platform app, when `/gofer` or `/eai-gofer` is unavailable in a new repository,
+or when an EAI app build reaches the Gofer pipeline before the local machine,
+workspace, tenant, or EAI app template is ready.
 
 This command is intentionally allowed to run before `.specify/` exists.
 
@@ -408,10 +435,11 @@ When the app folder, EAI CLI, login, tenant, EAI template, and Gofer scaffold ar
 ready, tell the user to start:
 
 ```text
-/0_gofer_start <what you want to build>
+/gofer <what you want to build>
 ```
 
-If `/0_gofer_start` is still unknown after the plugin is installed and the
-repo is bootstrapped, explain that the host has not loaded the Gofer plugin or
-repo commands yet. Give the host-specific install/update command from the Gofer
-README, then retry this command after the host reloads.
+Use `/eai-gofer`, `#gofer`, `#eai-gofer`, `$gofer`, or `$eai-gofer` where that
+syntax fits the host. If `/gofer` or `/eai-gofer` is still unknown after the
+plugin is installed and the repo is bootstrapped, explain that the host has not
+loaded the Gofer plugin or repo commands yet. Give the host-specific
+install/update command from the Gofer README, then retry after the host reloads.

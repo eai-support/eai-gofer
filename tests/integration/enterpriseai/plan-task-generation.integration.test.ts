@@ -7,7 +7,7 @@ import { recordArchitectureDecisionApproval } from '../../../extension/src/servi
 import { generateEnterpriseAiPlanAndTasks } from '../../../extension/src/services/enterpriseai/internalApi/GenerateEnterpriseAiPlanAndTasks';
 
 function readCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '.claude', 'commands', fileName), 'utf8');
+  return fs.readFileSync(path.join(process.cwd(), '.specify', 'commands', fileName), 'utf8');
 }
 
 describe('enterpriseai plan/task generation (root integration)', () => {

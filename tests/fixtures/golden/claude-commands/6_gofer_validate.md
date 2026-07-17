@@ -41,6 +41,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## User Input
 
 ```text
@@ -144,7 +171,7 @@ For pre-2026 Copilot environments, execute the validation phases
 | 4   | Security Posture             | 10     | Zero hardcoded secrets, no disabled security features, no client-side keys                                                                                                             | validation-security                                                                                                        |
 | 5   | Integration Reality          | 10     | Integration tests use real dependencies where possible. Contract tests validate boundaries                                                                                             | validation-integration                                                                                                     |
 | 6   | Error Path Coverage          | 10     | Public functions tested for failure modes. No empty catch blocks                                                                                                                       | validation-correctness + validation-standards                                                                              |
-| 7   | Architecture Compliance      | 10     | File structure, patterns, visual explanations, and human-facing document summaries match plan.md and research.md. Required visuals are simple, rendered or fallback-safe, and traceable to requirements, code, and EAI Platform decisions | validation-standards                                                                                                       |
+| 7   | Architecture Compliance      | 10     | File structure, patterns, visual explanations, `build-map.md`, and human-facing document summaries match plan.md and research.md. Required visuals are simple, rendered or fallback-safe, and traceable to requirements, code, and EAI Platform decisions | validation-standards                                                                                                       |
 | 8   | Performance Baseline         | 5      | No synchronous I/O in async paths, no unbounded loops, no N+1 patterns                                                                                                                 | validation-performance                                                                                                     |
 | 9   | Code Hygiene                 | 10     | Zero AI slop: no TODO placeholders, no redundant comments, no magic numbers                                                                                                            | validation-standards                                                                                                       |
 | 10  | Specification Traceability   | 5      | Every user story maps to tests, every test maps to code                                                                                                                                | validation-correctness                                                                                                     |
@@ -1876,7 +1903,15 @@ review report are written:
    status, business value confidence, and any validated/disproven assumptions.
 5. Refresh `{FEATURE_DIR}/cto-architecture-summary.md` with validation status,
    blast-radius verdict, and any architecture/security exceptions.
-6. Update `{FEATURE_DIR}/stakeholder-review-index.md` and make the final
+6. For application delivery, validate `{FEATURE_DIR}/build-map.md`:
+   - It exists and is not the raw template.
+   - Its areas match the delivered feature, EAI Platform usage, security
+     posture, integrations, preview/release state, and known issues.
+   - Its latest update is plain-language and tells a business user what is
+     ready, what is being fixed, and what decision remains.
+   - Any unresolved validation, security, platform, or UX issue appears in the
+     relevant "Issue / fix" and "Business impact" columns.
+7. Update `{FEATURE_DIR}/stakeholder-review-index.md` and make the final
    approve/revise/defer asks explicit:
    - Business Owner: release value, user/process impact, assumptions.
    - CTO / Architecture: platform/architecture evidence and exceptions.

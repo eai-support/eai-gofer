@@ -3,15 +3,19 @@
  *
  *   1. Is valid TOML (basic syntax: balanced brackets, key=value format)
  *   2. Contains [[skills.config]] blocks
- *   3. Has the full Gofer command/helper set (24 entries)
- *   4. Each entry has `path = "/full/path/to/repo/.agents/skills/<stage>"` and `enabled = true`
+ *   3. Has the public Gofer entrypoint set
+ *   4. Each public entry has `path = "/full/path/to/repo/.agents/skills/<stage>"` and `enabled = true`
  *   5. NEVER mentions `skills_context_budget_percent` (Hard Invariant 2)
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FULL_COMMAND_COUNT, FULL_COMMAND_NAMES } from '../../helpers/goferCommandSet';
+import {
+  FULL_COMMAND_NAMES,
+  PUBLIC_ENTRYPOINT_COUNT,
+  PUBLIC_ENTRYPOINT_NAMES,
+} from '../../helpers/goferCommandSet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +24,10 @@ const CONFIG_PATH = path.join(REPO_ROOT, 'codex-config.toml');
 
 function toSkillDir(stageName: string): string {
   return stageName.replace(/:/g, '_').replace(/-/g, '_');
+}
+
+function toPublicSkillDir(stageName: string): string {
+  return stageName.replace(/:/g, '_');
 }
 
 describe('codex-config.toml shape (T169)', () => {
@@ -44,20 +52,23 @@ describe('codex-config.toml shape (T169)', () => {
     expect(content).toContain('[[skills.config]]');
   });
 
-  it(`has exactly ${FULL_COMMAND_COUNT} [[skills.config]] entries`, (): void => {
+  it(`has exactly ${PUBLIC_ENTRYPOINT_COUNT} [[skills.config]] entries`, (): void => {
     const content = fs.readFileSync(CONFIG_PATH, 'utf8');
     const matches = content.match(/^\[\[skills\.config\]\]/gm) || [];
-    expect(matches.length).toBe(FULL_COMMAND_COUNT);
+    expect(matches.length).toBe(PUBLIC_ENTRYPOINT_COUNT);
   });
 
-  it('every Gofer stage has a path-based enabled = true entry', (): void => {
+  it('every public Gofer entrypoint has a path-based enabled = true entry', (): void => {
     const content = fs.readFileSync(CONFIG_PATH, 'utf8');
-    for (const stage of FULL_COMMAND_NAMES) {
+    for (const stage of PUBLIC_ENTRYPOINT_NAMES) {
       const re = new RegExp(
-        `\\[\\[skills\\.config\\]\\][\\s\\S]*?path\\s*=\\s*"/full/path/to/repo/\\.agents/skills/${toSkillDir(stage).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[\\s\\S]*?enabled\\s*=\\s*true`,
+        `\\[\\[skills\\.config\\]\\][\\s\\S]*?path\\s*=\\s*"/full/path/to/repo/\\.agents/skills/${toPublicSkillDir(stage).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[\\s\\S]*?enabled\\s*=\\s*true`,
         'm'
       );
       expect(re.test(content), `expected enabled=true entry for ${stage}`).toBe(true);
+    }
+    for (const stage of FULL_COMMAND_NAMES) {
+      expect(content).not.toContain(`/.agents/skills/${toSkillDir(stage)}`);
     }
   });
 

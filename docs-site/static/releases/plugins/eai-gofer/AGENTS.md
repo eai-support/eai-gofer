@@ -152,11 +152,13 @@ No commands detected. Add build/test/lint scripts to your project.
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run `/0_gofer_start` to
-start the core pipeline (Gofer Start -> research -> specify -> plan -> tasks ->
-implement -> validate). `/6_gofer_validate` is the terminal quality gate and
-includes the final engineering review loop. Artifacts in
-`.specify/specs/{feature}/`.
+This project uses Gofer for spec-driven development. Run `/gofer` or
+`/eai-gofer` to start or continue the core pipeline (Gofer Start -> research ->
+specify -> plan -> tasks -> implement -> validate). Use `#gofer` in
+Copilot-style prompts and `$gofer` in hosts that use dollar-prefixed skills.
+Gofer routes internally through `.specify/commands/*.md` contracts; validation
+is the terminal quality gate and includes the final engineering review loop.
+Artifacts in `.specify/specs/{feature}/`.
 
 ## Core Principles
 

@@ -696,16 +696,17 @@ priority: "P1"
 # Feature Specification: ${specTitle}
 
 <!--
-  To generate a complete implementation, use the Gofer pipeline in Claude Code:
-  /0_gofer_start ${specTitle}
+  To generate a complete implementation, use the public Gofer entrypoint:
+  /gofer ${specTitle}
 
-  Or run individual stages:
-  /1_gofer_research  → Creates research.md
-  /2_gofer_specify   → Updates this spec.md
-  /3_gofer_plan      → Creates plan.md, data-model.md, contracts/
-  /4_gofer_tasks     → Creates tasks.md
-  /5_gofer_implement → Implements the code
-  /6_gofer_validate  → Validates implementation
+  Use /eai-gofer, #gofer, #eai-gofer, $gofer, or $eai-gofer where that syntax
+  fits the host. Gofer routes internally through .specify/commands/*.md:
+  1_gofer_research  → Creates research.md
+  2_gofer_specify   → Updates this spec.md
+  3_gofer_plan      → Creates plan.md, data-model.md, contracts/
+  4_gofer_tasks     → Creates tasks.md
+  5_gofer_implement → Implements the code
+  6_gofer_validate  → Validates implementation
 -->
 
 ## User Scenarios & Testing

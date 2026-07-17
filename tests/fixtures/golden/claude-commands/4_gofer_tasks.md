@@ -39,6 +39,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## User Input
 
 ```text
@@ -102,7 +129,8 @@ boundaries live in the spec.
 7. Approval gate
 8. Output: `tasks.md`, `traceability.md`, `issues.md`,
    `working-backwards-prfaq.md`, `prfaq-history/04-tasks.md`, and
-   `stakeholder-review-index.md`
+   `stakeholder-review-index.md`; for app delivery, tasks must also preserve
+   and update `build-map.md`
 
 ---
 
@@ -463,6 +491,7 @@ Display the task summary and request explicit approval:
   Files created:
   - {FEATURE_DIR}/tasks.md
   - {FEATURE_DIR}/traceability.md
+  - {FEATURE_DIR}/build-map.md (updated for app delivery)
   - {FEATURE_DIR}/loop-contract.json (updated if evaluation commands changed)
   - {FEATURE_DIR}/issues.md ([N] GitHub issues)
   - {FEATURE_DIR}/working-backwards-prfaq.md

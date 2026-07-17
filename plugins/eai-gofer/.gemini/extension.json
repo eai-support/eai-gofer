@@ -1,7 +1,7 @@
 {
   "name": "eai-gofer",
   "version": "3.7.22",
-  "description": "Gofer core pipeline and helper commands as a Gemini CLI extension",
+  "description": "Gofer single-entry delivery command with internal pipeline routing",
   "license": "Apache-2.0",
   "commands": ".gemini/commands/gofer/",
   "gofer": {

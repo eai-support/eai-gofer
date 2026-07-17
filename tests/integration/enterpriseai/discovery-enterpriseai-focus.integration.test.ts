@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 function readCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '.claude', 'commands', fileName), 'utf8');
+  return fs.readFileSync(path.join(process.cwd(), '.specify', 'commands', fileName), 'utf8');
 }
 
 describe('enterpriseai discovery enterpriseai focus (root integration)', () => {
