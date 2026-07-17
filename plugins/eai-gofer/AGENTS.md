@@ -152,13 +152,12 @@ No commands detected. Add build/test/lint scripts to your project.
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run `/gofer` or `/eai` to
-start or continue the core pipeline (Gofer Start -> research -> specify -> plan
--> tasks -> implement -> validate). Use `#gofer` or `#eai` in Copilot-style
-prompts and `$gofer` or `$eai` in hosts that use dollar-prefixed skills. Gofer
-routes internally through `.specify/commands/*.md` contracts; validation is the
-terminal quality gate and includes the final engineering review loop. Artifacts
-in `.specify/specs/{feature}/`.
+This project uses Gofer for spec-driven development. Use `/eai` to start or
+continue work; use `#eai` in Copilot-style prompts and `$eai` in hosts that use
+dollar-prefixed skills. Gofer routes internally through `.specify/commands/*.md`
+contracts for start, research, specify, plan, tasks, implement, and validate.
+Validation is the terminal quality gate and includes the final engineering
+review loop. Artifacts live in `.specify/specs/{feature}/`.
 
 ## Core Principles
 
