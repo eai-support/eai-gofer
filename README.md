@@ -1,9 +1,10 @@
 # EAI Gofer
 
 EAI Gofer is a business specification-driven delivery workflow for repositories.
-It gives teams one shared pipeline from Gofer Start through validation, keeps
-the working artifacts in `.specify/`, and ships across VS Code, Claude Code,
-Codex, GitHub Copilot, and Gemini.
+Users talk to one command, `/eai`, and Gofer manages the pipeline that designs
+with you, builds with you, and validates the result. It keeps working artifacts
+in `.specify/` and ships across VS Code, Claude Code, Codex, GitHub Copilot, and
+Gemini.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -12,8 +13,7 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 - Work with AI to generate what you need whether it is business case, executive
   summary, technical diagram of otherwise for you and your stakeholders to know
   what will be built, not find out it is wrong later
-- one public `gofer` / `eai` entrypoint backed by the core `0-6` delivery
-  pipeline
+- one public `eai` entrypoint backed by the full internal delivery pipeline
 - closed-loop goal reconciliation with repo-owned goal ledgers and drift checks
 - repo-owned artifacts and templates
 - install paths for VS Code and AI coding CLIs
@@ -25,16 +25,16 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 
 1. Install the VS Code extension or add the public plugin marketplace for your
    preferred CLI.
-2. Start with `/gofer` or `/eai`. Use `#gofer` or `#eai` in Copilot-style
-   prompts and `$gofer` or `$eai` in hosts that use dollar-prefixed skills.
+2. Start every request with `/eai`. Use `#eai` in Copilot-style prompts and
+   `$eai` in hosts that use dollar-prefixed skills.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
    Repository** in VS Code, then refresh/restart the host command picker.
 4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
    state, and then routes the internal pipeline for you.
 
-If `/gofer` or `/eai` is unknown in a new repo, the host has not loaded the
-Gofer plugin or repo commands yet. Install/update the plugin first, then
-refresh/restart the host command picker.
+If `/eai` is unknown in a new repo, the host has not loaded the Gofer plugin or
+repo commands yet. Install/update the plugin first, then refresh/restart the
+host command picker.
 
 ## App-Native Integration Model
 
@@ -44,31 +44,47 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface                         | Clean entry point                                            | Repo integration                                                                                      |
-| ------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | `gofer` or `eai` skill                                       | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | `#gofer` or `#eai`, plus Gofer custom agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | `/gofer` or `/eai`                                           | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | `/gofer` or `/eai` Gemini extension command                  | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+| Surface                         | Clean entry point                                     | Repo integration                                                                                      |
+| ------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE           | `eai` skill, or `$eai` where the host uses skill tags | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app    | `#eai`, plus Gofer custom agents where supported      | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app                 | `/eai`                                                | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command                       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
 
-The UX rule is: users see only `gofer` or `eai`; Gofer keeps numbered stages and
-helpers as internal contracts under `.specify/commands/`. This update does not
-add AWS/Kiro app-integration support.
+The UX rule is: users start with `eai`. Gofer keeps numbered stages and helpers
+as internal contracts under `.specify/commands/`, then chooses the right one
+based on the current feature state. The `gofer` entrypoint remains as a
+compatibility alias, but public instructions should teach `/eai`.
 
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
 see the [5-minute first run guide](./.tech-docs/first-run.md).
 
-## Core Pipeline
+## How The Pipeline Works
 
-| Stage       | Internal contract                        | Main output                                    |
-| ----------- | ---------------------------------------- | ---------------------------------------------- |
-| Gofer Start | `.specify/commands/0_gofer_start.md`     | Full pipeline kickoff                          |
-| Research    | `.specify/commands/1_gofer_research.md`  | `research.md`                                  |
-| Specify     | `.specify/commands/2_gofer_specify.md`   | `spec.md`                                      |
-| Plan        | `.specify/commands/3_gofer_plan.md`      | `plan.md`, `data-model.md`, `contracts/`       |
-| Tasks       | `.specify/commands/4_gofer_tasks.md`     | `tasks.md`, `traceability.md`, `issues.md`     |
-| Implement   | `.specify/commands/5_gofer_implement.md` | Code and documentation changes                 |
-| Validate    | `.specify/commands/6_gofer_validate.md`  | Validation artifacts and final review evidence |
+Users do not manually run stage commands. Write normal requests as `/eai ...`
+and Gofer will:
+
+1. Check the repo scaffold, EAI CLI, login, tenant, and app-template readiness.
+2. Work out the current feature state from `.specify/specs/`.
+3. Ask business-level questions when the goal, audience, value, risk, or tenant
+   context is unclear.
+4. Run the internal stage contracts for research, specification, planning,
+   tasks, implementation, and validation.
+5. Show the UI as early and as often as practical when an app UI is involved.
+6. Keep business-owner, CTO, CISO, architecture, testing, and validation
+   artifacts current.
+
+The internal pipeline still has clear stages:
+
+| Internal stage | What Gofer does                                               | Main output                                    |
+| -------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| Start          | Understands the business outcome and checks EAI readiness     | feature folder, business scenario              |
+| Research       | Explores the repo, EAI platform fit, constraints, and options | `research.md`                                  |
+| Specify        | Turns the need into requirements and acceptance criteria      | `spec.md`                                      |
+| Plan           | Designs architecture, data, contracts, and delivery approach  | `plan.md`, `data-model.md`, `contracts/`       |
+| Tasks          | Breaks the plan into ordered implementation work              | `tasks.md`, `traceability.md`, `issues.md`     |
+| Implement      | Makes code and documentation changes with feedback loops      | code and document changes                      |
+| Validate       | Checks quality, security, evidence, tests, and business fit   | validation artifacts and final review evidence |
 
 Validation is the terminal quality gate. The previous standalone
 engineering-review stage is folded into validation.
@@ -93,12 +109,11 @@ documents current:
 | CTO / Architecture | `cto-architecture-summary.md` | `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams, `service-fit-matrix.md`, EAI preflight           |
 | CISO / Risk        | `ciso-security-summary.md`    | `validation-report.md`, `audit-history.md`, risk heatmap, auth/tenant controls, secret/data handling evidence |
 
-Gofer also scores visual communication as part of `/6_gofer_validate`.
-Architecture, process, security, UI, and EAI Platform visuals must be simple,
-rendered or fallback-safe, source-controlled, traceable to requirements and
-code/test evidence, and safe for public or stakeholder review. Crowded, stale,
-unrendered, or private-data-bearing diagrams fail the architecture compliance
-gate.
+Gofer also scores visual communication during validation. Architecture, process,
+security, UI, and EAI Platform visuals must be simple, rendered or
+fallback-safe, source-controlled, traceable to requirements and code/test
+evidence, and safe for public or stakeholder review. Crowded, stale, unrendered,
+or private-data-bearing diagrams fail the architecture compliance gate.
 
 Human-facing documents should start with a short executive summary in plain
 language. Mermaid is the default for Markdown-native diagrams, Marp is
@@ -107,16 +122,10 @@ source is acceptable when it makes architecture clearer, and UI behavior should
 be backed by screenshots, Storybook/component proof, Playwright evidence, or an
 equivalent render check.
 
-Optional helpers stay outside the core 0-6 flow:
-
-- `/0a_problem_validation`
-- `/7_gofer_save`
-- `/8_gofer_branding`
-- `/9_gofer_tests`
-- `/7a_stakeholder_comms`
-- `/gofer:check-workspace`
-- `/gofer:bootstrap-workspace`
-- `/gofer:eai-first-run`
+Optional helpers stay available internally for problem validation, checkpoints,
+branding, test generation, stakeholder communications, workspace checks,
+bootstrap, and first-run EAI setup. Users should still ask through `/eai`, for
+example: `/eai rebrand the stakeholder documents with our company logo`.
 
 ## Model And Cost Policy
 
@@ -209,9 +218,10 @@ References:
 - [Codex App](https://developers.openai.com/codex/app)
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 
-The Codex plugin exposes only the public `gofer` and `eai` skills rather than a
-second namespaced copy of every stage command. In an initialized repo, use those
-plain skills from `.agents/skills/`.
+The Codex plugin exposes `eai` as the recommended public skill, with `gofer`
+retained as a compatibility alias. It does not expose a second namespaced copy
+of every stage command. In an initialized repo, start with the plain `eai` skill
+from `.agents/skills/`.
 
 ### GitHub Copilot CLI
 
@@ -257,11 +267,12 @@ https://eai-tools.github.io/eai-gofer/releases.json
 
 ## First EAI Platform App Setup
 
-`/gofer:eai-first-run` replaces the long website setup prompt for users who have
-installed a supported AI coding host. It works as a plugin-level command, so it
-can run before `.specify/` exists in the target repo.
+`/eai` replaces the long website setup prompt for users who have installed a
+supported AI coding host. It can run before `.specify/` exists in the target
+repo, because Gofer routes first-run setup internally when the machine, login,
+tenant, template, or scaffold is not ready.
 
-The command:
+When first-run setup is needed, Gofer:
 
 - detects Claude Code, Codex, Copilot, Gemini, VS Code, GitHub Codespaces, OS,
   shell, and workspace folder
@@ -289,9 +300,9 @@ The command:
 - uses `eai resources schema --format json` and
   `eai workflow readiness --format json` later in the pipeline to ground block,
   data, and workflow choices in actual platform capabilities
-- verifies `.specify/` and Gofer files created by `eai init`, runs
-  `/gofer:bootstrap-workspace` if the repo scaffold is missing or stale, and
-  writes a safe `.specify/logs/eai-first-run-report.md`
+- verifies `.specify/` and Gofer files created by `eai init`, bootstraps the
+  repo scaffold if it is missing or stale, and writes a safe
+  `.specify/logs/eai-first-run-report.md`
 
 Cross-platform behavior:
 

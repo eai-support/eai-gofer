@@ -7,7 +7,7 @@ source_commit: 'manual-public-onboarding'
 # First Run In Five Minutes
 
 Use this path to verify that Gofer is installed, the repository scaffold exists,
-and the first pipeline command can produce durable artifacts.
+and `/eai` can start or continue the delivery pipeline.
 
 ![Gofer first run demo](https://raw.githubusercontent.com/eai-tools/eai-gofer/main/assets/gofer-first-run.svg)
 
@@ -21,12 +21,12 @@ After the first run, the repository should contain:
 - `.specify/memory/gofer-model-policy.yaml`
 - `.specify/specs/{feature}/business-scenario.md`
 
-Gofer commands should also be available on the host you installed:
+The public Gofer command should also be available on the host you installed:
 
-- Claude Code: `/0_gofer_start`
-- Codex: `0_gofer_start` skill
-- GitHub Copilot: `#0_gofer_start`
-- Gemini CLI: `/gofer:0_gofer_start`
+- Claude Code: `/eai`
+- Codex: `eai` skill or `$eai`
+- GitHub Copilot: `#eai`
+- Gemini CLI: `/eai`
 - VS Code: **Gofer: Initialize Repository** and the Gofer panel
 
 ## 1. Install A Surface
@@ -73,21 +73,21 @@ gemini extensions install https://github.com/eai-tools/eai-gofer --auto-update
 For a first EAI Platform app, run:
 
 ```text
-/gofer:eai-first-run
+/eai I want to create my first EAI Platform app
 ```
 
-That command checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login,
-tenant access, project folder, EAI app template readiness, and Gofer scaffold
-health before the first Gofer Start intake begins.
+Gofer checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant
+access, project folder, EAI app template readiness, and Gofer scaffold health
+before design work begins.
 
 In VS Code, **Gofer: Initialize Repository** remains available when you only
 need the repo-owned Gofer scaffold.
 
-In a CLI host, run the scaffold-only bootstrap helper when you are not creating
-an EAI Platform app:
+In a CLI host, you can still ask through `/eai` when you are not creating an EAI
+Platform app:
 
 ```text
-/gofer:bootstrap-workspace
+/eai add or refresh the Gofer scaffold for this repo
 ```
 
 If a command detects a missing or stale scaffold, it should ask:
@@ -99,25 +99,25 @@ This repo is missing or stale for Gofer. Initialize/update it now?
 Choose yes. Gofer should create or refresh `.specify/`, host command files, and
 the model policy template.
 
-If `/0_gofer_start` is unknown, install or update the Gofer plugin for the host
-first, then run `/gofer:eai-first-run`. The first-run command is designed to
-work before `.specify/` exists.
+If `/eai` is unknown, install or update the Gofer plugin for the host first,
+then refresh or restart the host command picker. The public command is designed
+to work before `.specify/` exists.
 
 ## 3. Start The First Feature
 
 Use the host-specific command syntax:
 
-| Surface        | Copy-paste first command                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| VS Code        | Run **Gofer: Create New Specification** or start `/0_gofer_start` from your connected assistant |
-| Claude Code    | `/0_gofer_start I want to add passwordless login for customers`                                 |
-| Codex          | `Use the 0_gofer_start skill: I want to add passwordless login for customers`                   |
-| GitHub Copilot | `#0_gofer_start I want to add passwordless login for customers`                                 |
-| Gemini CLI     | `/gofer:0_gofer_start I want to add passwordless login for customers`                           |
+| Surface        | Copy-paste first command                                                                |
+| -------------- | --------------------------------------------------------------------------------------- |
+| VS Code        | Run **Gofer: Initialize Repository**, then ask your connected assistant with `/eai ...` |
+| Claude Code    | `/eai I want to add passwordless login for customers`                                   |
+| Codex          | `$eai I want to add passwordless login for customers`                                   |
+| GitHub Copilot | `#eai I want to add passwordless login for customers`                                   |
+| Gemini CLI     | `/eai I want to add passwordless login for customers`                                   |
 
-For first EAI Platform app setup, start with `/gofer:eai-first-run` instead of
-the stage command. It will hand you back to `/0_gofer_start` once the EAI CLI,
-login, tenant, app template, and Gofer scaffold are ready.
+For first EAI Platform app setup, use the same `/eai` command. It will handle
+EAI CLI, login, tenant, app template, and Gofer scaffold readiness before it
+starts feature design.
 
 Answer the questions Gofer asks about business value, users, constraints,
 success measures, risks, and known systems.
@@ -130,19 +130,17 @@ The first successful command should write:
 .specify/specs/{feature}/business-scenario.md
 ```
 
-From there, continue the core pipeline:
+From there, continue with normal business-language requests:
 
 ```text
-/1_gofer_research
-/2_gofer_specify
-/3_gofer_plan
-/4_gofer_tasks
-/5_gofer_implement
-/6_gofer_validate
+/eai research the options and explain the trade-offs
+/eai turn this into the spec and plan
+/eai build it, show me the UI, and validate it
 ```
 
-`/6_gofer_validate` is the terminal quality gate and includes the engineering
-review loop.
+Gofer routes those requests through its internal research, specify, plan, tasks,
+implement, and validate contracts. Validation is the terminal quality gate and
+includes the engineering review loop.
 
 ## 5. Where To Ask For Help
 

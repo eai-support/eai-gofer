@@ -7,31 +7,36 @@ source_commit: 'public-launch-readiness'
 # EAI Gofer
 
 EAI Gofer is a business specification-driven delivery workflow for repositories.
-It provides a shared `0-6` pipeline, repo-owned artifacts in `.specify/`, a VS
-Code extension, and portable plugin surfaces for Claude Code, Codex, GitHub
+Users start with one command, `/eai`, and Gofer manages the design, build, and
+validation pipeline with them. It provides repo-owned artifacts in `.specify/`,
+a VS Code extension, and portable plugin surfaces for Claude Code, Codex, GitHub
 Copilot, and Gemini.
 
-## Core Pipeline
+## How Users Run Gofer
 
-| Stage       | Command              | Purpose                                                      |
-| ----------- | -------------------- | ------------------------------------------------------------ |
-| Gofer Start | `/0_gofer_start`     | Kick off the workflow, gather context, and route the work    |
-| Research    | `/1_gofer_research`  | Explore the codebase, constraints, and delivery options      |
-| Specify     | `/2_gofer_specify`   | Write the feature specification                              |
-| Plan        | `/3_gofer_plan`      | Produce architecture, data model, and contracts              |
-| Tasks       | `/4_gofer_tasks`     | Break the work into dependency-ordered execution units       |
-| Implement   | `/5_gofer_implement` | Make code and documentation changes                          |
-| Validate    | `/6_gofer_validate`  | Run validation, blast-radius review, and final quality gates |
+Use `/eai` for every feature statement or follow-up request. Gofer checks the
+workspace, EAI CLI/login/tenant/template readiness, existing feature state, and
+then routes the right internal stage for you.
 
-Optional helpers:
+Examples:
 
-- `/0a_problem_validation`
-- `/7_gofer_save`
-- `/8_gofer_branding`
-- `/9_gofer_tests`
-- `/7a_stakeholder_comms`
-- `/gofer:check-workspace`
-- `/gofer:bootstrap-workspace`
+```text
+/eai I want to build a customer onboarding app for the EAI Platform
+/eai show me the UI as soon as there is something useful to review
+/eai update the business-owner summary and validate that this is ready
+```
+
+Internally, Gofer still runs a staged pipeline:
+
+| Stage     | Purpose                                                       | Main output                                |
+| --------- | ------------------------------------------------------------- | ------------------------------------------ |
+| Start     | Understand the business outcome and readiness                 | business scenario                          |
+| Research  | Explore codebase, EAI platform fit, constraints, and options  | `research.md`                              |
+| Specify   | Write requirements and acceptance criteria                    | `spec.md`                                  |
+| Plan      | Produce architecture, data model, contracts, and diagrams     | `plan.md`, `data-model.md`, contracts      |
+| Tasks     | Break work into dependency-ordered execution units            | `tasks.md`, `traceability.md`, `issues.md` |
+| Implement | Make code and documentation changes with feedback loops       | code and docs                              |
+| Validate  | Run evidence, blast-radius, security, and final quality gates | validation artifacts                       |
 
 ## Release Feed
 

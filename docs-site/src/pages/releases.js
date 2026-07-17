@@ -7,34 +7,34 @@ import styles from './releases.module.css';
 function formatDate(dateString) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
-  return date.toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function buildButtons(release) {
   const buttons = [];
   if (release.download_url) {
-    buttons.push({label: 'Download VSIX', href: release.download_url, primary: true});
+    buttons.push({ label: 'Download VSIX', href: release.download_url, primary: true });
   }
   const assets = release.assets || {};
   if (assets.claude?.download_url) {
-    buttons.push({label: 'Download Agent Plugin Zip', href: assets.claude.download_url});
+    buttons.push({ label: 'Download Agent Plugin Zip', href: assets.claude.download_url });
   }
   if (assets.claude?.marketplace_url) {
-    buttons.push({label: 'Open Claude Marketplace', href: assets.claude.marketplace_url});
+    buttons.push({ label: 'Open Claude Marketplace', href: assets.claude.marketplace_url });
   }
   if (assets.codex?.manifest_url) {
-    buttons.push({label: 'Open Codex Manifest', href: assets.codex.manifest_url});
+    buttons.push({ label: 'Open Codex Manifest', href: assets.codex.manifest_url });
   }
   if (assets.copilot?.marketplace_url) {
-    buttons.push({label: 'Open Copilot Marketplace', href: assets.copilot.marketplace_url});
+    buttons.push({ label: 'Open Copilot Marketplace', href: assets.copilot.marketplace_url });
   }
   if (assets.gemini?.manifest_url) {
-    buttons.push({label: 'Open Gemini Manifest', href: assets.gemini.manifest_url});
+    buttons.push({ label: 'Open Gemini Manifest', href: assets.gemini.manifest_url });
   }
   return buttons;
 }
 
-function ReleaseCard({release, isLatest}) {
+function ReleaseCard({ release, isLatest }) {
   const buttons = buildButtons(release);
   return (
     <div className={styles.releaseItem}>
@@ -51,7 +51,8 @@ function ReleaseCard({release, isLatest}) {
             <a
               key={b.label}
               className={clsx('button', b.primary ? 'button--primary' : 'button--secondary')}
-              href={b.href}>
+              href={b.href}
+            >
               {b.label}
             </a>
           ))}
@@ -113,6 +114,11 @@ export default function Releases() {
             <code>https://github.com/eai-tools/eai-gofer</code> as the install source for Claude,
             Codex, Copilot, and Gemini. Use the release card here for VSIX and downloadable zip
             artifacts.
+          </p>
+          <p>
+            After install, start or continue work with <code>/eai ...</code>, <code>#eai ...</code>,
+            or <code>$eai ...</code> depending on the host. Gofer runs the design, build, and
+            validation pipeline for you; numbered stage commands are internal routing contracts.
           </p>
         </div>
       </main>

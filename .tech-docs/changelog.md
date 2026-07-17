@@ -9,12 +9,23 @@ source_commit: 'public-launch-readiness'
 This changelog tracks notable public-facing releases, packaging changes, and
 documentation updates for Gofer.
 
+## v3.7.24 - 2026-07-17
+
+### Changed
+
+- Updated public documentation to teach `/eai` as the single user-facing command
+  for design, build, and validation work.
+- Reframed numbered stage commands as internal pipeline contracts that Gofer
+  routes automatically.
+- Clarified that users should keep making business-language requests through
+  `/eai`, `#eai`, or `$eai` depending on the host.
+
 ## v3.4.7 - 2026-05-29
 
 ### Changed
 
-- Consolidated the core public pipeline to: `/0_gofer_start` →
-  `/6_gofer_validate`
+- Consolidated the core pipeline to internal contracts from Gofer Start through
+  validation
 - Removed the old standalone `6a_gofer_engineering_review` stage from the core
   public flow
 - Updated public README, docs, plugin manifests, and release metadata to align

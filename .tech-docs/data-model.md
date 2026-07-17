@@ -62,7 +62,7 @@ design where each spec has its own directory containing all related artifacts
 │       ├── impact-canvas.md
 │       ├── c4-context.md
 │       └── ...
-├── commands/                   # Canonical command definitions
+├── commands/                   # Internal pipeline contracts routed by /eai
 │   ├── 0_gofer_start.md
 │   ├── 1_gofer_research.md
 │   └── ...

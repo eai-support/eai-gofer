@@ -24,10 +24,11 @@ development.
 Run the unified EAI Gofer pipeline with a single command:
 
 ```
-/0_gofer_start Add user authentication with OAuth2 and JWT
+/eai Add user authentication with OAuth2 and JWT
 ```
 
-This automatically chains through all stages:
+Use `/eai` again for every follow-up statement. Gofer automatically routes
+through the right internal stage:
 
 1. **Gofer Start** → Frames the business problem and kickoff
 2. **Research** → Explores codebase, platform, and technology
@@ -39,15 +40,18 @@ This automatically chains through all stages:
 
 ## Unified EAI Gofer Pipeline
 
-| Stage       | Command              | Output                                      |
-| ----------- | -------------------- | ------------------------------------------- |
-| Gofer Start | `/0_gofer_start`     | Full pipeline kickoff                       |
-| Research    | `/1_gofer_research`  | research.md                                 |
-| Specify     | `/2_gofer_specify`   | spec.md                                     |
-| Plan        | `/3_gofer_plan`      | plan.md, data-model.md, contracts/          |
-| Tasks       | `/4_gofer_tasks`     | tasks.md, traceability.md, issues.md        |
-| Implement   | `/5_gofer_implement` | Source code and documentation changes       |
-| Validate    | `/6_gofer_validate`  | validation-report.md and final review gates |
+| Internal stage | Output                                      |
+| -------------- | ------------------------------------------- |
+| Gofer Start    | Full pipeline kickoff                       |
+| Research       | research.md                                 |
+| Specify        | spec.md                                     |
+| Plan           | plan.md, data-model.md, contracts/          |
+| Tasks          | tasks.md, traceability.md, issues.md        |
+| Implement      | Source code and documentation changes       |
+| Validate       | validation-report.md and final review gates |
+
+Numbered command files in `.specify/commands/` are internal contracts. Users
+should keep using `/eai ...`; Gofer decides which contract to run.
 
 All artifacts are stored in: `.specify/specs/{feature}/`
 
@@ -57,7 +61,8 @@ Each feature should include a bounded loop contract:
   budget.
 - `loop-ledger.jsonl` - append-only record of stage re-loops.
 - `goal-ledger.json` - business goals, metrics, owners, and drift triggers.
-- `loop-audit-report.md` - strict validation audit from `/6_gofer_validate`.
+- `loop-audit-report.md` - strict validation audit from the internal validation
+  contract.
 
 Each feature should also keep a running stakeholder review pack:
 
