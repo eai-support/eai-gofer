@@ -1,7 +1,9 @@
 ---
 name: 6_gofer_validate
-description: "Validate implemented work with evidence-backed scoring, blast-radius analysis, and engineering review."
-title: "Gofer Validate"
+description:
+  'Validate implemented work with evidence-backed scoring, blast-radius
+  analysis, and engineering review.'
+title: 'Gofer Validate'
 category: pipeline
 surfaces:
   - claude
@@ -15,10 +17,12 @@ surfaces:
   - system-skills
 aliases: [gofer:validate]
 ---
+
 ---
-description:
-  Unified validation, blast-radius analysis, and engineering review (3 phases,
-  110-point rubric)
+
+description: Unified validation, blast-radius analysis, and engineering review
+(3 phases, 110-point rubric)
+
 ---
 
 # Gofer Validate
@@ -42,28 +46,47 @@ Before any Gofer stage/helper command does pipeline work:
    Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
+
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
+   truth for simple, medium, hard, and arbiter model routing. If it is missing,
+   run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
-3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
+     synthesis, validation, and security; Opus for high-risk arbitration or
+     release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
+     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
+     for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
+     default research synthesis; Pro for large-context architecture or high-risk
+     arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before
+     choosing a paid/high-tier picker model for hard security, architecture, or
+     release gates.
+3. Keep raw tool output out of the main conversation context. Save stable
+   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
+   summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes:
+   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
+   stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or
+   validation bursts, checkpoint the durable artifacts and compact/clear/resume
+   context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence,
+contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
+
 <!-- gofer:business-progress:start -->
 
 Default user-facing updates must be concise, business-level, and easy to scan.
-Keep the technical work rigorous in artifacts, tests, logs, and code, but do
-not lead with implementation jargon unless the user asks for it.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do not
+lead with implementation jargon unless the user asks for it.
 
 1. Explain progress as what is being connected, changed, checked, or fixed and
    why it matters to the business outcome.
@@ -81,8 +104,7 @@ not lead with implementation jargon unless the user asks for it.
    - `Why it matters`: user/business impact
    - `Status`: done, checking, fixing, blocked, or needs decision
 6. Do not remove technical validation, security checks, EAI preflights, tests,
-   or loop evidence. This contract changes presentation, not engineering
-   standards.
+or loop evidence. This contract changes presentation, not engineering standards.
 <!-- gofer:business-progress:end -->
 
 ## User Input
@@ -130,12 +152,12 @@ This command expects in `.specify/specs/{feature}/`:
 
 ## Spec Artifact Guard
 
-Before validation, `.specify/scripts/bash/check-prerequisites.sh --json
---require-tasks` must confirm that `{FEATURE_DIR}/spec.md` exists, is
-non-empty, and is not the unfilled spec template. If the helper reports
-`spec.md` as missing, empty, or `template`, stop and run `/2_gofer_specify`.
-Validation cannot score functional correctness, traceability, or objective
-outcomes without a real specification.
+Before validation,
+`.specify/scripts/bash/check-prerequisites.sh --json --require-tasks` must
+confirm that `{FEATURE_DIR}/spec.md` exists, is non-empty, and is not the
+unfilled spec template. If the helper reports `spec.md` as missing, empty, or
+`template`, stop and run `/2_gofer_specify`. Validation cannot score functional
+correctness, traceability, or objective outcomes without a real specification.
 
 ## Outline
 
@@ -143,10 +165,10 @@ outcomes without a real specification.
 2. Load implementation context
 3. Closed-loop objective audit
 4. **Phase A** — Spawn 6 specialist rubric validation agents in parallel
-4. Evidence gate pre-check and pending-gate tracking
-5. **Phase B** — Spawn 5 blast-radius analysis agents in parallel
+5. Evidence gate pre-check and pending-gate tracking
+6. **Phase B** — Spawn 5 blast-radius analysis agents in parallel
 7. Blast-radius synthesis (change graph, interface diff, observability,
-    dependency/submodule impact, rollback readiness, release checklist)
+   dependency/submodule impact, rollback readiness, release checklist)
 8. Run automated checks (build, test, lint, typecheck)
 9. Mutation testing gate
 10. Mock ratio analysis
@@ -180,19 +202,19 @@ For pre-2026 Copilot environments, execute the validation phases
 
 ### 11-Category Scoring (110 Points)
 
-| #   | Category                     | Points | Pass Criteria                                                                                                                                                                          | Agent                                                                                                                      |
-| --- | ---------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Functional Correctness       | 15     | Every acceptance criterion in spec.md has a passing test exercising real code                                                                                                          | validation-correctness                                                                                                     |
-| 2   | Test Authenticity            | 15     | Zero skips, zero placeholders, zero mock-only assertions. Mutation score >= 60% if Stryker available                                                                                   | validation-test-quality                                                                                                    |
-| 3   | UI/E2E Verification          | 10     | If feature has UI: real rendering tests pass. If no UI: points redistribute                                                                                                            | N/A (automated check)                                                                                                      |
-| 4   | Security Posture             | 10     | Zero hardcoded secrets, no disabled security features, no client-side keys                                                                                                             | validation-security                                                                                                        |
-| 5   | Integration Reality          | 10     | Integration tests use real dependencies where possible. Contract tests validate boundaries                                                                                             | validation-integration                                                                                                     |
-| 6   | Error Path Coverage          | 10     | Public functions tested for failure modes. No empty catch blocks                                                                                                                       | validation-correctness + validation-standards                                                                              |
+| #   | Category                     | Points | Pass Criteria                                                                                                                                                                                                                                             | Agent                                                                                                                      |
+| --- | ---------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Functional Correctness       | 15     | Every acceptance criterion in spec.md has a passing test exercising real code                                                                                                                                                                             | validation-correctness                                                                                                     |
+| 2   | Test Authenticity            | 15     | Zero skips, zero placeholders, zero mock-only assertions. Mutation score >= 60% if Stryker available                                                                                                                                                      | validation-test-quality                                                                                                    |
+| 3   | UI/E2E Verification          | 10     | If feature has UI: real rendering tests pass. If no UI: points redistribute                                                                                                                                                                               | N/A (automated check)                                                                                                      |
+| 4   | Security Posture             | 10     | Zero hardcoded secrets, no disabled security features, no client-side keys                                                                                                                                                                                | validation-security                                                                                                        |
+| 5   | Integration Reality          | 10     | Integration tests use real dependencies where possible. Contract tests validate boundaries                                                                                                                                                                | validation-integration                                                                                                     |
+| 6   | Error Path Coverage          | 10     | Public functions tested for failure modes. No empty catch blocks                                                                                                                                                                                          | validation-correctness + validation-standards                                                                              |
 | 7   | Architecture Compliance      | 10     | File structure, patterns, visual explanations, `build-map.md`, and human-facing document summaries match plan.md and research.md. Required visuals are simple, rendered or fallback-safe, and traceable to requirements, code, and EAI Platform decisions | validation-standards                                                                                                       |
-| 8   | Performance Baseline         | 5      | No synchronous I/O in async paths, no unbounded loops, no N+1 patterns                                                                                                                 | validation-performance                                                                                                     |
-| 9   | Code Hygiene                 | 10     | Zero AI slop: no TODO placeholders, no redundant comments, no magic numbers                                                                                                            | validation-standards                                                                                                       |
-| 10  | Specification Traceability   | 5      | Every user story maps to tests, every test maps to code                                                                                                                                | validation-correctness                                                                                                     |
-| 11  | **Blast Radius Containment** | 10     | No unmitigated breaking API changes, full-surface consumer/import audit, new error paths log, no new High/Critical CVEs, rollback/feature-flag path exists, release checklist complete | codebase-analyzer + validation-integration + validation-standards + research-dependency-evaluator + tasks-rollback-planner |
+| 8   | Performance Baseline         | 5      | No synchronous I/O in async paths, no unbounded loops, no N+1 patterns                                                                                                                                                                                    | validation-performance                                                                                                     |
+| 9   | Code Hygiene                 | 10     | Zero AI slop: no TODO placeholders, no redundant comments, no magic numbers                                                                                                                                                                               | validation-standards                                                                                                       |
+| 10  | Specification Traceability   | 5      | Every user story maps to tests, every test maps to code                                                                                                                                                                                                   | validation-correctness                                                                                                     |
+| 11  | **Blast Radius Containment** | 10     | No unmitigated breaking API changes, full-surface consumer/import audit, new error paths log, no new High/Critical CVEs, rollback/feature-flag path exists, release checklist complete                                                                    | codebase-analyzer + validation-integration + validation-standards + research-dependency-evaluator + tasks-rollback-planner |
 
 ### Point Redistribution (No-UI Features)
 
@@ -225,6 +247,67 @@ evidence and MUST NOT contribute to any score. Any rubric category where
 evidence is absent, unverifiable, fabricated, or implied scores exactly 0 — no
 partial credit.
 
+## Real-Contract Validation Rules
+
+Validation must prove the code is correct in the real system, not merely that
+local tests are green.
+
+1. Do not trust existing tests, mocks, or prior passes by default.
+2. For every defect or risky change, identify:
+   - the exact runtime path involved
+   - the real downstream dependency or contract boundary
+   - whether current tests exercise that real boundary or only mocked behavior
+3. If a bug crosses an integration boundary, inspect the real request/response
+   shape at that boundary when feasible. For non-HTTP boundaries, inspect the
+   concrete payload/event/query shape actually exchanged.
+4. Do not treat a mock-only test, a relaxed assertion, or a changed fake as
+   proof that behavior is fixed unless you can also show the production behavior
+   is unchanged.
+5. Every regression fix must add at least one test or validation artifact that
+   would have failed before the fix for the same underlying reason the live bug
+   occurred.
+6. Prefer contract tests, integration tests, exact payload assertions, and
+   runtime evidence over broad happy-path mocks.
+7. If mocks are still required, explicitly state:
+   - what real behavior the mock stands in for
+   - what the mock does not prove
+   - what additional evidence closes the gap
+8. Green CI is not sufficient evidence for a boundary bug when the failing
+   contract or payload shape has not been directly verified.
+
+Forbidden anti-patterns:
+
+- Making a failing integration appear fixed only by updating mocks
+- Replacing a failing integration path with a pure unit test and calling it done
+- Claiming confidence without showing the contract, payload, query, or event
+  shape at the failing boundary
+- Treating `test passes locally` as proof when production failed at a real
+  service boundary
+
+## Bounded Fix And Revalidate Loop
+
+If validation finds a defect that the active agent can safely repair in the
+current workspace, validation must enter a bounded repair loop instead of
+stopping after the first failed pass.
+
+1. Record the failing evidence and root-cause hypothesis.
+2. Apply the smallest credible fix.
+3. Re-run the focused validation that proves the same boundary or behavior.
+4. Repeat until the issue is fixed or three repair attempts have been made.
+
+Loop rules:
+
+- Maximum repair attempts: 3
+- Every attempt must produce new evidence, not the same unexamined retry
+- If the third attempt still fails, validation MUST end in `FAIL` with:
+  - the last concrete blocker
+  - the evidence checked
+  - why the agent could not safely close the gap
+  - the next required human or engineering action
+- Do not loop blindly when the blocker is external, permission-bound, or
+  requires an unavailable environment; fail fast with explicit evidence in those
+  cases.
+
 ---
 
 ## Step 0: Context Health Check
@@ -237,8 +320,8 @@ Before starting validation, assess context window health:
 
 - If **< 50%**: Proceed normally
 - If **50-70%**: Use sub-agents heavily, minimize main context
-- If **> 70%**: Run `/7_gofer_save`, start a fresh session, read the
-  checkpoint, and continue validation
+- If **> 70%**: Run `/7_gofer_save`, start a fresh session, read the checkpoint,
+  and continue validation
 
 Validation loads all artifacts and spawns 6 agents — context pressure is high.
 
@@ -259,7 +342,8 @@ Validation loads all artifacts and spawns 6 agents — context pressure is high.
    - plan.md (architecture, file structure, tech stack)
    - tasks.md (task completion status)
    - goal-ledger.json (goal IDs, metrics, delivery states, re-loop triggers)
-   - loop-contract.json (loop objective, eval commands, max iterations, stop conditions)
+   - loop-contract.json (loop objective, eval commands, max iterations, stop
+     conditions)
    - loop-ledger.jsonl (implementation and validation loop evidence)
    - traceability.md (requirement-to-code/test evidence matrix)
    - research.md (codebase patterns to follow)
@@ -280,19 +364,19 @@ Scan `spec.md`, `plan.md`, `contract-pack.md`, and `quickstart.md` (when
 present) for the following signals:
 
 - `DEPLOY_SIGNAL_1`: any acceptance criterion contains: `rendered`,
-  `live route`, `live API`, `deployed`, `production`, `staging`,
-  `SharePoint`, `Azure`, `smoke`, `E2E`, `browser`
-- `DEPLOY_SIGNAL_2`: `plan.md`, `contract-pack.md`, or `quickstart.md`
-  names a deployment target: SharePoint, Azure, staging, production, Vercel,
-  Netlify, Docker, Kubernetes, or any server/environment referenced in the
-  acceptance chain
+  `live route`, `live API`, `deployed`, `production`, `staging`, `SharePoint`,
+  `Azure`, `smoke`, `E2E`, `browser`
+- `DEPLOY_SIGNAL_2`: `plan.md`, `contract-pack.md`, or `quickstart.md` names a
+  deployment target: SharePoint, Azure, staging, production, Vercel, Netlify,
+  Docker, Kubernetes, or any server/environment referenced in the acceptance
+  chain
 - `DEPLOY_SIGNAL_3`: `plan.md` declares a UI/rendered experience AND at least
   one acceptance criterion uses: `sees`, `displays`, `shows`, `renders`,
   `navigates to`
 
-Set `DEPLOY_IN_SCOPE = true` if ANY signal is present.
-Set `DEPLOY_IN_SCOPE = false` if NO signal is present.
-Record the determination in the validation report preamble.
+Set `DEPLOY_IN_SCOPE = true` if ANY signal is present. Set
+`DEPLOY_IN_SCOPE = false` if NO signal is present. Record the determination in
+the validation report preamble.
 
 ## Step 1.5: Closed-Loop Objective And Loop Evidence Audit
 
@@ -353,6 +437,9 @@ Plan: {FEATURE_DIR}/plan.md
 
 Check every acceptance criterion in spec.md.
 For each criterion, find the test that exercises it and verify it tests real code.
+If a criterion depends on an integration boundary, identify the exact boundary
+and whether the existing proof is real, contract-level, or mock-only.
+Call out any criterion that is only supported by indirect or theatrical tests.
 Return findings in your standard report format (<2000 tokens)."
 ```
 
@@ -388,6 +475,8 @@ Prompt: "Validate test quality for feature [FEATURE_NAME].
 Scan test files related to the feature.
 Check for: placeholder assertions, skipped tests, mock ratio, mock-only tests.
 VSCode API mocks marked '// mock-justified: VSCode API' are exempt from ratio.
+Flag any regression test that would still pass if the real boundary payload,
+query shape, or downstream contract remained broken.
 Return findings with mock ratio calculation (<2000 tokens)."
 ```
 
@@ -400,6 +489,9 @@ Prompt: "Validate integration contracts for feature [FEATURE_NAME].
 Feature directory: {FEATURE_DIR}
 Check contracts/ directory if it exists.
 Verify cross-component boundaries, type compatibility, integration test coverage.
+Inspect exact request/response, event, or query shapes at changed boundaries
+where feasible. If the proof is only mocked, say so explicitly and score the
+boundary as unproven.
 Return findings with contract compliance status (<2000 tokens)."
 ```
 
@@ -452,8 +544,8 @@ with the core agents.
 
 ## Step 2.2: Evidence Gate Pre-Check
 
-Evaluate the truthfulness gates before final scoring. If a gate is still
-pending here, re-check it after Step 3 automated checks complete and before the
+Evaluate the truthfulness gates before final scoring. If a gate is still pending
+here, re-check it after Step 3 automated checks complete and before the
 PASS/FAIL synthesis.
 
 ```
@@ -1035,11 +1127,11 @@ category:
 
 **Category 2: Test Authenticity** ({15 or 20 if no UI} pts)
 
-- Input: validation-test-quality agent report + `GATE-2` + mutation score +
-  mock ratio
+- Input: validation-test-quality agent report + `GATE-2` + mutation score + mock
+  ratio
 - Score 0 if: Any placeholder assertion found, OR any test.skip found, OR mock
-  ratio > 30%, OR mutation score < 60% (when Stryker available), OR
-  `GATE-2` fails
+  ratio > 30%, OR mutation score < 60% (when Stryker available), OR `GATE-2`
+  fails
 - Score full if: Zero placeholders, zero skips, mock ratio <= 30%
 
 **Category 3: UI/E2E Verification** (10 pts, or 0 if redistributed)
@@ -1051,10 +1143,10 @@ category:
   when that proof exists. Score 0 if `GATE-3` fails or no local render proof
   exists. Do not redistribute Category 3 points.
 - If `HAS_UI = true` and `DEPLOY_IN_SCOPE = true`: Check `GATE-3` for
-  screenshot, curl/HTTP transcript, deployment log, headless browser
-  assertion, or smoke-check output with proof of rendered/live behavior on the
-  declared route or target. Score 0 if `GATE-3` fails or no real render/deploy
-  proof exists.
+  screenshot, curl/HTTP transcript, deployment log, headless browser assertion,
+  or smoke-check output with proof of rendered/live behavior on the declared
+  route or target. Score 0 if `GATE-3` fails or no real render/deploy proof
+  exists.
 
 **Category 4: Security Posture** (10 pts)
 
@@ -1086,7 +1178,8 @@ category:
   human-facing artifacts lack a plain-language executive summary
 - Score full if: All files in expected locations, patterns followed
 
-**Visual And Document Comprehension Gate** (part of Category 7, no extra points):
+**Visual And Document Comprehension Gate** (part of Category 7, no extra
+points):
 
 Use this gate whenever the feature has architecture, process, security,
 workflow, data, UI, or EAI Platform behavior that a human reviewer or future AI
@@ -1096,10 +1189,10 @@ alignment, Marp-style narrative decks, and UI proof practices such as screenshot
 or visual-test evidence.
 
 - Executive summaries: every human-facing document starts with three to five
-  plain-language bullets that cover the decision, value, risk, evidence, and next
-  ask. Technical detail comes after the summary.
-- Purpose clarity: every visual states the question it answers, audience,
-  source inputs, and how to read it in plain language.
+  plain-language bullets that cover the decision, value, risk, evidence, and
+  next ask. Technical detail comes after the summary.
+- Purpose clarity: every visual states the question it answers, audience, source
+  inputs, and how to read it in plain language.
 - Simplicity: each diagram focuses on one decision or flow, keeps primary
   nodes/steps to about seven or fewer where practical, and splits crowded
   diagrams instead of making a spaghetti map.
@@ -1249,7 +1342,8 @@ blast_radius_verdict: [CONTAINED | BREACHED]
 blast_radius_report: blast-radius-report.md
 GeneratedAt: [ISO timestamp]
 SourceCommandId: /6_gofer_validate
-SourceInputs: [spec.md, plan.md, tasks.md, research.md, automated checks, agent findings]
+SourceInputs:
+  [spec.md, plan.md, tasks.md, research.md, automated checks, agent findings]
 OverwriteNoticeWhenApplicable: [new file or overwrite note]
 ---
 
@@ -1294,8 +1388,8 @@ OverwriteNoticeWhenApplicable: [new file or overwrite note]
 
 ## Closed-Loop Traceability
 
-| Requirement ID | Goal ID | Code Evidence | Test Evidence | Status |
-| -------------- | ------- | ------------- | ------------- | ------ |
+| Requirement ID | Goal ID | Code Evidence | Test Evidence | Status      |
+| -------------- | ------- | ------------- | ------------- | ----------- |
 | [FR-001]       | [G1]    | [path]        | [path]        | [PASS/FAIL] |
 
 ## Mutation Testing
@@ -1397,20 +1491,20 @@ See `{FEATURE_DIR}/blast-radius-report.md` for the full dimension report.
 
 ## Evidence Table
 
-| Category | Score | Evidence Artifact / Command Output | Absent / Reason for 0 |
-| --- | --- | --- | --- |
-| 1 — Functional Correctness | [0/15/20] | [file path, executed `npm test` output with timestamp, or agent citation] | [reason if 0] |
-| 2 — Test Authenticity | [0/15/20] | [file path, mutation output, or agent citation] | [reason if 0] |
-| 3 — UI/E2E Verification | [0/10/N/A] | [`N/A — HAS_UI=false`, `Render proof only — deployment target not in scope`, or render/deploy artifact] | [reason if 0 or not in scope] |
-| 4 — Security Posture | [0/10] | [agent finding citation] | [reason if 0] |
-| 5 — Integration Reality | [0/10] | [runtime wiring proof, integration-test output, or agent citation] | [reason if 0] |
-| 6 — Error Path Coverage | [0/10] | [agent finding citation] | [reason if 0] |
-| 7 — Architecture Compliance | [0/10] | [agent finding citation] | [reason if 0] |
-| 8 — Performance Baseline | [0/5] | [agent finding citation] | [reason if 0] |
-| 9 — Code Hygiene | [0/10] | [agent finding citation] | [reason if 0] |
-| 10 — Specification Traceability | [0/5] | [agent finding citation] | [reason if 0] |
-| 11 — Blast Radius Containment | [0/10] | [blast-radius-report.md reference] | [reason if 0] |
-| **Total** | **[N]/110** |  |  |
+| Category                        | Score       | Evidence Artifact / Command Output                                                                      | Absent / Reason for 0         |
+| ------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 1 — Functional Correctness      | [0/15/20]   | [file path, executed `npm test` output with timestamp, or agent citation]                               | [reason if 0]                 |
+| 2 — Test Authenticity           | [0/15/20]   | [file path, mutation output, or agent citation]                                                         | [reason if 0]                 |
+| 3 — UI/E2E Verification         | [0/10/N/A]  | [`N/A — HAS_UI=false`, `Render proof only — deployment target not in scope`, or render/deploy artifact] | [reason if 0 or not in scope] |
+| 4 — Security Posture            | [0/10]      | [agent finding citation]                                                                                | [reason if 0]                 |
+| 5 — Integration Reality         | [0/10]      | [runtime wiring proof, integration-test output, or agent citation]                                      | [reason if 0]                 |
+| 6 — Error Path Coverage         | [0/10]      | [agent finding citation]                                                                                | [reason if 0]                 |
+| 7 — Architecture Compliance     | [0/10]      | [agent finding citation]                                                                                | [reason if 0]                 |
+| 8 — Performance Baseline        | [0/5]       | [agent finding citation]                                                                                | [reason if 0]                 |
+| 9 — Code Hygiene                | [0/10]      | [agent finding citation]                                                                                | [reason if 0]                 |
+| 10 — Specification Traceability | [0/5]       | [agent finding citation]                                                                                | [reason if 0]                 |
+| 11 — Blast Radius Containment   | [0/10]      | [blast-radius-report.md reference]                                                                      | [reason if 0]                 |
+| **Total**                       | **[N]/110** |                                                                                                         |                               |
 ```
 
 This evidence table is required on **EVERY run (PASS and FAIL)**.
@@ -1428,8 +1522,8 @@ Category 11's evidence cell MUST cite `blast-radius-report.md`.
 
 When Category 3 is not in scope, the report preamble or row text MUST make the
 redistribution explicit enough that normalization/effective contribution remains
-derivable from the persisted report, and `Absent / Reason for 0` must record
-the matching not-in-scope reason.
+derivable from the persisted report, and `Absent / Reason for 0` must record the
+matching not-in-scope reason.
 
 ---
 
@@ -1479,8 +1573,8 @@ fails — fix the rubric first).
 
 ## Step 10: Brownfield Restart Loop
 
-When validation fails (score < score_max), generate a remediation report and signal
-the orchestrator to restart the pipeline focused on failed areas.
+When validation fails (score < score_max), generate a remediation report and
+signal the orchestrator to restart the pipeline focused on failed areas.
 
 ### 10.1 Check Iteration Count
 
@@ -1645,8 +1739,8 @@ the feature pipeline is complete.
 ## Step 10a: Initialize Phase C
 
 1. **Guard**: only proceed if rubric `status == PASS` and the objective outcome
-   gate passes (Step 9 TOTAL = 110 and Step 1.5 PASS). If
-   FAIL, skip Phase C entirely — brownfield restart (Step 10) already triggered.
+   gate passes (Step 9 TOTAL = 110 and Step 1.5 PASS). If FAIL, skip Phase C
+   entirely — brownfield restart (Step 10) already triggered.
 
 2. **Initialize cycle counter**: `CYCLE = 1`
 
@@ -1904,9 +1998,9 @@ review report are written:
    - Mark each Press Release claim as validated, changed, or unvalidated based
      on `validation-report.md`, `blast-radius-report.md`,
      `goal-rebaseline-report.md`, and `loop-audit-report.md`.
-   - Fill Internal FAQ CISO / Risk with data handled, identity controls,
-     tenant boundaries, secrets handling, residual risks, validation evidence,
-     and launch gates.
+   - Fill Internal FAQ CISO / Risk with data handled, identity controls, tenant
+     boundaries, secrets handling, residual risks, validation evidence, and
+     launch gates.
    - Update "What happens if something goes wrong?" with rollback/support
      evidence from validation and blast-radius analysis.
 2. Write `{FEATURE_DIR}/prfaq-history/06-validate.md` as an immutable final
@@ -2034,11 +2128,11 @@ If any validation gate failed, write these documents honestly with `FAIL`,
 
 ## Step 11: Attribution Logging
 
-Log every finding to `.specify/logs/validation-findings.jsonl`.
-For EnterpriseAI runs, also mirror the same finding lifecycle to
-`{FEATURE_DIR}/audit-history.md` so executive, architecture, CISO, data, CIO,
-delivery, finance, operations, and risk/compliance stakeholders can see stable
-finding IDs, recurrence, disposition, owner, expiry, and review cadence.
+Log every finding to `.specify/logs/validation-findings.jsonl`. For EnterpriseAI
+runs, also mirror the same finding lifecycle to `{FEATURE_DIR}/audit-history.md`
+so executive, architecture, CISO, data, CIO, delivery, finance, operations, and
+risk/compliance stakeholders can see stable finding IDs, recurrence,
+disposition, owner, expiry, and review cadence.
 
 ### Finding Format
 
@@ -2083,15 +2177,15 @@ For each finding from all agents and automated checks, append a JSON line:
 
 `audit-history.md` MUST include:
 
-| Field | Requirement |
-| ----- | ----------- |
-| Finding ID | Stable across validation cycles; never renumber existing findings |
-| Source | Rubric category, agent, automated check, or stakeholder gate |
-| Status | Open, fixed, accepted, or escalated |
-| Recurrence | Count and prior cycle references for repeated findings |
-| Owner | Named accountable role or team |
-| Expiry | Required for accepted exceptions |
-| Evidence | Links to validation report, tests, contract pack, or code references |
+| Field      | Requirement                                                          |
+| ---------- | -------------------------------------------------------------------- |
+| Finding ID | Stable across validation cycles; never renumber existing findings    |
+| Source     | Rubric category, agent, automated check, or stakeholder gate         |
+| Status     | Open, fixed, accepted, or escalated                                  |
+| Recurrence | Count and prior cycle references for repeated findings               |
+| Owner      | Named accountable role or team                                       |
+| Expiry     | Required for accepted exceptions                                     |
+| Evidence   | Links to validation report, tests, contract pack, or code references |
 
 Recurring red findings must escalate to the relevant decision owner and block
 launch unless explicitly accepted with owner, expiry, and review cadence.
@@ -2102,15 +2196,15 @@ For application delivery, validation MUST also check
 - The app process has four user-facing steps or fewer, or an approved exception
   explains why extra steps could not be combined, automated, or handled by
   generative AI assistance.
-- Each journey step preserves its business goal, AI assistance mode, data/context
-  used, completion signal, human controls, evidence/confidence display, audit
-  trail, and fallback/escalation path.
+- Each journey step preserves its business goal, AI assistance mode,
+  data/context used, completion signal, human controls, evidence/confidence
+  display, audit trail, and fallback/escalation path.
 - `{FEATURE_DIR}/ui-review-log.md` contains a `gofer-ui-preview.mjs` run or
   equivalent opened-browser evidence for every UI-facing change after the first
   preview command/URL was established.
-- Each preview entry records the changed surface, preview command or URL,
-  opened local URL, browser target, screenshot path or clear capture limitation,
-  and pre-presentation self-review notes before stakeholder feedback.
+- Each preview entry records the changed surface, preview command or URL, opened
+  local URL, browser target, screenshot path or clear capture limitation, and
+  pre-presentation self-review notes before stakeholder feedback.
 - `{FEATURE_DIR}/ui-show-and-tell.md` records the latest opened preview URL,
   latest preview-helper run, screenshot/browser evidence, user feedback,
   branding/logo notes, any EAI App Template exceptions, changes made from
@@ -2128,21 +2222,22 @@ For application delivery, validation MUST also check
   expiry, and validation evidence.
 - The selected external/internal/hybrid profile choice, package lane, coupling
   status, Storybook story IDs, theme override points, public-readiness target,
-  and custom-block exceptions are present in the preview/show-and-tell/service-fit
-  artifacts and match the delivered implementation.
+  and custom-block exceptions are present in the
+  preview/show-and-tell/service-fit artifacts and match the delivered
+  implementation.
 - Validation confirms that app-delivery runs used EAI App Template blocks by
   default and that any create-new UI concept was explicitly shown to the user,
   recorded with rationale, and not silently introduced.
 - Validation confirms that block-porting tasks produced the expected package
-  surface and that public or hybrid lanes do not directly depend on source platform
-  internals unless an approved restricted-source exception is recorded.
+  surface and that public or hybrid lanes do not directly depend on source
+  platform internals unless an approved restricted-source exception is recorded.
 - Chatbot, voice, accessibility, translation, contextual prefill, validation,
   and step-goal assistance claims are covered by acceptance tests where they are
   in scope.
 
 For explicit non-app work, validation MUST treat `ui-preview-brief.md`,
-`ui-review-log.md`, `ui-show-and-tell.md`, and `service-fit-matrix.md` as
-**not applicable** rather than as missing blocking artifacts.
+`ui-review-log.md`, `ui-show-and-tell.md`, and `service-fit-matrix.md` as **not
+applicable** rather than as missing blocking artifacts.
 
 ### Log Summary Entry
 
