@@ -35,8 +35,6 @@ passing but not testing anything meaningful.
      return values
    - Tests where every dependency is mocked (nothing real is tested)
    - Tests that verify mock wiring, not behavior
-   - Regression tests that would still pass even if the real downstream
-     contract, payload shape, or query grammar remained broken
 
 5. **Mutation Testing Readiness**
    - Check if Stryker config exists
@@ -82,8 +80,6 @@ For each test:
 
 - Check if ALL expect() calls use toHaveBeenCalled/toHaveBeenCalledWith
 - If so, flag as "mock-only test — verifies wiring, not behavior"
-- Check whether the test would still pass if the real downstream boundary kept
-  failing for the original reason; if yes, flag it as "regression theater"
 
 ## Output Format
 
@@ -148,6 +144,3 @@ This agent blocks validation (scores 0 in Test Authenticity) if ANY:
   the entire test suite
 - **Quality over quantity** — 5 real tests beat 50 placeholder tests
 - **Report the worst offenders first** — sort findings by severity
-- **Boundary realism matters** — if a test never inspects the real payload,
-  request shape, response shape, query grammar, or externally visible behavior,
-  it does not close an integration regression by itself

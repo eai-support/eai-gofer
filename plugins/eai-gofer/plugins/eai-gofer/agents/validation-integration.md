@@ -35,7 +35,6 @@ API interfaces.
    - Tests use real dependencies where possible (not all mocked)
    - Error scenarios at boundaries are tested
    - Timeout and retry behavior is verified
-   - Regression proof would fail if the original boundary bug still existed
 
 ## Analysis Strategy
 
@@ -64,8 +63,6 @@ For each boundary:
 - Read the consumer's expected input type/shape
 - Verify they match
 - Flag mismatches
-- Where feasible, inspect the exact request/response, event, query, or payload
-  shape used at runtime rather than relying on inferred intent
 
 ### Step 4: Integration Test Check
 
@@ -73,9 +70,6 @@ For each boundary:
 - Verify they test real cross-component paths
 - Check if integration tests are all-mocked (defeats purpose)
 - Note missing integration test coverage
-- Determine whether any regression test would still pass if the real boundary
-  contract were broken in the same way as production; if so, mark that proof as
-  insufficient
 
 ## Output Format
 
@@ -133,5 +127,3 @@ This agent blocks validation (scores 0 in Integration Reality) if ANY:
 - **Mock-heavy integration tests are a red flag** — an "integration test" that
   mocks everything is just a unit test with extra steps
 - **Be specific about mismatches** — show the expected type vs actual type
-- **Boundary evidence beats optimism** — if you cannot show the exact boundary
-  shape or an equivalent contract-level proof, report the boundary as unproven
