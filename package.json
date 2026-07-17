@@ -12,6 +12,17 @@
     "url": "https://github.com/eai-tools/eai-gofer"
   },
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./headless": {
+      "types": "./dist/headless/index.d.ts",
+      "import": "./dist/headless/index.js"
+    }
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -50,6 +61,7 @@
     "gofer:codex-doctor": "node .specify/scripts/node/codex-doctor.mjs",
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
+    "prepack": "npm run build",
     "prepare": "husky"
   },
   "dependencies": {
