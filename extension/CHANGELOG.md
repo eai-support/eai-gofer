@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.23] - 2026-07-17
+
+Expose only gofer and eai-gofer as public command entrypoints
+
 ## [3.7.22] - 2026-07-15
 
 Align release flow with protected main
