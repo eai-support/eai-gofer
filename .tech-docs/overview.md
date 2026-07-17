@@ -8,38 +8,41 @@ source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
 
 ## Executive Summary
 
-| Attribute                | Value                                                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| **Service Name**         | Gofer                                                                                                                |
-| **Primary Capability**   | Spec-driven development workflow system with UI-first app delivery and multi-platform AI assistant support           |
-| **Primary Users**        | Software development teams using Claude Code, GitHub Copilot, OpenAI Codex, or Gemini CLI for feature implementation |
-| **Data Sensitivity**     | Low - stores specifications, plans, and code artifacts locally in repository workspace                               |
-| **Current Status**       | Active Development (v3.4.7) - production-ready with public plugin and VSIX distribution                              |
-| **Last Material Change** | 2026-05-29 - public-launch cleanup, community-health pass, and documentation refresh                                 |
+| Attribute                | Value                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Service Name**         | Gofer                                                                                                      |
+| **Primary Capability**   | One-command EAI delivery pipeline with UI-first app delivery and multi-platform AI assistant support       |
+| **Primary Users**        | Business and delivery teams using Claude Code, GitHub Copilot, OpenAI Codex, Gemini CLI, or VS Code        |
+| **Data Sensitivity**     | Low - stores specifications, plans, and code artifacts locally in repository workspace                     |
+| **Current Status**       | Active Development (v3.7.24) - production-ready with public plugin and VSIX distribution                   |
+| **Last Material Change** | 2026-07-17 - one-command `/eai` user experience, public release refresh, and Admin Portal contract support |
 
 ## Service Identity
 
-**Name:** Gofer  
-**Version:** 3.4.7  
-**Documentation Updated:** 2026-05-29  
-**Publisher:** EAI Tools  
-**Repository:** [eai-tools/eai-gofer](https://github.com/eai-tools/eai-gofer)
+- **Name:** Gofer
+- **Version:** 3.7.24
+- **Documentation Updated:** 2026-07-17
+- **Publisher:** EAI Tools
+- **Repository:** [eai-tools/eai-gofer](https://github.com/eai-tools/eai-gofer)
 
-**Description:** Spec-driven development system for AI assistants. Provides the
-Gofer pipeline, repo bootstrap helpers, generated command surfaces, and portable
-installs for Claude Code, GitHub Copilot, OpenAI Codex, Gemini CLI, and VS Code.
+**Description:** Spec-driven delivery system for AI assistants. Users start with
+`/eai`, `#eai`, or `$eai` depending on the host. Gofer then checks readiness,
+routes the internal pipeline, keeps stakeholder artifacts current, shows UI
+progress early, and validates the result.
 
 ## Purpose
 
-Gofer is a VSCode extension that bridges human specifications with AI
-implementation through a dual-protocol architecture (LSP + MCP). It provides:
+Gofer is a VS Code extension and portable agent plugin that bridges business
+intent with AI implementation through repo-owned pipeline artifacts, lightweight
+host entrypoints, and a dual-protocol architecture (LSP + MCP). It provides:
 
 1. **Model Context Protocol (MCP) Tools** - 23+ tools that AI assistants call
    directly to read specs, execute tasks, validate code, and manage context
 2. **Specification Framework** - Structured `.specify/` directory format for
    feature specs, plans, and tasks
-3. **Multi-Platform CLI Support** - Commands for Claude Code, GitHub Copilot
-   Chat, OpenAI Codex, and Gemini CLI (24+ commands)
+3. **Multi-Platform CLI Support** - One public `eai` entrypoint for Claude Code,
+   GitHub Copilot Chat, OpenAI Codex, and Gemini CLI, backed by internal stage
+   contracts
 4. **Autonomous Execution** - Optional orchestrator that drives Claude Code
    through full implementation cycles with Haiku-based decision making
 5. **Adaptive Context Compaction (ACC)** - 5-stage progressive context
@@ -172,8 +175,9 @@ npm run gofer:codex-doctor                          # Diagnostic tool
 
 - Based on CLAUDE.md, the project follows a structured workflow with autonomous
   bug fixing and self-improvement loops
-- Uses Gofer's own pipeline for development (`/0_gofer_start` → research →
-  specify → plan → tasks → implement → validate)
+- Uses Gofer's own pipeline for development through `/eai`, which routes
+  internally through start → research → specify → plan → tasks → implement →
+  validate
 - Specifications stored in `.specify/specs/` directory
 - Constitution principles defined in `.specify/memory/constitution.md`
 
@@ -248,12 +252,13 @@ gofer/
    - Add requirements and success criteria
    - Define protected boundaries if needed
 
-5. **Let AI Implement**
-   - In Claude Code: `/0_gofer_start Add user authentication`
-   - In GitHub Copilot: `#0_gofer_start Add user authentication`
-   - In OpenAI Codex: Ask to use the `0_gofer_start` skill
-   - In Gemini CLI: `/gofer:0_gofer_start Add user authentication`
-   - Pipeline auto-chains through all stages
+5. **Let Gofer Design, Build, And Validate**
+   - In Claude Code: `/eai Add user authentication`
+   - In GitHub Copilot: `#eai Add user authentication`
+   - In OpenAI Codex: `$eai Add user authentication`
+   - In Gemini CLI: `/eai Add user authentication`
+   - Gofer checks the repo and EAI readiness, then routes the internal pipeline
+     without asking the user to run numbered stage commands
 
 ## Key Features
 
@@ -273,10 +278,11 @@ gofer/
 - **Visual Artifacts** - 10 persona-pack templates (Impact Canvas, C4, ERD,
   Heatmaps)
 - **7 Visual Writer Agents** - Specialized agents for each diagram type
-- **Namespace Aliases** - `/gofer:*` prefix for all commands
+- **Single Public Entrypoint** - `/eai`, `#eai`, or `$eai` depending on host
 - **Mermaid Export** - `npm run gofer:mermaid-export` (optional)
-- **24+ Pipeline Commands** - Numbered stages + helper commands + control
-  commands
+- **Internal Pipeline Contracts** - numbered stages, helpers, and control
+  commands remain available under `.specify/commands/` for Gofer to route
+  internally
 
 ### Adaptive Context Compaction (ACC) v3.2+
 
@@ -316,8 +322,8 @@ gofer/
 ### Recent Additions (v3.0-3.4)
 
 - **Memory Panel Filter** - Toggle to hide system-generated memories
-- **Cross-Platform Command Parity** - All 24+ Gofer commands on Claude, Copilot,
-  Codex, Gemini
+- **Cross-Platform Command Parity** - one public `eai` entrypoint across Claude,
+  Copilot, Codex, and Gemini, with internal stage parity retained
 - **Parallel Validation** - 6 validation agents run concurrently
 - **Codex Budget Doctor** - `npm run gofer:codex-doctor` diagnostic tool
 - **Plugin Manifests** - `.claude-plugin/`, `.gemini/`, `codex-config.toml`
@@ -403,9 +409,9 @@ This repository maintains multiple documentation surfaces:
 
 ## Current Status
 
-- Active development at v3.4.0
+- Active development at v3.7.24
 - Nightly-managed `.tech-docs/` content is present for this repository
 - Source commit: `0344d6df21fba9738d8bd9f6c26d7602c4e0775e`
 - Additional repo-local docs surfaces detected: 1 (docs-site/)
-- Recent focus: agent plugin marketplace distribution, release alignment, and
-  cross-platform command parity
+- Recent focus: one-command `/eai` UX, public release alignment, Admin Portal
+  headless contracts, and cross-platform host parity

@@ -67,9 +67,9 @@ See @AGENTS.md for project conventions, commands, and code style.
 
 ## Gofer Pipeline
 
-Run `/0_gofer_start` to start the core Gofer pipeline: business scenario ->
-research -> specify -> plan -> tasks -> implement -> validate.
-`/6_gofer_validate` is the terminal quality gate and includes the final
-engineering review loop. Use `/7_gofer_save` for checkpoints and
-`/8_gofer_branding` for branded document/deck templates. Artifacts go to
-`.specify/specs/{feature}/`.
+Use `/eai ...` as the public Gofer entrypoint. Gofer will work out the current
+feature state and route internally through business scenario -> research ->
+specify -> plan -> tasks -> implement -> validate. Validation is the terminal
+quality gate and includes the final engineering review loop. Ask through `/eai`
+for checkpoints, branded document/deck templates, stakeholder summaries, tests,
+or other helper work. Artifacts go to `.specify/specs/{feature}/`.

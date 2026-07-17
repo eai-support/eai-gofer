@@ -91,7 +91,7 @@ sequenceDiagram
     participant FS as File System (.specify/)
     participant Extension as VS Code Extension
 
-    User->>ClaudeCode: /0_gofer_start Add auth
+    User->>ClaudeCode: /eai Add auth
     ClaudeCode->>LSP: MCP: tools/call("gofer_read_spec")
     LSP->>MCP: Route to tool handler
     MCP->>FS: Read .specify/specs/*/spec.md
@@ -221,7 +221,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Start["User Initiates<br/>/0_gofer_start"]
+    Start["User asks<br/>/eai ..."]
 
     subgraph "Research Phase"
         Research["Generate research.md<br/>Codebase analysis"]

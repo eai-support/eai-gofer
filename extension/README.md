@@ -22,10 +22,11 @@ Gofer pipeline.
 
 1. Open the Command Palette and run **Gofer: Initialize Repository**.
 2. Optional: run **Gofer: Install Optional Developer Tools**.
-3. Start with `/0_gofer_start` in slash-command CLIs or `#0_gofer_start` in
-   Copilot Chat.
-4. Progress through the core pipeline:
-   `Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate`.
+3. Start every feature or follow-up request with `/eai` in slash-command CLIs,
+   `#eai` in Copilot Chat, or `$eai` in hosts that use dollar-prefixed skills.
+4. Gofer manages the internal pipeline for you:
+   `start -> research -> specify -> plan -> tasks -> implement -> validate`. You
+   do not need to run numbered stage commands.
 
 ## Common Commands
 

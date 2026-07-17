@@ -10,9 +10,10 @@ source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
 
 Gofer is deployed through three distribution channels:
 
-1. **VS Code Marketplace** - Extension VSIX (primary)
-2. **GitHub Releases** - VSIX + agent plugin ZIP + source tarball
-3. **Agent Plugin Marketplaces** - Claude Code, Copilot CLI, Codex local
+1. **GitHub Releases and Pages** - VSIX + agent plugin ZIP + source tarball
+2. **VS Code Marketplace** - Extension VSIX when publisher authorization is
+   configured
+3. **Agent Plugin Marketplaces** - Claude Code, Copilot CLI, Codex, and Gemini
    installations
 
 All deployments are automated via GitHub Actions CI/CD pipelines with version
@@ -130,12 +131,16 @@ flowchart TB
      - `eai-gofer-X.Y.Z.vsix`
      - `eai-gofer-agent-plugin-X.Y.Z.zip`
      - `gofer-vX.Y.Z.tar.gz` (source)
-   - Publish to VS Code Marketplace with `VSCE_PAT`
+   - Publish to VS Code Marketplace through Microsoft Entra workload identity
+     when the publishing identity is authorized on the Marketplace publisher
 
-**Required Secrets:**
+**Required Publishing Configuration:**
 
-- `VSCE_PAT` - VS Code Marketplace Personal Access Token for
-  `EnterpriseAI.gofer` (required for stable public releases)
+- `VSCE_AZURE_CLIENT_ID`, `VSCE_AZURE_TENANT_ID`, and
+  `VSCE_AZURE_SUBSCRIPTION_ID` repository variables for Entra workload identity
+  publishing
+- `VSCE_PAT` is retained only as a legacy fallback while Azure DevOps global
+  PATs are retired
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions
 
 #### Pages Pipeline (`.github/workflows/pages.yml`)
@@ -184,68 +189,40 @@ flowchart TB
 
 ## Deployment Process
 
-### Manual Deployment Steps
+### Release Script Deployment
 
-1. **Bump Version Numbers**
+Use `release.sh`; do not hand-edit versions, package artifacts, or tags.
 
-   ```bash
-   # Update package.json files
-   npm version minor  # or major, patch
-   cd extension && npm version minor
-   cd ../language-server && npm version minor
-   ```
-
-2. **Generate Command Surfaces**
+1. **Prepare the release PR**
 
    ```bash
-   npm run gofer:generate
+   ./release.sh patch "Release notes for users"
    ```
 
-3. **Package Agent Plugin**
+   The script bumps package versions, regenerates command surfaces, syncs
+   extension resources, packages the VSIX and agent plugin, runs activation and
+   command checks, runs tests, mirrors public GitHub Pages assets, commits the
+   release prep, pushes a release branch, and opens a PR.
+
+2. **Merge the release PR after CI is green**
+
+3. **Publish the tag from merged `main`**
 
    ```bash
-   npm run gofer:package-plugin -- --version 3.4.0 --sync-repo
+   git switch main
+   git pull --ff-only origin main
+   ./release.sh patch "Release notes for users"
    ```
 
-4. **Test Locally**
-
-   ```bash
-   npm test
-   npm run build:all
-   cd extension && npx vsce package
-   code --install-extension gofer-3.4.0.vsix
-   ```
-
-5. **Create Git Tag**
-
-   ```bash
-   git add -A
-   git commit -m "chore: bump version to 3.4.0"
-   git tag v3.4.0
-   git push origin main --tags
-   ```
-
-6. **Monitor Release Pipeline**
-   - Watch GitHub Actions for release workflow
-   - Verify assets uploaded to GitHub Release
-   - Verify VS Code Marketplace publish
-
-### Automated Deployment (Recommended)
-
-1. **Create and Push Tag**
-
-   ```bash
-   git tag v3.4.0
-   git push origin v3.4.0
-   ```
-
-2. **Automated Steps** (GitHub Actions handles):
+4. **Automated Steps** (GitHub Actions handles):
    - Run CI tests
    - Build extension and agent plugin
    - Package VSIX and ZIP
    - Create GitHub Release
    - Upload release assets
-   - Publish to VS Code Marketplace with `VSCE_PAT`
+   - Publish to VS Code Marketplace with Entra workload identity when the
+     publishing identity is authorized, with `VSCE_PAT` only as a legacy
+     fallback
    - Deploy documentation site
 
 ## Release Assets
