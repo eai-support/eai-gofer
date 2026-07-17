@@ -49,7 +49,7 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('E001');
     expect(command).toContain('.specify/logs/eai-first-run-report.md');
     expect(command).toContain('/gofer <what you want to build>');
-    expect(command).toContain('/eai-gofer');
+    expect(command).toContain('/eai');
     expect(command).not.toContain('/0_gofer_start <what you want to build>');
   });
 

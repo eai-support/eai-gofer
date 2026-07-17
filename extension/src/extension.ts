@@ -903,7 +903,7 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
  * Register global commands (available even without workspace)
  * These commands are registered early before workspace detection
  */
-async function runPublicGoferEntrypoint(label: 'Gofer' | 'EAI Gofer'): Promise<void> {
+async function runPublicGoferEntrypoint(label: 'Gofer' | 'Eai'): Promise<void> {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
     vscode.window.showInformationMessage(`${label}: open a folder first, then run Gofer again.`);
@@ -933,7 +933,7 @@ async function runPublicGoferEntrypoint(label: 'Gofer' | 'EAI Gofer'): Promise<v
   }
 
   vscode.window.showInformationMessage(
-    `${label} is ready. In your AI app, run /gofer or /eai-gofer. Use #gofer in Copilot or $gofer in hosts that use dollar-prefixed skills.`
+    `${label} is ready. In your AI app, run /gofer or /eai. Use #gofer or #eai in Copilot and $gofer or $eai in hosts that use dollar-prefixed skills.`
   );
 }
 
@@ -947,8 +947,8 @@ function registerGlobalCommands(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('gofer.eaiGofer', async () => {
-      await runPublicGoferEntrypoint('EAI Gofer');
+    vscode.commands.registerCommand('gofer.eai', async () => {
+      await runPublicGoferEntrypoint('Eai');
     })
   );
 

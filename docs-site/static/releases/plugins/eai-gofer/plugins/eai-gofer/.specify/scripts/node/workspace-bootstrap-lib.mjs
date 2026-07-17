@@ -645,7 +645,7 @@ ${buildCodeStyleSection(projectInfo)}
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#gofer\` in Copilot-style prompts and \`$gofer\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
+This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
 
 Each feature should carry a bounded loop contract:
 
@@ -707,7 +707,7 @@ See @AGENTS.md for project conventions, commands, and code style.
 
 ## Gofer Pipeline
 
-Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#gofer\` in Copilot-style prompts and \`$gofer\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts go to \`.specify/specs/{feature}/\`.
+Run \`/gofer\` or \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts go to \`.specify/specs/{feature}/\`.
 
 For each active feature, keep \`loop-contract.json\`, \`loop-ledger.jsonl\`, and
 \`loop-audit-report.md\` in the feature directory. The loop contract bounds
@@ -730,9 +730,9 @@ export function buildCopilotInstructions(projectInfo) {
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
+This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
 
-Use \`#gofer\` or \`#eai-gofer\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
+Use \`#gofer\` or \`#eai\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
 
 ${eaiSection}
 
@@ -933,7 +933,7 @@ Run the unified Gofer pipeline with one public command:
 /gofer Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`/eai-gofer\`, \`#gofer\`, \`#eai-gofer\`, \`$gofer\`, or \`$eai-gofer\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
+Use \`/eai\`, \`#gofer\`, \`#eai\`, \`$gofer\`, or \`$eai\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
 
 Artifacts are stored in \`.specify/specs/{feature}/\`.
 

@@ -46,7 +46,7 @@ not lead with implementation jargon unless the user asks for it.
 <!-- gofer:business-progress:end -->
 
 Use this internal setup contract when the user is starting their first EAI
-Platform app, when `/gofer` or `/eai-gofer` is unavailable in a new repository,
+Platform app, when `/gofer` or `/eai` is unavailable in a new repository,
 or when an EAI app build reaches the Gofer pipeline before the local machine,
 workspace, tenant, or EAI app template is ready.
 
@@ -438,8 +438,8 @@ ready, tell the user to start:
 /gofer <what you want to build>
 ```
 
-Use `/eai-gofer`, `#gofer`, `#eai-gofer`, `$gofer`, or `$eai-gofer` where that
-syntax fits the host. If `/gofer` or `/eai-gofer` is still unknown after the
+Use `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` where that
+syntax fits the host. If `/gofer` or `/eai` is still unknown after the
 plugin is installed and the repo is bootstrapped, explain that the host has not
 loaded the Gofer plugin or repo commands yet. Give the host-specific
 install/update command from the Gofer README, then retry after the host reloads.
