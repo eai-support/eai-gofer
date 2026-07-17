@@ -56,9 +56,13 @@ describe('agent plugin manifests', () => {
     expect(manifest.version).toBe(expectedVersion());
     expect(manifest.author.name).toBe('EAI Tools');
     expect(Array.isArray((manifest as unknown as { commands?: unknown }).commands)).toBe(false);
-    expect(manifest.skills).toBe('./.agents/skills/');
+    expect(manifest.skills).toBe('./plugin-skills/');
     expect(manifest.agents).toBeUndefined();
     expect(manifest.commands).toBeUndefined();
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
+      true
+    );
   });
 
   it('Copilot root plugin manifest exists for direct installs', (): void => {

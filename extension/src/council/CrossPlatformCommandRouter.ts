@@ -271,7 +271,11 @@ export class CrossPlatformCommandRouter {
    * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const geminiCommand = commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
+    const publicEntrypoints = new Set(['gofer', 'eai-gofer']);
+    const geminiCommand =
+      publicEntrypoints.has(commandName) || commandName.startsWith('gofer:')
+        ? commandName
+        : `gofer:${commandName}`;
     const syntaxMap: Record<PlatformType, string> = {
       claude: `/${commandName}`,
       codex: `/${commandName}`,
@@ -512,7 +516,7 @@ export class CrossPlatformCommandRouter {
       );
       const rootChecks = await Promise.all(
         rootEntries
-          .filter((entry) => entry !== 'gofer')
+          .filter((entry) => !entry.endsWith('.md'))
           .map(async (entry) => {
             const skillPath = path.join(codexRoot, entry, 'SKILL.md');
             const exists = await pathExistsSafe(

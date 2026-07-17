@@ -67,6 +67,7 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
 const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
+const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['gofer', 'eai-gofer']);
 
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -179,7 +180,8 @@ export class ResourceSyncer implements IResourceOperations {
     }
 
     const archiveStamp = this.buildLegacyArchiveStamp();
-    for (const relativePath of LEGACY_GOFER_COMMAND_PATHS) {
+    const visibleStagePaths = await this.collectVisibleStageSurfacePaths();
+    for (const relativePath of [...LEGACY_GOFER_COMMAND_PATHS, ...visibleStagePaths]) {
       const targetPath = path.join(this.workspacePath, relativePath);
       try {
         if (!(await FileUtils.exists(targetPath))) {
@@ -199,6 +201,46 @@ export class ResourceSyncer implements IResourceOperations {
           }`
         );
       }
+    }
+  }
+
+  private async collectVisibleStageSurfacePaths(): Promise<string[]> {
+    const commandStems = await this.collectBundledInternalCommandStems();
+    const relativePaths: string[] = [];
+
+    for (const stem of commandStems) {
+      if (PUBLIC_GOFER_ENTRYPOINT_STEMS.has(stem)) {
+        continue;
+      }
+
+      relativePaths.push(
+        path.join('.claude', 'commands', `${stem}.md`),
+        path.join('.github', 'prompts', `${stem}.prompt.md`),
+        path.join('.agents', 'skills', stem),
+        path.join('.system', 'skills', stem),
+        path.join('.gemini', 'commands', 'gofer', `${stem}.md`),
+        path.join('.gemini', 'commands', 'gofer', `${stem}.toml`)
+      );
+    }
+
+    return relativePaths;
+  }
+
+  private async collectBundledInternalCommandStems(): Promise<string[]> {
+    try {
+      const sourcePath = path.join(this.getExtensionPath(), 'resources', 'specify-commands');
+      const entries = await fs.readdir(sourcePath);
+      return entries
+        .filter((entry) => entry.endsWith('.md') && entry !== '.gitkeep')
+        .map((entry) => path.basename(entry, '.md'));
+    } catch (error) {
+      this.logger.warn(
+        'ResourceSyncer',
+        `Unable to inspect bundled command list for public-surface cleanup: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return [];
     }
   }
 
@@ -1562,13 +1604,15 @@ This folder contains all project specifications for AI-driven feature developmen
 2. Run: **"Gofer: Create New Specification"**
 3. Follow the prompts to create your feature spec
 
-### Using Claude Code (Recommended)
+### Using an AI coding app (Recommended)
 
-Run the unified Gofer pipeline with a single command:
+Run the unified Gofer pipeline with one public command:
 
 \`\`\`
-/0_gofer_start Add user authentication with OAuth2 and JWT
+/gofer Add user authentication with OAuth2 and JWT
 \`\`\`
+
+Use \`#gofer\` in Copilot-style prompts or \`$gofer\` in hosts that use dollar-prefixed skills. \`/eai-gofer\`, \`#eai-gofer\`, and \`$eai-gofer\` are equivalent aliases.
 
 This automatically chains through all stages:
 1. **Research** → Explores codebase and technology
@@ -1580,21 +1624,21 @@ This automatically chains through all stages:
 
 ## Core Gofer Pipeline
 
-| Stage | Command | Output |
+| Stage | Internal contract | Output |
 |-------|---------|--------|
-| 0. Business scenario | \`/0_gofer_start\` | Pipeline kickoff |
-| 1. Research | \`/1_gofer_research\` | research.md |
-| 2. Specify | \`/2_gofer_specify\` | spec.md |
-| 3. Plan | \`/3_gofer_plan\` | plan.md, data-model.md, contracts/ |
-| 4. Tasks | \`/4_gofer_tasks\` | tasks.md, traceability.md, issues.md |
-| 5. Implement | \`/5_gofer_implement\` | Source code |
-| 6. Validate | \`/6_gofer_validate\` | Validation artifacts |
+| 0. Gofer Start | \`.specify/commands/0_gofer_start.md\` | Pipeline kickoff |
+| 1. Research | \`.specify/commands/1_gofer_research.md\` | research.md |
+| 2. Specify | \`.specify/commands/2_gofer_specify.md\` | spec.md |
+| 3. Plan | \`.specify/commands/3_gofer_plan.md\` | plan.md, data-model.md, contracts/ |
+| 4. Tasks | \`.specify/commands/4_gofer_tasks.md\` | tasks.md, traceability.md, issues.md |
+| 5. Implement | \`.specify/commands/5_gofer_implement.md\` | Source code |
+| 6. Validate | \`.specify/commands/6_gofer_validate.md\` | Validation artifacts |
 
 All artifacts are stored in: \`.specify/specs/{feature}/\`
 
-Optional helpers such as \`/0a_problem_validation\`, \`/7_gofer_save\`,
-\`/8_gofer_branding\`, and \`/7a_stakeholder_comms\` support the workflow without
-adding extra core pipeline stages.
+Optional helpers such as problem validation, save, branding, tests, stakeholder
+communications, workspace checks, bootstrap, and first-run setup support the
+workflow as internal contracts without adding extra core pipeline stages.
 
 ## Model Policy
 
@@ -1613,7 +1657,7 @@ Define your project principles in \`memory/constitution.md\`:
 - Testing policies
 
 AI agents validate code against the constitution before and during the final
-\`/6_gofer_validate\` quality gate.
+validation quality gate.
 
 ## Learn More
 

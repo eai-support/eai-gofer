@@ -7,7 +7,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FULL_COMMAND_COUNT, FULL_COMMAND_FILES } from '../../helpers/goferCommandSet';
+import {
+  FULL_COMMAND_FILES,
+  PUBLIC_ENTRYPOINT_COUNT,
+  PUBLIC_ENTRYPOINT_FILES,
+} from '../../helpers/goferCommandSet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,6 +131,10 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/references/platform/eai-repo-contract.md',
         'eai-gofer/.specify/references/platform/eai-error-catalog.yaml',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',
+        'eai-gofer/commands/gofer.md',
+        'eai-gofer/commands/eai-gofer.md',
+        'eai-gofer/skills/gofer/SKILL.md',
+        'eai-gofer/skills/eai-gofer/SKILL.md',
       ]) {
         expect(zipListing).toContain(required);
       }
@@ -201,18 +209,26 @@ describe('Gofer agent plugin package', () => {
       );
       expect(umbrellaSkill).toContain('eai publicapi');
 
-      for (const command of FULL_COMMAND_FILES) {
+      for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);
         expect(fs.existsSync(path.join(pluginRoot, 'skills', command, 'SKILL.md'))).toBe(true);
+      }
+      for (const command of FULL_COMMAND_FILES) {
+        expect(fs.existsSync(path.join(pluginRoot, '.specify', 'commands', `${command}.md`))).toBe(
+          true
+        );
+        expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(false);
+        expect(fs.existsSync(path.join(pluginRoot, 'skills', command, 'SKILL.md'))).toBe(false);
       }
       expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'eai-gofer', 'SKILL.md'))).toBe(
         true
       );
+      expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(true);
       expect(
         fs
           .readdirSync(path.join(pluginRoot, 'skills'), { withFileTypes: true })
           .filter((entry) => entry.isDirectory()).length
-      ).toBe(FULL_COMMAND_COUNT + 1);
+      ).toBe(PUBLIC_ENTRYPOINT_COUNT);
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }

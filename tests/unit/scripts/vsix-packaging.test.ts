@@ -6,7 +6,7 @@
  *   2. extension/.vscodeignore does NOT exclude resources/claude-commands/**
  *   3. extension/.vscodeignore does NOT exclude resources/specify-commands/**
  *   4. extension/resources/templates/visuals/ contains persona-pack templates
- *   5. extension/resources/claude-commands/ contains the canonical Claude bodies
+ *   5. extension/resources/claude-commands/ contains the public Claude wrappers
  *   6. extension/resources/specify-commands/ contains canonical source files
  */
 import { describe, it, expect } from 'vitest';
@@ -60,12 +60,11 @@ describe('vsix packaging includes persona-pack + source-of-truth (T172)', () => 
     expect(files.length).toBeGreaterThanOrEqual(9);
   });
 
-  it('extension/resources/claude-commands/ contains canonical Claude bodies', (): void => {
+  it('extension/resources/claude-commands/ contains public Claude wrappers', (): void => {
     const claudeDir = path.join(EXTENSION_DIR, 'resources', 'claude-commands');
     expect(fs.existsSync(claudeDir)).toBe(true);
     const files = fs.readdirSync(claudeDir).filter((f) => f.endsWith('.md'));
-    // The full command set lives here (Claude surface + Claude-mirror).
-    expect(files.length).toBeGreaterThanOrEqual(11);
+    expect(files.sort()).toEqual(['eai-gofer.md', 'gofer.md']);
   });
 
   it('extension/resources/specify-commands/ contains canonical command sources', (): void => {

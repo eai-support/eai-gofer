@@ -105,9 +105,8 @@ async function readLegacyWorkflowDoc(): Promise<string> {
 
 describe('Command Generation Integration (US-3)', () => {
   describe('T061: Parallel Agent Instructions in Validation Commands', () => {
-    it('should have parallel agent spawning in Claude validation command', async () => {
-      // Read Claude validation command
-      const claudeCommandPath = path.join(process.cwd(), '.claude/commands/6_gofer_validate.md');
+    it('should have parallel agent spawning in the internal validation contract', async () => {
+      const claudeCommandPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
 
       const content = await fs.readFile(claudeCommandPath, 'utf-8');
 
@@ -134,9 +133,8 @@ describe('Command Generation Integration (US-3)', () => {
       expect(content).toMatch(/Task:\s+subagent_type=/);
     });
 
-    it('should preserve the execution-strategy table in the Codex validation skill', async () => {
-      // Read Codex validation skill
-      const codexSkillPath = path.join(process.cwd(), '.agents/skills/6_gofer_validate/SKILL.md');
+    it('should preserve the execution-strategy table in the internal validation contract', async () => {
+      const codexSkillPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
 
       const content = await fs.readFile(codexSkillPath, 'utf-8');
 
@@ -160,12 +158,8 @@ describe('Command Generation Integration (US-3)', () => {
       }
     });
 
-    it('should have multi-agent delegation section in Copilot validation prompt', async () => {
-      // Read Copilot validation prompt
-      const copilotPromptPath = path.join(
-        process.cwd(),
-        '.github/prompts/6_gofer_validate.prompt.md'
-      );
+    it('should have multi-agent delegation section in the internal validation contract', async () => {
+      const copilotPromptPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
 
       const content = await fs.readFile(copilotPromptPath, 'utf-8');
 
@@ -199,11 +193,7 @@ describe('Command Generation Integration (US-3)', () => {
     });
 
     it('should reference legacy workflow documentation for pre-2026 Copilot', async () => {
-      // Read Copilot validation prompt
-      const copilotPromptPath = path.join(
-        process.cwd(),
-        '.github/prompts/6_gofer_validate.prompt.md'
-      );
+      const copilotPromptPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
 
       const content = await fs.readFile(copilotPromptPath, 'utf-8');
 
@@ -218,10 +208,7 @@ describe('Command Generation Integration (US-3)', () => {
     });
 
     it('should preserve canonical SourceCommandId values in Copilot validation report templates', async () => {
-      const copilotPromptPath = path.join(
-        process.cwd(),
-        '.github/prompts/6_gofer_validate.prompt.md'
-      );
+      const copilotPromptPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
       const content = await fs.readFile(copilotPromptPath, 'utf-8');
 
       expect(content).toContain('SourceCommandId: /6_gofer_validate');
@@ -229,10 +216,9 @@ describe('Command Generation Integration (US-3)', () => {
     });
 
     it('should have consistent agent naming across all platforms', async () => {
-      // Read all three platform validation files
-      const claudePath = path.join(process.cwd(), '.claude/commands/6_gofer_validate.md');
-      const codexPath = path.join(process.cwd(), '.agents/skills/6_gofer_validate/SKILL.md');
-      const copilotPath = path.join(process.cwd(), '.github/prompts/6_gofer_validate.prompt.md');
+      const claudePath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
+      const codexPath = claudePath;
+      const copilotPath = claudePath;
 
       const [claudeContent, codexContent, copilotContent] = await Promise.all([
         fs.readFile(claudePath, 'utf-8'),
@@ -260,7 +246,7 @@ describe('Command Generation Integration (US-3)', () => {
 
     it('should document performance expectations consistently', async () => {
       // Read validation files for performance timing checks
-      const codexPath = path.join(process.cwd(), '.agents/skills/6_gofer_validate/SKILL.md');
+      const codexPath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
       const [codexContent, legacyContent] = await Promise.all([
         fs.readFile(codexPath, 'utf-8'),
         readLegacyWorkflowDoc(),
@@ -294,10 +280,9 @@ describe('Command Generation Integration (US-3)', () => {
         'Semantic Slop',
       ];
 
-      // Read all platform validation files
-      const claudePath = path.join(process.cwd(), '.claude/commands/6_gofer_validate.md');
-      const codexPath = path.join(process.cwd(), '.agents/skills/6_gofer_validate/SKILL.md');
-      const copilotPath = path.join(process.cwd(), '.github/prompts/6_gofer_validate.prompt.md');
+      const claudePath = path.join(process.cwd(), '.specify/commands/6_gofer_validate.md');
+      const codexPath = claudePath;
+      const copilotPath = claudePath;
 
       const [claudeContent, codexContent, copilotContent] = await Promise.all([
         fs.readFile(claudePath, 'utf-8'),
@@ -323,16 +308,16 @@ describe('Command Generation Integration (US-3)', () => {
         'integration',
         '.command-generation-fixture'
       );
-      const canonicalCommand = '1_gofer_research.md';
-      const canonicalPath = path.join(process.cwd(), '.specify', 'commands', canonicalCommand);
-      const canonicalContent = await fs.readFile(canonicalPath, 'utf-8');
-
       await fs.rm(fixtureRoot, { recursive: true, force: true });
-      await fs.mkdir(path.join(fixtureRoot, '.specify', 'commands'), { recursive: true });
-      await fs.writeFile(
-        path.join(fixtureRoot, '.specify', 'commands', canonicalCommand),
-        canonicalContent,
-        'utf-8'
+      await fs.mkdir(path.join(fixtureRoot, '.specify'), { recursive: true });
+      await fs.copyFile(
+        path.join(process.cwd(), 'package.json'),
+        path.join(fixtureRoot, 'package.json')
+      );
+      await fs.cp(
+        path.join(process.cwd(), '.specify', 'commands'),
+        path.join(fixtureRoot, '.specify', 'commands'),
+        { recursive: true }
       );
 
       try {
@@ -349,19 +334,19 @@ describe('Command Generation Integration (US-3)', () => {
         );
 
         const generatedCodex = await fs.readFile(
-          path.join(fixtureRoot, '.agents', 'skills', '1_gofer_research', 'SKILL.md'),
+          path.join(fixtureRoot, '.agents', 'skills', 'gofer', 'SKILL.md'),
           'utf-8'
         );
         const generatedCopilot = await fs.readFile(
-          path.join(fixtureRoot, '.github', 'prompts', '1_gofer_research.prompt.md'),
+          path.join(fixtureRoot, '.github', 'prompts', 'gofer.prompt.md'),
           'utf-8'
         );
         const repoCodex = await fs.readFile(
-          path.join(process.cwd(), '.agents', 'skills', '1_gofer_research', 'SKILL.md'),
+          path.join(process.cwd(), '.agents', 'skills', 'gofer', 'SKILL.md'),
           'utf-8'
         );
         const repoCopilot = await fs.readFile(
-          path.join(process.cwd(), '.github', 'prompts', '1_gofer_research.prompt.md'),
+          path.join(process.cwd(), '.github', 'prompts', 'gofer.prompt.md'),
           'utf-8'
         );
 

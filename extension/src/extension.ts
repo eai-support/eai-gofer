@@ -903,8 +903,54 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
  * Register global commands (available even without workspace)
  * These commands are registered early before workspace detection
  */
+async function runPublicGoferEntrypoint(label: 'Gofer' | 'EAI Gofer'): Promise<void> {
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    vscode.window.showInformationMessage(`${label}: open a folder first, then run Gofer again.`);
+    return;
+  }
+
+  const workspacePath = workspaceFolder.uri.fsPath;
+  const specifyPath = path.join(workspacePath, '.specify');
+
+  if (!fs.existsSync(specifyPath)) {
+    const choice = await vscode.window.showInformationMessage(
+      `${label}: this folder is not set up for Gofer yet. Initialize it now?`,
+      'Initialize Gofer',
+      'Not now'
+    );
+
+    if (choice === 'Initialize Gofer') {
+      await vscode.commands.executeCommand('gofer.initialize');
+    }
+    return;
+  }
+
+  try {
+    await vscode.commands.executeCommand('goferProgress.focus');
+  } catch {
+    // The view command is optional during early activation; the user guidance is still useful.
+  }
+
+  vscode.window.showInformationMessage(
+    `${label} is ready. In your AI app, run /gofer or /eai-gofer. Use #gofer in Copilot or $gofer in hosts that use dollar-prefixed skills.`
+  );
+}
+
 function registerGlobalCommands(context: vscode.ExtensionContext): void {
   logger?.debug('Extension', 'Registering global commands');
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gofer.run', async () => {
+      await runPublicGoferEntrypoint('Gofer');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gofer.eaiGofer', async () => {
+      await runPublicGoferEntrypoint('EAI Gofer');
+    })
+  );
 
   // gofer.initialize - Initialize .specify structure
   context.subscriptions.push(

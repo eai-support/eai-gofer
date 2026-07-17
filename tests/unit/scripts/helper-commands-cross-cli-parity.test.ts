@@ -53,28 +53,6 @@ function readMarkdownFrontmatter(content: string): Record<string, unknown> {
   return out;
 }
 
-function readTomlDescription(content: string): string {
-  const match = content.match(/^description\s*=\s*"([^"]+)"/m);
-  if (!match) {
-    throw new Error('Missing TOML description');
-  }
-
-  return match[1];
-}
-
-function stripFirstFrontmatter(content: string): string {
-  if (!content.startsWith('---\n')) {
-    return content;
-  }
-
-  const endIndex = content.indexOf('\n---\n', 4);
-  if (endIndex === -1) {
-    return content;
-  }
-
-  return content.slice(endIndex + 5).replace(/^\n+/, '');
-}
-
 const REQUIRED_PROVENANCE_FIELDS = [
   'GeneratedAt',
   'SourceCommandId',
@@ -182,7 +160,7 @@ describe('helper commands cross-CLI parity', () => {
       expect(frontmatter.surfaces).toEqual(CROSS_CLI_SURFACES);
     });
 
-    it(`${helper.name} emits every cross-CLI surface`, () => {
+    it(`${helper.name} stays hidden from generated public command surfaces`, () => {
       for (const relativePath of [
         claudeRelativePath,
         githubPromptRelativePath,
@@ -193,32 +171,9 @@ describe('helper commands cross-CLI parity', () => {
       ]) {
         expect(
           fs.existsSync(path.join(REPO_ROOT, relativePath)),
-          `expected emitted helper surface ${relativePath}`
-        ).toBe(true);
+          `expected hidden helper surface ${relativePath}`
+        ).toBe(false);
       }
-    });
-
-    it(`${helper.name} preserves description parity across generated manifests`, () => {
-      const sourceFrontmatter = readMarkdownFrontmatter(readFile(sourceRelativePath));
-      const sourceDescription = String(sourceFrontmatter.description);
-
-      const githubPromptFrontmatter = readMarkdownFrontmatter(readFile(githubPromptRelativePath));
-      const extensionPromptFrontmatter = readMarkdownFrontmatter(
-        readFile(extensionPromptRelativePath)
-      );
-      const agentSkillFrontmatter = readMarkdownFrontmatter(readFile(agentsSkillRelativePath));
-      const systemSkillFrontmatter = readMarkdownFrontmatter(readFile(systemSkillRelativePath));
-      const geminiDescription = readTomlDescription(readFile(geminiRelativePath));
-
-      expect(githubPromptFrontmatter.name).toBe(helper.name);
-      expect(githubPromptFrontmatter.description).toBe(sourceDescription);
-      expect(extensionPromptFrontmatter.name).toBe(helper.name);
-      expect(extensionPromptFrontmatter.description).toBe(sourceDescription);
-      expect(agentSkillFrontmatter.name).toBe(helper.name);
-      expect(agentSkillFrontmatter.description).toBe(sourceDescription);
-      expect(systemSkillFrontmatter.name).toBe(helper.name);
-      expect(systemSkillFrontmatter.description).toBe(sourceDescription);
-      expect(geminiDescription).toBe(sourceDescription);
     });
 
     it(`${helper.name} preserves its feature-local body contract`, () => {
@@ -234,28 +189,11 @@ describe('helper commands cross-CLI parity', () => {
       });
     });
 
-    it(`${helper.name} preserves its body contract on emitted long-form surfaces`, () => {
-      const contract = HELPER_BODY_CONTRACTS[helper.name];
-      const generatedContents = [
-        readFile(claudeRelativePath),
-        stripFirstFrontmatter(readFile(githubPromptRelativePath)),
-        stripFirstFrontmatter(readFile(extensionPromptRelativePath)),
-        stripFirstFrontmatter(readFile(agentsSkillRelativePath)),
-        stripFirstFrontmatter(readFile(systemSkillRelativePath)),
-      ];
-
-      generatedContents.forEach((content) => {
-        expect(content).toContain(contract.artifactPath);
-        REQUIRED_PROVENANCE_FIELDS.forEach((field) => {
-          expect(content).toContain(field);
-        });
-        contract.requiredSections.forEach((section) => {
-          expect(content).toContain(section);
-        });
-      });
-
-      expect(readFile(geminiRelativePath)).toContain(
-        `../../../.specify/commands/${helper.file}.md`
+    it(`${helper.name} is named by the public wrapper's internal contract list`, () => {
+      const publicWrapper = readFile('.claude/commands/gofer.md');
+      expect(publicWrapper).toContain(`\`${helper.file}\``);
+      expect(publicWrapper).toContain(
+        String(readMarkdownFrontmatter(readFile(sourceRelativePath)).description)
       );
     });
   }

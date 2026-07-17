@@ -10,6 +10,7 @@ export const CORE_SENTINELS = [
   GOFER_VERSION_FILE,
   path.join('.specify', 'commands', '0_gofer_start.md'),
   path.join('.specify', 'templates', 'spec-template.md'),
+  path.join('.specify', 'templates', 'build-map-template.md'),
   path.join('.specify', 'templates', 'loop-contract-template.json'),
   path.join('.specify', 'templates', 'working-backwards-prfaq-template.md'),
   path.join('.specify', 'templates', 'business-owner-summary-template.md'),
@@ -644,7 +645,7 @@ ${buildCodeStyleSection(projectInfo)}
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/0_gofer_start\` to start the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). \`/6_gofer_validate\` is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
+This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#gofer\` in Copilot-style prompts and \`$gofer\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
 
 Each feature should carry a bounded loop contract:
 
@@ -706,7 +707,7 @@ See @AGENTS.md for project conventions, commands, and code style.
 
 ## Gofer Pipeline
 
-Run \`/0_gofer_start\` to start the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. \`/6_gofer_validate\` is the terminal quality gate and includes the final engineering review loop. Use \`/7_gofer_save\` for checkpoints and \`/8_gofer_branding\` to apply company, client, or consulting-firm presentation style. Artifacts go to \`.specify/specs/{feature}/\`.
+Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#gofer\` in Copilot-style prompts and \`$gofer\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts go to \`.specify/specs/{feature}/\`.
 
 For each active feature, keep \`loop-contract.json\`, \`loop-ledger.jsonl\`, and
 \`loop-audit-report.md\` in the feature directory. The loop contract bounds
@@ -729,9 +730,9 @@ export function buildCopilotInstructions(projectInfo) {
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/0_gofer_start\` to start the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
+This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai-gofer\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
 
-Key commands: \`/1_gofer_research\`, \`/2_gofer_specify\`, \`/3_gofer_plan\`, \`/4_gofer_tasks\`, \`/5_gofer_implement\`, \`/6_gofer_validate\`. \`/6_gofer_validate\` is the terminal quality gate and includes the final engineering review loop. Use \`/7_gofer_save\` for checkpoints and \`/8_gofer_branding\` for branded document/deck templates. Artifacts in \`.specify/specs/{feature}/\`.
+Use \`#gofer\` or \`#eai-gofer\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Artifacts in \`.specify/specs/{feature}/\`.
 
 ${eaiSection}
 
@@ -926,11 +927,13 @@ This folder contains all project specifications for AI-driven feature developmen
 
 ## Quick Start
 
-Run the unified Gofer pipeline with:
+Run the unified Gofer pipeline with one public command:
 
 \`\`\`
-/0_gofer_start Add user authentication with OAuth2 and JWT
+/gofer Add user authentication with OAuth2 and JWT
 \`\`\`
+
+Use \`/eai-gofer\`, \`#gofer\`, \`#eai-gofer\`, \`$gofer\`, or \`$eai-gofer\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
 
 Artifacts are stored in \`.specify/specs/{feature}/\`.
 

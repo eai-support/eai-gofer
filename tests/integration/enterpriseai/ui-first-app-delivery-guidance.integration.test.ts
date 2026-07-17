@@ -8,15 +8,18 @@ function readRepoFile(relativePath: string): string {
 
 describe('enterpriseai ui-first app-delivery guidance (root integration)', () => {
   it('keeps shared numbered stages while adding app-delivery-only preview and service-fit gates', () => {
-    const scenarioCommand = readRepoFile('.claude/commands/0_gofer_start.md');
-    const researchCommand = readRepoFile('.claude/commands/1_gofer_research.md');
-    const planCommand = readRepoFile('.claude/commands/3_gofer_plan.md');
-    const tasksCommand = readRepoFile('.claude/commands/4_gofer_tasks.md');
-    const implementCommand = readRepoFile('.claude/commands/5_gofer_implement.md');
-    const validateCommand = readRepoFile('.claude/commands/6_gofer_validate.md');
+    const scenarioCommand = readRepoFile('.specify/commands/0_gofer_start.md');
+    const researchCommand = readRepoFile('.specify/commands/1_gofer_research.md');
+    const planCommand = readRepoFile('.specify/commands/3_gofer_plan.md');
+    const tasksCommand = readRepoFile('.specify/commands/4_gofer_tasks.md');
+    const implementCommand = readRepoFile('.specify/commands/5_gofer_implement.md');
+    const validateCommand = readRepoFile('.specify/commands/6_gofer_validate.md');
 
     expect(scenarioCommand).toContain('Shared Numbered Stage Contract');
     expect(scenarioCommand).toContain('UI-First App-Delivery Default');
+    expect(scenarioCommand).toContain('Business-Friendly Progress Contract');
+    expect(scenarioCommand).toContain('Build Map Frame Of Reference');
+    expect(scenarioCommand).toContain('build-map.md');
     expect(scenarioCommand).toContain('EAI App Template');
     expect(scenarioCommand).toContain('service-fit review');
     expect(scenarioCommand).toContain('gofer-ui-preview.mjs');
@@ -25,6 +28,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(scenarioCommand).toContain('Non-app work');
 
     expect(researchCommand).toContain('ui-preview-brief.md');
+    expect(researchCommand).toContain('build-map.md');
+    expect(researchCommand).toContain('Which build-map areas are now understood');
     expect(researchCommand).toContain('EAI App Template constraint map');
     expect(researchCommand).toContain('Preview validation plan');
     expect(researchCommand).toContain('Fast preview runtime');
@@ -35,6 +40,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(researchCommand).toContain('theme override points');
 
     expect(planCommand).toContain('ui-review-log.md');
+    expect(planCommand).toContain('build-map.md');
     expect(planCommand).toContain('ui-show-and-tell.md');
     expect(planCommand).toContain('service-fit-matrix.md');
     expect(planCommand).toContain('preview command or URL');
@@ -48,6 +54,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
 
     expect(tasksCommand).toContain('App-Delivery Preconditions Inside Shared Stages');
     expect(tasksCommand).toContain('ui-show-and-tell.md');
+    expect(tasksCommand).toContain('build-map.md');
     expect(tasksCommand).toContain('service-fit-matrix.md');
     expect(tasksCommand).toContain('EAI App Template');
     expect(tasksCommand).toContain('package lane');
@@ -59,6 +66,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(tasksCommand).toContain('eai resources schema --format json');
 
     expect(implementCommand).toContain('ui-show-and-tell.md');
+    expect(implementCommand).toContain('build-map.md');
     expect(implementCommand).toContain('ui-review-log.md');
     expect(implementCommand).toContain('service-fit-matrix.md');
     expect(implementCommand).toContain('For non-app work, skip the preview');
@@ -69,6 +77,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(implementCommand).toContain('source-platform internals');
 
     expect(validateCommand).toContain('ui-review-log.md');
+    expect(validateCommand).toContain('build-map.md');
+    expect(validateCommand).toContain('plain-language and tells a business user');
     expect(validateCommand).toContain('ui-show-and-tell.md');
     expect(validateCommand).toContain('service-fit-matrix.md');
     expect(validateCommand).toContain('equivalent opened-browser evidence');
@@ -81,6 +91,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
   it('ships app-delivery templates for preview, show-and-tell, and service-fit artifacts', () => {
     const canonicalTemplates = [
       '.specify/templates/ui-preview-brief-template.md',
+      '.specify/templates/build-map-template.md',
       '.specify/templates/ui-review-log-template.md',
       '.specify/templates/ui-show-and-tell-template.md',
       '.specify/templates/service-fit-matrix-template.md',

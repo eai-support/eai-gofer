@@ -49,10 +49,6 @@ async function readFile(filePath: string): Promise<string> {
   return fs.readFile(filePath, 'utf8');
 }
 
-function toSkillDir(stageName: string): string {
-  return stageName.replace(/:/g, '_').replace(/-/g, '_');
-}
-
 // ---------------------------------------------------------------------------
 // Fixtures — all stages can list codex/agents-skills surfaces
 // ---------------------------------------------------------------------------
@@ -191,22 +187,24 @@ describe('codex-config emitter (T068)', () => {
     expect(content).toContain('[[skills.config]]');
   });
 
-  it('contains entry for 1_gofer_research', async () => {
+  it('contains entry for gofer', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/1_gofer_research"');
+    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/gofer"');
   });
 
-  it('contains entry for 0a_problem_validation', async () => {
+  it('contains entry for eai-gofer', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/0a_problem_validation"');
+    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/eai-gofer"');
   });
 
-  it('contains entry for 2_gofer_specify', async () => {
+  it('does not contain stage-specific public skill entries', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/2_gofer_specify"');
+    expect(content).not.toContain('/.agents/skills/1_gofer_research"');
+    expect(content).not.toContain('/.agents/skills/0_gofer_start"');
+    expect(content).not.toContain('/.agents/skills/7_gofer_save"');
   });
 
   it('all entries have enabled = true', async () => {
@@ -222,25 +220,10 @@ describe('codex-config emitter (T068)', () => {
     }
   });
 
-  it('contains 0_gofer_start', async () => {
+  it('keeps exactly two public skill entries', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/0_gofer_start"');
-  });
-
-  it('contains 7_gofer_save', async () => {
-    const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
-    const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/7_gofer_save"');
-  });
-
-  it('contains formerly Claude-only fixtures when they list portable surfaces', async () => {
-    const formerlyClaudeOnlyStages = ['0_gofer_start', '7_gofer_save'];
-    const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
-    const content = await readFile(outPath);
-    for (const stage of formerlyClaudeOnlyStages) {
-      expect(content).toContain(`path = "/full/path/to/repo/.agents/skills/${toSkillDir(stage)}"`);
-    }
+    expect(content.match(/^\[\[skills\.config\]\]/gm)).toHaveLength(2);
   });
 
   it('does NOT touch ~/.codex/config.toml — path is .specify/outputs not home dir', async () => {

@@ -5,14 +5,18 @@
  *   1. .gemini/extension.json exists and is valid JSON
  *   2. .gemini/commands/gofer/ contains TOML files
  *   3. Each TOML file has `description = "..."` and a prompt field
- *   4. Number of TOML files = the full Gofer command/helper set
- *   5. Formerly Claude-only stages are present in .gemini/commands/gofer/
+ *   4. Number of TOML files = the public Gofer entrypoint set
+ *   5. Internal stage/helper contracts stay under .specify/commands/
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FORMERLY_CLAUDE_ONLY_STAGES, FULL_COMMAND_COUNT } from '../../helpers/goferCommandSet';
+import {
+  FULL_COMMAND_FILES,
+  PUBLIC_ENTRYPOINT_COUNT,
+  PUBLIC_ENTRYPOINT_FILES,
+} from '../../helpers/goferCommandSet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,15 +60,19 @@ describe('e2e gemini extension shape (T162)', () => {
     }
   });
 
-  it(`emits exactly ${FULL_COMMAND_COUNT} TOML files for the full command set`, (): void => {
+  it(`emits exactly ${PUBLIC_ENTRYPOINT_COUNT} TOML files for the public command set`, (): void => {
     const tomlFiles = fs.readdirSync(GEMINI_COMMANDS_DIR).filter((f) => f.endsWith('.toml'));
-    expect(tomlFiles.length).toBe(FULL_COMMAND_COUNT);
+    expect(tomlFiles.length).toBe(PUBLIC_ENTRYPOINT_COUNT);
+    expect(tomlFiles.sort()).toEqual(PUBLIC_ENTRYPOINT_FILES.map((file) => `${file}.toml`).sort());
   });
 
-  it('formerly Claude-only stages are present as TOML files', (): void => {
-    for (const stage of FORMERLY_CLAUDE_ONLY_STAGES) {
+  it('internal stage/helper contracts stay under .specify/commands/', (): void => {
+    for (const stage of FULL_COMMAND_FILES) {
       const tomlPath = path.join(GEMINI_COMMANDS_DIR, `${stage}.toml`);
-      expect(fs.existsSync(tomlPath), `stage '${stage}' must exist in Gemini commands`).toBe(true);
+      expect(fs.existsSync(tomlPath), `stage '${stage}' should not be public Gemini command`).toBe(
+        false
+      );
+      expect(fs.existsSync(path.join(REPO_ROOT, '.specify', 'commands', `${stage}.md`))).toBe(true);
     }
   });
 });

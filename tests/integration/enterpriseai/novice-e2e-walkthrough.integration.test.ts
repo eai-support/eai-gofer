@@ -12,7 +12,7 @@ import { generateStakeholderArtifacts } from '../../../extension/src/services/en
 const FEATURE_DIR = '.specify/specs/029-enterpriseai-student-vertical-builder';
 
 function readCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '.claude', 'commands', fileName), 'utf8');
+  return fs.readFileSync(path.join(process.cwd(), '.specify', 'commands', fileName), 'utf8');
 }
 
 function createFixtureDir(prefix: string): string {

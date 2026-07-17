@@ -8,7 +8,7 @@ import {
 import { createDeploymentReadinessEventHandlers } from '../../../extension/src/services/enterpriseai/events/DeploymentReadinessEvents';
 
 function readCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '.claude', 'commands', fileName), 'utf8');
+  return fs.readFileSync(path.join(process.cwd(), '.specify', 'commands', fileName), 'utf8');
 }
 
 function createFixtureDir(prefix: string): string {

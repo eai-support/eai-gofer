@@ -44,6 +44,16 @@
   "contributes": {
     "commands": [
       {
+        "command": "gofer.run",
+        "title": "Gofer",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "gofer.eaiGofer",
+        "title": "EAI Gofer",
+        "icon": "$(rocket)"
+      },
+      {
         "command": "gofer.initialize",
         "title": "Gofer: Initialize Repository",
         "icon": "$(rocket)"
@@ -306,7 +316,7 @@
     "viewsWelcome": [
       {
         "view": "goferProgress",
-        "contents": "Gofer helps turn Gofer Start intake into repository work that is easier to research, specify, plan, implement, and validate.\n\nNo `.specify` workspace was found yet.\n\n[Initialize Gofer](command:gofer.initialize)\n\nA simple way to start:\n1. Initialize the workspace\n2. Open your AI chat or CLI and run `/0_gofer_start` (or `#0_gofer_start` in Copilot)\n3. Move through the core flow: Gofer Start → research → specify → plan → tasks → implement → validate\n4. Treat `/6_gofer_validate` as the terminal quality gate; it includes the final engineering review loop\n\nUse **Gofer: Install Optional Developer Tools** if your preferred CLI is not installed locally."
+        "contents": "Gofer helps turn one business request into repository work that is easier to research, specify, plan, implement, and validate.\n\nNo `.specify` workspace was found yet.\n\n[Start Gofer](command:gofer.run)\n\nA simple way to start:\n1. Start Gofer from this panel or the Command Palette\n2. Open your AI chat or CLI and run `/gofer` or `/eai-gofer` (use `#gofer` in Copilot or `$gofer` in hosts that use dollar-prefixed skills)\n3. Gofer routes the internal stages for you: start → research → specify → plan → tasks → implement → validate\n4. The validation stage remains the terminal quality gate and includes the final engineering review loop\n\nUse **Gofer: Install Optional Developer Tools** if your preferred CLI is not installed locally."
       },
       {
         "view": "goferAIUsage",
@@ -377,36 +387,174 @@
       ],
       "commandPalette": [
         {
+          "command": "gofer.run"
+        },
+        {
+          "command": "gofer.eaiGofer"
+        },
+        {
           "command": "gofer.initialize",
-          "when": "!goferInitialized"
+          "when": "false"
         },
         {
-          "command": "gofer.showProgress",
-          "when": "goferInitialized"
-        },
-        {
-          "command": "gofer.showConstitution",
-          "when": "goferInitialized"
-        },
-        {
-          "command": "gofer.refreshSpecs",
-          "when": "goferInitialized"
-        },
-        {
-          "command": "gofer.refreshConstitution",
-          "when": "goferInitialized"
+          "command": "gofer.installOptionalTools",
+          "when": "false"
         },
         {
           "command": "gofer.upgrade",
-          "when": "goferInitialized"
+          "when": "false"
+        },
+        {
+          "command": "gofer.showProgress",
+          "when": "false"
+        },
+        {
+          "command": "gofer.refreshSpecs",
+          "when": "false"
+        },
+        {
+          "command": "gofer.checkForUpdates",
+          "when": "false"
+        },
+        {
+          "command": "gofer.updateNow",
+          "when": "false"
+        },
+        {
+          "command": "gofer.refreshConstitution",
+          "when": "false"
+        },
+        {
+          "command": "gofer.refreshContextWindow",
+          "when": "false"
+        },
+        {
+          "command": "gofer.refreshAIUsage",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showAIUsage",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showContextCategoryContent",
+          "when": "false"
+        },
+        {
+          "command": "gofer.refreshMemory",
+          "when": "false"
+        },
+        {
+          "command": "gofer.remember",
+          "when": "false"
+        },
+        {
+          "command": "gofer.searchMemory",
+          "when": "false"
+        },
+        {
+          "command": "gofer.forgetMemory",
+          "when": "false"
+        },
+        {
+          "command": "gofer.clearMemory",
+          "when": "false"
+        },
+        {
+          "command": "gofer.viewMemories",
+          "when": "false"
+        },
+        {
+          "command": "gofer.migrateMemoriesToLayered",
+          "when": "false"
+        },
+        {
+          "command": "gofer.queryMemoryUsage",
+          "when": "false"
+        },
+        {
+          "command": "gofer.viewCompactionHistory",
+          "when": "false"
+        },
+        {
+          "command": "gofer.createHintFile",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showConstitution",
+          "when": "false"
         },
         {
           "command": "gofer.updateTemplates",
-          "when": "goferInitialized"
+          "when": "false"
+        },
+        {
+          "command": "gofer.fixSpecPaths",
+          "when": "false"
+        },
+        {
+          "command": "gofer.openSpec",
+          "when": "false"
         },
         {
           "command": "gofer.createSpec",
-          "when": "goferInitialized"
+          "when": "false"
+        },
+        {
+          "command": "gofer.showSpecDetails",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showSectionDetails",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showArticleDetails",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showMemoryDocument",
+          "when": "false"
+        },
+        {
+          "command": "gofer.showMemorySection",
+          "when": "false"
+        },
+        {
+          "command": "gofer.openWithPreview",
+          "when": "false"
+        },
+        {
+          "command": "gofer.openWithMarkSharp",
+          "when": "false"
+        },
+        {
+          "command": "gofer.openWithMarkdownEditor",
+          "when": "false"
+        },
+        {
+          "command": "gofer.openWithMarkdownWYSIWYG",
+          "when": "false"
+        },
+        {
+          "command": "gofer.executeAllPendingSpecs",
+          "when": "false"
+        },
+        {
+          "command": "gofer.debugAIUsage",
+          "when": "false"
+        },
+        {
+          "command": "gofer.checkForSlop",
+          "when": "false"
+        },
+        {
+          "command": "gofer.resumeSession",
+          "when": "false"
+        },
+        {
+          "command": "gofer.regenerateInstructions",
+          "when": "false"
         }
       ]
     },
@@ -471,7 +619,7 @@
           ],
           "default": "auto",
           "description": "Default AI CLI for Gofer command routing",
-          "markdownDescription": "Choose which AI platform to use for Gofer slash commands across the core pipeline (`/0_gofer_start` through `/6_gofer_validate`).\n\n- **Claude**: Use `.claude/commands/*.md` files\n- **Copilot**: Use `.github/prompts/*.prompt.md` files\n- **Codex**: Use `.agents/skills/*/SKILL.md` files\n- **Gemini**: Use `.gemini/commands/gofer/*.toml` files\n- **Auto**: Automatically detect which CLI is active\n\nThis enables complete feature parity across Claude, Copilot, Codex, and Gemini.",
+          "markdownDescription": "Choose which AI platform to use for Gofer's single public entrypoint (`gofer` or `eai-gofer`).\n\n- **Claude**: Use `.claude/commands/gofer.md` or `.claude/commands/eai-gofer.md`\n- **Copilot**: Use `.github/prompts/gofer.prompt.md` or `.github/prompts/eai-gofer.prompt.md`\n- **Codex**: Use `.agents/skills/gofer/` or `.agents/skills/eai-gofer/`\n- **Gemini**: Use `.gemini/commands/gofer/gofer.toml` or `.gemini/commands/gofer/eai-gofer.toml`\n- **Auto**: Automatically detect which CLI is active\n\nGofer preserves feature parity by routing internally through `.specify/commands/*.md` stage contracts.",
           "order": 27
         },
         "gofer.workflowProfile": {

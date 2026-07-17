@@ -48,11 +48,13 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('eai doctor --check-updates');
     expect(command).toContain('E001');
     expect(command).toContain('.specify/logs/eai-first-run-report.md');
-    expect(command).toContain('/0_gofer_start <what you want to build>');
+    expect(command).toContain('/gofer <what you want to build>');
+    expect(command).toContain('/eai-gofer');
+    expect(command).not.toContain('/0_gofer_start <what you want to build>');
   });
 
-  it('exposes the first-run command on every generated host surface', () => {
-    const generatedFiles = [
+  it('keeps first-run as an internal contract while exposing public wrappers', () => {
+    const hiddenHelperFiles = [
       '.claude/commands/gofer_eai_first_run.md',
       'extension/resources/claude-commands/gofer_eai_first_run.md',
       '.github/prompts/gofer_eai_first_run.prompt.md',
@@ -63,17 +65,23 @@ describe('enterpriseai first-run bootstrap command', () => {
       'extension/resources/gemini/commands/gofer/gofer_eai_first_run.toml',
     ];
 
-    for (const relativePath of generatedFiles) {
-      expect(fs.existsSync(path.join(process.cwd(), relativePath)), relativePath).toBe(true);
+    for (const relativePath of hiddenHelperFiles) {
+      expect(fs.existsSync(path.join(process.cwd(), relativePath)), relativePath).toBe(false);
     }
+
+    expect(
+      fs.existsSync(path.join(process.cwd(), '.specify/commands/gofer_eai_first_run.md'))
+    ).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), '.claude/commands/gofer.md'))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/gofer/SKILL.md'))).toBe(true);
   });
 
-  it('does not inject normal workspace preflight into the first-run command', () => {
-    const claudeCommand = readRepoFile('.claude/commands/gofer_eai_first_run.md');
+  it('does not inject normal workspace preflight into the first-run contract', () => {
+    const firstRunContract = readRepoFile('.specify/commands/gofer_eai_first_run.md');
 
-    expect(claudeCommand).toContain('EAI Gofer First Run');
-    expect(claudeCommand).not.toContain('## Workspace Preflight');
-    expect(claudeCommand).toContain(
+    expect(firstRunContract).toContain('EAI Gofer First Run');
+    expect(firstRunContract).not.toContain('## Workspace Preflight');
+    expect(firstRunContract).toContain(
       'This command is intentionally allowed to run before `.specify/` exists.'
     );
   });

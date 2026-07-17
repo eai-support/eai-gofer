@@ -112,6 +112,7 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.specify/references/platform/eai-repo-contract.md',
       '.specify/references/platform/eai-error-catalog.yaml',
       '.specify/templates/spec-template.md',
+      '.specify/templates/build-map-template.md',
       '.specify/templates/loop-contract-template.json',
       '.specify/templates/working-backwards-prfaq-template.md',
       '.specify/templates/business-owner-summary-template.md',
@@ -284,7 +285,8 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.claude/skills/eai-gofer/SKILL.md',
       '.github/agents/gofer-business.agent.md',
       '.github/skills/eai-gofer/SKILL.md',
-      '.agents/skills/0_gofer_start/SKILL.md',
+      '.agents/skills/gofer/SKILL.md',
+      '.agents/skills/eai-gofer/SKILL.md',
       '.gemini/extension.json',
     ]) {
       expect(

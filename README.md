@@ -12,11 +12,12 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 - Work with AI to generate what you need whether it is business case, executive
   summary, technical diagram of otherwise for you and your stakeholders to know
   what will be built, not find out it is wrong later
-- one core `0-6` delivery pipeline
+- one public `gofer` / `eai-gofer` entrypoint backed by the core `0-6` delivery
+  pipeline
 - closed-loop goal reconciliation with repo-owned goal ledgers and drift checks
 - repo-owned artifacts and templates
 - install paths for VS Code and AI coding CLIs
-- generated command surfaces that stay aligned across hosts
+- generated public command surfaces that stay aligned across hosts
 
 ## Quick Start
 
@@ -24,63 +25,62 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 
 1. Install the VS Code extension or add the public plugin marketplace for your
    preferred CLI.
-2. For a first EAI Platform app, run `/gofer:eai-first-run`. It checks Git,
-   Node.js, npm, EAI CLI, login, tenant access, the EAI app template, and the
-   Gofer repo scaffold before the pipeline starts.
+2. Start with `/gofer` or `/eai-gofer`. Use `#gofer` in Copilot-style prompts
+   and `$gofer` in hosts that use dollar-prefixed skills.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
-   Repository** in VS Code or `/gofer:bootstrap-workspace` from a CLI host.
-4. Start with `/0_gofer_start` and move through the core pipeline.
+   Repository** in VS Code, then refresh/restart the host command picker.
+4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
+   state, and then routes the internal pipeline for you.
 
-If `/0_gofer_start` is unknown in a new repo, the host has not loaded the Gofer
-plugin or repo commands yet. Install/update the plugin first, then run
-`/gofer:eai-first-run` to prepare the workspace and start the app build.
+If `/gofer` or `/eai-gofer` is unknown in a new repo, the host has not loaded
+the Gofer plugin or repo commands yet. Install/update the plugin first, then
+refresh/restart the host command picker.
 
 ## App-Native Integration Model
 
 Gofer now uses a light-plugin model across AI coding apps. The repo remains the
 source of truth for `.specify/commands/`, `.specify/scripts/`, templates,
 references, specs, and memory. App plugins and app-native customizations provide
-thin entry points that check/bootstrap the repo and then route back to the
-repo-owned commands.
+thin entry points that check/bootstrap the repo and then route through the
+repo-owned internal contracts.
 
-| Surface                         | Clean entry point                                                                                | Repo integration                                                                                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | One `eai-gofer` umbrella plugin skill for setup, routing, and diagnostics                        | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | Gofer custom agents plus one umbrella skill; avoid duplicating every stage command in the picker | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | Plugin umbrella skill for discovery; repo slash commands remain the fast path                    | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | Gemini extension commands and workspace MCP/customization where available                        | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+| Surface                         | Clean entry point                                                  | Repo integration                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE           | `gofer` or `eai-gofer` skill                                       | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app    | `#gofer` or `#eai-gofer`, plus Gofer custom agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app                 | `/gofer` or `/eai-gofer`                                           | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Gemini CLI / Gemini Code Assist | `/gofer` or `/eai-gofer` Gemini extension command                  | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
 
-The UX rule is: initialized repos use plain commands such as `/0_gofer_start`;
-app/plugin skills are for first-run setup, workspace diagnostics, explanation,
-and recovery. This update does not add AWS/Kiro app-integration support.
+The UX rule is: users see only `gofer` or `eai-gofer`; Gofer keeps numbered
+stages and helpers as internal contracts under `.specify/commands/`. This update
+does not add AWS/Kiro app-integration support.
 
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
 see the [5-minute first run guide](./.tech-docs/first-run.md).
 
 ## Core Pipeline
 
-| Stage       | Command              | Main output                                    |
-| ----------- | -------------------- | ---------------------------------------------- |
-| Gofer Start | `/0_gofer_start`     | Full pipeline kickoff                          |
-| Research    | `/1_gofer_research`  | `research.md`                                  |
-| Specify     | `/2_gofer_specify`   | `spec.md`                                      |
-| Plan        | `/3_gofer_plan`      | `plan.md`, `data-model.md`, `contracts/`       |
-| Tasks       | `/4_gofer_tasks`     | `tasks.md`, `traceability.md`, `issues.md`     |
-| Implement   | `/5_gofer_implement` | Code and documentation changes                 |
-| Validate    | `/6_gofer_validate`  | Validation artifacts and final review evidence |
+| Stage       | Internal contract                        | Main output                                    |
+| ----------- | ---------------------------------------- | ---------------------------------------------- |
+| Gofer Start | `.specify/commands/0_gofer_start.md`     | Full pipeline kickoff                          |
+| Research    | `.specify/commands/1_gofer_research.md`  | `research.md`                                  |
+| Specify     | `.specify/commands/2_gofer_specify.md`   | `spec.md`                                      |
+| Plan        | `.specify/commands/3_gofer_plan.md`      | `plan.md`, `data-model.md`, `contracts/`       |
+| Tasks       | `.specify/commands/4_gofer_tasks.md`     | `tasks.md`, `traceability.md`, `issues.md`     |
+| Implement   | `.specify/commands/5_gofer_implement.md` | Code and documentation changes                 |
+| Validate    | `.specify/commands/6_gofer_validate.md`  | Validation artifacts and final review evidence |
 
-`/6_gofer_validate` is the terminal quality gate. The previous standalone
-engineering-review stage is now folded into validation.
+Validation is the terminal quality gate. The previous standalone
+engineering-review stage is folded into validation.
 
 Gofer now treats the pipeline as a closed loop, not just a straight line:
 
-- `/1_gofer_research` seeds `goal-ledger.json` with business goals, metrics,
-  owners, delivery states, and re-loop triggers.
-- `/4_gofer_tasks` keeps `traceability.md` as the requirement-to-task-to-code
-  contract.
-- `/6_gofer_validate` runs the objective outcome gate, refreshes code/test
-  evidence, and writes `goal-rebaseline-report.md` when goals, assumptions,
-  contracts, UX scope, or implementation drift.
+- Research seeds `goal-ledger.json` with business goals, metrics, owners,
+  delivery states, and re-loop triggers.
+- Tasks keeps `traceability.md` as the requirement-to-task-to-code contract.
+- Validation runs the objective outcome gate, refreshes code/test evidence, and
+  writes `goal-rebaseline-report.md` when goals, assumptions, contracts, UX
+  scope, or implementation drift.
 
 Each stage also maintains a running product-release PR/FAQ in
 `working-backwards-prfaq.md`, with immutable stage snapshots in

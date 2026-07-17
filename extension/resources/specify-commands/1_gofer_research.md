@@ -56,6 +56,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## User Input
 
 ```text
@@ -126,6 +153,8 @@ This is the **first stage** of the unified Gofer pipeline. Your job is to:
 - `.specify/specs/{feature}/loop-contract.json`
 - `.specify/specs/{feature}/working-backwards-prfaq.md`
 - `.specify/specs/{feature}/prfaq-history/01-research.md`
+- `.specify/specs/{feature}/build-map.md` (for app delivery; plain-language
+  build picture and status)
 - `.specify/specs/{feature}/business-owner-summary.md` (draft; mark missing inputs pending)
 - `.specify/specs/{feature}/stakeholder-review-index.md`
 - `.specify/specs/{feature}/proposal-review.md` (optional supporting review context)
@@ -838,7 +867,15 @@ PR/FAQ artifacts:
    `problem-brief.md`, `discovery.md`, `research.md`, value-stream, and ROI
    evidence when present. If `spec-summary.md` or `business-metrics.md` does
    not exist yet, keep the relevant rows and mark status `Pending /2 or /7a`.
-4. Update `{FEATURE_DIR}/stakeholder-review-index.md` from
+4. For application delivery, create or update `{FEATURE_DIR}/build-map.md`
+   from `.specify/templates/build-map-template.md`.
+   - Keep the picture simple enough for a business owner to follow.
+   - Mark the EAI Platform, app experience, data/workflow, security, integration,
+     and preview/release areas as `not started`, `working`, `ready`,
+     `blocked`, or `needs decision`.
+   - In the latest update, state what was learned, why it matters, and the next
+     decision or stage in plain language.
+5. Update `{FEATURE_DIR}/stakeholder-review-index.md` from
    `.specify/templates/stakeholder-review-index-template.md` and mark the
    Business Owner and CTO review asks that should be answered before or during
    `/2_gofer_specify`.
@@ -848,6 +885,8 @@ PR/FAQ review artifacts:
 
 1. **Present summary** to user:
    - What was found
+   - Which build-map areas are now understood, blocked, or waiting for a
+     decision
    - Business scenarios considered
    - Recommended business scenario
    - Recommended architecture direction

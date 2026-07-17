@@ -56,6 +56,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## User Input
 
 ```text
@@ -645,7 +672,12 @@ update the stakeholder-facing implementation record:
    - CTO review ask for implementation deltas against the architecture summary.
    - Delivery review ask for completed scope, outstanding risks, and rollback
      evidence.
-6. Do not mark implementation complete unless the existing feedback loops,
+6. For application delivery, update `{FEATURE_DIR}/build-map.md` after each
+   meaningful UI, EAI Platform, data/workflow, login/security, integration, or
+   preview/release change. The latest update must explain the change in
+   business terms, name the affected map area, and record any issue or fix that
+   would matter to a non-technical stakeholder.
+7. Do not mark implementation complete unless the existing feedback loops,
    `loop-ledger.jsonl`, and strict loop audit requirements remain satisfied.
 
 After the stakeholder PR/FAQ artifacts are updated:
@@ -659,6 +691,7 @@ After the stakeholder PR/FAQ artifacts are updated:
   Loop evidence: {FEATURE_DIR}/loop-ledger.jsonl
   Working Backwards PR/FAQ: {FEATURE_DIR}/working-backwards-prfaq.md
   PR/FAQ implementation snapshot: {FEATURE_DIR}/prfaq-history/05-implement.md
+  Build map: {FEATURE_DIR}/build-map.md
   Stakeholder review index: {FEATURE_DIR}/stakeholder-review-index.md
 
   Phases completed:
@@ -864,7 +897,9 @@ separation from `tasks.md`:
   Use `--command "<preview command>"` when auto-detection is wrong, or
   `--url <preview-url>` when a server is already running. Report the opened URL and
   screenshot path to the user quickly. Append the run, self-review, and any
-  known visual risks to `{FEATURE_DIR}/ui-review-log.md`.
+  known visual risks to `{FEATURE_DIR}/ui-review-log.md`. Also update
+  `{FEATURE_DIR}/build-map.md` with the affected map area, plain-language
+  status, business impact, and next step.
 - For application delivery, show each new MVP preview to the user as quickly as
   possible after the latest UI-facing change opens in a browser and has
   screenshot, local render proof, or Playwright-style self-review evidence in

@@ -5,6 +5,24 @@ import path from 'node:path';
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 
 describe('Gofer public execution-depth guidance', () => {
+  it('keeps business-friendly progress guidance in every command source', () => {
+    const commandDir = path.join(REPO_ROOT, '.specify/commands');
+    const commandFiles = fs
+      .readdirSync(commandDir)
+      .filter((file) => file.endsWith('.md'))
+      .sort();
+
+    for (const file of commandFiles) {
+      const content = fs.readFileSync(path.join(commandDir, file), 'utf8');
+      expect(content, file).toContain('## Business-Friendly Progress Contract');
+      expect(content, file).toContain('<!-- gofer:business-progress:start -->');
+      expect(content, file).toContain('`Working on`');
+      expect(content, file).toContain('`Why it matters`');
+      expect(content, file).toContain('`Status`');
+      expect(content, file).toContain('<!-- gofer:business-progress:end -->');
+    }
+  });
+
   it('documents generic risk labels across the six primary pipeline commands', () => {
     for (const file of [
       '1_gofer_research.md',
@@ -39,6 +57,7 @@ describe('Gofer public execution-depth guidance', () => {
     );
     expect(scenario).toContain('working-backwards-prfaq.md');
     expect(scenario).toContain('prfaq-history/00-business-scenario.md');
+    expect(scenario).toContain('build-map.md');
     expect(scenario).toContain('stakeholder-review-index.md');
 
     const research = fs.readFileSync(
@@ -46,6 +65,7 @@ describe('Gofer public execution-depth guidance', () => {
       'utf8'
     );
     expect(research).toContain('prfaq-history/01-research.md');
+    expect(research).toContain('build-map.md');
     expect(research).toContain('business-owner-summary.md');
 
     const specify = fs.readFileSync(
@@ -53,10 +73,12 @@ describe('Gofer public execution-depth guidance', () => {
       'utf8'
     );
     expect(specify).toContain('prfaq-history/02-specify.md');
+    expect(specify).toContain('build-map.md');
     expect(specify).toContain('business-owner-summary.md');
 
     const plan = fs.readFileSync(path.join(REPO_ROOT, '.specify/commands/3_gofer_plan.md'), 'utf8');
     expect(plan).toContain('prfaq-history/03-plan.md');
+    expect(plan).toContain('build-map.md');
     expect(plan).toContain('cto-architecture-summary.md');
 
     const tasks = fs.readFileSync(
@@ -71,6 +93,7 @@ describe('Gofer public execution-depth guidance', () => {
       'utf8'
     );
     expect(implement).toContain('prfaq-history/05-implement.md');
+    expect(implement).toContain('build-map.md');
     expect(implement).toContain('loop-ledger.jsonl');
 
     const validate = fs.readFileSync(
@@ -78,6 +101,7 @@ describe('Gofer public execution-depth guidance', () => {
       'utf8'
     );
     expect(validate).toContain('prfaq-history/06-validate.md');
+    expect(validate).toContain('build-map.md');
     expect(validate).toContain('ciso-security-summary.md');
     expect(validate).toContain('loop-audit-report.md');
 

@@ -57,6 +57,33 @@ Before spawning agents, calling tools, or loading large files:
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
+## Business-Friendly Progress Contract
+<!-- gofer:business-progress:start -->
+
+Default user-facing updates must be concise, business-level, and easy to scan.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
+
+1. Explain progress as what is being connected, changed, checked, or fixed and
+   why it matters to the business outcome.
+2. Use the running build map: create or update
+   `.specify/specs/{feature}/build-map.md` from
+   `.specify/templates/build-map-template.md` for application delivery, and
+   refer to its plain-language areas in progress updates.
+3. When there is a problem, translate it into business impact, current status,
+   next action, and what input or approval is needed. Keep raw stack traces,
+   command logs, IDs, and acronyms out of chat unless asked.
+4. If the user asks for technical depth, provide it on request and point to the
+   durable artifact that contains the evidence.
+5. Prefer a compact update shape:
+   - `Working on`: the build-map area or stakeholder outcome
+   - `Why it matters`: user/business impact
+   - `Status`: done, checking, fixing, blocked, or needs decision
+6. Do not remove technical validation, security checks, EAI preflights, tests,
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
+<!-- gofer:business-progress:end -->
+
 ## User Input
 
 ```text
@@ -116,7 +143,8 @@ empty, or `template`, stop and run `/2_gofer_specify`; do not create or refresh
 4. Review agent outputs
 5. Optional multi-perspective review
 6. Spec coverage validation
-7. Output: `plan.md`, `data-model.md`, `contracts/`, `quickstart.md`
+7. Output: `plan.md`, `data-model.md`, `contracts/`, `quickstart.md`, and
+   for app delivery an updated `build-map.md`
 8. Stakeholder PR/FAQ output: `working-backwards-prfaq.md`,
    `prfaq-history/03-plan.md`, `cto-architecture-summary.md`, and
    `stakeholder-review-index.md`
@@ -680,10 +708,15 @@ Before reporting completion, update the stakeholder-facing architecture pack:
    `.specify/templates/cto-architecture-summary-template.md` using
    `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams,
    `service-fit-matrix.md`, and `eai-preflight.md` when present.
-4. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask
+4. For application delivery, update `{FEATURE_DIR}/build-map.md` so the EAI
+   Platform, data/workflow, login/security, integrations, and preview/release
+   rows reflect the selected architecture in plain language. The latest update
+   should say what is being connected, why it matters, and what remains to
+   prove before implementation.
+5. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask
    CTO / Architecture to approve, revise, or defer the architecture,
    EAI/Azure fit, auth/tenant model, data model, and integration contracts.
-5. Preserve the existing loop contract: if planning changed eval commands,
+6. Preserve the existing loop contract: if planning changed eval commands,
    stop conditions, or escalation rules, update `loop-contract.json` and keep
    those changes visible in the stakeholder index rather than replacing loop
    audit behavior.

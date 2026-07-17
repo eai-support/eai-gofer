@@ -46,6 +46,7 @@ rationale.
 | -------------------------- | -------------------------------- | ----------- |
 | `discovery.md`             | {{business-context}}             | Keep        |
 | `journeys/base-journey.md` | {{ai-augmented-process-context}} | Keep / N/A  |
+| `build-map.md`             | {{plain-language-build-picture}} | Keep / N/A  |
 | `ui-preview-brief.md`      | {{preview-scope-and-branding}}   | Keep / N/A  |
 | `ui-show-and-tell.md`      | {{latest-preview-and-feedback}}  | Keep / N/A  |
 | `service-fit-matrix.md`    | {{capability-selection}}         | Keep / N/A  |
