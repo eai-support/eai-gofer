@@ -5,7 +5,7 @@ description: "Start or continue the EAI Gofer delivery pipeline."
 
 # EAI Gofer
 
-Version: 3.7.22
+Version: 3.7.23
 Host: Codex
 
 # EAI Gofer
