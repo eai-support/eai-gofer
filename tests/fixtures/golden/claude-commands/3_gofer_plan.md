@@ -75,6 +75,13 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Delivery Lineage Contract
+
+Before completing this stage, read `.specify/references/delivery-lineage.md`
+and update `.specify/specs/{feature}/delivery-lineage.json` with customer
+architecture, decisions, approvers, evidence, and PublicAPI capability
+dependencies. Store concise decision rationale, never hidden reasoning.
+
 ## Execution Profile And Planning Surface
 
 Use the research/spec risk classification to choose planning depth:

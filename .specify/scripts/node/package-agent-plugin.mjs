@@ -186,6 +186,7 @@ function buildCodexManifest(version, stages, paths = {}) {
         'Set up my first EAI Platform app with Gofer',
         'Run Gofer research for this feature',
         'Create a Gofer implementation plan',
+        'Show the delivery lineage diagram for this feature',
         'Validate this branch with Gofer',
       ],
       brandColor: '#145DA0',
@@ -863,6 +864,12 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     await writeText(path.join(pluginRoot, 'skills', entry.stem, 'SKILL.md'), skill);
     await writeText(path.join(pluginRoot, UMBRELLA_SKILLS_DIR, entry.stem, 'SKILL.md'), skill);
   }
+  await copyIfExistsAs(
+    root,
+    '.claude/skills/gofer-documentation',
+    path.join(UMBRELLA_SKILLS_DIR, 'gofer-documentation'),
+    pluginRoot
+  );
 
   await writeText(path.join(pluginRoot, 'README.md'), buildPluginReadme(version));
   await writeText(path.join(pluginRoot, '.eai-gofer-plugin-version'), `${version}\n${GENERATED_MARKER}\n`);

@@ -76,6 +76,14 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Delivery Lineage Contract
+
+Before completing validation, read `.specify/references/delivery-lineage.md`,
+reconcile `.specify/specs/{feature}/delivery-lineage.json` against actual
+customer code/docs/tests, and run the headless lineage validation and
+customer-projection checks. Missing, stale, broken, or superseded evidence must
+remain visible to the documentation viewer.
+
 ## Execution Profile And Validation Cost
 
 Validation must respect the final risk label:

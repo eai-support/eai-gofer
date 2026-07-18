@@ -74,6 +74,11 @@
         "icon": "$(dashboard)"
       },
       {
+        "command": "gofer.showDeliveryLineage",
+        "title": "Gofer: Show Delivery Lineage",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
         "command": "gofer.refreshSpecs",
         "title": "Gofer: Refresh Specifications",
         "icon": "$(refresh)"

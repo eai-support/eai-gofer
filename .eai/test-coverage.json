@@ -10,7 +10,8 @@
           "required_repo_tests": [
             "tests/unit/headless/validators.test.ts",
             "tests/unit/headless/exportBundle.test.ts",
-            "tests/unit/headless/stageExecutor.test.ts"
+            "tests/unit/headless/stageExecutor.test.ts",
+            "tests/unit/headless/deliveryLineage.test.ts"
           ],
           "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
           "required_cross_service_surfaces": ["adminportal-adminapi"],
@@ -20,6 +21,28 @@
               "path": "tests/cross-service/contracts/adminportal-adminapi/admin-portal-gofer-governance.spec.ts"
             }
           ]
+        },
+        {
+          "id": "customer-delivery-lineage-viewer",
+          "description": "Customer-safe delivery lineage authoring, Mermaid generation, and VS Code graph viewing capped at the PublicAPI contract boundary.",
+          "owned_paths": [
+            ".claude/skills/gofer-documentation/**",
+            ".specify/references/delivery-lineage.md",
+            ".specify/scripts/node/render-delivery-lineage.mjs",
+            ".specify/skills/gofer-documentation/**",
+            ".specify/templates/delivery-lineage-template.json",
+            "extension/src/ui/DeliveryLineagePanel.ts",
+            "extension/src/ui/deliveryLineageHtml.ts",
+            "extension/src/ui/deliveryLineageModel.ts",
+            "tests/unit/ui/deliveryLineageViewer.test.ts"
+          ],
+          "required_repo_tests": [
+            "tests/unit/headless/deliveryLineage.test.ts",
+            "tests/unit/ui/deliveryLineageViewer.test.ts"
+          ],
+          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
         }
       ]
     }

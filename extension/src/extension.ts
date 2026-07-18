@@ -32,6 +32,7 @@ import { registerQueryMemoryUsageCommand } from './commands/queryMemoryUsage';
 import { registerSpecCommands } from './commands/specCommands';
 // Context Health Monitoring (Spec 012)
 import { ContextHealthStatusBar } from './ui/ContextHealthStatusBar';
+import { showDeliveryLineagePanel } from './ui/DeliveryLineagePanel';
 import { ScopeGuard } from './autonomous/ScopeGuard';
 import { ToolAuditLogger } from './autonomous/ToolAuditLogger';
 import { RunLedger } from './autonomous/RunLedger';
@@ -949,6 +950,18 @@ function registerGlobalCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('gofer.eai', async () => {
       await runPublicGoferEntrypoint('Eai');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gofer.showDeliveryLineage', async () => {
+      try {
+        await showDeliveryLineagePanel();
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Unable to show delivery lineage: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
     })
   );
 

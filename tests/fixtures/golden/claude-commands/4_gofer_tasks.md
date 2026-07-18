@@ -74,6 +74,13 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Delivery Lineage Contract
+
+Before completing this stage, read `.specify/references/delivery-lineage.md`
+and update `.specify/specs/{feature}/delivery-lineage.json` with work-order
+nodes linked to the requirements, decisions, and customer files they will
+change.
+
 ## Execution Profile And Task Sizing
 
 Preserve the selected depth from earlier stages:

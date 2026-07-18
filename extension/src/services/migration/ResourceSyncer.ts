@@ -642,6 +642,11 @@ export class ResourceSyncer implements IResourceOperations {
         paths: generatedPaths,
         workflowProfile,
       });
+      await this.syncBundledDirectory(
+        'Gofer documentation skill for Codex',
+        path.join('claude-skills', 'gofer-documentation'),
+        path.join(this.workspacePath, '.agents', 'skills', 'gofer-documentation')
+      );
     } catch (error) {
       this.logger.error('ResourceSyncer', error as Error, {
         operation: 'setupCodexSkills',
