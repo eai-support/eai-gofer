@@ -1,6 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import {
+  augmentDeliveryLineageWithFeatureCorpus,
+  type DeliveryLineageCorpusArtifact,
+} from './deliveryLineageCorpus';
 import { renderDeliveryLineageHtml } from './deliveryLineageHtml';
 import {
   parseDeliveryLineageViewGraph,
@@ -58,10 +62,34 @@ async function selectManifest(): Promise<vscode.Uri | undefined> {
 
 async function loadGraph(uri: vscode.Uri): Promise<DeliveryLineageViewGraph> {
   const bytes = await vscode.workspace.fs.readFile(uri);
-  return parseDeliveryLineageViewGraph(JSON.parse(Buffer.from(bytes).toString('utf8')), {
+  let graph = parseDeliveryLineageViewGraph(JSON.parse(Buffer.from(bytes).toString('utf8')), {
     expectedPlane: 'customer',
     forbiddenTerms: FORBIDDEN_CUSTOMER_TERMS,
   });
+  const manifestWorkspace = vscode.workspace.getWorkspaceFolder(uri);
+  if (!manifestWorkspace)
+    throw new Error('The delivery lineage manifest is outside the workspace.');
+  const featureFolder = path.dirname(uri.fsPath);
+  const featureRoot = path
+    .relative(manifestWorkspace.uri.fsPath, featureFolder)
+    .replaceAll(path.sep, '/');
+  const corpusUris = await vscode.workspace.findFiles(
+    new vscode.RelativePattern(featureFolder, '**/*.{md,json}')
+  );
+  const corpus: DeliveryLineageCorpusArtifact[] = await Promise.all(
+    corpusUris.map(async (corpusUri) => ({
+      path: path.relative(manifestWorkspace.uri.fsPath, corpusUri.fsPath).replaceAll(path.sep, '/'),
+      content: await vscode.workspace.fs.readFile(corpusUri),
+    }))
+  );
+  graph = augmentDeliveryLineageWithFeatureCorpus(
+    graph,
+    path.basename(manifestWorkspace.uri.fsPath),
+    featureRoot,
+    corpus,
+    FORBIDDEN_CUSTOMER_TERMS
+  );
+  return graph;
 }
 
 function isSafeRepositoryName(repository: string): boolean {

@@ -28,16 +28,20 @@
           "owned_paths": [
             ".claude/skills/gofer-documentation/**",
             ".specify/references/delivery-lineage.md",
+            ".specify/scripts/node/delivery-lineage-corpus.mjs",
             ".specify/scripts/node/render-delivery-lineage.mjs",
             ".specify/skills/gofer-documentation/**",
             ".specify/templates/delivery-lineage-template.json",
             "extension/src/ui/DeliveryLineagePanel.ts",
+            "extension/src/ui/deliveryLineageCorpus.ts",
             "extension/src/ui/deliveryLineageHtml.ts",
             "extension/src/ui/deliveryLineageModel.ts",
+            "tests/unit/ui/deliveryLineageCorpus.test.ts",
             "tests/unit/ui/deliveryLineageViewer.test.ts"
           ],
           "required_repo_tests": [
             "tests/unit/headless/deliveryLineage.test.ts",
+            "tests/unit/ui/deliveryLineageCorpus.test.ts",
             "tests/unit/ui/deliveryLineageViewer.test.ts"
           ],
           "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],

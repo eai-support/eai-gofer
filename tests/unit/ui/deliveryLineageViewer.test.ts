@@ -61,6 +61,44 @@ describe('Gofer delivery lineage viewer', () => {
     expect(html).not.toContain('tech-docs');
     expect(graph.nodes.every((node) => node.visibility !== 'eai-internal')).toBe(true);
     expect(html).toContain("script-src 'nonce-nonce'");
+    expect(html).toContain('Evidence status legend');
+    expect(html).toContain('Anchor lost / broken');
+    expect(html).toContain("heading.textContent = 'Connections (' + nodeEdges.length + ')'");
+    expect(html).toContain(
+      "sourceLink.textContent = 'Open ' + node.source.repository + ' · ' + node.source.path"
+    );
+    expect(html).toContain("'Open ' + node.source.repository + ' document'");
+    expect(html).not.toContain('label.textContent = title(edge.relation)');
+  });
+
+  it('renders every evidence status for nodes, relationships, and the worklist', () => {
+    const statuses = ['current', 'suspect', 'anchor-lost', 'broken', 'superseded'];
+    for (const status of statuses) {
+      const candidate = newCustomerFeatureGraph() as {
+        nodes: Array<{ status: string }>;
+        edges: Array<{ status: string }>;
+      };
+      candidate.nodes[0].status = status;
+      candidate.edges[0].status = status;
+      expect(() =>
+        parseDeliveryLineageViewGraph(candidate, { expectedPlane: 'customer' })
+      ).not.toThrow();
+    }
+
+    const graph = parseDeliveryLineageViewGraph(newCustomerFeatureGraph(), {
+      expectedPlane: 'customer',
+    });
+    const html = renderDeliveryLineageHtml(
+      graph,
+      { productName: 'Gofer', boundaryLabel: 'PublicAPI boundary', portableCommand: 'render' },
+      'nonce'
+    );
+    expect(html).toContain('.status-current');
+    expect(html).toContain('.status-suspect');
+    expect(html).toContain('.status-anchor-lost, .status-broken');
+    expect(html).toContain('.status-superseded');
+    expect(html).toContain("'work-item status-' + edge.status");
+    expect(html).toContain("'connection status-' + edge.status");
   });
 
   it('fails closed for internal visibility and forbidden repositories', () => {

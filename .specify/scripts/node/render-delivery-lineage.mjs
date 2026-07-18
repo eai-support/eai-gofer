@@ -3,6 +3,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { augmentCustomerLineageCorpus } from './delivery-lineage-corpus.mjs';
 
 const SCHEMA_VERSION = 'eai.delivery_lineage.v1';
 const STAGES = ['intent', 'requirements', 'architecture', 'delivery', 'validation', 'outcome'];
@@ -138,7 +139,10 @@ export async function main(argv = process.argv.slice(2)) {
   if (!args.input) throw new Error(usage());
   const inputPath = path.resolve(args.input);
   const outputPath = path.resolve(args.output || path.join(path.dirname(inputPath), 'delivery-lineage.md'));
-  const lineage = JSON.parse(await fs.readFile(inputPath, 'utf8'));
+  const lineage = await augmentCustomerLineageCorpus(
+    JSON.parse(await fs.readFile(inputPath, 'utf8')),
+    inputPath
+  );
   await fs.writeFile(outputPath, renderCustomerLineageMarkdown(lineage, inputPath), 'utf8');
   console.log(outputPath);
 }
