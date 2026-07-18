@@ -7,6 +7,13 @@ import { augmentCustomerLineageCorpus } from './delivery-lineage-corpus.mjs';
 
 const SCHEMA_VERSION = 'eai.delivery_lineage.v1';
 const STAGES = ['intent', 'requirements', 'architecture', 'delivery', 'validation', 'outcome'];
+const STATUSES = ['current', 'suspect', 'anchor-lost', 'broken', 'superseded'];
+const EDGE_STATUS_STYLES = {
+  suspect: 'stroke:#f59e0b,stroke-width:3px',
+  'anchor-lost': 'stroke:#e53935,stroke-width:3px',
+  broken: 'stroke:#c62828,stroke-width:3px',
+  superseded: 'stroke:#8b949e,stroke-width:2px,stroke-dasharray:7 5',
+};
 const FORBIDDEN_INTERNAL_TERMS = [
   'AdminAPI',
   'ResourceAPI',
@@ -63,6 +70,7 @@ export function validateCustomerLineage(lineage) {
     if (!node?.id || nodeIds.has(node.id)) errors.push(`node id is missing or duplicated: ${node?.id ?? '<empty>'}`);
     nodeIds.add(node?.id);
     if (!STAGES.includes(node?.stage)) errors.push(`node ${node?.id} has an invalid stage`);
+    if (!STATUSES.includes(node?.status)) errors.push(`node ${node?.id} has an invalid status`);
     if (!['customer', 'public-contract'].includes(node?.visibility)) {
       errors.push(`node ${node?.id} crosses the customer trust boundary`);
     }
@@ -72,6 +80,7 @@ export function validateCustomerLineage(lineage) {
     if (!edge?.id || edgeIds.has(edge.id)) errors.push(`edge id is missing or duplicated: ${edge?.id ?? '<empty>'}`);
     edgeIds.add(edge?.id);
     if (!nodeIds.has(edge?.source) || !nodeIds.has(edge?.target)) errors.push(`edge ${edge?.id} references a missing node`);
+    if (!STATUSES.includes(edge?.status)) errors.push(`edge ${edge?.id} has an invalid status`);
     if (!['customer', 'public-contract'].includes(edge?.visibility)) {
       errors.push(`edge ${edge?.id} crosses the customer trust boundary`);
     }
@@ -110,18 +119,27 @@ export function renderCustomerLineageMarkdown(lineage, inputName = 'delivery-lin
     if (stageNodes.length === 0) continue;
     lines.push(`  subgraph stage_${stage}["${titleCase(stage)}"]`, '    direction TB');
     for (const node of stageNodes) {
-      const className = node.status === 'current' ? 'current' : 'attention';
+      const className = node.status.replace('-', '_');
       lines.push(`    ${nodeNames.get(node.id)}["${cleanLabel(node.label)}<br/>${titleCase(node.kind)}"]:::${className}`);
     }
     lines.push('  end');
   }
 
-  for (const edge of lineage.edges) {
-    lines.push(`  ${nodeNames.get(edge.source)} -->|"${titleCase(cleanLabel(edge.relation))}"| ${nodeNames.get(edge.target)}`);
+  const edgeStyles = [];
+  for (const [index, edge] of lineage.edges.entries()) {
+    const statusLabel = edge.status === 'current' ? '' : ` · ${titleCase(edge.status)}`;
+    lines.push(`  ${nodeNames.get(edge.source)} -->|"${titleCase(cleanLabel(edge.relation))}${statusLabel}"| ${nodeNames.get(edge.target)}`);
+    if (EDGE_STATUS_STYLES[edge.status]) {
+      edgeStyles.push(`  linkStyle ${index} ${EDGE_STATUS_STYLES[edge.status]}`);
+    }
   }
+  lines.push(...edgeStyles);
   lines.push(
     '  classDef current fill:#e8f5e9,stroke:#2e7d32,color:#102a13',
-    '  classDef attention fill:#fff3e0,stroke:#ef6c00,color:#3d2200',
+    '  classDef suspect fill:#fff4ce,stroke:#f59e0b,color:#3d2800',
+    '  classDef anchor_lost fill:#ffebee,stroke:#e53935,color:#3f1010',
+    '  classDef broken fill:#ffcdd2,stroke:#c62828,color:#3f1010',
+    '  classDef superseded fill:#eceff1,stroke:#8b949e,color:#30363d',
     '```',
     '',
     `Generated from \`${path.basename(inputName)}\`. Open **Gofer: Show Delivery Lineage** for the interactive viewer.`,
