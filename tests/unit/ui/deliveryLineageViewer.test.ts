@@ -2,38 +2,38 @@ import { describe, expect, it } from 'vitest';
 import { renderDeliveryLineageHtml } from '@extension/ui/deliveryLineageHtml';
 import { parseDeliveryLineageViewGraph } from '@extension/ui/deliveryLineageModel';
 
-function customerGraph(): unknown {
+function newCustomerFeatureGraph(): unknown {
   return {
     schemaVersion: 'eai.delivery_lineage.v1',
     plane: 'customer',
-    featureId: 'customer-onboarding',
+    featureId: 'customer-permit-status',
     generatedAt: '2026-07-18T00:00:00.000Z',
     nodes: [
       {
-        id: 'requirement:onboarding',
+        id: 'requirement:permit-status',
         kind: 'requirement',
-        label: 'Customer onboarding',
+        label: 'New customer permit status feature',
         stage: 'requirements',
         visibility: 'customer',
         status: 'current',
-        source: { repository: 'customer-app', path: 'docs/onboarding.md', anchor: '#scope' },
+        source: { repository: 'customer-app', path: 'docs/permit-status.md', anchor: '#scope' },
       },
       {
-        id: 'capability:onboarding',
+        id: 'capability:permit-status',
         kind: 'public-api-capability',
-        label: 'Onboarding API',
+        label: 'PublicAPI permit status contract',
         stage: 'architecture',
         visibility: 'public-contract',
         status: 'current',
-        capabilityId: 'eai.publicapi.capability.onboarding.v1',
+        capabilityId: 'eai.publicapi.capability.permit-status.v1',
         contractVersion: 'v1',
       },
     ],
     edges: [
       {
-        id: 'edge:onboarding',
-        source: 'requirement:onboarding',
-        target: 'capability:onboarding',
+        id: 'edge:permit-status',
+        source: 'requirement:permit-status',
+        target: 'capability:permit-status',
         relation: 'depends-on',
         visibility: 'public-contract',
         status: 'current',
@@ -43,8 +43,8 @@ function customerGraph(): unknown {
 }
 
 describe('Gofer delivery lineage viewer', () => {
-  it('parses and renders a customer-safe graph', () => {
-    const graph = parseDeliveryLineageViewGraph(customerGraph(), {
+  it('shows a new customer feature only through its PublicAPI contract', () => {
+    const graph = parseDeliveryLineageViewGraph(newCustomerFeatureGraph(), {
       expectedPlane: 'customer',
       forbiddenTerms: ['ResourceAPI', 'tech-docs'],
     });
@@ -55,12 +55,16 @@ describe('Gofer delivery lineage viewer', () => {
     );
 
     expect(html).toContain('Gofer Delivery Lineage');
-    expect(html).toContain('Customer onboarding');
+    expect(html).toContain('New customer permit status feature');
+    expect(html).toContain('PublicAPI permit status contract');
+    expect(html).not.toContain('ResourceAPI');
+    expect(html).not.toContain('tech-docs');
+    expect(graph.nodes.every((node) => node.visibility !== 'eai-internal')).toBe(true);
     expect(html).toContain("script-src 'nonce-nonce'");
   });
 
   it('fails closed for internal visibility and forbidden repositories', () => {
-    const graph = customerGraph() as {
+    const graph = newCustomerFeatureGraph() as {
       nodes: Array<{ visibility: string; source?: { repository: string; path: string } }>;
     };
     graph.nodes[0].visibility = 'eai-internal';
@@ -79,7 +83,7 @@ describe('Gofer delivery lineage viewer', () => {
   });
 
   it('rejects source paths that escape a repository', () => {
-    const graph = customerGraph() as {
+    const graph = newCustomerFeatureGraph() as {
       nodes: Array<{ source?: { repository: string; path: string } }>;
     };
     graph.nodes[0].source = { repository: 'customer-app', path: '../secret.md' };
