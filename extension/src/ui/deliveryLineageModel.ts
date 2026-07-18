@@ -17,6 +17,7 @@ interface DeliveryLineageViewNode {
   stage: string;
   visibility: string;
   status: DeliveryLineageStatus;
+  decisionOutcome?: 'selected' | 'rejected' | 'superseded';
   summary?: string;
   capabilityId?: string;
   contractVersion?: string;
@@ -120,6 +121,17 @@ export function parseDeliveryLineageViewGraph(
     if (!STAGES.has(stage)) throw new Error(`Node ${id} has an invalid stage.`);
     if (!VISIBILITIES.has(visibility)) throw new Error(`Node ${id} has invalid visibility.`);
     if (!STATUSES.has(status)) throw new Error(`Node ${id} has an invalid status.`);
+    const decisionOutcome =
+      typeof entry.decisionOutcome === 'string' ? entry.decisionOutcome : undefined;
+    if (
+      decisionOutcome !== undefined &&
+      !['selected', 'rejected', 'superseded'].includes(decisionOutcome)
+    ) {
+      throw new Error(`Node ${id} has an invalid decisionOutcome.`);
+    }
+    if (decisionOutcome !== undefined && entry.kind !== 'decision') {
+      throw new Error(`Node ${id} uses decisionOutcome but is not a decision.`);
+    }
     if (options.expectedPlane === 'customer' && visibility === 'eai-internal') {
       throw new Error(`Node ${id} crosses the customer trust boundary.`);
     }
@@ -130,6 +142,7 @@ export function parseDeliveryLineageViewGraph(
       stage,
       visibility,
       status: status as DeliveryLineageStatus,
+      decisionOutcome: decisionOutcome as DeliveryLineageViewNode['decisionOutcome'],
       summary: typeof entry.summary === 'string' ? entry.summary : undefined,
       capabilityId: typeof entry.capabilityId === 'string' ? entry.capabilityId : undefined,
       contractVersion:

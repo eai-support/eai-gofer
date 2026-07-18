@@ -22,7 +22,7 @@ describe('Gofer feature corpus lineage', () => {
       {
         path: `${root}/research.md`,
         content: encode(
-          '# Permit status research\n\n## Approved Direction\n\nUse the public contract.'
+          '# Permit status research\n\n## Approved Direction\n\nUse the public contract.\n\n## Rejected Alternative\n\nCall a private service directly.'
         ),
       },
       { path: `${root}/spec.md`, content: encode('# Permit status specification') },
@@ -33,7 +33,7 @@ describe('Gofer feature corpus lineage', () => {
       { path: `${root}/delivery-lineage.json`, content: encode('{}') },
     ]);
 
-    expect(graph.nodes).toHaveLength(7);
+    expect(graph.nodes).toHaveLength(8);
     expect(graph.nodes.map((node) => node.label)).toEqual(
       expect.arrayContaining([
         'P1 Research · Permit status research',
@@ -43,9 +43,24 @@ describe('Gofer feature corpus lineage', () => {
         'P5 Implement · Implementation status',
         'P6 Validate · Validation evidence',
         'P1 Decision · Approved Direction',
+        'P1 Decision · Rejected Alternative',
       ])
     );
-    expect(graph.edges.filter((edge) => edge.relation === 'records-decision')).toHaveLength(1);
+    expect(graph.edges.filter((edge) => edge.relation === 'records-decision')).toHaveLength(2);
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'P1 Decision · Approved Direction',
+          decisionOutcome: 'selected',
+          summary: 'Use the public contract.',
+        }),
+        expect.objectContaining({
+          label: 'P1 Decision · Rejected Alternative',
+          decisionOutcome: 'rejected',
+          summary: 'Call a private service directly.',
+        }),
+      ])
+    );
   });
 
   it('rejects an internal EAI term discovered in a customer feature artifact', () => {

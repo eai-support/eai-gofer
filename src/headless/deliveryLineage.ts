@@ -58,6 +58,7 @@ export const DELIVERY_LINEAGE_STATUSES = [
   'broken',
   'superseded',
 ] as const;
+export const DELIVERY_LINEAGE_DECISION_OUTCOMES = ['selected', 'rejected', 'superseded'] as const;
 export const DELIVERY_LINEAGE_ORIGINS = ['human-directed', 'agent-initiated'] as const;
 export const DELIVERY_LINEAGE_VERIFIERS = ['human', 'agent', 'none'] as const;
 
@@ -73,6 +74,8 @@ export type DeliveryLineageNodeKind = (typeof DELIVERY_LINEAGE_NODE_KINDS)[numbe
 export type DeliveryLineageRelation = (typeof DELIVERY_LINEAGE_RELATIONS)[number];
 /** Evidence health retained for drift and repair worklists. */
 export type DeliveryLineageStatus = (typeof DELIVERY_LINEAGE_STATUSES)[number];
+/** Recorded outcome distinguishing the accepted delivery choice from alternatives. */
+export type DeliveryLineageDecisionOutcome = (typeof DELIVERY_LINEAGE_DECISION_OUTCOMES)[number];
 /** Whether a relationship originated from human direction or agent initiative. */
 export type DeliveryLineageOrigin = (typeof DELIVERY_LINEAGE_ORIGINS)[number];
 /** Actor that last verified the relationship claim. */
@@ -95,6 +98,7 @@ export interface DeliveryLineageNode {
   stage: DeliveryLineageStage;
   visibility: DeliveryLineageVisibility;
   status: DeliveryLineageStatus;
+  decisionOutcome?: DeliveryLineageDecisionOutcome;
   summary?: string;
   capabilityId?: string;
   contractVersion?: string;
@@ -246,6 +250,15 @@ export function validateDeliveryLineage(
     }
     if (!DELIVERY_LINEAGE_STATUSES.includes(node.status)) {
       errors.push(`${context} status is invalid.`);
+    }
+    if (
+      node.decisionOutcome !== undefined &&
+      !DELIVERY_LINEAGE_DECISION_OUTCOMES.includes(node.decisionOutcome)
+    ) {
+      errors.push(`${context} decisionOutcome is invalid.`);
+    }
+    if (node.decisionOutcome !== undefined && node.kind !== 'decision') {
+      errors.push(`${context} decisionOutcome is only valid for decision nodes.`);
     }
     if (node.kind === 'public-api-capability') {
       if (!node.capabilityId || !PUBLIC_API_CAPABILITY_PATTERN.test(node.capabilityId)) {

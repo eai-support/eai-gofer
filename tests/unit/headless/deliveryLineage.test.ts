@@ -175,6 +175,23 @@ describe('delivery lineage contract', () => {
     });
   });
 
+  it('accepts decision outcomes only on decision nodes', () => {
+    const graph = createInternalLineage();
+    const invalid = {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === 'requirement:search' ? { ...node, decisionOutcome: 'selected' as const } : node
+      ),
+    };
+
+    expect(validateDeliveryLineage(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([
+        'Node requirement:search decisionOutcome is only valid for decision nodes.',
+      ]),
+    });
+  });
+
   it('serializes nodes and edges deterministically for hashing', () => {
     const graph = createInternalLineage();
     const reversed: DeliveryLineageGraph = {

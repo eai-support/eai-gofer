@@ -20,7 +20,13 @@ interface ClassifiedArtifact {
   phase: CorpusPhase;
   relativePath: string;
   title: string;
-  decisions: readonly string[];
+  decisions: readonly ClassifiedDecision[];
+}
+
+interface ClassifiedDecision {
+  heading: string;
+  outcome?: 'selected' | 'rejected' | 'superseded';
+  summary?: string;
 }
 
 const PHASES = {
@@ -144,17 +150,52 @@ function titleFromContent(relativePath: string, content: string): string {
   return (frontmatter ?? heading ?? humanize(fileStem(relativePath))).trim().slice(0, 120);
 }
 
-function decisionHeadings(content: string): string[] {
-  const headings = [...content.matchAll(/^#{1,6}\s+(.+)$/gm)].map((match) => match[1].trim());
-  return [
-    ...new Set(
-      headings.filter((heading) =>
-        /\b(decision|decisions|selected approach|approved direction|chosen option|recommendation)\b/i.test(
-          heading
-        )
+function decisionOutcome(heading: string): ClassifiedDecision['outcome'] {
+  if (/\b(rejected|declined|not selected)\b/i.test(heading)) return 'rejected';
+  if (/\bsuperseded\b/i.test(heading)) return 'superseded';
+  if (
+    /\b(selected approach|approved direction|chosen option|recommendation|final decision|architecture decision)\b/i.test(
+      heading
+    )
+  ) {
+    return 'selected';
+  }
+  return undefined;
+}
+
+function decisionSummary(value: string): string | undefined {
+  const summary = value
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^[\s]*[-+*]\s+/gm, '')
+    .replace(/[#>*_`|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return summary ? summary.slice(0, 320) : undefined;
+}
+
+function decisionHeadings(content: string): ClassifiedDecision[] {
+  const headings = [...content.matchAll(/^#{1,6}\s+(.+)$/gm)];
+  const decisions: ClassifiedDecision[] = [];
+  for (let index = 0; index < headings.length; index += 1) {
+    const match = headings[index];
+    const heading = match[1].trim();
+    if (
+      !/\b(decision|decisions|selected approach|approved direction|chosen option|recommendation|rejected alternative|declined option|superseded decision)\b/i.test(
+        heading
       )
-    ),
-  ].slice(0, 30);
+    ) {
+      continue;
+    }
+    const bodyStart = (match.index ?? 0) + match[0].length;
+    const bodyEnd = headings[index + 1]?.index ?? content.length;
+    decisions.push({
+      heading,
+      outcome: decisionOutcome(heading),
+      summary: decisionSummary(content.slice(bodyStart, bodyEnd)),
+    });
+  }
+  return decisions.slice(0, 30);
 }
 
 function classify(relativePath: string, content: string): ClassifiedArtifact {
@@ -263,16 +304,18 @@ export function augmentDeliveryLineageWithFeatureCorpus(
     phaseArtifacts.set(classified.phase.code, phaseItems);
 
     for (const decision of classified.decisions) {
-      const decisionId = stableId('decision', `${sourcePath}#${decision}`);
+      const decisionId = stableId('decision', `${sourcePath}#${decision.heading}`);
       if (!nodes.some((node) => node.id === decisionId)) {
         nodes.push({
           id: decisionId,
           kind: 'decision',
-          label: `${classified.phase.code} Decision · ${decision}`,
+          label: `${classified.phase.code} Decision · ${decision.heading}`,
           stage: classified.phase.stage,
           visibility: 'customer',
           status: 'current',
-          source: { repository, path: sourcePath, anchor: decision },
+          decisionOutcome: decision.outcome,
+          summary: decision.summary,
+          source: { repository, path: sourcePath, anchor: decision.heading },
         });
       }
       addEdge({

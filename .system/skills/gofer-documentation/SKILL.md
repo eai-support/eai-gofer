@@ -39,6 +39,22 @@ writing and enforce all of its export rules.
 5. Use repository-relative links and paths. Include a Git commit and SHA-256
    content hash in lineage sources when known.
 
+## Record The Selected Decision
+
+Use one explicit heading for each material outcome so the viewer can separate
+the accepted path from alternatives:
+
+- `## Selected Approach`, `## Approved Direction`, `## Chosen Option`, or
+  `## Architecture Decision` for an accepted choice;
+- `## Rejected Alternative` or `## Declined Option` for an option not taken;
+- `## Superseded Decision` when a later choice replaced it.
+
+State the decision itself in the first paragraph below the heading. Keep the
+concise rationale and consequences below it. The viewer records the heading as
+an anchored decision node, shows the latest current accepted decision as the
+**Final selected decision**, and highlights the current customer delivery path
+while fading rejected, superseded, or unhealthy evidence.
+
 ## Update The Graph
 
 1. Resolve the active feature under `.specify/specs/`.
@@ -73,4 +89,5 @@ return links to both generated files.
 - The persisted graph contains no `eai-internal` visibility.
 - All edges resolve to existing nodes.
 - The diagram was regenerated after the final graph change.
+- The final selected decision and selected delivery path are visible.
 - The summary names documentation changed and evidence still non-current.

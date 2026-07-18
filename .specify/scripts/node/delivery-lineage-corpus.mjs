@@ -43,8 +43,30 @@ function titleFor(relativePath, content) {
   return (frontmatter ?? heading ?? stem(relativePath).replace(/[-_]+/g, ' ')).trim().slice(0, 120);
 }
 
+function outcomeFor(heading) {
+  if (/\b(rejected|declined|not selected)\b/i.test(heading)) return 'rejected';
+  if (/\bsuperseded\b/i.test(heading)) return 'superseded';
+  if (/\b(selected approach|approved direction|chosen option|recommendation|final decision|architecture decision)\b/i.test(heading)) return 'selected';
+  return undefined;
+}
+
+function summaryFor(value) {
+  const summary = value.replace(/```[\s\S]*?```/g, ' ').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/^[\s]*[-+*]\s+/gm, '').replace(/[#>*_`|]/g, ' ').replace(/\s+/g, ' ').trim();
+  return summary ? summary.slice(0, 320) : undefined;
+}
+
 function decisionsFor(content) {
-  return [...new Set([...content.matchAll(/^#{1,6}\s+(.+)$/gm)].map((match) => match[1].trim()).filter((heading) => /\b(decision|decisions|selected approach|approved direction|chosen option|recommendation)\b/i.test(heading)))].slice(0, 30);
+  const headings = [...content.matchAll(/^#{1,6}\s+(.+)$/gm)];
+  const decisions = [];
+  for (let index = 0; index < headings.length; index += 1) {
+    const match = headings[index];
+    const heading = match[1].trim();
+    if (!/\b(decision|decisions|selected approach|approved direction|chosen option|recommendation|rejected alternative|declined option|superseded decision)\b/i.test(heading)) continue;
+    const bodyStart = (match.index ?? 0) + match[0].length;
+    const bodyEnd = headings[index + 1]?.index ?? content.length;
+    decisions.push({ heading, decisionOutcome: outcomeFor(heading), summary: summaryFor(content.slice(bodyStart, bodyEnd)) });
+  }
+  return decisions.slice(0, 30);
 }
 
 function id(prefix, value) {
@@ -115,8 +137,8 @@ export async function augmentCustomerLineageCorpus(lineage, inputPath) {
     items.push({ nodeId, relativePath: artifact.relativePath });
     groups.set(code, items);
     for (const decision of decisionsFor(artifact.content)) {
-      const decisionId = id('decision', `${sourcePath}#${decision}`);
-      if (!nodes.some((node) => node.id === decisionId)) nodes.push({ id: decisionId, kind: 'decision', label: `${code} Decision · ${decision}`, stage: phase.stage, visibility: 'customer', status: 'current', source: { repository, path: sourcePath, anchor: decision } });
+      const decisionId = id('decision', `${sourcePath}#${decision.heading}`);
+      if (!nodes.some((node) => node.id === decisionId)) nodes.push({ id: decisionId, kind: 'decision', label: `${code} Decision · ${decision.heading}`, stage: phase.stage, visibility: 'customer', status: 'current', decisionOutcome: decision.decisionOutcome, summary: decision.summary, source: { repository, path: sourcePath, anchor: decision.heading } });
       addEdge({ id: id('corpus-edge', `${nodeId}:records-decision:${decisionId}`), source: nodeId, target: decisionId, relation: 'records-decision', visibility: 'customer', status: 'current' });
     }
   }

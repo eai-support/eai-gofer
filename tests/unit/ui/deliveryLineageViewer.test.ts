@@ -63,6 +63,9 @@ describe('Gofer delivery lineage viewer', () => {
     expect(html).toContain("script-src 'nonce-nonce'");
     expect(html).toContain('Evidence status legend');
     expect(html).toContain('Anchor lost / broken');
+    expect(html).toContain('Final selected decision');
+    expect(html).toContain('Show selected delivery path');
+    expect(html).toContain("card.classList.toggle('path-selected'");
     expect(html).toContain("heading.textContent = 'Connections (' + nodeEdges.length + ')'");
     expect(html).toContain(
       "sourceLink.textContent = 'Open ' + node.source.repository + ' · ' + node.source.path"
@@ -99,6 +102,8 @@ describe('Gofer delivery lineage viewer', () => {
     expect(html).toContain('.status-superseded');
     expect(html).toContain("'work-item status-' + edge.status");
     expect(html).toContain("'connection status-' + edge.status");
+    expect(html).toContain("node.decisionOutcome !== 'rejected'");
+    expect(html).toContain('if (attentionOnly && !visibleStageNodes.length) return');
   });
 
   it('fails closed for internal visibility and forbidden repositories', () => {

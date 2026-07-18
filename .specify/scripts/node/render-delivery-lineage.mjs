@@ -9,6 +9,7 @@ const SCHEMA_VERSION = 'eai.delivery_lineage.v1';
 const STAGES = ['intent', 'requirements', 'architecture', 'delivery', 'validation', 'outcome'];
 const STATUSES = ['current', 'suspect', 'anchor-lost', 'broken', 'superseded'];
 const EDGE_STATUS_STYLES = {
+  current: 'stroke:#1565c0,stroke-width:2px',
   suspect: 'stroke:#f59e0b,stroke-width:3px',
   'anchor-lost': 'stroke:#e53935,stroke-width:3px',
   broken: 'stroke:#c62828,stroke-width:3px',
@@ -98,6 +99,11 @@ export function renderCustomerLineageMarkdown(lineage, inputName = 'delivery-lin
   if (errors.length > 0) throw new Error(`Cannot render customer lineage:\n- ${errors.join('\n- ')}`);
 
   const nodeNames = new Map(lineage.nodes.map((node, index) => [node.id, `n${index}`]));
+  const finalDecision = lineage.nodes.reduce((selected, node) => {
+    if (node.kind !== 'decision' || node.decisionOutcome !== 'selected' || node.status !== 'current') return selected;
+    if (!selected || STAGES.indexOf(node.stage) >= STAGES.indexOf(selected.stage)) return node;
+    return selected;
+  }, undefined);
   const lines = [
     '---',
     `feature: ${JSON.stringify(lineage.featureId)}`,
@@ -119,8 +125,9 @@ export function renderCustomerLineageMarkdown(lineage, inputName = 'delivery-lin
     if (stageNodes.length === 0) continue;
     lines.push(`  subgraph stage_${stage}["${titleCase(stage)}"]`, '    direction TB');
     for (const node of stageNodes) {
-      const className = node.status.replace('-', '_');
-      lines.push(`    ${nodeNames.get(node.id)}["${cleanLabel(node.label)}<br/>${titleCase(node.kind)}"]:::${className}`);
+      const className = node.id === finalDecision?.id ? 'final_selected' : node.decisionOutcome === 'rejected' ? 'rejected_decision' : node.status.replace('-', '_');
+      const outcomeLabel = node.id === finalDecision?.id ? '<br/>FINAL SELECTED DECISION' : '';
+      lines.push(`    ${nodeNames.get(node.id)}["${cleanLabel(node.label)}<br/>${titleCase(node.kind)}${outcomeLabel}"]:::${className}`);
     }
     lines.push('  end');
   }
@@ -140,6 +147,8 @@ export function renderCustomerLineageMarkdown(lineage, inputName = 'delivery-lin
     '  classDef anchor_lost fill:#ffebee,stroke:#e53935,color:#3f1010',
     '  classDef broken fill:#ffcdd2,stroke:#c62828,color:#3f1010',
     '  classDef superseded fill:#eceff1,stroke:#8b949e,color:#30363d',
+    '  classDef final_selected fill:#e3f2fd,stroke:#1565c0,stroke-width:4px,color:#0d2440',
+    '  classDef rejected_decision fill:#eceff1,stroke:#8b949e,stroke-dasharray:5 4,color:#30363d',
     '```',
     '',
     `Generated from \`${path.basename(inputName)}\`. Open **Gofer: Show Delivery Lineage** for the interactive viewer.`,
