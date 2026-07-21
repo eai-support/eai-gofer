@@ -2,6 +2,11 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.26] - 2026-07-21
+
+Add customer-safe delivery lineage viewer, selected decision path, and portable
+documentation graphs
+
 ## [3.7.25] - 2026-07-17
 
 Clarify /eai as the single Gofer entrypoint across docs and website
@@ -68,7 +73,8 @@ Fix VS Code Marketplace publishing verification and Marketplace README links
 
 ## [3.7.9] - 2026-07-02
 
-Gofer Start rename, EAI preflight hardening, legacy command archival, and refreshed current public plugin bundles
+Gofer Start rename, EAI preflight hardening, legacy command archival, and
+refreshed current public plugin bundles
 
 ## [3.7.8] - 2026-07-02
 
@@ -84,7 +90,8 @@ Add loop engineering audit gates across Gofer stages.
 
 ## [3.7.5] - 2026-06-29
 
-Require material specs before downstream Gofer stages; update all host command surfaces and validation checks.
+Require material specs before downstream Gofer stages; update all host command
+surfaces and validation checks.
 
 ## [3.7.4] - 2026-06-28
 
@@ -96,11 +103,15 @@ Rename vertical terminology to app
 
 ## [3.7.2] - 2026-06-28
 
-App-native Gofer integrations for Codex, Claude, GitHub Copilot, Gemini, and VS Code, with provider-neutral MCP bridge tools and deterministic agent plugin packaging.
+App-native Gofer integrations for Codex, Claude, GitHub Copilot, Gemini, and VS
+Code, with provider-neutral MCP bridge tools and deterministic agent plugin
+packaging.
 
 ## [3.7.1] - 2026-06-23
 
-Patch release: fix Gofer workspace refresh version detection, package EAI platform references into agent plugins, and preserve slash-command routing across Claude, Codex, Copilot, Gemini, and VS Code.
+Patch release: fix Gofer workspace refresh version detection, package EAI
+platform references into agent plugins, and preserve slash-command routing
+across Claude, Codex, Copilot, Gemini, and VS Code.
 
 ## [3.7.0] - 2026-06-21
 
@@ -128,7 +139,9 @@ Improve EAI capability discovery guidance
 
 ## [3.5.6] - 2026-06-05
 
-Add EAI first-run bootstrap across supported AI coding hosts, including EAI CLI install/login/tenant/template preflight for macOS, Linux, Windows, and GitHub Codespaces.
+Add EAI first-run bootstrap across supported AI coding hosts, including EAI CLI
+install/login/tenant/template preflight for macOS, Linux, Windows, and GitHub
+Codespaces.
 
 ## [3.5.5] - 2026-06-04
 

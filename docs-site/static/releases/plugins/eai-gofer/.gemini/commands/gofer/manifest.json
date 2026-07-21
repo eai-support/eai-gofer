@@ -1,8 +1,5 @@
 {
   "version": "1.0",
-  "generated": "2026-07-17T05:24:05.973Z",
-  "commands": [
-    "eai",
-    "gofer"
-  ]
+  "generated": "2026-07-21T00:31:16.094Z",
+  "commands": ["eai", "gofer"]
 }
