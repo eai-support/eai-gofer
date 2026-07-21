@@ -731,7 +731,7 @@
     "@types/vscode": "1.93.0",
     "@typescript-eslint/eslint-plugin": "8.56.1",
     "@typescript-eslint/parser": "8.56.1",
-    "@vscode/test-electron": "2.5.2",
+    "@vscode/test-electron": "3.0.0",
     "@vscode/vsce": "3.7.1",
     "eslint": "9.39.4",
     "glob": "11.1.0",
