@@ -736,7 +736,7 @@
     "eslint": "9.39.4",
     "glob": "11.1.0",
     "mocha": "11.3.0",
-    "sharp": "0.34.5",
+    "sharp": "0.35.3",
     "ts-loader": "9.5.4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.56.1",
