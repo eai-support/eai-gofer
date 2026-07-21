@@ -86,7 +86,7 @@ return links to both generated files.
 ## Completion Check
 
 - Markdown claims have exact source anchors.
-- The persisted graph contains no `eai-internal` visibility.
+- The persisted graph contains no private EAI visibility.
 - All edges resolve to existing nodes.
 - The diagram was regenerated after the final graph change.
 - The final selected decision and selected delivery path are visible.

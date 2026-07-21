@@ -97,7 +97,7 @@ Before completing this stage, read `.specify/references/delivery-lineage.md`
 and create or update
 `.specify/specs/{feature}/delivery-lineage.json`. Gofer is customer-side: the
 manifest must be a separately compiled `customer` graph that stops at published
-PublicAPI capability nodes and contains no EAI-internal records.
+PublicAPI capability nodes and contains no private EAI records.
 
 ## Execution Profile And Public Risk Labels
 

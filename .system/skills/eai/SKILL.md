@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.7.25
+Version: 3.7.26
 Host: Codex
 
 # Eai
