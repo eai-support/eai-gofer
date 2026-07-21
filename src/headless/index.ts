@@ -3,3 +3,4 @@ export * from './validators.js';
 export * from './exportBundle.js';
 export * from './auditHistory.js';
 export * from './portableScaffold.js';
+export * from './deliveryLineage.js';

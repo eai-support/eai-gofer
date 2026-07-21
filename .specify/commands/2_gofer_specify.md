@@ -91,6 +91,13 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Delivery Lineage Contract
+
+Before completing this stage, read `.specify/references/delivery-lineage.md`
+and update `.specify/specs/{feature}/delivery-lineage.json` with the approved
+requirements and their research evidence. Preserve the customer-only trust
+plane and terminate EAI dependencies at published PublicAPI capability nodes.
+
 ## Execution Profile And Artifact Churn
 
 Carry forward the `fast` / `standard` / `full` / `dynamic` profile chosen in

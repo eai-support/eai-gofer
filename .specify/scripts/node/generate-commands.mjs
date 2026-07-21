@@ -864,6 +864,29 @@ function buildSkillContent(stageName, description, body) {
   return `---\nname: ${stageName}\ndescription: "${description}"\n---\n\n${body}`;
 }
 
+async function emitDocumentationSkill(root, baseDir, dryRun, label) {
+  const sourcePath = path.join(
+    root,
+    '.specify',
+    'skills',
+    'gofer-documentation',
+    'SKILL.md'
+  );
+  const outPath = path.join(baseDir, 'gofer-documentation', 'SKILL.md');
+  try {
+    await fs.access(sourcePath);
+  } catch {
+    return;
+  }
+  if (dryRun) {
+    console.log(`[dry-run] ${label}: would write ${outPath}`);
+  } else {
+    await ensureDir(path.dirname(outPath));
+    await fs.copyFile(sourcePath, outPath);
+    console.log(`${label}: wrote ${outPath}`);
+  }
+}
+
 function buildUmbrellaSkillContent(version, stages, hostLabel) {
   const stageList = buildInternalStageList(stages);
 
@@ -1039,6 +1062,8 @@ async function emitAgentsSkills(stages, root, dryRun) {
     }
     count++;
   }
+  await emitDocumentationSkill(root, baseDir, dryRun, 'agents-skills');
+  count++;
   console.log(`agents-skills: ${count} file(s) emitted`);
   return true;
 }
@@ -1084,6 +1109,9 @@ async function emitGithubSkills(stages, root, dryRun) {
     count++;
   }
 
+  await emitDocumentationSkill(root, baseDir, dryRun, 'github-skills');
+  count++;
+
   console.log(`github-skills: ${count} file(s) emitted`);
   return true;
 }
@@ -1106,6 +1134,9 @@ async function emitClaudeSkills(stages, root, dryRun) {
     }
     count++;
   }
+
+  await emitDocumentationSkill(root, baseDir, dryRun, 'claude-skills');
+  count++;
 
   console.log(`claude-skills: ${count} file(s) emitted`);
   return true;
@@ -1145,6 +1176,8 @@ async function emitSystemSkills(stages, root, dryRun) {
     }
     count++;
   }
+  await emitDocumentationSkill(root, baseDir, dryRun, 'system-skills');
+  count++;
   console.log(`system-skills: ${count} file(s) emitted`);
   return true;
 }

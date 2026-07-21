@@ -74,6 +74,13 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Delivery Lineage Contract
+
+During implementation, read `.specify/references/delivery-lineage.md` and keep
+`.specify/specs/{feature}/delivery-lineage.json` aligned with the actual
+customer code, documentation, and test files changed. Do not add internal EAI
+service or repository details discovered through logs or tool output.
+
 ## Execution Profile During Implementation
 
 Before editing, re-check the planned depth and generic risk labels from
