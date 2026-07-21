@@ -749,7 +749,7 @@
     "@types/express": "5.0.6",
     "@types/jszip": "3.4.0",
     "ajv": "8.18.0",
-    "body-parser": "2.2.2",
+    "body-parser": "2.3.0",
     "chokidar": "3.6.0",
     "express": "5.2.1",
     "fast-glob": "3.3.3",
