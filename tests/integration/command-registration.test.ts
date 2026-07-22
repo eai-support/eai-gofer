@@ -54,6 +54,11 @@ interface KeybindingDefinition {
   when?: string;
 }
 
+interface ChatPromptFileDefinition {
+  path: string;
+  when?: string;
+}
+
 interface ViewContainerDefinition {
   id: string;
   title: string;
@@ -78,6 +83,7 @@ interface PackageJson {
   };
   activationEvents: string[];
   contributes: {
+    chatPromptFiles: ChatPromptFileDefinition[];
     commands: CommandDefinition[];
     configuration: {
       properties: Record<string, { default?: unknown }>;
@@ -437,6 +443,28 @@ describe('Command Registration Validation', () => {
   it('should have commands declared in package.json', () => {
     expect(packageJson.contributes.commands).toBeDefined();
     expect(packageJson.contributes.commands.length).toBeGreaterThan(0);
+  });
+
+  it('should contribute Gofer prompt files as VS Code Copilot slash commands', () => {
+    const promptFiles = packageJson.contributes.chatPromptFiles ?? [];
+    const paths = promptFiles.map((entry) => entry.path);
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        './resources/copilot-prompts/eai.prompt.md',
+        './resources/copilot-prompts/gofer.prompt.md',
+      ])
+    );
+
+    for (const promptPath of [
+      './resources/copilot-prompts/eai.prompt.md',
+      './resources/copilot-prompts/gofer.prompt.md',
+    ]) {
+      const content = readWorkspaceFile(`../../extension/${promptPath.replace(/^\.\//, '')}`);
+      expect(content).toContain('name:');
+      expect(content).toContain('agent: agent');
+      expect(content).not.toContain('agent: copilot-workspace');
+    }
   });
 
   it('should keep exported config defaults aligned with manifest defaults', () => {

@@ -29,22 +29,18 @@ test.describe('Gofer Brownfield Improvements', () => {
     fs.writeFileSync(path.join(WORKSPACE_PATH, 'index.ts'), 'console.log("Hello World");');
   });
 
-  test('Phase 2: Hydration Command Resource Check', async () => {
-    // Verify the prompt file exists in the built extension
-    // Note: In E2E, we are running outside the extension context usually,
-    // but we can check the source location or dist location if predictable.
+  test('Phase 2: Hydration Contract Resource Check', async () => {
     const cwd = process.cwd();
-    const promptPath = path.join(
-      cwd,
-      'extension',
-      'resources',
-      'claude-commands',
-      'gofer_hydrate.md'
-    );
-    expect(fs.existsSync(promptPath)).toBe(true);
+    const contractPath = path.join(cwd, '.specify', 'commands', 'gofer_hydrate.md');
+    expect(fs.existsSync(contractPath)).toBe(true);
 
-    const content = fs.readFileSync(promptPath, 'utf-8');
+    const content = fs.readFileSync(contractPath, 'utf-8');
     expect(content).toContain('Reverse-engineer specification from existing code');
+
+    const publicCommandDir = path.join(cwd, 'extension', 'resources', 'claude-commands');
+    const publicCommands = fs.readdirSync(publicCommandDir).sort();
+    expect(publicCommands).toEqual(['eai.md', 'gofer.md']);
+    expect(publicCommands).not.toContain('gofer_hydrate.md');
   });
 
   test('Phase 3: Real World Test Harness Generation', async () => {

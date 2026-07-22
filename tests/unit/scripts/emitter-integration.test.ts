@@ -318,7 +318,8 @@ describe('generate-commands emitters (integration)', () => {
       const promptsPath = path.join(tmpRoot, 'extension', 'resources', 'copilot-prompts');
       const content = await readFile(path.join(promptsPath, 'gofer.prompt.md'));
       expect(content).toContain('name: gofer');
-      expect(content).toContain('agent: copilot-workspace');
+      expect(content).toContain('agent: agent');
+      expect(content).not.toContain('agent: copilot-workspace');
       expect(content).toContain('publicEntrypoint: true');
       expect(content).toContain('canonicalSource: .specify/commands/0_gofer_start.md');
       expect(await fileExists(path.join(promptsPath, '1_gofer_research.prompt.md'))).toBe(false);

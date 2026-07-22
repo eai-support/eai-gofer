@@ -42,6 +42,14 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "chatPromptFiles": [
+      {
+        "path": "./resources/copilot-prompts/eai.prompt.md"
+      },
+      {
+        "path": "./resources/copilot-prompts/gofer.prompt.md"
+      }
+    ],
     "commands": [
       {
         "command": "gofer.run",
