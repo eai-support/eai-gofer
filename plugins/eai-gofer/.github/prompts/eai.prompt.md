@@ -1,7 +1,7 @@
 ---
 name: eai
 description: Start or continue the EAI delivery pipeline.
-agent: copilot-workspace
+agent: agent
 tools:
   - Read
   - Grep

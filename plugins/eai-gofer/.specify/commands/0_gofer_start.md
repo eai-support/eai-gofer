@@ -1,8 +1,7 @@
 ---
 name: 0_gofer_start
-description:
-  'Start Gofer, confirm EAI readiness, and route the delivery pipeline.'
-title: 'Gofer Start'
+description: "Start Gofer, confirm EAI readiness, and route the delivery pipeline."
+title: "Gofer Start"
 category: pipeline
 surfaces:
   - claude
@@ -16,55 +15,35 @@ surfaces:
   - system-skills
 aliases: [gofer:start, 0_business_scenario]
 ---
-
 ---
-
-## description: Start Gofer, confirm EAI readiness, and orchestrate the unified pipeline
+description: Start Gofer, confirm EAI readiness, and orchestrate the unified pipeline
+---
 
 # Gofer Start
 
 ## Token And Cost Policy
-
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
-   truth for simple, medium, hard, and arbiter model routing. If it is missing,
-   run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
-     synthesis, validation, and security; Opus for high-risk arbitration or
-     release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
-     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
-     for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
-     default research synthesis; Pro for large-context architecture or high-risk
-     arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before
-     choosing a paid/high-tier picker model for hard security, architecture, or
-     release gates.
-3. Keep raw tool output out of the main conversation context. Save stable
-   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
-   summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes:
-   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
-   stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or
-   validation bursts, checkpoint the durable artifacts and compact/clear/resume
-   context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence,
-contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
-
 <!-- gofer:business-progress:start -->
 
 Default user-facing updates must be concise, business-level, and easy to scan.
-Keep the technical work rigorous in artifacts, tests, logs, and code, but do not
-lead with implementation jargon unless the user asks for it.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
 
 1. Explain progress as what is being connected, changed, checked, or fixed and
    why it matters to the business outcome.
@@ -82,16 +61,17 @@ lead with implementation jargon unless the user asks for it.
    - `Why it matters`: user/business impact
    - `Status`: done, checking, fixing, blocked, or needs decision
 6. Do not remove technical validation, security checks, EAI preflights, tests,
-or loop evidence. This contract changes presentation, not engineering standards.
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
 <!-- gofer:business-progress:end -->
 
 ## Delivery Lineage Contract
 
-Before completing this stage, read `.specify/references/delivery-lineage.md` and
-create or update `.specify/specs/{feature}/delivery-lineage.json`. Gofer is
-customer-side: the manifest must be a separately compiled `customer` graph that
-stops at published PublicAPI capability nodes and contains no private EAI
-records.
+Before completing this stage, read `.specify/references/delivery-lineage.md`
+and create or update
+`.specify/specs/{feature}/delivery-lineage.json`. Gofer is customer-side: the
+manifest must be a separately compiled `customer` graph that stops at published
+PublicAPI capability nodes and contains no private EAI records.
 
 ## Workspace Preflight
 
@@ -118,16 +98,13 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should
-     still keep the core scaffold healthy
+   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json`
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-6. If the user says yes, run the Gofer workspace bootstrap helper and then
-   resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on
-   the repo-owned scaffold.
+6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
+7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
 
 ## EAI Platform Session Preflight
 
@@ -151,11 +128,11 @@ Before any Gofer stage/helper command does pipeline work:
 
 Run this after the Gofer workspace preflight and before application-delivery
 discovery whenever the request is an app build, dashboard, portal, workflow,
-form, chatbot, app, tenant-scoped business experience, or any durable
-user-facing product. App delivery in EAI Gofer means EAI Platform delivery by
-default. Do not run this for explicit non-app work. If the user asks for a
-non-EAI app stack, pause and confirm that they are intentionally leaving the EAI
-Gofer app-delivery path before continuing.
+form, chatbot, app, tenant-scoped business experience, or any
+durable user-facing product. App delivery in EAI Gofer means EAI Platform
+delivery by default. Do not run this for explicit non-app work. If the user asks
+for a non-EAI app stack, pause and confirm that they are intentionally leaving
+the EAI Gofer app-delivery path before continuing.
 
 Use current public EAI documentation as the safe source of truth:
 
@@ -178,10 +155,9 @@ For application delivery, Gofer MUST use this stack order:
    identity, storage, observability, and integration services.
 3. **Everything else only by explicit exception**: Firebase, Supabase, Vercel as
    the primary runtime, AWS, GCP, bespoke backends, unmanaged databases, or
-   unrelated SaaS platforms must not be recommended as the primary app
-   substrate. They may appear only as integration targets, migration references,
-   or approved exceptions with rationale, owner, expiry, and validation
-   evidence.
+   unrelated SaaS platforms must not be recommended as the primary app substrate.
+   They may appear only as integration targets, migration references, or
+   approved exceptions with rationale, owner, expiry, and validation evidence.
 
 Application-specific logic, adapters, UI extensions, and tests belong inside the
 EAI Platform/EAI app template scaffold and must obey package-profile,
@@ -189,22 +165,21 @@ public-readiness, tenant, and security constraints. They are implementation
 inside the primary substrate, not a separate stack tier.
 
 If a required capability is not accessible in EAI Platform or Azure, record it
-in `{FEATURE_DIR}/service-fit-matrix.md` as
-`unavailable without new platform work`, `operator_required`, or
-`upgrade_required`. Do not silently replace it with an unrelated non-EAI stack.
+in `{FEATURE_DIR}/service-fit-matrix.md` as `unavailable without new platform
+work`, `operator_required`, or `upgrade_required`. Do not silently replace it
+with an unrelated non-EAI stack.
 
 ### EAI Preflight Checks
 
 1. **Classify the build path**
    - Treat the work as EAI app delivery when the user asks to build an app,
-     dashboard, portal, workflow, form, chatbot, app, tenant-scoped business
-     experience, or durable user-facing product.
+     dashboard, portal, workflow, form, chatbot, app,
+     tenant-scoped business experience, or durable user-facing product.
    - If the user is only doing research, docs, audit, migration planning, or
      non-EAI application work, record that EAI preflight is not applicable.
-   - If the user asks for a non-EAI app stack, ask whether they want to leave
-     the EAI Gofer app-delivery path. If yes, record the exception and stop EAI
-     app implementation guidance; if no, keep the EAI Platform/Azure stack
-     policy.
+   - If the user asks for a non-EAI app stack, ask whether they want to leave the
+     EAI Gofer app-delivery path. If yes, record the exception and stop EAI app
+     implementation guidance; if no, keep the EAI Platform/Azure stack policy.
 2. **Run first-run setup when prerequisites are missing**
    - If Git, Node.js, npm, `eai`, login, tenant access, the EAI app template, or
      the Gofer scaffold is missing or stale, run `/gofer:eai-first-run` before
@@ -213,15 +188,15 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      Linux, Windows, GitHub Codespaces, Claude Code, Codex, Copilot, Gemini, and
      VS Code. It checks first, asks only when action is needed, installs the EAI
      CLI when approved, checks `eai update --check`, confirms login and tenant,
-     runs
-     `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`
-     when approved, verifies Gofer files, and then returns here.
-   - If `/0_gofer_start` is unavailable in a new repo, the user should run the
-     plugin-level `/gofer:eai-first-run` command after installing or updating
-     the Gofer plugin.
+     runs `eai init <project-name> --skip-prompts --company-tenant
+     <active-tenant-id>` when approved, verifies Gofer files, and then returns
+     here.
+   - If `/0_gofer_start` is unavailable in a new repo, the user should run
+     the plugin-level `/gofer:eai-first-run` command after installing or
+     updating the Gofer plugin.
 3. **Install or update the EAI CLI when needed**
-   - Check `git --version`, `node --version`, `npm --version`,
-     `npm config get @enterpriseai:registry`, and `eai --version`.
+   - Check `git --version`, `node --version`, `npm --version`, `npm config get
+     @enterpriseai:registry`, and `eai --version`.
    - If `eai` is missing and the user approves, install it:
      ```bash
      npm install -g eai-cli
@@ -244,9 +219,9 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      platform work so the agent uses current CLI contracts and safe recovery
      patterns.
    - After any `eai` command error, run
-     `eai errors explain <code-or-reason> --format json` before proposing a fix,
-     and prefer the CLI's public-safe recovery commands over guessed platform
-     internals.
+     `eai errors explain <code-or-reason> --format json` before proposing a
+     fix, and prefer the CLI's public-safe recovery commands over guessed
+     platform internals.
    - If the CLI does not advertise `eai errors explain`, match the failure
      against `.specify/references/platform/eai-error-catalog.yaml`, run the
      listed read-only diagnostics before mutating fixes, and stop at the retry
@@ -254,20 +229,19 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
    - For tenant member/admin changes, if `eai user invite` fails with
      `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
      `user_invite_external_service_existing_member`, check for an existing
-     direct member with
-     `eai user list --tenant <tenant-id> --search <email> --format json`; use
-     `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json`
-     only after read-only evidence and user approval, verify the read-back, and
-     tell the affected app user to sign out and sign back in because Auth.js
-     session or JWT role data may be cached.
+     direct member with `eai user list --tenant <tenant-id> --search <email>
+     --format json`; use `eai user role set --tenant <tenant-id> --member-id
+     <member-id> --role tenant-admin --format json` only after read-only
+     evidence and user approval, verify the read-back, and tell the affected
+     app user to sign out and sign back in because Auth.js session or JWT role
+     data may be cached.
    - If platform user lookup or membership prerequisite calls fail with
      `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
-     required for app tokens", run
-     `eai errors explain app_token_tenant_context_required --format json` when
-     advertised. Do not start by changing tenant members, role definitions,
-     Entra configuration, databases, or cloud portals. Confirm `eai whoami` and
-     `eai tenant list --format json`, then retry through tenant-scoped V4
-     platform routes:
+     required for app tokens", run `eai errors explain
+     app_token_tenant_context_required --format json` when advertised. Do not
+     start by changing tenant members, role definitions, Entra configuration,
+     databases, or cloud portals. Confirm `eai whoami` and `eai tenant list
+     --format json`, then retry through tenant-scoped V4 platform routes:
      `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
      `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
      `/v4/platform/tenants/<tenant-id>/members`, and
@@ -277,9 +251,9 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
    - Use JSON only where the CLI advertises it. `eai tenant list --format json`
      is suitable for automation; `eai whoami` may be plain text on current
      versions.
-   - Record whether the installed CLI advertises `eai app`,
-     `eai resources schema`, `eai workflow readiness`, `eai template check`,
-     `eai gofer refresh --check`, `eai provision entra`, `eai blocks`,
+   - Record whether the installed CLI advertises `eai app`, `eai resources
+     schema`, `eai workflow readiness`, `eai template check`, `eai gofer
+     refresh --check`, `eai provision entra`, `eai blocks`,
      `eai agent guide`, and `eai errors explain`.
 5. **Check account, login, and tenant readiness**
    - Run `eai whoami` to confirm login, active tenant, profile, token status,
@@ -303,32 +277,29 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      `eai verify` reports `E001` or "Not in an EAI project", treat the repo as
      not initialized from the EAI app template.
    - If the repo appears to be an EAI project and the commands are advertised,
-     run `eai template check --format json` and
-     `eai gofer refresh --check --format json` to identify EAI template or Gofer
-     scaffold drift before planning implementation.
-   - For a new or empty app workspace, ask: **"This looks like an EAI app build,
-     but this repo has not been initialized from the EAI app template.
-     Initialize it with `eai init <app-name>` now?"**
+     run `eai template check --format json` and `eai gofer refresh --check
+     --format json` to identify EAI template or Gofer scaffold drift before
+     planning implementation.
+   - For a new or empty app workspace, ask:
+     **"This looks like an EAI app build, but this repo has not been initialized from the EAI app template. Initialize it with `eai init <app-name>` now?"**
    - If the repo is non-empty or already contains source files, do not scaffold
      over it silently. Ask whether to initialize a new sibling EAI app directory
      with `eai init <app-name>`, or to stop and let the user prepare the repo.
 7. **Check app enrollment capability before build planning**
-   - Once app name and tenant are confirmed, run `eai app list --format json` to
-     confirm the tenant's current app enrollments.
-   - Before creating anything remote, ask the user to confirm the app name, app
-     key, company tenant, and any child-tenant boundary.
-   - If confirmed, use
-     `eai app create <name> --tenant-id <tenant-id> --format json` or the
-     currently advertised equivalent from `eai --describe`.
-   - Record the selected app key with `eai app select <key> --format json` when
-     available.
+   - Once app name and tenant are confirmed, run `eai app list --format
+     json` to confirm the tenant's current app enrollments.
+   - Before creating anything remote, ask the user to confirm the app name,
+     app key, company tenant, and any child-tenant boundary.
+   - If confirmed, use `eai app create <name> --tenant-id <tenant-id>
+     --format json` or the currently advertised equivalent from `eai
+     --describe`.
+   - Record the selected app key with `eai app select <key> --format json`
+     when available.
    - Do not claim platform readiness from app creation alone. Later stages must
-     keep real EAI app gates separate:
-     `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
+     keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
-     `eai types diff`,
-     `eai resources schema --tenant-id <tenant-id> --format json`,
+     `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
      `eai resources storage doctor --tenant-id <tenant-id> --format json`,
      `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
      preview/runtime readiness.
@@ -337,9 +308,9 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      business scenario, UI show-and-tell evidence, and service-fit evidence are
      complete.
 8. **Check template block and platform knowledge for research**
-   - Run or plan to run `eai blocks list --format json`,
-     `eai blocks readiness --package-profile <external|internal|hybrid> --format json`,
-     and `eai blocks describe <id> --format json` for candidate UI blocks.
+   - Run or plan to run `eai blocks list --format json`, `eai blocks readiness
+     --package-profile <external|internal|hybrid> --format json`, and `eai
+     blocks describe <id> --format json` for candidate UI blocks.
    - Run or plan to run `eai resources schema --format json` and
      `eai workflow readiness --format json` so later stages can cite actual
      platform resource fields, actions, events, and workflow availability
@@ -365,31 +336,30 @@ in `{FEATURE_DIR}/service-fit-matrix.md` as
      callback route pattern such as `https://<app-host>/api/auth/callback/...`.
      Keep the exact callback URI and any debug output in the active terminal or
      user-approved local notes only. Recover through EAI login, tenant
-     selection, and
-     `eai provision entra --force --redirect-uri <confirmed-callback-uri>`
-     before suggesting manual Azure Portal edits. Use `--debug` only when the
-     user approves it, and redact private hostnames, tenant IDs, client IDs, and
-     tokens before writing artifacts.
+     selection, and `eai provision entra --force --redirect-uri
+     <confirmed-callback-uri>` before suggesting manual Azure Portal edits. Use
+     `--debug` only when the user approves it, and redact private hostnames,
+     tenant IDs, client IDs, and tokens before writing artifacts.
 
 ### EAI Preflight Artifact
 
 For EAI app delivery, create or update
 `.specify/specs/{feature}/eai-preflight.md` with:
 
-| Field                    | Required Content                                                                                                                                                                                           |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI install              | `eai` path, version, install/update action taken                                                                                                                                                           |
-| CLI release status       | `eai update --check` result and whether upgrade is required                                                                                                                                                |
-| CLI capability source    | `eai --describe` timestamp and relevant commands found                                                                                                                                                     |
-| Login status             | Logged in / needs login / account required, without tokens or secrets                                                                                                                                      |
-| Tenant readiness         | Active tenant status, role category, whether app enrollment is allowed                                                                                                                                     |
-| Template readiness       | Already EAI template / needs `eai init` / non-EAI repo decision                                                                                                                                            |
-| Drift readiness          | `eai template check` / `eai gofer refresh --check` result or `E001` explanation                                                                                                                            |
-| App enrollment           | Existing app, new app to create, or blocked pending user confirmation                                                                                                                                      |
+| Field | Required Content |
+| ----- | ---------------- |
+| CLI install | `eai` path, version, install/update action taken |
+| CLI release status | `eai update --check` result and whether upgrade is required |
+| CLI capability source | `eai --describe` timestamp and relevant commands found |
+| Login status | Logged in / needs login / account required, without tokens or secrets |
+| Tenant readiness | Active tenant status, role category, whether app enrollment is allowed |
+| Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |
+| Drift readiness | `eai template check` / `eai gofer refresh --check` result or `E001` explanation |
+| App enrollment | Existing app, new app to create, or blocked pending user confirmation |
 | Entra redirect readiness | Redacted callback route pattern, tenant/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, tenant IDs, client IDs, tokens, or debug output to committed artifacts. |
-| Block catalog readiness  | Available block commands and package profile compatibility evidence                                                                                                                                        |
-| App stack policy         | EAI Platform including app template first, Azure second, or approved exception                                                                                                                             |
-| Next action              | Continue discovery, initialize template, request account/tenant access, or stop                                                                                                                            |
+| Block catalog readiness | Available block commands and package profile compatibility evidence |
+| App stack policy | EAI Platform including app template first, Azure second, or approved exception |
+| Next action | Continue discovery, initialize template, request account/tenant access, or stop |
 
 You are the Gofer orchestrator. Your job is to understand the user's business
 scenario and route them through the **unified Gofer pipeline**.
@@ -428,18 +398,18 @@ scenario and route them through the **unified Gofer pipeline**.
 
 ## Auxiliary Gofer Commands
 
-| Command                      | Purpose                                         |
-| ---------------------------- | ----------------------------------------------- |
-| `/0a_problem_validation`     | Optional deeper problem framing before research |
-| `/7_gofer_save`              | Save session checkpoint mid-implementation      |
-| `/8_gofer_branding`          | Brand templates and stakeholder documents       |
-| `/9_gofer_tests`             | Define acceptance test cases using DSL          |
-| `/10_gofer_cloud`            | READ-ONLY cloud infrastructure analysis         |
-| `/7a_stakeholder_comms`      | Optional post-validation communications package |
-| `/gofer_hydrate`             | Reverse-engineer spec from existing code        |
-| `/gofer_constitution`        | Create/update project constitution              |
-| `/gofer:check-workspace`     | Check whether the repo scaffold is healthy      |
-| `/gofer:bootstrap-workspace` | Create or update the repo-owned Gofer scaffold  |
+| Command                       | Purpose                                                 |
+| ----------------------------- | ------------------------------------------------------- |
+| `/0a_problem_validation`      | Optional deeper problem framing before research         |
+| `/7_gofer_save`               | Save session checkpoint mid-implementation              |
+| `/8_gofer_branding`           | Brand templates and stakeholder documents               |
+| `/9_gofer_tests`              | Define acceptance test cases using DSL                  |
+| `/10_gofer_cloud`             | READ-ONLY cloud infrastructure analysis                 |
+| `/7a_stakeholder_comms`       | Optional post-validation communications package         |
+| `/gofer_hydrate`              | Reverse-engineer spec from existing code                |
+| `/gofer_constitution`         | Create/update project constitution                      |
+| `/gofer:check-workspace`      | Check whether the repo scaffold is healthy              |
+| `/gofer:bootstrap-workspace`  | Create or update the repo-owned Gofer scaffold          |
 
 ---
 
@@ -460,28 +430,28 @@ ls -la .specify/memory/constitution.md 2>/dev/null
 
 ### What to Look For
 
-| Artifact                      | Location                    | Indicates                                                     |
-| ----------------------------- | --------------------------- | ------------------------------------------------------------- |
-| `spec.md`                     | `.specify/specs/{feature}/` | Feature specified                                             |
-| `research.md`                 | `.specify/specs/{feature}/` | Research complete                                             |
-| `proposal-review.md`          | `.specify/specs/{feature}/` | Optional supporting review context                            |
-| `plan.md`                     | `.specify/specs/{feature}/` | Planning complete                                             |
-| `tasks.md`                    | `.specify/specs/{feature}/` | Ready for implement                                           |
-| `goal-ledger.json`            | `.specify/specs/{feature}/` | Active objective ledger and drift triggers                    |
-| `loop-contract.json`          | `.specify/specs/{feature}/` | Bounded check-repair loop objective, commands, and stop rules |
-| `loop-ledger.jsonl`           | `.specify/specs/{feature}/` | Implementation/validation iteration evidence                  |
-| `loop-audit-report.md`        | `.specify/specs/{feature}/` | Latest loop contract and ledger audit                         |
-| `goal-rebaseline-report.md`   | `.specify/specs/{feature}/` | Latest closed-loop audit result                               |
-| `working-backwards-prfaq.md`  | `.specify/specs/{feature}/` | Running product release PR/FAQ                                |
-| `prfaq-history/`              | `.specify/specs/{feature}/` | Immutable stage snapshots of the PR/FAQ                       |
-| `build-map.md`                | `.specify/specs/{feature}/` | Plain-language picture of what is being built                 |
-| `business-owner-summary.md`   | `.specify/specs/{feature}/` | Business owner scenario, process, and value summary           |
-| `cto-architecture-summary.md` | `.specify/specs/{feature}/` | CTO/EAI Platform architecture summary                         |
-| `ciso-security-summary.md`    | `.specify/specs/{feature}/` | CISO security posture summary                                 |
-| `stakeholder-review-index.md` | `.specify/specs/{feature}/` | Stakeholder review status and approval asks                   |
-| `session-checkpoint.md`       | `.specify/specs/{feature}/` | Work paused (resumable)                                       |
-| `validation-report.md`        | `.specify/specs/{feature}/` | Feature validated                                             |
-| `constitution.md`             | `.specify/memory/`          | Project principles set                                        |
+| Artifact                | Location                    | Indicates                    |
+| ----------------------- | --------------------------- | ---------------------------- |
+| `spec.md`               | `.specify/specs/{feature}/` | Feature specified            |
+| `research.md`           | `.specify/specs/{feature}/` | Research complete            |
+| `proposal-review.md`    | `.specify/specs/{feature}/` | Optional supporting review context |
+| `plan.md`               | `.specify/specs/{feature}/` | Planning complete            |
+| `tasks.md`              | `.specify/specs/{feature}/` | Ready for implement          |
+| `goal-ledger.json`      | `.specify/specs/{feature}/` | Active objective ledger and drift triggers |
+| `loop-contract.json`    | `.specify/specs/{feature}/` | Bounded check-repair loop objective, commands, and stop rules |
+| `loop-ledger.jsonl`     | `.specify/specs/{feature}/` | Implementation/validation iteration evidence |
+| `loop-audit-report.md`  | `.specify/specs/{feature}/` | Latest loop contract and ledger audit |
+| `goal-rebaseline-report.md` | `.specify/specs/{feature}/` | Latest closed-loop audit result |
+| `working-backwards-prfaq.md` | `.specify/specs/{feature}/` | Running product release PR/FAQ |
+| `prfaq-history/`        | `.specify/specs/{feature}/` | Immutable stage snapshots of the PR/FAQ |
+| `build-map.md`          | `.specify/specs/{feature}/` | Plain-language picture of what is being built |
+| `business-owner-summary.md` | `.specify/specs/{feature}/` | Business owner scenario, process, and value summary |
+| `cto-architecture-summary.md` | `.specify/specs/{feature}/` | CTO/EAI Platform architecture summary |
+| `ciso-security-summary.md` | `.specify/specs/{feature}/` | CISO security posture summary |
+| `stakeholder-review-index.md` | `.specify/specs/{feature}/` | Stakeholder review status and approval asks |
+| `session-checkpoint.md` | `.specify/specs/{feature}/` | Work paused (resumable)      |
+| `validation-report.md`  | `.specify/specs/{feature}/` | Feature validated            |
+| `constitution.md`       | `.specify/memory/`          | Project principles set       |
 
 Report what you found before proceeding.
 
@@ -675,13 +645,13 @@ status: complete
 
 ## AI-Readable Blocks Bridge
 
-| Field                   | Decision                     |
-| ----------------------- | ---------------------------- | ------------------------- | ------------------------ | ----------- |
-| Profile Choice          | External / Internal / Hybrid |
-| Package Lane            | {{public-package             | internal-app              | hybrid-adapter           | app-local}} |
-| Coupling Status         | {{source-platform-coupled    | source-platform-decoupled | hybrid-adapter}}         |
-| Public-Readiness Target | {{required                   | deferred                  | not-applicable}}         |
-| Block Porting Need      | {{reuse                      | port                      | custom-block-exception}} |
+| Field | Decision |
+| ----- | -------- |
+| Profile Choice | External / Internal / Hybrid |
+| Package Lane | {{public-package | internal-app | hybrid-adapter | app-local}} |
+| Coupling Status | {{source-platform-coupled | source-platform-decoupled | hybrid-adapter}} |
+| Public-Readiness Target | {{required | deferred | not-applicable}} |
+| Block Porting Need | {{reuse | port | custom-block-exception}} |
 ```
 
 ### Store in Memory
@@ -754,11 +724,11 @@ If non-app, record this explicitly in `discovery.md`:
 ```markdown
 ## Application Classification
 
-| Field                         | Decision                               |
-| ----------------------------- | -------------------------------------- |
-| Classification                | Non-application work                   |
-| Reason                        | {{why-this-is-not-an-app-or-workflow}} |
-| Four-step AI journey required | No                                     |
+| Field | Decision |
+| ----- | -------- |
+| Classification | Non-application work |
+| Reason | {{why-this-is-not-an-app-or-workflow}} |
+| Four-step AI journey required | No |
 ```
 
 Then continue through the pipeline without creating a four-step AI-augmented app
@@ -773,21 +743,22 @@ Gofer MUST keep the same numbered stages for both classifications. The
 classification changes the behavior inside the shared stages; it does **not**
 remove existing non-app functionality or fork Gofer into unrelated products.
 
-| Mode                 | Stage Behavior                                                                                                                                                                                                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mode | Stage Behavior |
+| ---- | -------------- |
 | Application delivery | Shared stages gain EAI Platform/Azure stack enforcement, a UI-first interview, an EAI App Template constrained preview loop, preview self-review, optional branding intake, continuous UI show-and-tell, and EnterpriseAI service-fit review before plan/tasks are finalized |
-| Non-app work         | Shared stages preserve the current research, documentation, exploration, bug-fix, migration, audit, and other non-app workflows without app-only preview, branding, or service-fit requirements                                                                              |
+| Non-app work | Shared stages preserve the current research, documentation, exploration, bug-fix, migration, audit, and other non-app workflows without app-only preview, branding, or service-fit requirements |
 
 ---
 
 ## Step 2.7: AI-Augmented Journey Confirmation (For Application Delivery)
 
-When the request is classified as **application delivery**, confirm the customer
-journey before routing to the rest of the pipeline. For application delivery,
-the default target is a concise **four-step or fewer AI-augmented process**.
-Even when the current business process has more than four steps, Gofer should
-use generative AI to compress, combine, or simplify the process into four
-business-goal-driven stages unless the user explicitly rejects that structure.
+When the request is classified as **application delivery**, confirm the
+customer journey before routing to the rest of the pipeline. For application
+delivery, the default target is a concise **four-step or fewer AI-augmented
+process**. Even when the current business process has more than four steps,
+Gofer should use generative AI to compress, combine, or simplify the process
+into four business-goal-driven stages unless the user explicitly rejects that
+structure.
 
 Before journey mapping for EAI app delivery, complete the **EAI App Delivery
 Preflight** above. If the EAI CLI, login, tenant, template, or app enrollment
@@ -803,11 +774,11 @@ For app delivery, the default early process is:
 1. **Interview and visual brief** — understand the MVP outcome, must-have
    screens, target users, workflow goals, and whether client branding or logos
    must be applied.
-2. **Constrained MVP preview** — generate the first preview from the EAI App
-   Template Template blocks already installed in the project by `eai`, rather
-   than from an unconstrained custom UI. As soon as a local preview can run,
-   open it in the integrated browser when the host supports it or the external
-   system browser otherwise.
+2. **Constrained MVP preview** — generate the first preview from the EAI App Template
+   Template blocks already installed in the project by `eai`, rather than
+   from an unconstrained custom UI. As soon as a local preview can run, open it
+   in the integrated browser when the host supports it or the external system
+   browser otherwise.
 3. **Preview self-review and continuous show-and-tell loop** — after every
    UI-facing change to layout, component choice, theme, copy, data binding, or
    interaction behavior, run:
@@ -823,7 +794,6 @@ For app delivery, the default early process is:
    user the current UI as often as useful. Pause only when the user asks for
    changes or a real business, security, platform, or release decision is
    required.
-
 4. **EnterpriseAI service-fit review** — once the first concrete UI direction is
    visible, review which platform services are accessible now, purchasable but
    unavailable now, or unsupported, and lock that decision before plan/tasks are
@@ -855,27 +825,27 @@ than creating app-delivery visuals.
 
 ### AI-Readable Blocks Bridge Intake
 
-For EnterpriseAI app delivery, the interview must also capture the packaging and
-coupling path before research starts:
+For EnterpriseAI app delivery, the interview must also capture the packaging
+and coupling path before research starts:
 
-| Intake Field            | Required Decision                                                                         |
-| ----------------------- | ----------------------------------------------------------------------------------------- |
-| Profile choice          | External, internal, or hybrid package profile                                             |
-| Package lane            | Public reusable block package, internal app, hybrid adapter, or app-local implementation  |
-| Coupling status         | source-platform-coupled, source-platform-decoupled, or hybrid adapter boundary            |
-| Public-readiness target | Whether the first delivery must be ready for external package consumers                   |
-| Block porting need      | Reuse existing block, port an EAI App Template block, or request a custom-block exception |
+| Intake Field | Required Decision |
+| ------------ | ----------------- |
+| Profile choice | External, internal, or hybrid package profile |
+| Package lane | Public reusable block package, internal app, hybrid adapter, or app-local implementation |
+| Coupling status | source-platform-coupled, source-platform-decoupled, or hybrid adapter boundary |
+| Public-readiness target | Whether the first delivery must be ready for external package consumers |
+| Block porting need | Reuse existing block, port an EAI App Template block, or request a custom-block exception |
 
 External and hybrid profile choices require explicit public-readiness,
-block-porting, source-platform decoupling, Storybook, and theme-override
-evidence in the later Gofer artifacts. Restricted-source choices still record
-why public readiness is not required now.
+block-porting, source-platform decoupling, Storybook, and theme-override evidence in the
+later Gofer artifacts. Restricted-source choices still record why public readiness
+is not required now.
 
 **First, offer the option to skip:**
 
-| Option                                    | Description                                                                 |
-| ----------------------------------------- | --------------------------------------------------------------------------- |
-| **Confirm AI Journey (Recommended)**      | Review the four-step AI-augmented process for this app                      |
+| Option                                   | Description                                                                 |
+| ---------------------------------------- | --------------------------------------------------------------------------- |
+| **Confirm AI Journey (Recommended)**     | Review the four-step AI-augmented process for this app                      |
 | **Classify as Non-App / Skip AI Journey** | Use only when this is strategy, research, documentation, audit, or analysis |
 
 If the user selects "Classify as Non-App / Skip AI Journey", capture the
@@ -899,8 +869,8 @@ Based on the discovery answers, extract:
    - State the business goal and completion outcome for each step
    - Note which generative AI assistance improves that step
    - For app delivery, default the steps to: brief -> preview -> show-and-tell
-     feedback -> service fit unless the user clearly needs a different four-step
-     shape
+     feedback -> service fit unless the user clearly needs a different
+     four-step shape
 
 3. **Touchpoints**: Where do interactions happen?
    - UI touchpoints (screens, buttons)
@@ -910,12 +880,13 @@ Based on the discovery answers, extract:
      Playwright/self-review outputs when the feature includes a UI
 
 4. **AI augmentation**: How does generative AI help?
-   - Conversational help: chatbot, voice, accessibility, translations, or guided
-     explanation
-   - Contextual prefill: populate fields from screen context, known data, user
-     profile, customer record, document, or prior workflow state
+   - Conversational help: chatbot, voice, accessibility, translations, or
+     guided explanation
+   - Contextual prefill: populate fields from screen context, known data,
+     user profile, customer record, document, or prior workflow state
    - Step-goal assistance: understand the goal of the step, recommend next
-     actions, validate completeness, and drive the user to successful completion
+     actions, validate completeness, and drive the user to successful
+     completion
    - Human control: show confidence, evidence, edit controls, escalation path,
      and audit trail
    - Preview critique: review the generated MVP before presentation and suggest
@@ -940,23 +911,23 @@ Use AskUserQuestion to present the extracted journey:
 
 "Here's the main flow I've identified:"
 
-| Option | Description                                                                                        |
-| ------ | -------------------------------------------------------------------------------------------------- |
+| Option | Description                                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------- |
 | A      | Step 1: [goal] → Step 2: [goal] → Step 3: [goal] → Step 4: [goal] (Confirm this AI-augmented flow) |
-| B      | I need to modify some steps                                                                        |
-| C      | Show me all steps, AI assistance, and completion criteria in detail first                          |
+| B      | I need to modify some steps                                                                         |
+| C      | Show me all steps, AI assistance, and completion criteria in detail first                           |
 
 **Question 2a: Confirm AI Assistance**
 
 "For each step, how should generative AI help the user complete the goal?"
 
-| Option | Description                                                                          |
-| ------ | ------------------------------------------------------------------------------------ |
+| Option | Description                                                                         |
+| ------ | ----------------------------------------------------------------------------------- |
 | A      | Chat/voice/accessibility/translations help the user understand and complete the step |
 | B      | Prefill or recommend data using screen context, user context, and EnterpriseAI data  |
 | C      | Validate completion, explain missing information, and guide the user to success      |
-| D      | Mix all of the above, with human review and audit trail controls                     |
-| Custom | Describe the AI assistance for each step                                             |
+| D      | Mix all of the above, with human review and audit trail controls                    |
+| Custom | Describe the AI assistance for each step                                            |
 
 **Question 3: Identify Key Touchpoints**
 
@@ -1003,12 +974,13 @@ maxSteps: 4
 
 ### Step 1: {{business-goal}}
 
-**Actor**: {{actor-id}} **User action**: {{action-description}} **AI
-assistance**:
+**Actor**: {{actor-id}}
+**User action**: {{action-description}}
+**AI assistance**:
 {{chatbot-or-voice-or-accessibility-or-translation-or-prefill-or-guidance}}
 **Context used**: {{screen-context-user-data-enterpriseai-data-documents}}
-**Completion criteria**: {{how-we-know-this-step-is-successful}} **Controls**:
-{{human-review-confidence-evidence-audit-escalation}}
+**Completion criteria**: {{how-we-know-this-step-is-successful}}
+**Controls**: {{human-review-confidence-evidence-audit-escalation}}
 
 ### Step 2: {{business-goal}}
 
@@ -1051,6 +1023,7 @@ sequenceDiagram
 - [x] Actors confirmed
 - [x] Steps confirmed
 - [x] Touchpoints identified
+
 ````
 
 ### Store Journey in Memory
@@ -1113,7 +1086,7 @@ resume information:
 
 ```bash
 .specify/scripts/bash/pipeline-state.sh read --json
-```
+````
 
 If `pipeline-state.json` exists and `status` is `in_progress`, resume from
 `currentStage`. This takes priority over file-existence heuristics because
@@ -1136,14 +1109,14 @@ implement, or validate a feature from research or plan artifacts alone.
 **Fallback — File-existence heuristics** (used when no pipeline-state.json
 exists):
 
-| Has This             | Missing This | Start At             |
-| -------------------- | ------------ | -------------------- |
-| tasks.md (unchecked) | -            | `/5_gofer_implement` |
-| plan.md              | tasks.md     | `/4_gofer_tasks`     |
-| spec.md              | plan.md      | `/3_gofer_plan`      |
-| research.md          | spec.md      | `/2_gofer_specify`   |
-| Nothing              | research.md  | `/1_gofer_research`  |
-| Nothing              | Everything   | `/1_gofer_research`  |
+| Has This                                  | Missing This                | Start At             |
+| ----------------------------------------- | --------------------------- | -------------------- |
+| tasks.md (unchecked)                      | -                           | `/5_gofer_implement` |
+| plan.md                                   | tasks.md                    | `/4_gofer_tasks`     |
+| spec.md                                   | plan.md                     | `/3_gofer_plan`      |
+| research.md                               | spec.md                     | `/2_gofer_specify`   |
+| Nothing                                   | research.md                 | `/1_gofer_research`  |
+| Nothing                                   | Everything                  | `/1_gofer_research`  |
 
 #### For New Features
 
@@ -1210,8 +1183,8 @@ Check for session checkpoints:
 find .specify/specs -name "session-checkpoint.md" -type f 2>/dev/null
 ```
 
-If checkpoint found, read the most recent checkpoint and continue from the stage
-it names. Do not invoke a separate resume command.
+If checkpoint found, read the most recent checkpoint and continue from the
+stage it names. Do not invoke a separate resume command.
 
 If no checkpoint but unchecked tasks exist:
 
@@ -1262,8 +1235,8 @@ The unified Gofer pipeline automatically chains commands:
 /6_gofer_validate completes → pipeline complete
 ```
 
-**The user only needs to run `/0_gofer_start` once** - the orchestrator handles
-everything else automatically.
+**The user only needs to run `/0_gofer_start` once** - the orchestrator
+handles everything else automatically.
 
 ---
 
@@ -1302,35 +1275,35 @@ If context window is filling up:
 
 ### Core Pipeline
 
-| Stage | Command              | Main output                                | Description                             |
-| ----- | -------------------- | ------------------------------------------ | --------------------------------------- |
-| 0     | `/0_gofer_start`     | Full pipeline kickoff                      | Business scenario intake and routing    |
-| 1     | `/1_gofer_research`  | research.md                                | Research and supporting review prep     |
-| 2     | `/2_gofer_specify`   | spec.md                                    | Feature specification                   |
-| 3     | `/3_gofer_plan`      | plan.md, data-model.md, contracts/         | Technical architecture and contracts    |
-| 4     | `/4_gofer_tasks`     | tasks.md, traceability.md, issues.md       | Dependency-ordered task breakdown       |
-| 5     | `/5_gofer_implement` | Code, docs, loop-ledger.jsonl              | Execute bounded check-repair loops      |
-| 6     | `/6_gofer_validate`  | Validation artifacts, loop-audit-report.md | Terminal quality gate, including review |
+| Stage | Command               | Main output                        | Description                               |
+| ----- | --------------------- | ---------------------------------- | ----------------------------------------- |
+| 0     | `/0_gofer_start`| Full pipeline kickoff              | Business scenario intake and routing      |
+| 1     | `/1_gofer_research`   | research.md                        | Research and supporting review prep       |
+| 2     | `/2_gofer_specify`    | spec.md                            | Feature specification                     |
+| 3     | `/3_gofer_plan`       | plan.md, data-model.md, contracts/ | Technical architecture and contracts      |
+| 4     | `/4_gofer_tasks`      | tasks.md, traceability.md, issues.md | Dependency-ordered task breakdown       |
+| 5     | `/5_gofer_implement`  | Code, docs, loop-ledger.jsonl      | Execute bounded check-repair loops        |
+| 6     | `/6_gofer_validate`   | Validation artifacts, loop-audit-report.md | Terminal quality gate, including review |
 
 Every stage also updates the running product release PR/FAQ:
-`working-backwards-prfaq.md`, writes an immutable snapshot in `prfaq-history/`,
-and refreshes `stakeholder-review-index.md` so the user sees which Business
-Owner, CTO/Architecture, CISO/Risk, or Delivery review is needed.
+`working-backwards-prfaq.md`, writes an immutable snapshot in
+`prfaq-history/`, and refreshes `stakeholder-review-index.md` so the user sees
+which Business Owner, CTO/Architecture, CISO/Risk, or Delivery review is needed.
 
 ### Helper Commands
 
-| Command                      | Purpose                                         |
-| ---------------------------- | ----------------------------------------------- |
-| `/0a_problem_validation`     | Optional deeper problem framing before research |
-| `/7_gofer_save`              | Save session checkpoint                         |
-| `/7a_stakeholder_comms`      | Post-validation communications                  |
-| `/8_gofer_branding`          | Brand templates and stakeholder documents       |
-| `/9_gofer_tests`             | Define test cases (DSL approach)                |
-| `/10_gofer_cloud`            | Cloud infrastructure analysis (READ-ONLY)       |
-| `/gofer_hydrate`             | Reverse-engineer spec from code                 |
-| `/gofer_constitution`        | Project principles and standards                |
-| `/gofer:check-workspace`     | Check whether the repo scaffold is healthy      |
-| `/gofer:bootstrap-workspace` | Create or update the repo-owned scaffold        |
+| Command                        | Purpose                                          |
+| ----------------------------- | ------------------------------------------------ |
+| `/0a_problem_validation`      | Optional deeper problem framing before research  |
+| `/7_gofer_save`               | Save session checkpoint                          |
+| `/7a_stakeholder_comms`       | Post-validation communications                   |
+| `/8_gofer_branding`           | Brand templates and stakeholder documents        |
+| `/9_gofer_tests`              | Define test cases (DSL approach)                 |
+| `/10_gofer_cloud`             | Cloud infrastructure analysis (READ-ONLY)        |
+| `/gofer_hydrate`              | Reverse-engineer spec from code                  |
+| `/gofer_constitution`         | Project principles and standards                 |
+| `/gofer:check-workspace`      | Check whether the repo scaffold is healthy       |
+| `/gofer:bootstrap-workspace`  | Create or update the repo-owned scaffold         |
 
 ---
 
@@ -1351,8 +1324,8 @@ When the workflow profile is explicitly `enterpriseai`:
 - Non-EAI platforms must never be presented as primary recommendations during
   discovery. They may only appear as optional reference material in the research
   stage, clearly labelled as non-primary.
-- All recommended scenarios must map to an EnterpriseAI app (business analysis →
-  EAI services → deployment target).
+- All recommended scenarios must map to an EnterpriseAI app
+  (business analysis → EAI services → deployment target).
 - Maintain a running domain model using the user's vocabulary. Ask adaptive
   follow-up questions that clarify actors, object types, workflows, tenant
   boundaries, decision owners, and measurable value.
@@ -1365,24 +1338,24 @@ When the workflow profile is explicitly `enterpriseai`:
 Every EnterpriseAI discovery must preserve enough information for downstream
 stages to create these artifacts without re-interviewing the user:
 
-| Artifact                      | Required Content                                                                                                                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `journeys/base-journey.md`    | Application classification, four-step-or-fewer AI-augmented customer journey, step goals, AI assistance, context used, controls, completion criteria                                                     |
-| `ui-preview-brief.md`         | App-delivery-only preview brief: target screens, EAI App Template component constraints, branding inputs, preview command or URL, browser strategy, and preview validation expectations                  |
-| `ui-review-log.md`            | App-delivery-only iteration log: every UI-facing change, helper command, opened URL, screenshot/browser evidence, requested changes, accepted changes, unresolved issues                                 |
-| `ui-show-and-tell.md`         | App-delivery-only show-and-tell record: latest opened URL, helper run evidence, screenshot/browser evidence, user feedback, branding notes, component exceptions, and unresolved UX issues               |
-| `service-fit-matrix.md`       | App-delivery-only service selection evidence: desired platform capability, evidence source, accessible now vs purchasable vs unavailable, selected direction                                             |
-| `eai-preflight.md`            | App-delivery-only EAI readiness evidence: CLI install/version, login status, tenant role, template initialization state, app enrollment readiness, block catalog readiness, and next action              |
-| `context-bundle.md`           | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, tenant assumptions, API surfaces, deployment assumptions, validation criteria |
-| `contract-pack.md`            | Actors, object types, workflows/journeys, four-step AI assistance contract, permissions, tenant boundaries, APIs/events, runtime assumptions, acceptance tests                                           |
-| `reuse-scan.md`               | Existing specs, platform references, object types, APIs, workflows, modules, and the reuse/extend/create decision                                                                                        |
-| `audit-history.md`            | Stable finding IDs, recurring-finding history, accepted exceptions, owner, expiry, and review cadence                                                                                                    |
-| `working-backwards-prfaq.md`  | Product release PR/FAQ: headline, customer problem, launch description, external FAQ, internal FAQ, evidence links, and review asks                                                                      |
-| `prfaq-history/`              | Stage-by-stage immutable PR/FAQ snapshots: `00-business-scenario.md` through `06-validate.md`                                                                                                            |
-| `business-owner-summary.md`   | Business scenario, process change, business case, metrics, assumptions, and Business Owner review ask                                                                                                    |
-| `cto-architecture-summary.md` | EAI Platform/Azure architecture, auth, tenancy, data, contracts, diagrams, and CTO review ask                                                                                                            |
-| `ciso-security-summary.md`    | Security posture, identity/tenant controls, secrets/data handling, residual risk, validation evidence, and CISO review ask                                                                               |
-| `stakeholder-review-index.md` | One-page index of review-ready artifacts, current status, reviewer, and approve/revise/defer response contract                                                                                           |
+| Artifact | Required Content |
+| -------- | ---------------- |
+| `journeys/base-journey.md` | Application classification, four-step-or-fewer AI-augmented customer journey, step goals, AI assistance, context used, controls, completion criteria |
+| `ui-preview-brief.md` | App-delivery-only preview brief: target screens, EAI App Template component constraints, branding inputs, preview command or URL, browser strategy, and preview validation expectations |
+| `ui-review-log.md` | App-delivery-only iteration log: every UI-facing change, helper command, opened URL, screenshot/browser evidence, requested changes, accepted changes, unresolved issues |
+| `ui-show-and-tell.md` | App-delivery-only show-and-tell record: latest opened URL, helper run evidence, screenshot/browser evidence, user feedback, branding notes, component exceptions, and unresolved UX issues |
+| `service-fit-matrix.md` | App-delivery-only service selection evidence: desired platform capability, evidence source, accessible now vs purchasable vs unavailable, selected direction |
+| `eai-preflight.md` | App-delivery-only EAI readiness evidence: CLI install/version, login status, tenant role, template initialization state, app enrollment readiness, block catalog readiness, and next action |
+| `context-bundle.md` | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, tenant assumptions, API surfaces, deployment assumptions, validation criteria |
+| `contract-pack.md` | Actors, object types, workflows/journeys, four-step AI assistance contract, permissions, tenant boundaries, APIs/events, runtime assumptions, acceptance tests |
+| `reuse-scan.md` | Existing specs, platform references, object types, APIs, workflows, modules, and the reuse/extend/create decision |
+| `audit-history.md` | Stable finding IDs, recurring-finding history, accepted exceptions, owner, expiry, and review cadence |
+| `working-backwards-prfaq.md` | Product release PR/FAQ: headline, customer problem, launch description, external FAQ, internal FAQ, evidence links, and review asks |
+| `prfaq-history/` | Stage-by-stage immutable PR/FAQ snapshots: `00-business-scenario.md` through `06-validate.md` |
+| `business-owner-summary.md` | Business scenario, process change, business case, metrics, assumptions, and Business Owner review ask |
+| `cto-architecture-summary.md` | EAI Platform/Azure architecture, auth, tenancy, data, contracts, diagrams, and CTO review ask |
+| `ciso-security-summary.md` | Security posture, identity/tenant controls, secrets/data handling, residual risk, validation evidence, and CISO review ask |
+| `stakeholder-review-index.md` | One-page index of review-ready artifacts, current status, reviewer, and approve/revise/defer response contract |
 
 Use these artifacts as decision evidence for executive, architecture, CISO,
 data, delivery, CIO, CFO, COO, and risk/compliance stakeholders.
