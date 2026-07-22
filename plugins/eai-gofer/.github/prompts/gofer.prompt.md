@@ -1,7 +1,7 @@
 ---
 name: gofer
 description: Start or continue the Gofer delivery pipeline.
-agent: copilot-workspace
+agent: agent
 tools:
   - Read
   - Grep

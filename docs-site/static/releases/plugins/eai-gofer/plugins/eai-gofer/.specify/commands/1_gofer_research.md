@@ -1,9 +1,7 @@
 ---
 name: 1_gofer_research
-description:
-  'Research codebase, CLI integrations, and technology landscape for the target
-  feature.'
-title: 'Gofer Research'
+description: "Research codebase, CLI integrations, and technology landscape for the target feature."
+title: "Gofer Research"
 category: pipeline
 surfaces:
   - claude
@@ -17,10 +15,9 @@ surfaces:
   - system-skills
 aliases: [gofer:research]
 ---
-
 ---
-
-## description: Deep codebase and technology research for feature implementation
+description: Deep codebase and technology research for feature implementation
+---
 
 # Gofer Research
 
@@ -43,47 +40,28 @@ Before any Gofer stage/helper command does pipeline work:
    Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
-
 <!-- gofer:token-cost-policy:start -->
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of
-   truth for simple, medium, hard, and arbiter model routing. If it is missing,
-   run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation,
-     synthesis, validation, and security; Opus for high-risk arbitration or
-     release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for
-     locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT
-     for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for
-     default research synthesis; Pro for large-context architecture or high-risk
-     arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before
-     choosing a paid/high-tier picker model for hard security, architecture, or
-     release gates.
-3. Keep raw tool output out of the main conversation context. Save stable
-   findings to `.specify/specs/{feature}/context-bundle.md`, then work from
-   summaries.
-4. Use provider prompt/context caching only for stable, non-secret prefixes:
-   Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map,
-   stage contracts, and validation rubric.
-5. Before continuing after large research, planning, implementation, or
-   validation bursts, checkpoint the durable artifacts and compact/clear/resume
-   context when the host supports it.
-6. Escalate model tier only when a cheaper pass is low-confidence,
-contradictory, security-sensitive, or blocking release quality.
+   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
+   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
+   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
+4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
+5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
+6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
-
 <!-- gofer:business-progress:start -->
 
 Default user-facing updates must be concise, business-level, and easy to scan.
-Keep the technical work rigorous in artifacts, tests, logs, and code, but do not
-lead with implementation jargon unless the user asks for it.
+Keep the technical work rigorous in artifacts, tests, logs, and code, but do
+not lead with implementation jargon unless the user asks for it.
 
 1. Explain progress as what is being connected, changed, checked, or fixed and
    why it matters to the business outcome.
@@ -101,7 +79,8 @@ lead with implementation jargon unless the user asks for it.
    - `Why it matters`: user/business impact
    - `Status`: done, checking, fixing, blocked, or needs decision
 6. Do not remove technical validation, security checks, EAI preflights, tests,
-or loop evidence. This contract changes presentation, not engineering standards.
+   or loop evidence. This contract changes presentation, not engineering
+   standards.
 <!-- gofer:business-progress:end -->
 
 ## User Input
@@ -114,18 +93,18 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Delivery Lineage Contract
 
-Before completing this stage, read `.specify/references/delivery-lineage.md` and
-create or update `.specify/specs/{feature}/delivery-lineage.json`. Gofer is
-customer-side: the manifest must be a separately compiled `customer` graph that
-stops at published PublicAPI capability nodes and contains no private EAI
-records.
+Before completing this stage, read `.specify/references/delivery-lineage.md`
+and create or update
+`.specify/specs/{feature}/delivery-lineage.json`. Gofer is customer-side: the
+manifest must be a separately compiled `customer` graph that stops at published
+PublicAPI capability nodes and contains no private EAI records.
 
 ## Execution Profile And Public Risk Labels
 
 Classify the request before spawning agents. Choose exactly one effective
-execution profile. This is a per-run depth decision: it controls research depth,
-agent fanout, and artifact production for this feature. It does not change the
-repo's broader workflow/content family, such as the optional VS Code
+execution profile. This is a per-run depth decision: it controls research
+depth, agent fanout, and artifact production for this feature. It does not
+change the repo's broader workflow/content family, such as the optional VS Code
 `gofer.workflowProfile` setting.
 
 Use repository-neutral labels only: `docs-only`, `single-repo-code`,
@@ -133,8 +112,9 @@ Use repository-neutral labels only: `docs-only`, `single-repo-code`,
 `release-critical`, `broad-fanout`, `unknown-blast-radius`, or `unknown`.
 
 - **fast**: docs-only, small clarification work, or clearly bounded low-risk
-  single-repo work. Use one locator/summarizer, keep existing required artifacts
-  concise, and skip optional councils unless evidence contradicts the request.
+  single-repo work. Use one locator/summarizer, keep existing required
+  artifacts concise, and skip optional councils unless evidence contradicts the
+  request.
 - **standard**: ordinary single-repository feature work. Standard is the
   catch-all for work that is not fast, full, or dynamic.
 - **full**: bounded high-risk work such as known cross-repo impact, API
@@ -148,15 +128,15 @@ Use repository-neutral labels only: `docs-only`, `single-repo-code`,
 
 Use this priority order so profiles are mutually exclusive and collectively
 exhaustive: dynamic first, then full, then fast, then standard as the catch-all.
-Users may request a deeper profile. Do not run below the computed `profileFloor`
-without explicit approval.
+Users may request a deeper profile. Do not run below the computed
+`profileFloor` without explicit approval.
 
 Record the decision in `.specify/specs/{feature}/execution-profile.md` with
-frontmatter fields: `classificationVersion`, `requestedProfile`, `profileFloor`,
-`effectiveProfile`, `riskLabels`, `overrideStatus`, `requiresConfirmation`, and
-`classificationReason`. If `dynamic` is selected by the classifier but was not
-explicitly requested, set `requiresConfirmation: true` and stop for confirmation
-before broad fanout work.
+frontmatter fields: `classificationVersion`, `requestedProfile`,
+`profileFloor`, `effectiveProfile`, `riskLabels`, `overrideStatus`,
+`requiresConfirmation`, and `classificationReason`. If `dynamic` is selected by
+the classifier but was not explicitly requested, set `requiresConfirmation:
+true` and stop for confirmation before broad fanout work.
 
 Artifact-churn rule: preserve existing required artifacts, but do not create
 large optional diagrams, councils, issue lists, workflow DAGs, or extended
@@ -183,13 +163,10 @@ This is the **first stage** of the unified Gofer pipeline. Your job is to:
 - `.specify/specs/{feature}/prfaq-history/01-research.md`
 - `.specify/specs/{feature}/build-map.md` (for app delivery; plain-language
   build picture and status)
-- `.specify/specs/{feature}/business-owner-summary.md` (draft; mark missing
-  inputs pending)
+- `.specify/specs/{feature}/business-owner-summary.md` (draft; mark missing inputs pending)
 - `.specify/specs/{feature}/stakeholder-review-index.md`
-- `.specify/specs/{feature}/proposal-review.md` (optional supporting review
-  context)
-- `.specify/specs/{feature}/journeys/base-journey.md` (application delivery
-  default)
+- `.specify/specs/{feature}/proposal-review.md` (optional supporting review context)
+- `.specify/specs/{feature}/journeys/base-journey.md` (application delivery default)
 - `.specify/specs/{feature}/eai-preflight.md` (EAI app delivery default)
 - `.specify/specs/{feature}/ui-preview-brief.md` (application delivery default)
 - `.specify/specs/{feature}/context-bundle.md` (EnterpriseAI profile only)
@@ -229,8 +206,8 @@ If discovery.md exists:
    - Target Users → Research UX patterns appropriate for these users
    - Value Proposition → Research metrics and measurement approaches
    - Competitive Analysis → If researched, focus on differentiation
-   - Application Classification → Determine whether a four-step AI-augmented app
-     journey is required
+   - Application Classification → Determine whether a four-step AI-augmented
+     app journey is required
    - AI-Augmented Journey → If app delivery, preserve the four-step-or-fewer
      journey as the scope spine for research
    - EAI Preflight → If present, preserve CLI install/login/tenant/template/app
@@ -306,8 +283,8 @@ Include: file paths, code snippets, conventions used."
 ```
 
 **Run all three agents in parallel** for maximum efficiency in standard/full
-mode. In fast mode, collapse this into one concise locator/summarizer unless the
-feature touches a full-depth risk label. In dynamic mode, do not start broad
+mode. In fast mode, collapse this into one concise locator/summarizer unless
+the feature touches a full-depth risk label. In dynamic mode, do not start broad
 fanout yet; have these agents identify candidate shards, unresolved ownership,
 and evidence needed before P3 builds the workflow DAG.
 
@@ -434,9 +411,9 @@ explicitly `enterpriseai`, generate:
    - Feature summary and approved business scenario.
    - Application classification: app delivery or non-app work, with rationale.
    - Four-step-or-fewer AI-augmented journey summary when app delivery applies.
-   - AI-readable blocks bridge summary: external/internal/hybrid profile choice,
-     package lane, coupling status, public-readiness target, and block porting
-     posture.
+   - AI-readable blocks bridge summary: external/internal/hybrid profile
+     choice, package lane, coupling status, public-readiness target, and block
+     porting posture.
    - Relevant existing specs, code paths, platform references, and API surfaces.
    - EAI preflight summary: CLI version, login/account status, tenant readiness,
      template initialization state, app enrollment readiness, block catalog
@@ -453,8 +430,7 @@ explicitly `enterpriseai`, generate:
      translation, contextual prefill, recommendation, validation, completion
      checks, audit logging, and escalation.
    - Existing UI block/package assets, Storybook story IDs, theme override
-     points, and source-platform dependencies that affect reuse, porting, or
-     decoupling.
+     points, and source-platform dependencies that affect reuse, porting, or decoupling.
    - EAI Platform/Azure stack fit for every app-delivery capability. Treat EAI
      Platform services as primary evidence, Azure as the preferred supporting
      substrate, and unrelated app stacks as exceptions only.
@@ -472,19 +448,18 @@ explicitly `enterpriseai`, generate:
      considered.
    - Block catalog evidence: run `eai --describe`, `eai blocks list`,
      `eai blocks describe <id>` for each candidate, and
-     `eai resources schema --format json`; record stable block IDs, required
-     resources, data/action bindings, Storybook story IDs, theme override
-     points, package lane, coupling status, and any custom-block exception that
-     needs approval.
+     `eai resources schema --format json`; record stable block IDs, required resources,
+     data/action bindings, Storybook story IDs, theme override points, package
+     lane, coupling status, and any custom-block exception that needs approval.
    - Block porting and source-platform decoupling evidence: identify whether
-     each selected block is reused as-is, ported into a package lane, or blocked
-     by source-platform coupling; define the adapter/resource-schema boundary
-     for any decoupling work.
+     each selected block is reused as-is, ported into a package lane, or
+     blocked by source-platform coupling; define the adapter/resource-schema
+     boundary for any decoupling work.
    - Public-readiness evidence: for external or hybrid profiles, capture package
      exports, consumer-facing constraints, accessibility/theming expectations,
      and what still prevents public consumption.
-   - Branding inputs: whether client styling, logos, colors, copy tone, or other
-     corporate-brand artifacts must be applied.
+   - Branding inputs: whether client styling, logos, colors, copy tone, or
+     other corporate-brand artifacts must be applied.
    - Fast preview runtime: the preview command or URL, expected local URL,
      integrated-browser vs external-browser fallback, and the exact invocation
      to run after every UI-facing change:
@@ -505,19 +480,20 @@ explicitly `enterpriseai`, generate:
      `https://eai-tools.github.io/eai/scenarios`, and
      `https://github.com/eai-tools/eai-app-template`.
    - Record whether `eai --describe` found the expected scaffolding,
-     authentication, tenant, app, resource schema, workflow readiness, block
-     catalog, diagnostics, Gofer-refresh, and template-check commands.
-   - Record whether `eai update --check` reports the installed CLI is current or
-     requires an upgrade before app delivery proceeds.
+     authentication, tenant, app, resource schema, workflow
+     readiness, block catalog, diagnostics, Gofer-refresh, and template-check
+     commands.
+   - Record whether `eai update --check` reports the installed CLI is current
+     or requires an upgrade before app delivery proceeds.
    - Record whether the app template markers exist:
      `src/eai.config/object-types.ts`, `src/eai.config/register.ts`,
      `.env.example`, `.npmrc`, and `package.json`.
    - Record whether the current repo is ready for `eai verify`, needs
      `eai init <app-name>`, or must avoid scaffolding because it is a non-empty
      non-EAI repo.
-   - Record whether `eai template check --format json` and
-     `eai gofer refresh --check --format json` succeed, report drift, or return
-     `E001` because the repo is not yet an EAI app project.
+   - Record whether `eai template check --format json` and `eai gofer refresh
+     --check --format json` succeed, report drift, or return `E001` because the
+     repo is not yet an EAI app project.
    - Record the app stack policy decision: EAI Platform including the EAI app
      template first, Azure second, or approved non-EAI exception.
    - Record the selected package profile and block-catalog readiness evidence
@@ -530,9 +506,10 @@ explicitly `enterpriseai`, generate:
    - Use `.specify/references/platform/eai-repo-contract.md` and
      `.specify/references/platform/eai-error-catalog.yaml` whenever recovery,
      command ordering, or drift handling is unclear.
-   - Record only product-safe status labels such as `ready`, `account_required`,
-     `login_required`, `tenant_required`, `operator_required`,
-     `template_required`, `user_confirmation_required`, or `not_applicable`.
+   - Record only product-safe status labels such as `ready`,
+     `account_required`, `login_required`, `tenant_required`,
+     `operator_required`, `template_required`, `user_confirmation_required`,
+     or `not_applicable`.
 
 Do not recommend a new EnterpriseAI object type, API/event, workflow, or module
 until the reuse-before-create scan is complete. Do not recommend a non-EAI app
@@ -573,16 +550,14 @@ Once all agents complete:
    - Preview-first rationale and the smallest useful MVP to show first
    - EAI App Template reuse constraints and any approved extension gaps
    - External/internal/hybrid profile choice, package lane, coupling status,
-     public-readiness target, block-porting needs, and source-platform
-     decoupling status
+     public-readiness target, block-porting needs, and source-platform decoupling status
    - Candidate capability-discovery inputs for the later service-fit gate
    - Non-app runs must explicitly state "Not applicable"
 5. **Goal Ledger Seed**
    - Goal IDs, business outcomes, metrics, targets, owners, and confidence
-   - Delivery states for any capability that starts mock/hybrid before going
-     live
-   - Re-loop triggers for objective drift, assumption expiry, contract drift, UX
-     scope changes, and post-validation code/test movement
+   - Delivery states for any capability that starts mock/hybrid before going live
+   - Re-loop triggers for objective drift, assumption expiry, contract drift,
+     UX scope changes, and post-validation code/test movement
 6. **Loop Contract Seed**
    - Initialize `{FEATURE_DIR}/loop-contract.json` if it is missing:
      `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 1_research --init --json`
@@ -704,16 +679,14 @@ Reference `.specify/specs/{feature}/loop-contract.json` and capture:
 - **EnterpriseAI Object Types**: [Known or candidate object types]
 - **EAI Platform Services and Azure Capabilities**: [Primary platform services,
   supporting Azure services, and any blocked capabilities]
-- **Tenant and Deployment Assumptions**: [Tenant, identity, runtime, target
-  environment]
-- **Validation Criteria**: [Business, security, data, architecture, and
-  operational checks]
+- **Tenant and Deployment Assumptions**: [Tenant, identity, runtime, target environment]
+- **Validation Criteria**: [Business, security, data, architecture, and operational checks]
 
 ## Reuse-Before-Create Scan
 
-| Candidate                              | Existing Evidence   | Decision                | Rationale | Owner   |
-| -------------------------------------- | ------------------- | ----------------------- | --------- | ------- |
-| [Object type/API/workflow/module/spec] | [Path or reference] | Reuse/Extend/Create New | [Why]     | [Owner] |
+| Candidate | Existing Evidence | Decision | Rationale | Owner |
+| --------- | ----------------- | -------- | --------- | ----- |
+| [Object type/API/workflow/module/spec] | [Path or reference] | Reuse/Extend/Create New | [Why] | [Owner] |
 
 ## Business Scenario Analysis
 
@@ -895,18 +868,19 @@ PR/FAQ artifacts:
      unknown claims as `Pending research validation` instead of inventing them.
    - Fill Internal FAQ Business Owner and CTO sections with research options,
      platform constraints, and architecture trade-offs.
-2. Write an immutable snapshot to `{FEATURE_DIR}/prfaq-history/01-research.md`.
+2. Write an immutable snapshot to
+   `{FEATURE_DIR}/prfaq-history/01-research.md`.
 3. Create or update `{FEATURE_DIR}/business-owner-summary.md` from
    `.specify/templates/business-owner-summary-template.md` using
    `problem-brief.md`, `discovery.md`, `research.md`, value-stream, and ROI
-   evidence when present. If `spec-summary.md` or `business-metrics.md` does not
-   exist yet, keep the relevant rows and mark status `Pending /2 or /7a`.
-4. For application delivery, create or update `{FEATURE_DIR}/build-map.md` from
-   `.specify/templates/build-map-template.md`.
+   evidence when present. If `spec-summary.md` or `business-metrics.md` does
+   not exist yet, keep the relevant rows and mark status `Pending /2 or /7a`.
+4. For application delivery, create or update `{FEATURE_DIR}/build-map.md`
+   from `.specify/templates/build-map-template.md`.
    - Keep the picture simple enough for a business owner to follow.
-   - Mark the EAI Platform, app experience, data/workflow, security,
-     integration, and preview/release areas as `not started`, `working`,
-     `ready`, `blocked`, or `needs decision`.
+   - Mark the EAI Platform, app experience, data/workflow, security, integration,
+     and preview/release areas as `not started`, `working`, `ready`,
+     `blocked`, or `needs decision`.
    - In the latest update, state what was learned, why it matters, and the next
      decision or stage in plain language.
 5. Update `{FEATURE_DIR}/stakeholder-review-index.md` from
@@ -928,12 +902,9 @@ PR/FAQ review artifacts:
    - Any open questions needing input
 
 2. **Ask focused follow-up questions only if needed**:
-   - Clarify the preferred business scenario if the research found real
-     alternatives
-   - Clarify the preferred architecture direction if the trade-off is still
-     ambiguous
-   - Confirm whether the user wants to stop after research or continue into
-     specification
+   - Clarify the preferred business scenario if the research found real alternatives
+   - Clarify the preferred architecture direction if the trade-off is still ambiguous
+   - Confirm whether the user wants to stop after research or continue into specification
 
 3. **Run architecture questions one-by-one (MANDATORY when architecture options
    exist)**:
@@ -1193,8 +1164,7 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - **Research should inform specification directly** - focus on what helps users
   discuss the business scenario and architecture before `spec.md` is written
 - **Maximum 5 open questions** - make informed decisions for the rest
-- **Use `proposal-review.md` as optional supporting context, not as a blocking
-  stage**
+- **Use `proposal-review.md` as optional supporting context, not as a blocking stage**
 - **Log stage completion** for observability tracking
 
 ---

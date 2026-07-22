@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.27] - 2026-07-22
+
+Fix VS Code and Copilot /eai slash command registration
+
 ## [3.7.26] - 2026-07-21
 
 Add customer-safe delivery lineage viewer, selected decision path, and portable
