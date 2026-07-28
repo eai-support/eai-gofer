@@ -62,6 +62,27 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     expect(result.every((item) => item.ruleId === 'EAI_V4_RESOURCE_ENVELOPE_REQUIRED')).toBe(true);
   });
 
+  it('rejects envelope keys that only exist in nested objects', () => {
+    const invalid = `
+      await fetch(\`/v4/data/resources/\${tenant}/project\`, {
+        method: 'POST',
+        body: JSON.stringify({ wrapper: { data } }),
+      });
+      await fetch(\`/v4/data/resources/\${tenant}/project/\${id}\`, {
+        method: 'PUT',
+        body: JSON.stringify({ wrapper: { data }, version }),
+      });
+      await fetch(\`/v4/data/resources/\${tenant}/project/\${id}/actions/approve\`, {
+        method: 'POST',
+        body: JSON.stringify({ wrapper: { params } }),
+      });
+    `;
+
+    const result = validateSourceContent(invalid, 'src/client.ts');
+    expect(result).toHaveLength(3);
+    expect(result.every((item) => item.ruleId === 'EAI_V4_RESOURCE_ENVELOPE_REQUIRED')).toBe(true);
+  });
+
   it('rejects action-followed-by-update when the old version is reused', () => {
     const invalid = `
       async function approveAndEdit() {
@@ -80,6 +101,17 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
       async function approveAndEdit() {
         const acted = await resources.executeAction('Project', id, 'approve', {});
         await resources.update('Project', id, { ...acted.data, note: 'checked' }, acted.version);
+      }
+    `;
+
+    expect(validateSourceContent(valid, 'src/flow.ts')).toEqual([]);
+  });
+
+  it('ignores updates made through a different client after an action', () => {
+    const valid = `
+      async function approveAndAudit() {
+        await resources.executeAction('Project', id, 'approve', {});
+        await auditLog.update('Audit', auditId, data, version);
       }
     `;
 

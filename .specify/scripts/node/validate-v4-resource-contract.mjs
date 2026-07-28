@@ -4,18 +4,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DOCS_URL =
-  'https://docs.eai.software/services/publicapi/v4/resource-mutation-contract';
-const SOURCE_EXTENSIONS = new Set([
-  '.cjs',
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.mts',
-  '.ts',
-  '.tsx',
-  '.vue',
-]);
+const DOCS_URL = 'https://docs.eai.software/services/publicapi/v4/resource-mutation-contract';
+const SOURCE_EXTENSIONS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.mts', '.ts', '.tsx', '.vue']);
 const EXCLUDED_DIRECTORIES = new Set([
   '.git',
   '.next',
@@ -29,13 +19,11 @@ const EXCLUDED_DIRECTORIES = new Set([
   'tests',
   '__tests__',
 ]);
-const RESOURCE_URL_PATTERN =
-  /(?:\/api\/eai)?\/v4\/data\/resources|resourceUrl\s*\(/;
+const RESOURCE_URL_PATTERN = /(?:\/api\/eai)?\/v4\/data\/resources|resourceUrl\s*\(/;
 const NON_RECORD_MUTATION_PATTERN =
   /\/(?:object-types|query|search|aggregate|batch|files|links|shares|parents|storage)(?:\/|['"`}]|$)/;
 const IS_DIRECT_RUN =
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 function lineNumber(content, index) {
   return content.slice(0, index).split(/\r?\n/).length;
@@ -90,13 +78,93 @@ function methodOf(snippet) {
   return snippet.match(/\bmethod\s*:\s*['"`](POST|PUT|PATCH)['"`]/i)?.[1]?.toUpperCase();
 }
 
+function objectLiteralArgument(snippet) {
+  const stringifyIndex = snippet.search(/JSON\.stringify\s*\(/);
+  if (stringifyIndex === -1) return null;
+  const openParenthesis = snippet.indexOf('(', stringifyIndex);
+  let index = openParenthesis + 1;
+  while (/\s/.test(snippet[index] || '')) index += 1;
+  if (snippet[index] !== '{') return null;
+
+  const objectStart = index;
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  for (; index < snippet.length; index += 1) {
+    const character = snippet[index];
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return snippet.slice(objectStart + 1, index);
+      }
+    }
+  }
+  return null;
+}
+
+function topLevelObjectProperties(objectBody) {
+  const properties = new Set();
+  let segmentStart = 0;
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+
+  function recordSegment(end) {
+    const segment = objectBody.slice(segmentStart, end).trim();
+    const property = segment.match(
+      /^(?:['"`]([A-Za-z_$][\w$]*)['"`]|([A-Za-z_$][\w$]*))\s*(?::|$)/
+    );
+    const name = property?.[1] || property?.[2];
+    if (name) properties.add(name);
+  }
+
+  for (let index = 0; index < objectBody.length; index += 1) {
+    const character = objectBody[index];
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{' || character === '[' || character === '(') depth += 1;
+    if (character === '}' || character === ']' || character === ')') depth -= 1;
+    if (character === ',' && depth === 0) {
+      recordSegment(index);
+      segmentStart = index + 1;
+    }
+  }
+  recordSegment(objectBody.length);
+  return properties;
+}
+
 function hasObjectEnvelope(snippet, requiredProperties) {
-  const stringify = snippet.match(/JSON\.stringify\s*\(\s*\{([\s\S]*?)\}\s*\)/);
-  if (!stringify) return false;
-  const objectBody = stringify[1].trim();
-  return requiredProperties.every((property) =>
-    new RegExp(`\\b${property}\\s*(?::|,|$)`).test(objectBody)
-  );
+  const objectBody = objectLiteralArgument(snippet);
+  if (objectBody === null) return false;
+  const properties = topLevelObjectProperties(objectBody);
+  return requiredProperties.every((property) => properties.has(property));
 }
 
 function violation(ruleId, file, content, index, message, remediation) {
@@ -184,23 +252,26 @@ export function validateSourceContent(content, file = '<memory>') {
 
   const actionCalls = callSnippets(content, '[A-Za-z_$][\\w$]*\\.executeAction');
   for (const actionCall of actionCalls) {
+    const receiver = actionCall.text.match(/^([A-Za-z_$][\w$]*)\s*\.\s*executeAction/)?.[1];
+    if (!receiver) continue;
     const afterAction = content.slice(actionCall.end, actionCall.end + 1600);
-    const updateFromIndex = afterAction.search(/\.\s*updateFrom\s*\(/);
-    const updateMatch = /\.\s*update\s*\(/.exec(afterAction);
+    const escapedReceiver = receiver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const updateFromIndex = afterAction.search(
+      new RegExp(`\\b${escapedReceiver}\\s*\\.\\s*updateFrom\\s*\\(`)
+    );
+    const updateMatch = new RegExp(`\\b${escapedReceiver}\\s*\\.\\s*update\\s*\\(`).exec(
+      afterAction
+    );
     if (!updateMatch || (updateFromIndex !== -1 && updateFromIndex < updateMatch.index)) {
       continue;
     }
 
-    const assignmentPrefix = content.slice(
-      Math.max(0, actionCall.start - 160),
-      actionCall.start
-    );
+    const assignmentPrefix = content.slice(Math.max(0, actionCall.start - 160), actionCall.start);
     const resultName = assignmentPrefix.match(
       /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s*$/
     )?.[1];
     const updateWindow = afterAction.slice(updateMatch.index, updateMatch.index + 800);
-    const usesActionVersion =
-      resultName && updateWindow.includes(`${resultName}.version`);
+    const usesActionVersion = resultName && updateWindow.includes(`${resultName}.version`);
 
     if (!usesActionVersion) {
       violations.push(
@@ -245,9 +316,7 @@ export async function validateWorkspace(workspace) {
   const violations = [];
   for (const file of files) {
     const content = await fs.readFile(file, 'utf8');
-    violations.push(
-      ...validateSourceContent(content, path.relative(root, file))
-    );
+    violations.push(...validateSourceContent(content, path.relative(root, file)));
   }
   return {
     valid: violations.length === 0,
@@ -260,7 +329,11 @@ function parseArgs(argv) {
   const args = { workspace: process.cwd(), json: false };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === '--workspace') {
-      args.workspace = argv[index + 1] || args.workspace;
+      const workspace = argv[index + 1];
+      if (!workspace || workspace.startsWith('-')) {
+        throw new Error('--workspace requires a path.');
+      }
+      args.workspace = workspace;
       index += 1;
     } else if (argv[index] === '--json') {
       args.json = true;
