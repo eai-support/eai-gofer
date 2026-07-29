@@ -328,6 +328,22 @@ function resolvedResourceRoute(expression, bindings) {
   return identifier ? bindings.get(identifier) : undefined;
 }
 
+function isResourceMemberRoute(route) {
+  const resourceUrlCall = route.match(/(?:this\s*\.\s*)?resourceUrl\s*\(([\s\S]*?)\)/);
+  if (resourceUrlCall) {
+    return splitTopLevel(resourceUrlCall[1]).length >= 2;
+  }
+
+  const marker = '/v4/data/resources';
+  const markerIndex = route.indexOf(marker);
+  if (markerIndex === -1) return false;
+  const suffix = route
+    .slice(markerIndex + marker.length)
+    .split(/[?#]/, 1)[0]
+    .replace(/['"`)}\];,\s]+$/g, '');
+  return suffix.split('/').filter(Boolean).length >= 3;
+}
+
 function enclosingBlockEnd(content, start) {
   const masked = maskNonCode(content);
   let depth = 0;
@@ -503,6 +519,19 @@ export function validateSourceContent(content, file = '<memory>') {
       continue;
     }
     if (isObjectTypeManagement || NON_RECORD_MUTATION_PATTERN.test(route)) {
+      continue;
+    }
+    if (isResourceMemberRoute(route)) {
+      violations.push(
+        violation(
+          'EAI_V4_RESOURCE_METHOD_REQUIRED',
+          file,
+          content,
+          request.start,
+          'POST is not a valid PublicAPI v4 resource record update.',
+          'Use PUT with JSON.stringify({ data, version }) for a member resource route.'
+        )
+      );
       continue;
     }
     if (!hasObjectEnvelope(bodyExpression, ['data'])) {

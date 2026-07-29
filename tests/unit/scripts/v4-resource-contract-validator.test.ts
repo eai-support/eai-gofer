@@ -88,6 +88,24 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     expect(result.every((item) => item.ruleId === 'EAI_V4_RESOURCE_ENVELOPE_REQUIRED')).toBe(true);
   });
 
+  it('rejects POST create envelopes on member resource routes', () => {
+    const invalid = `
+      await fetch(\`/v4/data/resources/\${tenant}/project/\${id}\`, {
+        method: 'POST',
+        body: JSON.stringify({ data }),
+      });
+      await platformFetch(this.resourceUrl(objectType, id), {
+        method: 'POST',
+        body: JSON.stringify({ data }),
+      });
+    `;
+
+    expect(validateSourceContent(invalid, 'src/client.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_METHOD_REQUIRED' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_METHOD_REQUIRED' }),
+    ]);
+  });
+
   it('rejects envelope keys that only exist in nested objects', () => {
     const invalid = `
       await fetch(\`/v4/data/resources/\${tenant}/project\`, {
