@@ -355,6 +355,26 @@ function normalizedExpression(expression) {
   return normalized;
 }
 
+function actionResultBinding(content, actionStart) {
+  const prefix = maskNonCode(content.slice(0, actionStart));
+  const declarations = [
+    ...prefix.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g),
+  ].reverse();
+
+  for (const declaration of declarations) {
+    const candidate = prefix.slice(declaration.index);
+    const binding = candidate.match(
+      /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[^=]*?)?\s*=\s*await\s*\(?\s*$/
+    );
+    if (binding) return binding[1];
+  }
+
+  const assignment = prefix.match(
+    /(?:^|[;{}])\s*([A-Za-z_$][\w$]*)\s*=\s*await\s*\(?\s*$/
+  );
+  return assignment?.[1];
+}
+
 function violation(ruleId, file, content, index, message, remediation) {
   return {
     ruleId,
@@ -501,17 +521,29 @@ export function validateSourceContent(content, file = '<memory>') {
     }
   }
 
-  const actionCalls = callSnippets(content, '[A-Za-z_$][\\w$]*\\.executeAction');
-  for (const actionCall of actionCalls) {
-    const receiver = actionCall.text.match(/^([A-Za-z_$][\w$]*)\s*\.\s*executeAction/)?.[1];
-    if (!receiver) continue;
-    const scopeEnd = enclosingBlockEnd(content, actionCall.end);
-    const afterAction = content.slice(actionCall.end, scopeEnd);
-    const escapedReceiver = receiver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const assignmentPrefix = content.slice(Math.max(0, actionCall.start - 160), actionCall.start);
-    const resultName = assignmentPrefix.match(
-      /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s*$/
+  const actionCalls = callSnippets(
+    content,
+    '[A-Za-z_$][\\w$]*(?:\\s*\\))?\\s*\\.\\s*executeAction'
+  );
+  for (const [actionIndex, actionCall] of actionCalls.entries()) {
+    const receiver = actionCall.text.match(
+      /^([A-Za-z_$][\w$]*)\s*(?:\)\s*)?\.\s*executeAction/
     )?.[1];
+    if (!receiver) continue;
+    let flowEnd = enclosingBlockEnd(content, actionCall.end);
+    for (const nextAction of actionCalls.slice(actionIndex + 1)) {
+      if (nextAction.start >= flowEnd) break;
+      const nextReceiver = nextAction.text.match(
+        /^([A-Za-z_$][\w$]*)\s*(?:\)\s*)?\.\s*executeAction/
+      )?.[1];
+      if (nextReceiver === receiver) {
+        flowEnd = nextAction.start;
+        break;
+      }
+    }
+    const afterAction = content.slice(actionCall.end, flowEnd);
+    const escapedReceiver = receiver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const resultName = actionResultBinding(content, actionCall.start);
     const updateCalls = callSnippets(afterAction, `${escapedReceiver}\\s*\\.\\s*update`);
 
     for (const updateCall of updateCalls) {

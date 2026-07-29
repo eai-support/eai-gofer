@@ -198,6 +198,29 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     expect(validateSourceContent(valid, 'src/flow.ts')).toEqual([]);
   });
 
+  it('accepts typed, multiline, wrapped, and reassigned action result bindings', () => {
+    const valid = `
+      async function approveAndEdit() {
+        const acted:
+          {
+            data: Record<string, unknown>;
+            version: number;
+            intentionallyLongMetadataFieldToExceedTheFormerLookbackWindow: string;
+          } =
+          await (
+            resources
+          ).executeAction('Project', id, 'approve', {});
+        await resources.update('Project', id, acted.data, ((acted.version)));
+
+        let reassigned;
+        reassigned = await resources.executeAction('Project', id, 'archive', {});
+        await resources.update('Project', id, reassigned.data, reassigned.version);
+      }
+    `;
+
+    expect(validateSourceContent(valid, 'src/flow.ts')).toEqual([]);
+  });
+
   it('checks the update version argument even after updateFrom or unrelated version use', () => {
     const invalid = `
       async function approveAndEdit() {
