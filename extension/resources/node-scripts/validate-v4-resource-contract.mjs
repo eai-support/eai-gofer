@@ -341,7 +341,16 @@ function isResourceMemberRoute(route) {
     .slice(markerIndex + marker.length)
     .split(/[?#]/, 1)[0]
     .replace(/['"`)}\];,\s]+$/g, '');
-  return suffix.split('/').filter(Boolean).length >= 3;
+  const segments = suffix.split('/').filter(Boolean);
+  if (segments.length >= 3) return true;
+  if (segments.length < 2) return false;
+
+  const firstSegment = segments[0];
+  const isExplicitTenantSegment =
+    /tenant/i.test(firstSegment) ||
+    /^\$\{[^}]*tenant[^}]*\}$/i.test(firstSegment) ||
+    /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(firstSegment);
+  return !isExplicitTenantSegment;
 }
 
 function enclosingBlockEnd(content, start) {

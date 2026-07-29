@@ -98,9 +98,14 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
         method: 'POST',
         body: JSON.stringify({ data }),
       });
+      await fetch(\`/v4/data/resources/project/\${id}\`, {
+        method: 'POST',
+        body: JSON.stringify({ data }),
+      });
     `;
 
     expect(validateSourceContent(invalid, 'src/client.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_METHOD_REQUIRED' }),
       expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_METHOD_REQUIRED' }),
       expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_METHOD_REQUIRED' }),
     ]);
