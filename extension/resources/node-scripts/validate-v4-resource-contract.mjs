@@ -105,6 +105,11 @@ function callSnippets(content, calleePattern) {
     let openIndex = match.index + match[0].length;
     while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
 
+    if (masked.slice(openIndex, openIndex + 2) === '?.') {
+      openIndex += 2;
+      while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
+    }
+
     if (masked[openIndex] === '<') {
       let genericDepth = 0;
       for (let index = openIndex; index < masked.length; index += 1) {
@@ -117,6 +122,11 @@ function callSnippets(content, calleePattern) {
           }
         }
       }
+      while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
+    }
+
+    if (masked.slice(openIndex, openIndex + 2) === '?.') {
+      openIndex += 2;
       while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
     }
 
