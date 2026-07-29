@@ -184,7 +184,32 @@ function topLevelPropertyExpression(objectExpression, propertyName) {
 }
 
 function methodOf(optionsExpression) {
-  const methodExpression = topLevelPropertyExpression(optionsExpression, 'method');
+  const normalizedOptions = optionsExpression.trim();
+  if (!normalizedOptions || normalizedOptions === 'undefined') {
+    return { method: 'GET', resolved: true };
+  }
+
+  const objectBody = objectLiteralBody(normalizedOptions);
+  if (objectBody === null) return { method: undefined, resolved: false };
+
+  let methodExpression;
+  let unresolvedAssignment = false;
+  for (const segment of splitTopLevel(objectBody)) {
+    const candidate = segment.trim();
+    if (candidate.startsWith('...') || candidate.startsWith('[')) {
+      methodExpression = undefined;
+      unresolvedAssignment = true;
+      continue;
+    }
+
+    const match = candidate.match(/^(?:['"`]method['"`]|method)\s*:\s*([\s\S]+)$/);
+    if (match) {
+      methodExpression = match[1].trim();
+      unresolvedAssignment = false;
+    }
+  }
+
+  if (unresolvedAssignment) return { method: undefined, resolved: false };
   if (methodExpression === undefined) return { method: 'GET', resolved: true };
   const method = methodExpression.match(/^['"`](GET|POST|PUT|PATCH|DELETE)['"`]$/i)?.[1];
   return method
