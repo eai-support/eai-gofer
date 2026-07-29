@@ -29,32 +29,81 @@ function lineNumber(content, index) {
   return content.slice(0, index).split(/\r?\n/).length;
 }
 
+function maskNonCode(content) {
+  const masked = [...content];
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+    const next = content[index + 1];
+
+    if (lineComment) {
+      if (character === '\n') {
+        lineComment = false;
+      } else {
+        masked[index] = ' ';
+      }
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        masked[index] = ' ';
+        masked[index + 1] = ' ';
+        index += 1;
+        blockComment = false;
+      } else if (character !== '\n') {
+        masked[index] = ' ';
+      }
+      continue;
+    }
+    if (quote) {
+      if (character !== '\n') masked[index] = ' ';
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (character === '/' && next === '/') {
+      masked[index] = ' ';
+      masked[index + 1] = ' ';
+      index += 1;
+      lineComment = true;
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      masked[index] = ' ';
+      masked[index + 1] = ' ';
+      index += 1;
+      blockComment = true;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      masked[index] = ' ';
+      quote = character;
+    }
+  }
+
+  return masked.join('');
+}
+
 function callSnippets(content, calleePattern) {
   const snippets = [];
+  const masked = maskNonCode(content);
   const regex = new RegExp(`\\b(?:${calleePattern})\\s*\\(`, 'g');
   let match;
 
-  while ((match = regex.exec(content)) !== null) {
-    const openIndex = content.indexOf('(', match.index);
+  while ((match = regex.exec(masked)) !== null) {
+    const openIndex = masked.indexOf('(', match.index);
     let depth = 0;
-    let quote = '';
-    let escaped = false;
     for (let index = openIndex; index < content.length; index += 1) {
-      const character = content[index];
-      if (quote) {
-        if (escaped) {
-          escaped = false;
-        } else if (character === '\\') {
-          escaped = true;
-        } else if (character === quote) {
-          quote = '';
-        }
-        continue;
-      }
-      if (character === "'" || character === '"' || character === '`') {
-        quote = character;
-        continue;
-      }
+      const character = masked[index];
       if (character === '(') depth += 1;
       if (character === ')') {
         depth -= 1;
@@ -74,47 +123,82 @@ function callSnippets(content, calleePattern) {
   return snippets;
 }
 
-function methodOf(snippet) {
-  return snippet.match(/\bmethod\s*:\s*['"`](POST|PUT|PATCH)['"`]/i)?.[1]?.toUpperCase();
+function splitTopLevel(content) {
+  const masked = maskNonCode(content);
+  const segments = [];
+  let segmentStart = 0;
+  let depth = 0;
+
+  for (let index = 0; index < masked.length; index += 1) {
+    const character = masked[index];
+    if (character === '{' || character === '[' || character === '(') depth += 1;
+    if (character === '}' || character === ']' || character === ')') depth -= 1;
+    if (character === ',' && depth === 0) {
+      segments.push(content.slice(segmentStart, index).trim());
+      segmentStart = index + 1;
+    }
+  }
+  segments.push(content.slice(segmentStart).trim());
+  return segments;
 }
 
-function objectLiteralArgument(snippet) {
-  const stringifyIndex = snippet.search(/JSON\.stringify\s*\(/);
-  if (stringifyIndex === -1) return null;
-  const openParenthesis = snippet.indexOf('(', stringifyIndex);
-  let index = openParenthesis + 1;
-  while (/\s/.test(snippet[index] || '')) index += 1;
-  if (snippet[index] !== '{') return null;
+function callArguments(snippet) {
+  const openIndex = maskNonCode(snippet).indexOf('(');
+  if (openIndex === -1 || !snippet.endsWith(')')) return [];
+  return splitTopLevel(snippet.slice(openIndex + 1, -1));
+}
 
-  const objectStart = index;
+function objectLiteralBody(expression) {
+  let candidate = expression.trim();
+  const stringifyMatch = /^JSON\s*\.\s*stringify\s*\(/.exec(maskNonCode(candidate));
+  if (stringifyMatch) {
+    const args = callArguments(candidate);
+    candidate = args[0]?.trim() || '';
+  }
+  if (!candidate.startsWith('{')) return null;
+
+  const masked = maskNonCode(candidate);
   let depth = 0;
-  let quote = '';
-  let escaped = false;
-  for (; index < snippet.length; index += 1) {
-    const character = snippet[index];
-    if (quote) {
-      if (escaped) {
-        escaped = false;
-      } else if (character === '\\') {
-        escaped = true;
-      } else if (character === quote) {
-        quote = '';
-      }
-      continue;
-    }
-    if (character === "'" || character === '"' || character === '`') {
-      quote = character;
-      continue;
-    }
-    if (character === '{') depth += 1;
-    if (character === '}') {
+  for (let index = 0; index < masked.length; index += 1) {
+    if (masked[index] === '{') depth += 1;
+    if (masked[index] === '}') {
       depth -= 1;
       if (depth === 0) {
-        return snippet.slice(objectStart + 1, index);
+        return candidate.slice(1, index);
       }
     }
   }
   return null;
+}
+
+function topLevelPropertyExpression(objectExpression, propertyName) {
+  const objectBody = objectLiteralBody(objectExpression);
+  if (objectBody === null) return undefined;
+  for (const segment of splitTopLevel(objectBody)) {
+    const match = segment.match(
+      /^(?:['"`]([A-Za-z_$][\w$]*)['"`]|([A-Za-z_$][\w$]*))\s*:\s*([\s\S]+)$/
+    );
+    if ((match?.[1] || match?.[2]) === propertyName) return match[3].trim();
+  }
+  return undefined;
+}
+
+function methodOf(optionsExpression) {
+  const methodExpression = topLevelPropertyExpression(optionsExpression, 'method');
+  if (methodExpression === undefined) return { method: 'GET', resolved: true };
+  const method = methodExpression.match(/^['"`](GET|POST|PUT|PATCH|DELETE)['"`]$/i)?.[1];
+  return method
+    ? { method: method.toUpperCase(), resolved: true }
+    : { method: undefined, resolved: false };
+}
+
+function objectLiteralArgument(expression) {
+  const stringifyIndex = expression.search(/JSON\s*\.\s*stringify\s*\(/);
+  if (stringifyIndex === -1) return null;
+  const openParenthesis = expression.indexOf('(', stringifyIndex);
+  let index = openParenthesis + 1;
+  while (/\s/.test(expression[index] || '')) index += 1;
+  return objectLiteralBody(expression.slice(index));
 }
 
 function topLevelObjectProperties(objectBody) {
@@ -160,11 +244,63 @@ function topLevelObjectProperties(objectBody) {
   return properties;
 }
 
-function hasObjectEnvelope(snippet, requiredProperties) {
-  const objectBody = objectLiteralArgument(snippet);
+function hasObjectEnvelope(bodyExpression, requiredProperties) {
+  const objectBody = objectLiteralArgument(bodyExpression);
   if (objectBody === null) return false;
   const properties = topLevelObjectProperties(objectBody);
   return requiredProperties.every((property) => properties.has(property));
+}
+
+function simpleResourceBindings(content) {
+  const bindings = new Map();
+  const masked = maskNonCode(content);
+  const bindingPattern = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/g;
+  let match;
+
+  while ((match = bindingPattern.exec(masked)) !== null) {
+    const expressionStart = match.index + match[0].length;
+    let expressionEnd = masked.indexOf(';', expressionStart);
+    if (expressionEnd === -1) expressionEnd = content.length;
+    const expression = content.slice(expressionStart, expressionEnd).trim();
+    if (RESOURCE_URL_PATTERN.test(expression)) {
+      bindings.set(match[1], expression);
+    }
+  }
+  return bindings;
+}
+
+function resolvedResourceRoute(expression, bindings) {
+  if (RESOURCE_URL_PATTERN.test(expression)) return expression;
+  const identifier = expression.trim().match(/^([A-Za-z_$][\w$]*)$/)?.[1];
+  return identifier ? bindings.get(identifier) : undefined;
+}
+
+function enclosingBlockEnd(content, start) {
+  const masked = maskNonCode(content);
+  let depth = 0;
+  for (let index = 0; index < start; index += 1) {
+    if (masked[index] === '{') depth += 1;
+    if (masked[index] === '}') depth -= 1;
+  }
+  if (depth === 0) return content.length;
+
+  const targetDepth = depth - 1;
+  for (let index = start; index < masked.length; index += 1) {
+    if (masked[index] === '{') depth += 1;
+    if (masked[index] === '}') {
+      depth -= 1;
+      if (depth === targetDepth) return index;
+    }
+  }
+  return content.length;
+}
+
+function normalizedExpression(expression) {
+  let normalized = expression.replace(/\s+/g, '');
+  while (normalized.startsWith('(') && normalized.endsWith(')')) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized;
 }
 
 function violation(ruleId, file, content, index, message, remediation) {
@@ -180,12 +316,60 @@ function violation(ruleId, file, content, index, message, remediation) {
 
 export function validateSourceContent(content, file = '<memory>') {
   const violations = [];
-  const requests = callSnippets(content, 'fetch|platformFetch');
+  const bindings = simpleResourceBindings(content);
+  const requests = callSnippets(
+    content,
+    '[A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*'
+  );
 
   for (const request of requests) {
-    if (!RESOURCE_URL_PATTERN.test(request.text)) continue;
-    const method = methodOf(request.text);
-    const isObjectTypeManagement = /\/object-types(?:\/|['"`}]|$)/.test(request.text);
+    const callee = request.text.slice(0, request.text.indexOf('(')).replace(/\s+/g, '');
+    const args = callArguments(request.text);
+    const route = resolvedResourceRoute(args[0] || '', bindings);
+    if (!route) continue;
+
+    if (callee !== 'fetch' && callee !== 'platformFetch') {
+      const helperOptions = args[1] || '';
+      const hasRequestOptions =
+        topLevelPropertyExpression(helperOptions, 'method') !== undefined ||
+        topLevelPropertyExpression(helperOptions, 'body') !== undefined;
+      if (!hasRequestOptions) continue;
+      violations.push(
+        violation(
+          'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+          file,
+          content,
+          request.start,
+          `A PublicAPI v4 resource request is hidden behind unsupported helper ${callee}().`,
+          'Use the canonical resource SDK or a direct fetch/platformFetch call with a literal method and body envelope.'
+        )
+      );
+      continue;
+    }
+
+    const optionsExpression = args[1] || '{}';
+    const methodResult = methodOf(optionsExpression);
+    if (!methodResult.resolved) {
+      violations.push(
+        violation(
+          'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+          file,
+          content,
+          request.start,
+          'A PublicAPI v4 resource request uses a dynamic or unresolved HTTP method.',
+          'Use a literal GET, POST, PUT, PATCH, or DELETE method so Gofer can prove the mutation contract.'
+        )
+      );
+      continue;
+    }
+
+    const method = methodResult.method;
+    const bodyExpression = topLevelPropertyExpression(optionsExpression, 'body') || '';
+    const isObjectTypeManagement = /\/object-types(?:\/|['"`}]|$)/.test(route);
+    const isAction = /\/actions\//.test(route);
+    const isOperation = /\/operations\//.test(route);
+    const routeShapeResolved =
+      /\/v4\/data\/resources/.test(route) || /\b(?:this\.)?resourceUrl\s*\(/.test(route);
 
     if (method === 'PATCH' && !isObjectTypeManagement) {
       violations.push(
@@ -201,8 +385,22 @@ export function validateSourceContent(content, file = '<memory>') {
       continue;
     }
 
+    if (!routeShapeResolved && ['POST', 'PUT'].includes(method)) {
+      violations.push(
+        violation(
+          'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+          file,
+          content,
+          request.start,
+          'A PublicAPI v4 resource mutation route is constructed dynamically and its route family cannot be proven.',
+          'Use the canonical resource SDK or keep the literal /v4/data/resources route in the fetch call.'
+        )
+      );
+      continue;
+    }
+
     if (method === 'PUT' && !isObjectTypeManagement) {
-      if (!hasObjectEnvelope(request.text, ['data', 'version'])) {
+      if (!hasObjectEnvelope(bodyExpression, ['data', 'version'])) {
         violations.push(
           violation(
             'EAI_V4_RESOURCE_ENVELOPE_REQUIRED',
@@ -218,25 +416,25 @@ export function validateSourceContent(content, file = '<memory>') {
     }
 
     if (method !== 'POST') continue;
-    if (/\/actions\//.test(request.text)) {
-      if (!hasObjectEnvelope(request.text, ['params'])) {
+    if (isAction || isOperation) {
+      if (!hasObjectEnvelope(bodyExpression, ['params'])) {
         violations.push(
           violation(
             'EAI_V4_RESOURCE_ENVELOPE_REQUIRED',
             file,
             content,
             request.start,
-            'A PublicAPI v4 resource action is missing the params envelope.',
+            `A PublicAPI v4 resource ${isOperation ? 'operation' : 'action'} is missing the params envelope.`,
             'Send POST with JSON.stringify({ params }).'
           )
         );
       }
       continue;
     }
-    if (isObjectTypeManagement || NON_RECORD_MUTATION_PATTERN.test(request.text)) {
+    if (isObjectTypeManagement || NON_RECORD_MUTATION_PATTERN.test(route)) {
       continue;
     }
-    if (!hasObjectEnvelope(request.text, ['data'])) {
+    if (!hasObjectEnvelope(bodyExpression, ['data'])) {
       violations.push(
         violation(
           'EAI_V4_RESOURCE_ENVELOPE_REQUIRED',
@@ -254,36 +452,34 @@ export function validateSourceContent(content, file = '<memory>') {
   for (const actionCall of actionCalls) {
     const receiver = actionCall.text.match(/^([A-Za-z_$][\w$]*)\s*\.\s*executeAction/)?.[1];
     if (!receiver) continue;
-    const afterAction = content.slice(actionCall.end, actionCall.end + 1600);
+    const scopeEnd = enclosingBlockEnd(content, actionCall.end);
+    const afterAction = content.slice(actionCall.end, scopeEnd);
     const escapedReceiver = receiver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const updateFromIndex = afterAction.search(
-      new RegExp(`\\b${escapedReceiver}\\s*\\.\\s*updateFrom\\s*\\(`)
-    );
-    const updateMatch = new RegExp(`\\b${escapedReceiver}\\s*\\.\\s*update\\s*\\(`).exec(
-      afterAction
-    );
-    if (!updateMatch || (updateFromIndex !== -1 && updateFromIndex < updateMatch.index)) {
-      continue;
-    }
-
     const assignmentPrefix = content.slice(Math.max(0, actionCall.start - 160), actionCall.start);
     const resultName = assignmentPrefix.match(
       /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s*$/
     )?.[1];
-    const updateWindow = afterAction.slice(updateMatch.index, updateMatch.index + 800);
-    const usesActionVersion = resultName && updateWindow.includes(`${resultName}.version`);
+    const updateCalls = callSnippets(afterAction, `${escapedReceiver}\\s*\\.\\s*update`);
 
-    if (!usesActionVersion) {
-      violations.push(
-        violation(
-          'EAI_V4_RESOURCE_STALE_VERSION_FLOW',
-          file,
-          content,
-          actionCall.start,
-          'An action is followed by update without using the action result version.',
-          'Capture executeAction(), then call updateFrom(objectType, actionResult, data) or pass actionResult.version.'
-        )
-      );
+    for (const updateCall of updateCalls) {
+      const versionExpression = callArguments(updateCall.text)[3];
+      const usesActionVersion =
+        resultName &&
+        versionExpression &&
+        normalizedExpression(versionExpression) === `${resultName}.version`;
+
+      if (!usesActionVersion) {
+        violations.push(
+          violation(
+            'EAI_V4_RESOURCE_STALE_VERSION_FLOW',
+            file,
+            content,
+            actionCall.end + updateCall.start,
+            'An action is followed by update without passing the action result version as the update version argument.',
+            'Capture executeAction(), then call updateFrom(objectType, actionResult, data) or pass actionResult.version as update() argument four.'
+          )
+        );
+      }
     }
   }
 
