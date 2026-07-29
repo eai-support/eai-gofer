@@ -257,6 +257,31 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     expect(validateSourceContent(valid, 'src/flow.ts')).toEqual([]);
   });
 
+  it('accepts destructured and locally aliased action result versions', () => {
+    const valid = `
+      async function approveWithDestructuring() {
+        const { data, version: actionVersion } =
+          await resources.executeAction('Project', id, 'approve', {});
+        await resources.update('Project', id, data, actionVersion);
+      }
+
+      async function approveWithAlias() {
+        const acted = await resources.executeAction('Project', id, 'approve', {});
+        const nextVersion: number = acted.version;
+        await resources.update('Project', id, acted.data, nextVersion);
+      }
+
+      async function approveWithLaterDestructuring() {
+        const acted = await resources.executeAction('Project', id, 'approve', {});
+        const { version } = acted;
+        const currentVersion = version;
+        await resources.update('Project', id, acted.data, currentVersion);
+      }
+    `;
+
+    expect(validateSourceContent(valid, 'src/flow.ts')).toEqual([]);
+  });
+
   it('checks the update version argument even after updateFrom or unrelated version use', () => {
     const invalid = `
       async function approveAndEdit() {

@@ -383,6 +383,23 @@ function normalizedExpression(expression) {
 
 function actionResultBinding(content, actionStart) {
   const prefix = maskNonCode(content.slice(0, actionStart));
+  const destructured = prefix.match(
+    /(?:const|let|var)\s*\{([^{}]+)\}(?:\s*:\s*[^=]+)?\s*=\s*await\s*\(?\s*$/
+  );
+  if (destructured) {
+    for (const property of splitTopLevel(destructured[1])) {
+      const versionBinding = property
+        .trim()
+        .match(/^version(?:\s*:\s*([A-Za-z_$][\w$]*))?$/);
+      if (versionBinding) {
+        return {
+          resultName: undefined,
+          versionNames: new Set([versionBinding[1] || 'version']),
+        };
+      }
+    }
+  }
+
   const declarations = [
     ...prefix.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g),
   ].reverse();
@@ -392,13 +409,53 @@ function actionResultBinding(content, actionStart) {
     const binding = candidate.match(
       /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[^=]*?)?\s*=\s*await\s*\(?\s*$/
     );
-    if (binding) return binding[1];
+    if (binding) {
+      return { resultName: binding[1], versionNames: new Set() };
+    }
   }
 
   const assignment = prefix.match(
     /(?:^|[;{}])\s*([A-Za-z_$][\w$]*)\s*=\s*await\s*\(?\s*$/
   );
-  return assignment?.[1];
+  return {
+    resultName: assignment?.[1],
+    versionNames: new Set(),
+  };
+}
+
+function versionExpressionsBeforeUpdate(binding, flowPrefix) {
+  const accepted = new Set(binding.versionNames);
+  if (binding.resultName) accepted.add(`${binding.resultName}.version`);
+
+  const masked = maskNonCode(flowPrefix);
+  if (binding.resultName) {
+    const escapedResult = binding.resultName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const propertyAlias = new RegExp(
+      `\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)(?:\\s*:\\s*[^=]+)?\\s*=\\s*${escapedResult}\\s*\\.\\s*version\\b`,
+      'g'
+    );
+    for (const match of masked.matchAll(propertyAlias)) accepted.add(match[1]);
+
+    const destructuredAlias = new RegExp(
+      `\\b(?:const|let|var)\\s*\\{\\s*version(?:\\s*:\\s*([A-Za-z_$][\\w$]*))?\\s*\\}\\s*=\\s*${escapedResult}\\b`,
+      'g'
+    );
+    for (const match of masked.matchAll(destructuredAlias)) {
+      accepted.add(match[1] || 'version');
+    }
+  }
+
+  for (const sourceName of [...accepted]) {
+    if (sourceName.includes('.')) continue;
+    const escapedSource = sourceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const localAlias = new RegExp(
+      `\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)(?:\\s*:\\s*[^=]+)?\\s*=\\s*${escapedSource}\\b`,
+      'g'
+    );
+    for (const match of masked.matchAll(localAlias)) accepted.add(match[1]);
+  }
+
+  return accepted;
 }
 
 function violation(ruleId, file, content, index, message, remediation) {
@@ -579,15 +636,18 @@ export function validateSourceContent(content, file = '<memory>') {
     }
     const afterAction = content.slice(actionCall.end, flowEnd);
     const escapedReceiver = receiver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const resultName = actionResultBinding(content, actionCall.start);
+    const actionBinding = actionResultBinding(content, actionCall.start);
     const updateCalls = callSnippets(afterAction, `${escapedReceiver}\\s*\\.\\s*update`);
 
     for (const updateCall of updateCalls) {
       const versionExpression = callArguments(updateCall.text, updateCall.openOffset)[3];
+      const acceptedVersions = versionExpressionsBeforeUpdate(
+        actionBinding,
+        afterAction.slice(0, updateCall.start)
+      );
       const usesActionVersion =
-        resultName &&
         versionExpression &&
-        normalizedExpression(versionExpression) === `${resultName}.version`;
+        acceptedVersions.has(normalizedExpression(versionExpression));
 
       if (!usesActionVersion) {
         violations.push(
