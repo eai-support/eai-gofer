@@ -220,6 +220,24 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     ]);
   });
 
+  it('does not treat larger identifiers as canonical resource URL helpers', () => {
+    const invalid = `
+      await platformFetch(myresourceUrl(objectType, id), {
+        method: 'PUT',
+        body: JSON.stringify({ data, version }),
+      });
+      await platformFetch($resourcesBaseUrl(objectType), {
+        method: 'POST',
+        body: JSON.stringify({ data }),
+      });
+    `;
+
+    expect(validateSourceContent(invalid, 'src/client.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' }),
+    ]);
+  });
+
   it('inspects the body property instead of unrelated JSON serialization', () => {
     const invalid = `
       await fetch(\`/v4/data/resources/\${tenant}/project/\${id}\`, {

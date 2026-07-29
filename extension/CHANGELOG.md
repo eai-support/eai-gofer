@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.28] - 2026-07-29
+
+Validate strict PublicAPI v4 resource mutation contracts
+
 ## [3.7.27] - 2026-07-22
 
 Fix VS Code and Copilot /eai slash command registration
