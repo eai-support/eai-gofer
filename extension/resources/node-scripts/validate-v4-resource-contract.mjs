@@ -376,11 +376,12 @@ export function validateSourceContent(content, file = '<memory>') {
 
   for (const request of requests) {
     const callee = request.callee;
+    const terminalCallee = callee.split('.').at(-1);
     const args = callArguments(request.text, request.openOffset);
     const route = resolvedResourceRoute(args[0] || '', bindings);
     if (!route) continue;
 
-    if (callee !== 'fetch' && callee !== 'platformFetch') {
+    if (terminalCallee !== 'fetch' && terminalCallee !== 'platformFetch') {
       const helperOptions = args[1] || '';
       const hasRequestOptions =
         topLevelPropertyExpression(helperOptions, 'method') !== undefined ||
