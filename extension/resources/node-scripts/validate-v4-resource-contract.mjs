@@ -195,6 +195,7 @@ function topLevelPropertyExpression(objectExpression, propertyName) {
   const objectBody = objectLiteralBody(objectExpression);
   if (objectBody === null) return undefined;
   for (const segment of splitTopLevel(objectBody)) {
+    if (segment.trim() === propertyName) return propertyName;
     const match = segment.match(
       /^(?:['"`]([A-Za-z_$][\w$]*)['"`]|([A-Za-z_$][\w$]*))\s*:\s*([\s\S]+)$/
     );
@@ -219,6 +220,12 @@ function methodOf(optionsExpression) {
     if (candidate.startsWith('...') || candidate.startsWith('[')) {
       methodExpression = undefined;
       unresolvedAssignment = true;
+      continue;
+    }
+
+    if (candidate === 'method') {
+      methodExpression = candidate;
+      unresolvedAssignment = false;
       continue;
     }
 

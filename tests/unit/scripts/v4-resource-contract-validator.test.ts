@@ -139,12 +139,20 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
       const spreadUrl = \`/v4/data/resources/\${tenant}/project/\${id}\`;
       await fetch(spreadUrl, { ...mutationOptions });
 
+      const shorthandUrl = \`/v4/data/resources/\${tenant}/project/\${id}\`;
+      await fetch(shorthandUrl, { method, body });
+
       const helperUrl = \`/v4/data/resources/\${tenant}/project/\${id}\`;
       await http.request(helperUrl, { method: 'PUT', body: JSON.stringify({ data, version }) });
+
+      const shorthandHelperUrl = \`/v4/data/resources/\${tenant}/project/\${id}\`;
+      await http.request(shorthandHelperUrl, { method, body });
     `;
 
     expect(validateSourceContent(invalid, 'src/client.ts').map((item) => item.ruleId)).toEqual([
       'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
+      'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+      'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
