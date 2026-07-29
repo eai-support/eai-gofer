@@ -61,6 +61,7 @@
     "gofer:codex-doctor": "node .specify/scripts/node/codex-doctor.mjs",
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
+    "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
     "prepack": "npm run build",
     "prepare": "husky"
   },

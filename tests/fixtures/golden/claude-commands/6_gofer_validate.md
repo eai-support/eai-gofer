@@ -318,6 +318,31 @@ Validation MUST treat the closed-loop and loop audits as objective gates:
 - If the audit only reports low-severity warnings with no recommended reopen
   stage, continue but record them in the validation report.
 
+## Step 1.6: PublicAPI V4 Resource Mutation Contract Gate
+
+Run the deterministic application-source guard:
+
+```bash
+node .specify/scripts/node/validate-v4-resource-contract.mjs --workspace . --json
+```
+
+This gate fails when application source:
+
+- sends `PATCH` to a PublicAPI v4 resource record update;
+- sends a flat create, update, or action body instead of the required envelope;
+- performs an action followed by an update without using the action result's
+  version or the canonical `updateFrom(...)` helper.
+
+Object Type management remains a separate contract and may use its documented
+`PATCH /v4/data/resources/object-types/{id}` route. Do not weaken this guard by
+allowing legacy record mutations. Fix the source and rerun the gate. Use at
+most three fix-and-validate attempts; after the third identical failure, mark
+validation failed with the rule ID, file, line, attempted fixes, and the reason
+the contract cannot be satisfied.
+
+Canonical contract:
+https://docs.eai.software/services/publicapi/v4/resource-mutation-contract
+
 ---
 
 # Phase A — Rubric Validation
