@@ -51,6 +51,10 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
+      await fetch<Response>(\`/v4/data/resources/\${tenant}/project/\${id}\`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
       await fetch('/v4/data/resources/object-types/type-id', {
         method: 'PATCH',
         body: JSON.stringify(definition),
@@ -58,6 +62,7 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     `;
 
     expect(validateSourceContent(invalid, 'src/client.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' }),
       expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' }),
     ]);
   });

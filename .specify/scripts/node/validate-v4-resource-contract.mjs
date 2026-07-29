@@ -96,11 +96,29 @@ function maskNonCode(content) {
 function callSnippets(content, calleePattern) {
   const snippets = [];
   const masked = maskNonCode(content);
-  const regex = new RegExp(`\\b(?:${calleePattern})\\s*\\(`, 'g');
+  const regex = new RegExp(`\\b(?:${calleePattern})(?![\\w$])`, 'g');
   let match;
 
   while ((match = regex.exec(masked)) !== null) {
-    const openIndex = masked.indexOf('(', match.index);
+    let openIndex = match.index + match[0].length;
+    while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
+
+    if (masked[openIndex] === '<') {
+      let genericDepth = 0;
+      for (let index = openIndex; index < masked.length; index += 1) {
+        if (masked[index] === '<') genericDepth += 1;
+        if (masked[index] === '>' && masked[index - 1] !== '=') {
+          genericDepth -= 1;
+          if (genericDepth === 0) {
+            openIndex = index + 1;
+            break;
+          }
+        }
+      }
+      while (/\s/.test(masked[openIndex] || '')) openIndex += 1;
+    }
+
+    if (masked[openIndex] !== '(') continue;
     let depth = 0;
     for (let index = openIndex; index < content.length; index += 1) {
       const character = masked[index];
@@ -112,6 +130,8 @@ function callSnippets(content, calleePattern) {
             start: match.index,
             end: index + 1,
             text: content.slice(match.index, index + 1),
+            callee: content.slice(match.index, match.index + match[0].length).replace(/\s+/g, ''),
+            openOffset: openIndex - match.index,
           });
           regex.lastIndex = index + 1;
           break;
@@ -142,8 +162,8 @@ function splitTopLevel(content) {
   return segments;
 }
 
-function callArguments(snippet) {
-  const openIndex = maskNonCode(snippet).indexOf('(');
+function callArguments(snippet, openOffset) {
+  const openIndex = openOffset ?? maskNonCode(snippet).indexOf('(');
   if (openIndex === -1 || !snippet.endsWith(')')) return [];
   return splitTopLevel(snippet.slice(openIndex + 1, -1));
 }
@@ -348,8 +368,8 @@ export function validateSourceContent(content, file = '<memory>') {
   );
 
   for (const request of requests) {
-    const callee = request.text.slice(0, request.text.indexOf('(')).replace(/\s+/g, '');
-    const args = callArguments(request.text);
+    const callee = request.callee;
+    const args = callArguments(request.text, request.openOffset);
     const route = resolvedResourceRoute(args[0] || '', bindings);
     if (!route) continue;
 
@@ -487,7 +507,7 @@ export function validateSourceContent(content, file = '<memory>') {
     const updateCalls = callSnippets(afterAction, `${escapedReceiver}\\s*\\.\\s*update`);
 
     for (const updateCall of updateCalls) {
-      const versionExpression = callArguments(updateCall.text)[3];
+      const versionExpression = callArguments(updateCall.text, updateCall.openOffset)[3];
       const usesActionVersion =
         resultName &&
         versionExpression &&
