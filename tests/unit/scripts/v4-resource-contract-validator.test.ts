@@ -187,6 +187,11 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
       const opaqueHelperUrl = \`/v4/data/resources/\${tenant}/project/\${id}\`;
       await request(opaqueHelperUrl);
 
+      await $fetch(\`/v4/data/resources/\${tenant}/project/\${id}\`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+
       await platformFetch(buildResourceUrl(tenant, 'project', id), {
         method: 'PUT',
         body: JSON.stringify({ data, version }),
@@ -202,6 +207,7 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
 
     expect(validateSourceContent(invalid, 'src/client.ts').map((item) => item.ruleId)).toEqual([
       'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
+      'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
       'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',

@@ -98,7 +98,7 @@ function maskNonCode(content) {
 function callSnippets(content, calleePattern) {
   const snippets = [];
   const masked = maskNonCode(content);
-  const regex = new RegExp(`\\b(?:${calleePattern})(?![\\w$])`, 'g');
+  const regex = new RegExp(`(?<![\\w$])(?:${calleePattern})(?![\\w$])`, 'g');
   let match;
 
   while ((match = regex.exec(masked)) !== null) {
