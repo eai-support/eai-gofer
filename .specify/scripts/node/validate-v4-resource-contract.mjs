@@ -22,6 +22,7 @@ const EXCLUDED_DIRECTORIES = new Set([
 const RESOURCE_URL_PATTERN = /(?:\/api\/eai)?\/v4\/data\/resources|resourceUrl\s*\(/;
 const NON_RECORD_MUTATION_PATTERN =
   /\/(?:object-types|query|search|aggregate|batch|files|links|shares|parents|storage)(?:\/|['"`}]|$)/;
+const NON_NETWORK_ROUTE_CONSUMERS = new Set(['URL']);
 const IS_DIRECT_RUN =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
@@ -401,12 +402,9 @@ export function validateSourceContent(content, file = '<memory>') {
     const route = resolvedResourceRoute(args[0] || '', bindings);
     if (!route) continue;
 
+    if (NON_NETWORK_ROUTE_CONSUMERS.has(terminalCallee)) continue;
+
     if (terminalCallee !== 'fetch' && terminalCallee !== 'platformFetch') {
-      const helperOptions = args[1] || '';
-      const hasRequestOptions =
-        topLevelPropertyExpression(helperOptions, 'method') !== undefined ||
-        topLevelPropertyExpression(helperOptions, 'body') !== undefined;
-      if (!hasRequestOptions) continue;
       violations.push(
         violation(
           'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
