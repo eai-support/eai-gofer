@@ -20,7 +20,7 @@ const EXCLUDED_DIRECTORIES = new Set([
   '__tests__',
 ]);
 const RESOURCE_URL_PATTERN =
-  /(?:\/api\/eai)?\/v4\/data\/resources|resources?BaseUrl\s*\(|resourceUrl\s*\(/;
+  /(?:\/api\/eai)?\/v4\/data\/resources|(?<![\w$])(?:this\s*\.\s*)?(?:resources?BaseUrl|resourceUrl)\s*\(/;
 const NON_RECORD_MUTATION_PATTERN =
   /\/(?:object-types|query|search|aggregate|batch|files|links|shares|parents|storage)(?:\/|['"`}]|$)/;
 const NON_NETWORK_ROUTE_CONSUMERS = new Set(['URL']);
