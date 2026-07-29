@@ -19,7 +19,8 @@ const EXCLUDED_DIRECTORIES = new Set([
   'tests',
   '__tests__',
 ]);
-const RESOURCE_URL_PATTERN = /(?:\/api\/eai)?\/v4\/data\/resources|resourceUrl\s*\(/;
+const RESOURCE_URL_PATTERN =
+  /(?:\/api\/eai)?\/v4\/data\/resources|resources?BaseUrl\s*\(|resourceUrl\s*\(/;
 const NON_RECORD_MUTATION_PATTERN =
   /\/(?:object-types|query|search|aggregate|batch|files|links|shares|parents|storage)(?:\/|['"`}]|$)/;
 const NON_NETWORK_ROUTE_CONSUMERS = new Set(['URL']);
@@ -481,8 +482,38 @@ export function validateSourceContent(content, file = '<memory>') {
     const callee = request.callee;
     const terminalCallee = callee.split('.').at(-1);
     const args = callArguments(request.text, request.openOffset);
+    const isNetworkLike =
+      terminalCallee === 'fetch' ||
+      terminalCallee === 'platformFetch' ||
+      /(?:fetch|request|send|call)$/i.test(terminalCallee || '');
+    if (!isNetworkLike) continue;
+
     const route = resolvedResourceRoute(args[0] || '', bindings);
-    if (!route) continue;
+    if (!route) {
+      const routeExpression = (args[0] || '').trim();
+      const optionsExpression = args[1] || '{}';
+      const methodResult = methodOf(optionsExpression);
+      const isLiteralNonV4Route =
+        /^['"`]/.test(routeExpression) && !/\/v4\/data\/resources/.test(routeExpression);
+      const isUnresolvedResourceCandidate =
+        !isLiteralNonV4Route && /resource/i.test(routeExpression);
+      const isMutationCandidate =
+        !methodResult.resolved || ['POST', 'PUT', 'PATCH'].includes(methodResult.method);
+
+      if (isUnresolvedResourceCandidate && isMutationCandidate) {
+        violations.push(
+          violation(
+            'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+            file,
+            content,
+            request.start,
+            'A mutation-capable PublicAPI resource request uses a route that cannot be proven.',
+            'Use the canonical resource SDK or keep the literal /v4/data/resources route in the network call.'
+          )
+        );
+      }
+      continue;
+    }
 
     if (NON_NETWORK_ROUTE_CONSUMERS.has(terminalCallee)) continue;
 
@@ -522,7 +553,9 @@ export function validateSourceContent(content, file = '<memory>') {
     const isAction = /\/actions\//.test(route);
     const isOperation = /\/operations\//.test(route);
     const routeShapeResolved =
-      /\/v4\/data\/resources/.test(route) || /\b(?:this\.)?resourceUrl\s*\(/.test(route);
+      /\/v4\/data\/resources/.test(route) ||
+      /\b(?:this\.)?resources?BaseUrl\s*\(/.test(route) ||
+      /\b(?:this\.)?resourceUrl\s*\(/.test(route);
 
     if (method === 'PATCH' && !isObjectTypeManagement) {
       violations.push(
