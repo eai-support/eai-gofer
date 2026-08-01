@@ -30,7 +30,8 @@ describe('createGoferExportBundle', () => {
       nextAllowedStage: '5_implement',
       repositoryAction: 'generate',
       auditHistoryPath: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
-      capabilityManifestPath:
+      capabilityManifestPath: 'src/eai.config/capabilities.generated.json',
+      capabilityEvidencePath:
         '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
       executionReference: {
         provider: 'eai-workflow',

@@ -8,6 +8,7 @@ import {
   GOFER_PIPELINE_STAGES,
   GOFER_REQUIRED_ARTIFACT_KINDS_BY_STAGE,
   GOFER_SOURCE_MANIFEST_SCHEMA_VERSION,
+  GENERATED_APP_CAPABILITY_MANIFEST_PATH,
   type CreateGoferExportBundleRequest,
   type AppCapabilityRequirement,
   type AppCapabilityRequirements,
@@ -425,7 +426,7 @@ export function createGoferHandoff(
   artifactManifestPath: string,
   sourceManifestPath: string,
   auditHistoryPath = artifactManifestPath.replace(/artifact-manifest\.json$/, 'audit-history.json'),
-  capabilityManifestPath = artifactManifestPath.replace(
+  capabilityEvidencePath = artifactManifestPath.replace(
     /artifact-manifest\.json$/,
     'app-capabilities.json'
   )
@@ -473,7 +474,8 @@ export function createGoferHandoff(
     artifactManifestPath,
     sourceManifestPath,
     auditHistoryPath,
-    capabilityManifestPath,
+    capabilityManifestPath: GENERATED_APP_CAPABILITY_MANIFEST_PATH,
+    capabilityEvidencePath,
     omissions: [...request.omissions].sort(compareOmissions),
   };
 }
@@ -501,14 +503,14 @@ export function createGoferExportBundle(
 
   const featureRoot = `.specify/specs/${request.run.featureSlug}`;
   const artifactManifestPath = `${featureRoot}/artifact-manifest.json`;
-  const capabilityManifestPath = `${featureRoot}/app-capabilities.json`;
+  const capabilityEvidencePath = `${featureRoot}/app-capabilities.json`;
   const auditHistoryPath = `${featureRoot}/audit-history.json`;
   const handoffPath = `${featureRoot}/gofer-handoff.json`;
   const sourceManifestPath = '.specify/sources/source-manifest.json';
   const versionPath = '.specify/gofer-version.json';
   const reservedPaths = [
     artifactManifestPath,
-    capabilityManifestPath,
+    capabilityEvidencePath,
     auditHistoryPath,
     handoffPath,
     sourceManifestPath,
@@ -550,7 +552,7 @@ export function createGoferExportBundle(
     artifactManifestPath,
     sourceManifestPath,
     auditHistoryPath,
-    capabilityManifestPath
+    capabilityEvidencePath
   );
 
   const generatedFiles: GoferPortableFileInput[] = [
@@ -570,7 +572,7 @@ export function createGoferExportBundle(
       content: stringifyGoferManifest(artifactManifest),
     },
     {
-      path: capabilityManifestPath,
+      path: capabilityEvidencePath,
       encoding: 'utf8',
       content: stringifyGoferManifest(capabilityRequirements),
     },

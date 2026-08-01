@@ -12,6 +12,9 @@ export const GOFER_AUDIT_HISTORY_SCHEMA_VERSION = 'eai.gofer.audit_history.v1' a
 export const GOFER_EXPORT_BUNDLE_SCHEMA_VERSION = 'eai.gofer.export_bundle.v1' as const;
 /** Schema discriminator shared with CLI-built and No-Code Builder applications. */
 export const APP_CAPABILITY_SCHEMA_VERSION = 'eai.app_capabilities.v1' as const;
+/** Canonical generated-app source path shared by CLI, NCB, and Gofer adapters. */
+export const GENERATED_APP_CAPABILITY_MANIFEST_PATH =
+  'src/eai.config/capabilities.generated.json' as const;
 
 /** Ordered stages supported by the governed pre-implementation pipeline. */
 export const GOFER_PIPELINE_STAGES = [
@@ -356,6 +359,7 @@ export interface GoferHandoff {
   sourceManifestPath: string;
   auditHistoryPath: string;
   capabilityManifestPath: string;
+  capabilityEvidencePath: string;
   omissions: readonly GoferExportOmission[];
 }
 
