@@ -330,6 +330,8 @@ export interface AppCapabilityRequirement {
   capability: string;
   required: boolean;
   description: string;
+  compatibleProviders?: readonly string[];
+  compatibleAssetTypes?: readonly string[];
 }
 
 /** Environment-neutral capability requirements emitted by governed app delivery. */

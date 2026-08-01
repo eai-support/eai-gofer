@@ -86,6 +86,29 @@ describe('createGoferExportBundle', () => {
     });
   });
 
+  it('accepts and canonicalizes optional provider and asset compatibility keys', () => {
+    const fixture = createValidExportFixture();
+    const requirement = fixture.capabilityRequirements.requirements[0];
+    const bundle = createGoferExportBundle({
+      ...fixture,
+      capabilityRequirements: {
+        ...fixture.capabilityRequirements,
+        requirements: [
+          {
+            ...requirement,
+            compatibleProviders: ['workflow_engine', 'publicapi'],
+            compatibleAssetTypes: ['shared-workflow-*', 'workflow-template'],
+          },
+        ],
+      },
+    });
+
+    expect(bundle.capabilityRequirements.requirements[0]).toMatchObject({
+      compatibleProviders: ['publicapi', 'workflow_engine'],
+      compatibleAssetTypes: ['shared-workflow-*', 'workflow-template'],
+    });
+  });
+
   it('rejects environment-specific capability data and invalid logical contracts', () => {
     const fixture = createValidExportFixture();
     const valid = fixture.capabilityRequirements.requirements[0];
@@ -125,6 +148,21 @@ describe('createGoferExportBundle', () => {
         },
       })
     ).toThrow('must not contain raw tenant record IDs');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [
+            {
+              ...valid,
+              compatibleAssetTypes: ['shared-workflow-*', 'shared-workflow-*'],
+            },
+          ],
+        },
+      })
+    ).toThrow('must not contain duplicate logical keys');
   });
 
   it('does not allow input files to replace the generated capability manifest', () => {

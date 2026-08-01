@@ -32,9 +32,8 @@ import {
 import { validateGenerationReadiness } from './validators.js';
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
-const APP_KEY_PATTERN = /^[a-z][a-z0-9-]{1,62}$/;
-const CAPABILITY_KEY_PATTERN = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
-const LOGICAL_ALIAS_PATTERN = /^[a-z][a-z0-9-]{1,62}$/;
+const LOGICAL_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RAW_RECORD_ID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 
 function compareText(left: string, right: string): number {
@@ -114,7 +113,40 @@ function canonicalCapabilityRequirement(
     capability: requirement.capability.trim(),
     required: requirement.required,
     description: requirement.description.trim(),
+    ...(requirement.compatibleProviders
+      ? { compatibleProviders: [...requirement.compatibleProviders].sort(compareText) }
+      : {}),
+    ...(requirement.compatibleAssetTypes
+      ? { compatibleAssetTypes: [...requirement.compatibleAssetTypes].sort(compareText) }
+      : {}),
   };
+}
+
+function normalizeLogicalKey(value: unknown, field: string): string {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!LOGICAL_KEY_PATTERN.test(normalized) || UUID_PATTERN.test(normalized)) {
+    throw new Error(`${field} must be a logical key.`);
+  }
+  return normalized;
+}
+
+function normalizeLogicalList(value: unknown, field: string): readonly string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${field} must be an array of logical keys.`);
+  }
+  const normalized = value.map((item, index) => {
+    const logicalReference = typeof item === 'string' ? item.trim() : '';
+    const wildcard = logicalReference.endsWith('*');
+    const logicalKey = wildcard ? logicalReference.slice(0, -1) : logicalReference;
+    return `${normalizeLogicalKey(logicalKey, `${field}[${index}]`)}${wildcard ? '*' : ''}`;
+  });
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error(`${field} must not contain duplicate logical keys.`);
+  }
+  return normalized.sort(compareText);
 }
 
 function canonicalCapabilityRequirements(
@@ -146,9 +178,7 @@ export function validateAppCapabilityRequirements(manifest: unknown): AppCapabil
   if (record.schemaVersion !== APP_CAPABILITY_SCHEMA_VERSION) {
     throw new Error('capabilityRequirements.schemaVersion is unsupported.');
   }
-  if (typeof record.appKey !== 'string' || !APP_KEY_PATTERN.test(record.appKey.trim())) {
-    throw new Error('capabilityRequirements.appKey must be kebab-case.');
-  }
+  const appKey = normalizeLogicalKey(record.appKey, 'capabilityRequirements.appKey');
   if (!Array.isArray(record.requirements) || record.requirements.length < 1) {
     throw new Error('capabilityRequirements.requirements must contain at least one requirement.');
   }
@@ -159,26 +189,31 @@ export function validateAppCapabilityRequirements(manifest: unknown): AppCapabil
       throw new Error(`capabilityRequirements.requirements[${index}] must be an object.`);
     }
     const item = candidate as Record<string, unknown>;
-    const keys = Object.keys(item).sort(compareText);
-    if (keys.join(',') !== 'alias,capability,description,required') {
+    const allowedKeys = new Set([
+      'alias',
+      'capability',
+      'description',
+      'required',
+      'compatibleProviders',
+      'compatibleAssetTypes',
+    ]);
+    if (Object.keys(item).some((key) => !allowedKeys.has(key))) {
       throw new Error(`capabilityRequirements.requirements[${index}] contains unsupported fields.`);
     }
 
-    const alias = typeof item.alias === 'string' ? item.alias.trim() : '';
-    const capability = typeof item.capability === 'string' ? item.capability.trim() : '';
+    const alias = normalizeLogicalKey(
+      item.alias,
+      `capabilityRequirements.requirements[${index}].alias`
+    );
+    const capability = normalizeLogicalKey(
+      item.capability,
+      `capabilityRequirements.requirements[${index}].capability`
+    );
     const description = typeof item.description === 'string' ? item.description.trim() : '';
-    if (!LOGICAL_ALIAS_PATTERN.test(alias)) {
-      throw new Error(`capabilityRequirements.requirements[${index}].alias must be kebab-case.`);
-    }
     if (aliases.has(alias)) {
       throw new Error(`capabilityRequirements contains duplicate alias "${alias}".`);
     }
     aliases.add(alias);
-    if (!CAPABILITY_KEY_PATTERN.test(capability)) {
-      throw new Error(
-        `capabilityRequirements.requirements[${index}].capability must be a stable capability key.`
-      );
-    }
     if (typeof item.required !== 'boolean') {
       throw new Error(`capabilityRequirements.requirements[${index}].required must be boolean.`);
     }
@@ -189,12 +224,28 @@ export function validateAppCapabilityRequirements(manifest: unknown): AppCapabil
       throw new Error('capabilityRequirements must not contain raw tenant record IDs.');
     }
 
-    return { alias, capability, required: item.required, description };
+    const compatibleProviders = normalizeLogicalList(
+      item.compatibleProviders,
+      `capabilityRequirements.requirements[${index}].compatibleProviders`
+    );
+    const compatibleAssetTypes = normalizeLogicalList(
+      item.compatibleAssetTypes,
+      `capabilityRequirements.requirements[${index}].compatibleAssetTypes`
+    );
+
+    return {
+      alias,
+      capability,
+      required: item.required,
+      description,
+      ...(compatibleProviders ? { compatibleProviders } : {}),
+      ...(compatibleAssetTypes ? { compatibleAssetTypes } : {}),
+    };
   });
 
   return canonicalCapabilityRequirements({
     schemaVersion: APP_CAPABILITY_SCHEMA_VERSION,
-    appKey: record.appKey.trim(),
+    appKey,
     requirements,
   });
 }
