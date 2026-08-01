@@ -9,6 +9,7 @@ import {
   createGoferScaffoldInventoryDigest,
   createGoferExportBundle,
   isPortableGoferScaffoldPath,
+  validateAppCapabilityRequirements,
 } from '../../../src/headless/index.js';
 import { createValidExportFixture } from './fixtures.js';
 
@@ -60,6 +61,10 @@ describe('createGoferExportBundle', () => {
           path: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
         }),
         expect.objectContaining({
+          path: 'src/eai.config/capabilities.generated.json',
+          encoding: 'utf8',
+        }),
+        expect.objectContaining({
           path: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
         }),
         expect.objectContaining({
@@ -83,6 +88,15 @@ describe('createGoferExportBundle', () => {
         expect.objectContaining({ alias: 'primary-workflow', capability: 'workflows.runtime' }),
       ],
     });
+    const generatedCapabilityManifest = first.files.find(
+      ({ path }) => path === 'src/eai.config/capabilities.generated.json'
+    );
+    const capabilityEvidence = first.files.find(
+      ({ path }) => path === '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json'
+    );
+    expect(JSON.parse(generatedCapabilityManifest!.content)).toEqual(first.capabilityRequirements);
+    expect(generatedCapabilityManifest!.content).toBe(capabilityEvidence!.content);
+    expect(generatedCapabilityManifest!.sha256).toBe(capabilityEvidence!.sha256);
   });
 
   it('accepts and canonicalizes optional provider and asset compatibility keys', () => {
@@ -105,6 +119,68 @@ describe('createGoferExportBundle', () => {
     expect(bundle.capabilityRequirements.requirements[0]).toMatchObject({
       compatibleProviders: ['publicapi', 'workflow_engine'],
       compatibleAssetTypes: ['shared-workflow-*', 'workflow-template'],
+    });
+  });
+
+  it('enforces the PublicAPI capability manifest wire limits', () => {
+    const fixture = createValidExportFixture();
+    const requirement = fixture.capabilityRequirements.requirements[0];
+    const requirements = Array.from({ length: 100 }, (_, index) => ({
+      ...requirement,
+      alias: index === 0 ? `a${'b'.repeat(119)}` : `requirement-${index}`,
+      capability: index === 0 ? `c${'d'.repeat(159)}` : requirement.capability,
+      description: index === 0 ? 'x'.repeat(500) : requirement.description,
+      compatibleProviders:
+        index === 0
+          ? Array.from({ length: 20 }, (__, itemIndex) => `provider-${itemIndex}`)
+          : undefined,
+    }));
+
+    expect(
+      validateAppCapabilityRequirements({
+        schemaVersion: 'eai.app_capabilities.v1',
+        appKey: `a${'b'.repeat(119)}`,
+        requirements,
+      }).requirements
+    ).toHaveLength(100);
+
+    const overLimitCases = [
+      { appKey: `a${'b'.repeat(120)}`, requirements: [requirement] },
+      {
+        appKey: 'rates-review',
+        requirements: [...requirements, { ...requirement, alias: 'extra' }],
+      },
+      { appKey: 'rates-review', requirements: [{ ...requirement, alias: `a${'b'.repeat(120)}` }] },
+      {
+        appKey: 'rates-review',
+        requirements: [{ ...requirement, capability: `c${'d'.repeat(160)}` }],
+      },
+      { appKey: 'rates-review', requirements: [{ ...requirement, description: 'x'.repeat(501) }] },
+      {
+        appKey: 'rates-review',
+        requirements: [
+          {
+            ...requirement,
+            compatibleAssetTypes: Array.from({ length: 21 }, (__, index) => `asset-${index}`),
+          },
+        ],
+      },
+    ];
+    const errors = [
+      'at most 120 characters',
+      'at most 100 items',
+      'at most 120 characters',
+      'at most 160 characters',
+      'at most 500 characters',
+      'at most 20 items',
+    ];
+    overLimitCases.forEach((manifest, index) => {
+      expect(() =>
+        validateAppCapabilityRequirements({
+          schemaVersion: 'eai.app_capabilities.v1',
+          ...manifest,
+        })
+      ).toThrow(errors[index]);
     });
   });
 
@@ -164,7 +240,10 @@ describe('createGoferExportBundle', () => {
     ).toThrow('must not contain duplicate logical keys');
   });
 
-  it('does not allow input files to replace the generated capability manifest', () => {
+  it.each([
+    '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+    'src/eai.config/capabilities.generated.json',
+  ])('does not allow input files to replace generated capability manifest %s', (path) => {
     const fixture = createValidExportFixture();
     expect(() =>
       createGoferExportBundle({
@@ -172,13 +251,13 @@ describe('createGoferExportBundle', () => {
         files: [
           ...fixture.files,
           {
-            path: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+            path,
             content: '{}',
             encoding: 'utf8',
           },
         ],
       })
-    ).toThrow('app-capabilities.json');
+    ).toThrow(`must not replace generated manifest ${path}`);
   });
 
   it('pins the complete v3.7.21 portable scaffold inventory and excludes runtime state', () => {
