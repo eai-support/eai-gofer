@@ -30,6 +30,8 @@ describe('createGoferExportBundle', () => {
       nextAllowedStage: '5_implement',
       repositoryAction: 'generate',
       auditHistoryPath: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
+      capabilityManifestPath:
+        '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
       executionReference: {
         provider: 'eai-workflow',
         executionId: 'execution-1',
@@ -55,6 +57,9 @@ describe('createGoferExportBundle', () => {
           path: '.specify/specs/3171-admin-portal-gofer-stages/artifact-manifest.json',
         }),
         expect.objectContaining({
+          path: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+        }),
+        expect.objectContaining({
           path: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
         }),
         expect.objectContaining({
@@ -70,6 +75,72 @@ describe('createGoferExportBundle', () => {
       runId: 'run-3171',
     });
     expect(first.auditHistory.events.map((event) => event.sequence)).toEqual([1, 2, 3]);
+    expect(first.capabilityRequirements).toEqual({
+      schemaVersion: 'eai.app_capabilities.v1',
+      appKey: 'rates-review',
+      requirements: [
+        expect.objectContaining({ alias: 'assistant-prompt', capability: 'ai.chat' }),
+        expect.objectContaining({ alias: 'primary-workflow', capability: 'workflows.runtime' }),
+      ],
+    });
+  });
+
+  it('rejects environment-specific capability data and invalid logical contracts', () => {
+    const fixture = createValidExportFixture();
+    const valid = fixture.capabilityRequirements.requirements[0];
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [{ ...valid, tenantId: 'tenant-1' } as typeof valid],
+        },
+      })
+    ).toThrow('contains unsupported fields');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [valid, { ...valid }],
+        },
+      })
+    ).toThrow('duplicate alias');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [
+            {
+              ...valid,
+              description:
+                'Use tenant record 40795709-be42-4fa5-879b-aec8c3f9b3c3 for this workflow.',
+            },
+          ],
+        },
+      })
+    ).toThrow('must not contain raw tenant record IDs');
+  });
+
+  it('does not allow input files to replace the generated capability manifest', () => {
+    const fixture = createValidExportFixture();
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        files: [
+          ...fixture.files,
+          {
+            path: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+            content: '{}',
+            encoding: 'utf8',
+          },
+        ],
+      })
+    ).toThrow('app-capabilities.json');
   });
 
   it('pins the complete v3.7.21 portable scaffold inventory and excludes runtime state', () => {

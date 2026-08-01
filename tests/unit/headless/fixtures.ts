@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  APP_CAPABILITY_SCHEMA_VERSION,
   GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
   GOFER_PORTABLE_SCAFFOLD_PATHS,
   type CreateGoferExportBundleRequest,
@@ -284,6 +285,24 @@ export function createValidExportFixture(): CreateGoferExportBundleRequest {
       },
     ],
     omissions: [],
+    capabilityRequirements: {
+      schemaVersion: APP_CAPABILITY_SCHEMA_VERSION,
+      appKey: 'rates-review',
+      requirements: [
+        {
+          alias: 'primary-workflow',
+          capability: 'workflows.runtime',
+          required: true,
+          description: 'Workflow executed by the generated application.',
+        },
+        {
+          alias: 'assistant-prompt',
+          capability: 'ai.chat',
+          required: false,
+          description: 'Governed prompt used by AI-assisted steps.',
+        },
+      ],
+    },
     files: [
       ...GOFER_PORTABLE_SCAFFOLD_PATHS.map((path) => ({
         path,
