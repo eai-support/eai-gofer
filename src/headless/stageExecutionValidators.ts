@@ -31,6 +31,10 @@ function isIsoTimestamp(value: string): boolean {
   return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 function sortedReferenceKeys(refs: readonly GoferArtifactReference[]): string[] {
   return refs
     .map((ref) => `${ref.artifactId}:${ref.version}:${ref.sha256}`)
@@ -125,10 +129,13 @@ export function validateStageExecutionRequest(
   if (request.schemaVersion !== GOFER_ADMIN_PORTAL_CONTRACT_VERSION) {
     errors.push(`Stage request schemaVersion must be ${GOFER_ADMIN_PORTAL_CONTRACT_VERSION}.`);
   }
-  if (!request.tenantId.trim()) {
+  if (!isNonEmptyString(request.tenantId)) {
     errors.push('Stage request tenantId is required.');
   }
-  if (!request.runId.trim()) {
+  if (!isNonEmptyString(request.appKey)) {
+    errors.push('Stage request appKey is required.');
+  }
+  if (!isNonEmptyString(request.runId)) {
     errors.push('Stage request runId is required.');
   }
   if (!FEATURE_SLUG_PATTERN.test(request.featureSlug)) {
@@ -172,10 +179,11 @@ export function validateStageExecutionResult(
   }
   if (
     executionResult.tenantId !== request.tenantId ||
+    executionResult.appKey !== request.appKey ||
     executionResult.runId !== request.runId ||
     executionResult.stage !== request.stage
   ) {
-    errors.push('Stage result tenantId, runId, and stage must match the request.');
+    errors.push('Stage result tenantId, appKey, runId, and stage must match the request.');
   }
   if (!GOFER_PIPELINE_STAGES.includes(executionResult.stage)) {
     errors.push('Stage result stage is invalid.');

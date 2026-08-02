@@ -58,6 +58,10 @@ function isIsoTimestamp(value: string): boolean {
   return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 function latestArtifactsById(
   artifacts: readonly GoferArtifactRecord[],
   runId?: string
@@ -117,11 +121,12 @@ export function validateGoferRun(run: GoferRun): GoferValidationResult {
   for (const [field, value] of [
     ['runId', run.runId],
     ['tenantId', run.tenantId],
+    ['appKey', run.appKey],
     ['draftId', run.draftId],
     ['goferVersion', run.goferVersion],
     ['scaffoldVersion', run.scaffoldVersion],
   ] as const) {
-    if (!value.trim()) {
+    if (!isNonEmptyString(value)) {
       errors.push(`${field} is required.`);
     }
   }

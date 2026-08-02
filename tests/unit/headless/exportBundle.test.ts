@@ -27,6 +27,9 @@ describe('createGoferExportBundle', () => {
     expect(second).toEqual(first);
     expect(first.handoff).toMatchObject({
       schemaVersion: 'eai.gofer.handoff.v1',
+      tenantId: 'tenant-1',
+      appKey: 'sample-app',
+      runId: 'run-3171',
       nextAllowedStage: '5_implement',
       repositoryAction: 'generate',
       auditHistoryPath: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
@@ -70,6 +73,19 @@ describe('createGoferExportBundle', () => {
       runId: 'run-3171',
     });
     expect(first.auditHistory.events.map((event) => event.sequence)).toEqual([1, 2, 3]);
+  });
+
+  it('refuses to export a legacy run without canonical app identity', () => {
+    const request = createValidExportFixture();
+    const legacyRun = { ...request.run } as Partial<typeof request.run>;
+    delete legacyRun.appKey;
+
+    expect(() =>
+      createGoferExportBundle({
+        ...request,
+        run: legacyRun as typeof request.run,
+      })
+    ).toThrow('Gofer run is not ready for repository export: appKey is required.');
   });
 
   it('pins the complete v3.7.21 portable scaffold inventory and excludes runtime state', () => {

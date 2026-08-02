@@ -192,6 +192,7 @@ export interface GoferRun {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   runId: string;
   tenantId: string;
+  appKey: string;
   draftId: string;
   appId?: string;
   featureSlug: string;
@@ -227,6 +228,7 @@ export interface GoferRunEvent {
 export interface GoferStageExecutionRequest {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   tenantId: string;
+  appKey: string;
   runId: string;
   featureSlug: string;
   stage: GoferPipelineStage;
@@ -247,6 +249,7 @@ export interface GoferStageExecutionError {
 export interface GoferStageExecutionResult {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   tenantId: string;
+  appKey: string;
   runId: string;
   stage: GoferPipelineStage;
   status: GoferStageExecutionStatus;
@@ -323,6 +326,8 @@ export interface GoferPortableFile extends GoferPortableFileInput {
 export interface GoferHandoff {
   schemaVersion: typeof GOFER_HANDOFF_SCHEMA_VERSION;
   contractVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
+  tenantId: string;
+  appKey: string;
   runId: string;
   draftId: string;
   appId?: string;

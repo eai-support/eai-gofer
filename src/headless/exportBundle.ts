@@ -352,6 +352,8 @@ export function createGoferHandoff(
   return {
     schemaVersion: GOFER_HANDOFF_SCHEMA_VERSION,
     contractVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
+    tenantId: request.run.tenantId,
+    appKey: request.run.appKey,
     runId: request.run.runId,
     draftId: request.run.draftId,
     ...(request.run.appId ? { appId: request.run.appId } : {}),

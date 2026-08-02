@@ -143,6 +143,7 @@ export function createValidExportFixture(): CreateGoferExportBundleRequest {
     schemaVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
     runId: RUN_ID,
     tenantId: 'tenant-1',
+    appKey: 'sample-app',
     draftId: 'draft-1',
     appId: 'app-1',
     featureSlug: '3171-admin-portal-gofer-stages',

@@ -38,6 +38,7 @@ function createExecutionFixture(): {
     request: {
       schemaVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
       tenantId: fixture.run.tenantId,
+      appKey: fixture.run.appKey,
       runId: fixture.run.runId,
       featureSlug: fixture.run.featureSlug,
       stage: '4_tasks',
@@ -49,6 +50,7 @@ function createExecutionFixture(): {
     result: {
       schemaVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
       tenantId: fixture.run.tenantId,
+      appKey: fixture.run.appKey,
       runId: fixture.run.runId,
       stage: '4_tasks',
       status: 'succeeded',
@@ -106,6 +108,7 @@ describe('GoferStageExecutor headless contract', () => {
     const drifted = {
       ...fixture.result,
       tenantId: 'another-tenant',
+      appKey: 'another-app',
       runId: 'another-run',
       stage: '3_plan',
       executionReference: {
@@ -122,10 +125,46 @@ describe('GoferStageExecutor headless contract', () => {
     expect(validateStageExecutionResult(fixture.request, drifted)).toMatchObject({
       valid: false,
       errors: expect.arrayContaining([
-        'Stage result tenantId, runId, and stage must match the request.',
+        'Stage result tenantId, appKey, runId, and stage must match the request.',
         'Stage result executionReference must match the request.',
         expect.stringContaining('must belong to the request run and stage'),
       ]),
+    });
+  });
+
+  it('requires app identity and rejects cross-app stage results', () => {
+    const fixture = createExecutionFixture();
+
+    expect(validateStageExecutionRequest({ ...fixture.request, appKey: ' ' })).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['Stage request appKey is required.']),
+    });
+    expect(
+      validateStageExecutionResult(fixture.request, {
+        ...fixture.result,
+        appKey: 'another-app',
+      })
+    ).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([
+        'Stage result tenantId, appKey, runId, and stage must match the request.',
+      ]),
+    });
+  });
+
+  it.each([
+    ['tenantId', 'Stage request tenantId is required.'],
+    ['appKey', 'Stage request appKey is required.'],
+  ] as const)('fails closed when legacy stage requests omit %s', (field, expectedError) => {
+    const fixture = createExecutionFixture();
+    const legacyRequest = { ...fixture.request } as Partial<GoferStageExecutionRequest>;
+    delete legacyRequest[field];
+
+    expect(
+      validateStageExecutionRequest(legacyRequest as GoferStageExecutionRequest)
+    ).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([expectedError]),
     });
   });
 

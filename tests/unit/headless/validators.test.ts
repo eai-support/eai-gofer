@@ -186,6 +186,30 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it('requires immutable app identity in run projections', () => {
+    const fixture = createValidExportFixture();
+    const invalid = { ...fixture.run, appKey: ' ' };
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['appKey is required.']),
+    });
+  });
+
+  it.each([
+    ['tenantId', 'tenantId is required.'],
+    ['appKey', 'appKey is required.'],
+  ] as const)('fails closed when legacy run payloads omit %s', (field, expectedError) => {
+    const fixture = createValidExportFixture();
+    const legacyRun = { ...fixture.run } as Partial<GoferRun>;
+    delete legacyRun[field];
+
+    expect(validateGoferRun(legacyRun as GoferRun)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([expectedError]),
+    });
+  });
+
   it('fails closed instead of throwing for an invalid runtime stage value', () => {
     const fixture = createValidExportFixture();
     const invalid = { ...fixture.run, currentStage: 'unknown' } as unknown as GoferRun;
