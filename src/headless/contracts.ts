@@ -1,5 +1,7 @@
 /** Version discriminator shared by Gofer and Admin Portal persistence adapters. */
 export const GOFER_ADMIN_PORTAL_CONTRACT_VERSION = 'eai.gofer.admin_portal.v1' as const;
+/** Stable semantic boundary implemented by compatible headless Gofer releases. */
+export const GOFER_RELEASE_CONTRACT_VERSION = 'eai.gofer.headless.v1' as const;
 /** Schema discriminator for the generated-repository implementation handoff. */
 export const GOFER_HANDOFF_SCHEMA_VERSION = 'eai.gofer.handoff.v1' as const;
 /** Schema discriminator for the immutable artifact manifest. */
@@ -36,6 +38,16 @@ export type GoferPipelineStage = (typeof GOFER_PIPELINE_STAGES)[number];
 export type GoferRequiredPipelineStage = (typeof GOFER_REQUIRED_PIPELINE_STAGES)[number];
 /** First stage a generated repository may run after the governed handoff. */
 export type GoferNextStage = '5_implement';
+
+/** Immutable runtime release identity recorded on each run and repository handoff. */
+export interface GoferReleaseDescriptor {
+  contractVersion: typeof GOFER_RELEASE_CONTRACT_VERSION;
+  repository: string;
+  version: string;
+  ref: string;
+  commitSha: string;
+  inventoryDigest: string;
+}
 
 /** Canonical artifact-kind vocabulary accepted by the headless contract. */
 export const GOFER_ARTIFACT_KINDS = [
@@ -196,8 +208,7 @@ export interface GoferRun {
   draftId: string;
   appId?: string;
   featureSlug: string;
-  goferVersion: string;
-  scaffoldVersion: string;
+  goferRelease: Readonly<GoferReleaseDescriptor>;
   status: GoferRunStatus;
   currentStage: GoferPipelineStage;
   stages: readonly GoferStageState[];
@@ -333,8 +344,7 @@ export interface GoferHandoff {
   appId?: string;
   featureSlug: string;
   repositoryAction: GoferRepositoryAction;
-  goferVersion: string;
-  scaffoldVersion: string;
+  goferRelease: Readonly<GoferReleaseDescriptor>;
   completedStages: readonly GoferPipelineStage[];
   approvedArtifacts: readonly GoferArtifactReference[];
   executionReference?: GoferExecutionReference;

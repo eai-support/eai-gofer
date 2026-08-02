@@ -359,8 +359,7 @@ export function createGoferHandoff(
     ...(request.run.appId ? { appId: request.run.appId } : {}),
     featureSlug: request.run.featureSlug,
     repositoryAction: request.repositoryAction,
-    goferVersion: request.run.goferVersion,
-    scaffoldVersion: request.run.scaffoldVersion,
+    goferRelease: Object.freeze({ ...request.run.goferRelease }),
     completedStages,
     approvedArtifacts,
     ...(request.run.executionReference
@@ -385,7 +384,7 @@ export function createGoferExportBundle(
   assertRecordOwnership(request);
   assertUniquePaths(request.files);
   const suppliedFiles = request.files.map(contentAddressFile);
-  assertPortableGoferScaffold(suppliedFiles, request.run.scaffoldVersion);
+  assertPortableGoferScaffold(suppliedFiles, request.run.goferRelease);
   assertPortableOrDeclaredGoferFiles(
     suppliedFiles,
     new Set([
@@ -453,8 +452,7 @@ export function createGoferExportBundle(
       content: stringifyGoferManifest({
         schemaVersion: 'eai.gofer.scaffold.v1',
         contractVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
-        goferVersion: request.run.goferVersion,
-        scaffoldVersion: request.run.scaffoldVersion,
+        goferRelease: request.run.goferRelease,
       }),
     },
     {

@@ -196,6 +196,19 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it('rejects release descriptors whose ref does not match their version', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, ref: 'v3.7.27' },
+    };
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.ref must match goferRelease.version.']),
+    });
+  });
+
   it.each([
     ['tenantId', 'tenantId is required.'],
     ['appKey', 'appKey is required.'],
