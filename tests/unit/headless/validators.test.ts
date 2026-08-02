@@ -209,6 +209,19 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it.each([[1], [true], ['v3.7.29'], [null], [[]], [undefined]])(
+    'reports a contract error rather than throwing when goferRelease is %p',
+    (goferRelease) => {
+      const fixture = createValidExportFixture();
+      const invalid = { ...fixture.run, goferRelease } as unknown as GoferRun;
+
+      expect(validateGoferRun(invalid)).toMatchObject({
+        valid: false,
+        errors: expect.arrayContaining(['goferRelease must be an object.']),
+      });
+    }
+  );
+
   it.each([
     ['tenantId', 'tenantId is required.'],
     ['appKey', 'appKey is required.'],
