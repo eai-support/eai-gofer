@@ -209,6 +209,22 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it.each([
+    ['01.2.3', 'v01.2.3'],
+    ['1.02.3', 'v1.02.3'],
+  ])('rejects %s as an exact semantic version', (version, ref) => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, version, ref },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.version must be an exact semantic version.']),
+    });
+  });
+
   it('rejects a malformed release tag before comparing it to the version', () => {
     const fixture = createValidExportFixture();
     const invalid = {

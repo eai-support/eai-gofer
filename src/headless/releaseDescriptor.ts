@@ -4,8 +4,10 @@ import {
   type GoferReleaseDescriptor,
 } from './contracts.js';
 
-const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-const REF_PATTERN = /^v\d+\.\d+\.\d+$/;
+// SemVer forbids leading zeros in numeric identifiers; 01.2.3 must not pass as exact.
+const SEMVER_CORE = String.raw`(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)`;
+const VERSION_PATTERN = new RegExp(`^${SEMVER_CORE}$`);
+const REF_PATTERN = new RegExp(`^v${SEMVER_CORE}$`);
 const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
