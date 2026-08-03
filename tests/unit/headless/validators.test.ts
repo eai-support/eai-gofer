@@ -209,6 +209,19 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it('rejects a malformed release tag before comparing it to the version', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, ref: 3.729 },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.ref must be an exact release tag.']),
+    });
+  });
+
   it('refuses a descriptor that sources the scaffold from another repository', () => {
     const fixture = createValidExportFixture();
     const invalid = {
@@ -218,9 +231,7 @@ describe('headless Gofer validators', () => {
 
     expect(validateGoferRun(invalid)).toMatchObject({
       valid: false,
-      errors: expect.arrayContaining([
-        'goferRelease.repository must be eai-tools/eai-gofer.',
-      ]),
+      errors: expect.arrayContaining(['goferRelease.repository must be eai-tools/eai-gofer.']),
     });
   });
 

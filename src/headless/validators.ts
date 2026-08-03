@@ -9,7 +9,7 @@ import {
   type GoferRun,
   type GoferValidationResult,
 } from './contracts.js';
-import { assertGoferReleaseDescriptor } from './portableScaffold.js';
+import { assertGoferReleaseDescriptor } from './releaseDescriptor.js';
 
 const TERMINAL_RUN_STATUSES = new Set(['approved', 'completed', 'failed', 'cancelled']);
 const RUN_STATUSES = new Set([
