@@ -10,6 +10,7 @@ import {
   type GoferValidationResult,
 } from './contracts.js';
 import { assertGoferReleaseDescriptor } from './releaseDescriptor.js';
+import { isNonEmptyString } from './validationUtils.js';
 
 const TERMINAL_RUN_STATUSES = new Set(['approved', 'completed', 'failed', 'cancelled']);
 const RUN_STATUSES = new Set([
@@ -57,10 +58,6 @@ function result(errors: string[]): GoferValidationResult {
 
 function isIsoTimestamp(value: string): boolean {
   return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function latestArtifactsById(

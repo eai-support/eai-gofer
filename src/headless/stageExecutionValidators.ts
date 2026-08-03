@@ -10,6 +10,7 @@ import {
   type GoferStageExecutionResult,
   type GoferValidationResult,
 } from './contracts.js';
+import { isNonEmptyString } from './validationUtils.js';
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const FEATURE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -29,10 +30,6 @@ function result(errors: string[]): GoferValidationResult {
 
 function isIsoTimestamp(value: string): boolean {
   return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function sortedReferenceKeys(refs: readonly GoferArtifactReference[]): string[] {
