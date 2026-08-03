@@ -209,6 +209,21 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it('refuses a descriptor that sources the scaffold from another repository', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, repository: 'attacker/eai-gofer' },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([
+        'goferRelease.repository must be eai-tools/eai-gofer.',
+      ]),
+    });
+  });
+
   it.each([[1], [true], ['v3.7.29'], [null], [[]], [undefined]])(
     'reports a contract error rather than throwing when goferRelease is %p',
     (goferRelease) => {

@@ -2,11 +2,11 @@ import { createHash } from 'node:crypto';
 
 import {
   GOFER_RELEASE_CONTRACT_VERSION,
+  GOFER_RELEASE_REPOSITORY,
   type GoferPortableFileInput,
   type GoferReleaseDescriptor,
 } from './contracts.js';
 
-const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -28,8 +28,8 @@ export function assertGoferReleaseDescriptor(
   if (candidate.contractVersion !== GOFER_RELEASE_CONTRACT_VERSION) {
     throw new Error(`goferRelease.contractVersion must be ${GOFER_RELEASE_CONTRACT_VERSION}.`);
   }
-  if (typeof candidate.repository !== 'string' || !REPOSITORY_PATTERN.test(candidate.repository)) {
-    throw new Error('goferRelease.repository must use owner/repository format.');
+  if (candidate.repository !== GOFER_RELEASE_REPOSITORY) {
+    throw new Error(`goferRelease.repository must be ${GOFER_RELEASE_REPOSITORY}.`);
   }
   if (typeof candidate.version !== 'string' || !VERSION_PATTERN.test(candidate.version)) {
     throw new Error('goferRelease.version must be an exact semantic version.');

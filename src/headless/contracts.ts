@@ -2,6 +2,13 @@
 export const GOFER_ADMIN_PORTAL_CONTRACT_VERSION = 'eai.gofer.admin_portal.v1' as const;
 /** Stable semantic boundary implemented by compatible headless Gofer releases. */
 export const GOFER_RELEASE_CONTRACT_VERSION = 'eai.gofer.headless.v1' as const;
+/**
+ * SECURITY: consumers fetch the portable scaffold from the descriptor's
+ * repository, and inventoryDigest cannot detect a swap because it is validated
+ * against the same descriptor. The source repository is therefore fixed by the
+ * contract; only the release within it moves by configuration.
+ */
+export const GOFER_RELEASE_REPOSITORY = 'eai-tools/eai-gofer' as const;
 /** Schema discriminator for the generated-repository implementation handoff. */
 export const GOFER_HANDOFF_SCHEMA_VERSION = 'eai.gofer.handoff.v1' as const;
 /** Schema discriminator for the immutable artifact manifest. */
@@ -42,7 +49,7 @@ export type GoferNextStage = '5_implement';
 /** Immutable runtime release identity recorded on each run and repository handoff. */
 export interface GoferReleaseDescriptor {
   contractVersion: typeof GOFER_RELEASE_CONTRACT_VERSION;
-  repository: string;
+  repository: typeof GOFER_RELEASE_REPOSITORY;
   version: string;
   ref: string;
   commitSha: string;
