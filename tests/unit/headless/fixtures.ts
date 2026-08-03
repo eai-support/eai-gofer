@@ -17,6 +17,12 @@ import {
 const RUN_ID = 'run-3171';
 const CREATED_AT = '2026-07-15T00:00:00.000Z';
 
+/**
+ * Pinned to the last tagged release, not the one being cut: commitSha and
+ * inventoryDigest are verifiable against v3.7.28, whereas the identity of the
+ * release this branch becomes does not exist until it is merged and tagged.
+ * Assertions read these fields rather than literals, so no per-release edit.
+ */
 export const TEST_GOFER_RELEASE_DESCRIPTOR: Readonly<GoferReleaseDescriptor> = Object.freeze({
   contractVersion: GOFER_RELEASE_CONTRACT_VERSION,
   repository: 'eai-tools/eai-gofer',

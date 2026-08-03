@@ -122,7 +122,7 @@ describe('createGoferExportBundle', () => {
         ...fixture,
         files: fixture.files.filter((file) => file.path !== missingPath),
       })
-    ).toThrow(`Gofer v3.7.28 scaffold is missing ${missingPath}`);
+    ).toThrow(`Gofer ${TEST_GOFER_RELEASE_DESCRIPTOR.ref} scaffold is missing ${missingPath}`);
   });
 
   it('rejects a scaffold marker that does not match its pinned version', () => {
@@ -135,7 +135,7 @@ describe('createGoferExportBundle', () => {
           file.path === '.specify/.gofer-version' ? { ...file, content: '3.7.20\n' } : file
         ),
       })
-    ).toThrow('.specify/.gofer-version must contain 3.7.28.');
+    ).toThrow(`.specify/.gofer-version must contain ${TEST_GOFER_RELEASE_DESCRIPTOR.version}.`);
   });
 
   it('rejects runtime state and undeclared feature packs outside the portable scaffold', () => {
@@ -265,7 +265,9 @@ describe('createGoferExportBundle', () => {
         ...fixture,
         files: fixture.files.filter((file) => file.path !== '.specify/hints/global.md'),
       })
-    ).toThrow('Gofer v3.7.28 scaffold is missing .specify/hints/global.md');
+    ).toThrow(
+      `Gofer ${TEST_GOFER_RELEASE_DESCRIPTOR.ref} scaffold is missing .specify/hints/global.md`
+    );
 
     expect(() =>
       createGoferExportBundle({
