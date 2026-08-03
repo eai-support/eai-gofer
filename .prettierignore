@@ -25,7 +25,6 @@ tests/fixtures/stage-commands/
 # folds once the text is long enough.
 .claude/skills/
 .github/skills/
-.system/skills/
 plugin-skills/
 plugins/
 extension/resources/
@@ -33,10 +32,6 @@ docs-site/static/releases/
 .system/skills/
 .claude/commands/
 .github/prompts/
-extension/resources/copilot-prompts/
-extension/resources/claude-commands/
-extension/resources/gemini/
-extension/resources/specify-commands/
 .gemini/commands/
 *.tgz
 *.tar.gz
