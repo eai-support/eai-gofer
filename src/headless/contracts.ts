@@ -1,5 +1,14 @@
 /** Version discriminator shared by Gofer and Admin Portal persistence adapters. */
 export const GOFER_ADMIN_PORTAL_CONTRACT_VERSION = 'eai.gofer.admin_portal.v1' as const;
+/** Stable semantic boundary implemented by compatible headless Gofer releases. */
+export const GOFER_RELEASE_CONTRACT_VERSION = 'eai.gofer.headless.v1' as const;
+/**
+ * SECURITY: consumers fetch the portable scaffold from the descriptor's
+ * repository, and inventoryDigest cannot detect a swap because it is validated
+ * against the same descriptor. The source repository is therefore fixed by the
+ * contract; only the release within it moves by configuration.
+ */
+export const GOFER_RELEASE_REPOSITORY = 'eai-tools/eai-gofer' as const;
 /** Schema discriminator for the generated-repository implementation handoff. */
 export const GOFER_HANDOFF_SCHEMA_VERSION = 'eai.gofer.handoff.v1' as const;
 /** Schema discriminator for the immutable artifact manifest. */
@@ -36,6 +45,16 @@ export type GoferPipelineStage = (typeof GOFER_PIPELINE_STAGES)[number];
 export type GoferRequiredPipelineStage = (typeof GOFER_REQUIRED_PIPELINE_STAGES)[number];
 /** First stage a generated repository may run after the governed handoff. */
 export type GoferNextStage = '5_implement';
+
+/** Immutable runtime release identity recorded on each run and repository handoff. */
+export interface GoferReleaseDescriptor {
+  contractVersion: typeof GOFER_RELEASE_CONTRACT_VERSION;
+  repository: typeof GOFER_RELEASE_REPOSITORY;
+  version: string;
+  ref: string;
+  commitSha: string;
+  inventoryDigest: string;
+}
 
 /** Canonical artifact-kind vocabulary accepted by the headless contract. */
 export const GOFER_ARTIFACT_KINDS = [
@@ -192,11 +211,11 @@ export interface GoferRun {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   runId: string;
   tenantId: string;
+  appKey: string;
   draftId: string;
   appId?: string;
   featureSlug: string;
-  goferVersion: string;
-  scaffoldVersion: string;
+  goferRelease: Readonly<GoferReleaseDescriptor>;
   status: GoferRunStatus;
   currentStage: GoferPipelineStage;
   stages: readonly GoferStageState[];
@@ -227,6 +246,7 @@ export interface GoferRunEvent {
 export interface GoferStageExecutionRequest {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   tenantId: string;
+  appKey: string;
   runId: string;
   featureSlug: string;
   stage: GoferPipelineStage;
@@ -247,6 +267,7 @@ export interface GoferStageExecutionError {
 export interface GoferStageExecutionResult {
   schemaVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
   tenantId: string;
+  appKey: string;
   runId: string;
   stage: GoferPipelineStage;
   status: GoferStageExecutionStatus;
@@ -323,13 +344,14 @@ export interface GoferPortableFile extends GoferPortableFileInput {
 export interface GoferHandoff {
   schemaVersion: typeof GOFER_HANDOFF_SCHEMA_VERSION;
   contractVersion: typeof GOFER_ADMIN_PORTAL_CONTRACT_VERSION;
+  tenantId: string;
+  appKey: string;
   runId: string;
   draftId: string;
   appId?: string;
   featureSlug: string;
   repositoryAction: GoferRepositoryAction;
-  goferVersion: string;
-  scaffoldVersion: string;
+  goferRelease: Readonly<GoferReleaseDescriptor>;
   completedStages: readonly GoferPipelineStage[];
   approvedArtifacts: readonly GoferArtifactReference[];
   executionReference?: GoferExecutionReference;
