@@ -1,17 +1,7 @@
 import { createHash } from 'node:crypto';
 
-import type { GoferPortableFileInput } from './contracts.js';
-
-/** Pinned Gofer release whose portable scaffold is embedded in generated apps. */
-export const GOFER_PORTABLE_SCAFFOLD_VERSION = '3.7.21' as const;
-/** Immutable Git reference corresponding to the embedded portable scaffold. */
-export const GOFER_PORTABLE_SCAFFOLD_REF = 'v3.7.21' as const;
-/** Source commit used to produce the embedded portable scaffold inventory. */
-export const GOFER_PORTABLE_SCAFFOLD_COMMIT_SHA =
-  '9695a1d85bc7698d6c6eb3c76a3d24efcdcfcc79' as const;
-/** Digest that detects drift in the pinned portable path inventory. */
-export const GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST =
-  '639e7c169336cb3ac6c74c62252b4daeea90787a32ecf0d9b90f26a5c7ac4eb8' as const;
+import { type GoferPortableFileInput, type GoferReleaseDescriptor } from './contracts.js';
+import { assertGoferReleaseDescriptor } from './releaseDescriptor.js';
 
 const COMMAND_FILES = [
   '.gitkeep',
@@ -73,6 +63,7 @@ const MEMORY_FILES = [
 const OUTPUT_FILES = ['.gitkeep', 'codex-config-fragment.toml'] as const;
 
 const REFERENCE_FILES = [
+  'delivery-lineage.md',
   'platform/README.md',
   'platform/deployment-repo.md',
   'platform/eai-app-template.md',
@@ -114,6 +105,7 @@ const SCRIPT_FILES = [
   'node/canonical-descriptions.mjs',
   'node/check-version-alignment.mjs',
   'node/codex-doctor.mjs',
+  'node/delivery-lineage-corpus.mjs',
   'node/generate-commands.mjs',
   'node/generate-issues.js',
   'node/gofer-closed-loop-audit.mjs',
@@ -133,12 +125,17 @@ const SCRIPT_FILES = [
   'node/mermaid-export.mjs',
   'node/package-agent-plugin.mjs',
   'node/parse-stage-command.mjs',
+  'node/render-delivery-lineage.mjs',
   'node/schemas/.gitkeep',
   'node/schemas/stage-command.schema.json',
   'node/sync-extension-resources.mjs',
+  'node/validate-v4-resource-contract.d.mts',
+  'node/validate-v4-resource-contract.mjs',
   'node/workspace-bootstrap-lib.mjs',
   'powershell/install-optional-tools.ps1',
 ] as const;
+
+const SKILL_FILES = ['gofer-documentation/SKILL.md'] as const;
 
 const TEMPLATE_FILES = [
   'agent-file-template.md',
@@ -150,12 +147,14 @@ const TEMPLATE_FILES = [
   'brownfield-analysis.md',
   'business-metrics-template.md',
   'business-owner-summary-template.md',
+  'build-map-template.md',
   'checklist-template.md',
   'ciso-security-summary-template.md',
   'context-bundle-template.md',
   'contract-pack-template.md',
   'cto-architecture-summary-template.md',
   'discovery-template.md',
+  'delivery-lineage-template.json',
   'eai-preflight-template.md',
   'goal-ledger-template.json',
   'gofer-model-policy.yaml',
@@ -200,7 +199,7 @@ function under(root: string, files: readonly string[]): string[] {
   return files.map((file) => `.specify/${root}/${file}`);
 }
 
-/** Exact repository-owned scaffold files shipped by the v3.7.21 release. */
+/** Exact repository-owned scaffold files supplied by a compatible runtime release. */
 export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   [
     '.specify/.gofer-version',
@@ -214,6 +213,7 @@ export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
     ...under('outputs', OUTPUT_FILES),
     ...under('references', REFERENCE_FILES),
     ...under('scripts', SCRIPT_FILES),
+    ...under('skills', SKILL_FILES),
     ...under('templates', TEMPLATE_FILES),
   ].sort()
 );
@@ -244,34 +244,27 @@ export function assertPortableOrDeclaredGoferFiles(
   }
 }
 
-/** Requires the exact pinned release inventory and matching root version marker. */
+/** Requires the exact runtime release inventory and matching root version marker. */
 export function assertPortableGoferScaffold(
   files: readonly GoferPortableFileInput[],
-  scaffoldVersion: string
+  goferRelease: Readonly<GoferReleaseDescriptor>
 ): void {
-  const normalizedVersion = scaffoldVersion.replace(/^v/, '');
-  if (normalizedVersion !== GOFER_PORTABLE_SCAFFOLD_VERSION) {
-    throw new Error(`Unsupported portable Gofer scaffold version: ${scaffoldVersion}`);
-  }
+  assertGoferReleaseDescriptor(goferRelease);
 
   const filesByPath = new Map(files.map((file) => [file.path, file]));
   for (const path of GOFER_PORTABLE_SCAFFOLD_PATHS) {
     if (!filesByPath.has(path)) {
-      throw new Error(
-        `Pinned Gofer v${GOFER_PORTABLE_SCAFFOLD_VERSION} scaffold is missing ${path}`
-      );
+      throw new Error(`Gofer ${goferRelease.ref} scaffold is missing ${path}`);
     }
   }
 
   const inventoryDigest = createGoferScaffoldInventoryDigest(GOFER_PORTABLE_SCAFFOLD_PATHS);
-  if (inventoryDigest !== GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST) {
-    throw new Error(
-      `Pinned Gofer v${GOFER_PORTABLE_SCAFFOLD_VERSION} inventory digest does not match its canonical contract.`
-    );
+  if (inventoryDigest !== goferRelease.inventoryDigest) {
+    throw new Error(`Gofer ${goferRelease.ref} inventory digest does not match its descriptor.`);
   }
 
   const marker = filesByPath.get('.specify/.gofer-version');
-  if (marker?.encoding !== 'utf8' || marker.content.trim() !== GOFER_PORTABLE_SCAFFOLD_VERSION) {
-    throw new Error(`.specify/.gofer-version must contain ${GOFER_PORTABLE_SCAFFOLD_VERSION}.`);
+  if (marker?.encoding !== 'utf8' || marker.content.trim() !== goferRelease.version) {
+    throw new Error(`.specify/.gofer-version must contain ${goferRelease.version}.`);
   }
 }

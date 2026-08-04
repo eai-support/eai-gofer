@@ -18,13 +18,20 @@ tests/fixtures/codex-skills-fixture/
 tests/fixtures/codex-skills-polluted/
 tests/fixtures/stage-commands/
 .agents/skills/
+
+# Generated skill and plugin mirrors. `npm run gofer:generate` owns their exact
+# bytes: the mirror-parity test compares them to generator output, and gofer's
+# own frontmatter parser only reads a single-line `description:`, which prettier
+# folds once the text is long enough.
+.claude/skills/
+.github/skills/
+plugin-skills/
+plugins/
+extension/resources/
+docs-site/static/releases/
 .system/skills/
 .claude/commands/
 .github/prompts/
-extension/resources/copilot-prompts/
-extension/resources/claude-commands/
-extension/resources/gemini/
-extension/resources/specify-commands/
 .gemini/commands/
 *.tgz
 *.tar.gz

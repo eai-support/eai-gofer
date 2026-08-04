@@ -3,6 +3,7 @@ import {
   APP_CAPABILITY_SCHEMA_VERSION,
   GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
   GOFER_PORTABLE_SCAFFOLD_PATHS,
+  GOFER_RELEASE_CONTRACT_VERSION,
   type CreateGoferExportBundleRequest,
   type GoferApprovalRecord,
   type GoferArtifactKind,
@@ -11,10 +12,26 @@ import {
   type GoferPipelineStage,
   type GoferPortableFileInput,
   type GoferRun,
+  type GoferReleaseDescriptor,
 } from '../../../src/headless/index.js';
 
 const RUN_ID = 'run-3171';
 const CREATED_AT = '2026-07-15T00:00:00.000Z';
+
+/**
+ * Pinned to the last tagged release, not the one being cut: commitSha and
+ * inventoryDigest are verifiable against v3.7.28, whereas the identity of the
+ * release this branch becomes does not exist until it is merged and tagged.
+ * Assertions read these fields rather than literals, so no per-release edit.
+ */
+export const TEST_GOFER_RELEASE_DESCRIPTOR: Readonly<GoferReleaseDescriptor> = Object.freeze({
+  contractVersion: GOFER_RELEASE_CONTRACT_VERSION,
+  repository: 'eai-tools/eai-gofer',
+  version: '3.7.28',
+  ref: 'v3.7.28',
+  commitSha: '43628f620259bd016d5fb26d3ab2b77a926309b3',
+  inventoryDigest: '8365099072e5ed9956476f3732f24573df28d7f05c71bd68e38d3751ed216750',
+});
 
 /** Hash fixture content using the canonical plain SHA-256 format. */
 export function sha256(content: string): string {
@@ -144,11 +161,11 @@ export function createValidExportFixture(): CreateGoferExportBundleRequest {
     schemaVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
     runId: RUN_ID,
     tenantId: 'tenant-1',
+    appKey: 'sample-app',
     draftId: 'draft-1',
     appId: 'app-1',
     featureSlug: '3171-admin-portal-gofer-stages',
-    goferVersion: '3.7.21',
-    scaffoldVersion: '3.7.21',
+    goferRelease: TEST_GOFER_RELEASE_DESCRIPTOR,
     status: 'approved',
     currentStage: '4_tasks',
     stages: [
@@ -306,7 +323,10 @@ export function createValidExportFixture(): CreateGoferExportBundleRequest {
     files: [
       ...GOFER_PORTABLE_SCAFFOLD_PATHS.map((path) => ({
         path,
-        content: path === '.specify/.gofer-version' ? '3.7.21\n' : `${path}\n`,
+        content:
+          path === '.specify/.gofer-version'
+            ? `${TEST_GOFER_RELEASE_DESCRIPTOR.version}\n`
+            : `${path}\n`,
         encoding: 'utf8' as const,
       })),
       ...created.map((item) => item.file),

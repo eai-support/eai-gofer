@@ -9,6 +9,8 @@ import {
   type GoferRun,
   type GoferValidationResult,
 } from './contracts.js';
+import { assertGoferReleaseDescriptor } from './releaseDescriptor.js';
+import { isNonEmptyString } from './validationUtils.js';
 
 const TERMINAL_RUN_STATUSES = new Set(['approved', 'completed', 'failed', 'cancelled']);
 const RUN_STATUSES = new Set([
@@ -117,13 +119,17 @@ export function validateGoferRun(run: GoferRun): GoferValidationResult {
   for (const [field, value] of [
     ['runId', run.runId],
     ['tenantId', run.tenantId],
+    ['appKey', run.appKey],
     ['draftId', run.draftId],
-    ['goferVersion', run.goferVersion],
-    ['scaffoldVersion', run.scaffoldVersion],
   ] as const) {
-    if (!value.trim()) {
+    if (!isNonEmptyString(value)) {
       errors.push(`${field} is required.`);
     }
+  }
+  try {
+    assertGoferReleaseDescriptor(run.goferRelease);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'goferRelease is invalid.');
   }
   if (!FEATURE_SLUG_PATTERN.test(run.featureSlug)) {
     errors.push('featureSlug must contain lowercase letters, numbers, and single hyphens only.');

@@ -186,6 +186,98 @@ describe('headless Gofer validators', () => {
     });
   });
 
+  it('requires immutable app identity in run projections', () => {
+    const fixture = createValidExportFixture();
+    const invalid = { ...fixture.run, appKey: ' ' };
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['appKey is required.']),
+    });
+  });
+
+  it('rejects release descriptors whose ref does not match their version', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, ref: 'v3.7.27' },
+    };
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.ref must match goferRelease.version.']),
+    });
+  });
+
+  it.each([
+    ['01.2.3', 'v01.2.3'],
+    ['1.02.3', 'v1.02.3'],
+  ])('rejects %s as an exact semantic version', (version, ref) => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, version, ref },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.version must be an exact semantic version.']),
+    });
+  });
+
+  it('rejects a malformed release tag before comparing it to the version', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, ref: 3.729 },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.ref must be an exact release tag.']),
+    });
+  });
+
+  it('refuses a descriptor that sources the scaffold from another repository', () => {
+    const fixture = createValidExportFixture();
+    const invalid = {
+      ...fixture.run,
+      goferRelease: { ...fixture.run.goferRelease, repository: 'attacker/eai-gofer' },
+    } as unknown as GoferRun;
+
+    expect(validateGoferRun(invalid)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['goferRelease.repository must be eai-tools/eai-gofer.']),
+    });
+  });
+
+  it.each([[1], [true], ['v3.7.29'], [null], [[]], [undefined]])(
+    'reports a contract error rather than throwing when goferRelease is %p',
+    (goferRelease) => {
+      const fixture = createValidExportFixture();
+      const invalid = { ...fixture.run, goferRelease } as unknown as GoferRun;
+
+      expect(validateGoferRun(invalid)).toMatchObject({
+        valid: false,
+        errors: expect.arrayContaining(['goferRelease must be an object.']),
+      });
+    }
+  );
+
+  it.each([
+    ['tenantId', 'tenantId is required.'],
+    ['appKey', 'appKey is required.'],
+  ] as const)('fails closed when legacy run payloads omit %s', (field, expectedError) => {
+    const fixture = createValidExportFixture();
+    const legacyRun = { ...fixture.run } as Partial<GoferRun>;
+    delete legacyRun[field];
+
+    expect(validateGoferRun(legacyRun as GoferRun)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([expectedError]),
+    });
+  });
+
   it('fails closed instead of throwing for an invalid runtime stage value', () => {
     const fixture = createValidExportFixture();
     const invalid = { ...fixture.run, currentStage: 'unknown' } as unknown as GoferRun;

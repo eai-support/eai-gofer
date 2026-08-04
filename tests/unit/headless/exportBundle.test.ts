@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
-  GOFER_PORTABLE_SCAFFOLD_COMMIT_SHA,
-  GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST,
   GOFER_PORTABLE_SCAFFOLD_PATHS,
-  GOFER_PORTABLE_SCAFFOLD_REF,
-  GOFER_PORTABLE_SCAFFOLD_VERSION,
   createGoferScaffoldInventoryDigest,
   createGoferExportBundle,
   isPortableGoferScaffoldPath,
   validateAppCapabilityRequirements,
 } from '../../../src/headless/index.js';
-import { createValidExportFixture } from './fixtures.js';
+import { TEST_GOFER_RELEASE_DESCRIPTOR, createValidExportFixture } from './fixtures.js';
 
 describe('createGoferExportBundle', () => {
   it('creates a deterministic, path-sorted handoff and complete manifests', () => {
@@ -28,6 +24,9 @@ describe('createGoferExportBundle', () => {
     expect(second).toEqual(first);
     expect(first.handoff).toMatchObject({
       schemaVersion: 'eai.gofer.handoff.v1',
+      tenantId: 'tenant-1',
+      appKey: 'sample-app',
+      runId: 'run-3171',
       nextAllowedStage: '5_implement',
       repositoryAction: 'generate',
       auditHistoryPath: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
@@ -97,6 +96,12 @@ describe('createGoferExportBundle', () => {
     expect(JSON.parse(generatedCapabilityManifest!.content)).toEqual(first.capabilityRequirements);
     expect(generatedCapabilityManifest!.content).toBe(capabilityEvidence!.content);
     expect(generatedCapabilityManifest!.sha256).toBe(capabilityEvidence!.sha256);
+    const releaseManifest = first.files.find((file) => file.path === '.specify/gofer-version.json');
+    expect(JSON.parse(releaseManifest!.content)).toEqual({
+      schemaVersion: 'eai.gofer.scaffold.v1',
+      contractVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
+      goferRelease: TEST_GOFER_RELEASE_DESCRIPTOR,
+    });
   });
 
   it('accepts and canonicalizes optional provider and asset compatibility keys', () => {
@@ -260,16 +265,23 @@ describe('createGoferExportBundle', () => {
     ).toThrow(`must not replace generated manifest ${path}`);
   });
 
-  it('pins the complete v3.7.21 portable scaffold inventory and excludes runtime state', () => {
-    expect(GOFER_PORTABLE_SCAFFOLD_VERSION).toBe('3.7.21');
-    expect(GOFER_PORTABLE_SCAFFOLD_REF).toBe('v3.7.21');
-    expect(GOFER_PORTABLE_SCAFFOLD_COMMIT_SHA).toBe('9695a1d85bc7698d6c6eb3c76a3d24efcdcfcc79');
-    expect(GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST).toBe(
-      '639e7c169336cb3ac6c74c62252b4daeea90787a32ecf0d9b90f26a5c7ac4eb8'
-    );
-    expect(GOFER_PORTABLE_SCAFFOLD_PATHS).toHaveLength(170);
+  it('refuses to export a legacy run without canonical app identity', () => {
+    const request = createValidExportFixture();
+    const legacyRun = { ...request.run } as Partial<typeof request.run>;
+    delete legacyRun.appKey;
+
+    expect(() =>
+      createGoferExportBundle({
+        ...request,
+        run: legacyRun as typeof request.run,
+      })
+    ).toThrow('Gofer run is not ready for repository export: appKey is required.');
+  });
+
+  it('validates the complete runtime release inventory and excludes runtime state', () => {
+    expect(GOFER_PORTABLE_SCAFFOLD_PATHS).toHaveLength(178);
     expect(createGoferScaffoldInventoryDigest(GOFER_PORTABLE_SCAFFOLD_PATHS)).toBe(
-      GOFER_PORTABLE_SCAFFOLD_INVENTORY_DIGEST
+      TEST_GOFER_RELEASE_DESCRIPTOR.inventoryDigest
     );
     expect(GOFER_PORTABLE_SCAFFOLD_PATHS.every(isPortableGoferScaffoldPath)).toBe(true);
     expect(
@@ -298,7 +310,7 @@ describe('createGoferExportBundle', () => {
         ...fixture,
         files: fixture.files.filter((file) => file.path !== missingPath),
       })
-    ).toThrow(`Pinned Gofer v3.7.21 scaffold is missing ${missingPath}`);
+    ).toThrow(`Gofer ${TEST_GOFER_RELEASE_DESCRIPTOR.ref} scaffold is missing ${missingPath}`);
   });
 
   it('rejects a scaffold marker that does not match its pinned version', () => {
@@ -311,7 +323,7 @@ describe('createGoferExportBundle', () => {
           file.path === '.specify/.gofer-version' ? { ...file, content: '3.7.20\n' } : file
         ),
       })
-    ).toThrow('.specify/.gofer-version must contain 3.7.21.');
+    ).toThrow(`.specify/.gofer-version must contain ${TEST_GOFER_RELEASE_DESCRIPTOR.version}.`);
   });
 
   it('rejects runtime state and undeclared feature packs outside the portable scaffold', () => {
@@ -441,7 +453,9 @@ describe('createGoferExportBundle', () => {
         ...fixture,
         files: fixture.files.filter((file) => file.path !== '.specify/hints/global.md'),
       })
-    ).toThrow('Pinned Gofer v3.7.21 scaffold is missing .specify/hints/global.md');
+    ).toThrow(
+      `Gofer ${TEST_GOFER_RELEASE_DESCRIPTOR.ref} scaffold is missing .specify/hints/global.md`
+    );
 
     expect(() =>
       createGoferExportBundle({
