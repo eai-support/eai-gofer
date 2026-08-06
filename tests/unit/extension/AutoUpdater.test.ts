@@ -465,7 +465,9 @@ describe('AutoUpdater - Download URL Construction', () => {
     const extensionName = 'eai-gofer';
     const expectedUrl = `https://eai-support.github.io/eai-gofer/releases/${extensionName}-${version}.vsix`;
 
-    expect(expectedUrl).toBe('https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix');
+    expect(expectedUrl).toBe(
+      'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
+    );
   });
 
   it('should construct correct GitHub releases API URL', () => {
@@ -512,6 +514,19 @@ describe('AutoUpdater - Download URL Construction', () => {
     );
 
     expect(allowed).toBe(true);
+  });
+
+  it('should reject pre-rename release hosts and repository paths', () => {
+    expect(
+      (updater as any).isAllowedDownloadUrl(
+        'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
+      )
+    ).toBe(false);
+    expect(
+      (updater as any).isAllowedDownloadUrl(
+        'https://github.com/eai-tools/eai-gofer/releases/download/v2.5.3/eai-gofer-2.5.3.vsix'
+      )
+    ).toBe(false);
   });
 
   it('should reject VSIX downloads from untrusted hosts', () => {
