@@ -8,7 +8,7 @@ export const GOFER_RELEASE_CONTRACT_VERSION = 'eai.gofer.headless.v1' as const;
  * against the same descriptor. The source repository is therefore fixed by the
  * contract; only the release within it moves by configuration.
  */
-export const GOFER_RELEASE_REPOSITORY = 'eai-tools/eai-gofer' as const;
+export const GOFER_RELEASE_REPOSITORY = 'eai-support/eai-gofer' as const;
 /** Schema discriminator for the generated-repository implementation handoff. */
 export const GOFER_HANDOFF_SCHEMA_VERSION = 'eai.gofer.handoff.v1' as const;
 /** Schema discriminator for the immutable artifact manifest. */

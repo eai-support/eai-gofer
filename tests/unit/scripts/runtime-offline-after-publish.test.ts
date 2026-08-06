@@ -35,7 +35,7 @@ const ALLOWED_URL_HOSTS = new Set([
   'localhost',
   '127.0.0.1',
   'github.com',
-  'eai-tools.github.io',
+  'eai-support.github.io',
   'enterpriseai.com.au',
   'anthropic.com',
   'www.anthropic.com',

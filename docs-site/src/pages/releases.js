@@ -111,7 +111,7 @@ export default function Releases() {
           </ol>
           <p>
             <strong>Agent surfaces:</strong> use the public GitHub repo{' '}
-            <code>https://github.com/eai-tools/eai-gofer</code> as the install source for Claude,
+            <code>https://github.com/eai-support/eai-gofer</code> as the install source for Claude,
             Codex, Copilot, and Gemini. Use the release card here for VSIX and downloadable zip
             artifacts.
           </p>

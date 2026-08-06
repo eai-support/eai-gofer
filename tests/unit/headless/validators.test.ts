@@ -247,7 +247,7 @@ describe('headless Gofer validators', () => {
 
     expect(validateGoferRun(invalid)).toMatchObject({
       valid: false,
-      errors: expect.arrayContaining(['goferRelease.repository must be eai-tools/eai-gofer.']),
+      errors: expect.arrayContaining(['goferRelease.repository must be eai-support/eai-gofer.']),
     });
   });
 

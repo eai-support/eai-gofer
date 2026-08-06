@@ -37,7 +37,7 @@ describe('publish-public-release-assets.mjs', () => {
       JSON.stringify(
         {
           latest_version: '3.4.0',
-          repository: 'eai-tools/eai-gofer',
+          repository: 'eai-support/eai-gofer',
           last_updated: '2026-05-22T00:00:00.000Z',
           releases: [
             { version: '3.4.0', tag_name: 'v3.4.0', published_at: '', download_url: '', notes: '' },

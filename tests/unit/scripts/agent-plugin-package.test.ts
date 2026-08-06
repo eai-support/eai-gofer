@@ -184,15 +184,15 @@ describe('Gofer agent plugin package', () => {
         path: './plugins/eai-gofer',
       });
       expect(readme).toContain(
-        'claude plugin marketplace add https://github.com/eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
+        'claude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
       );
       expect(readme).toContain(
-        'codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
+        'codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
       );
       expect(readme).toContain(
-        'copilot plugin marketplace add https://github.com/eai-tools/eai-gofer'
+        'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain('gemini extensions install https://github.com/eai-tools/eai-gofer');
+      expect(readme).toContain('gemini extensions install https://github.com/eai-support/eai-gofer');
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain(
@@ -292,11 +292,11 @@ describe('Gofer agent plugin package', () => {
     expect(workflow).toContain('vsce publish --packagePath');
     expect(workflow).toContain('softprops/action-gh-release@v3');
     expect(workflow).toContain(
-      'https://github.com/eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
+      'https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
     );
     expect(workflow).toContain(
-      'https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
+      'https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
     );
-    expect(workflow).toContain('https://github.com/eai-tools/eai-gofer');
+    expect(workflow).toContain('https://github.com/eai-support/eai-gofer');
   });
 });

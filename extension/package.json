@@ -7,12 +7,12 @@
   "icon": "icon.png",
   "author": {
     "name": "EAI Tools",
-    "url": "https://github.com/eai-tools/eai-gofer"
+    "url": "https://github.com/eai-support/eai-gofer"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/eai-tools/eai-gofer"
+    "url": "https://github.com/eai-support/eai-gofer"
   },
   "engines": {
     "vscode": "^1.93.0"

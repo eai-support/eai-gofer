@@ -68,6 +68,6 @@ documentation updates for Gofer.
 ## Release Notes Source
 
 - GitHub Releases:
-  [eai-tools/eai-gofer/releases](https://github.com/eai-tools/eai-gofer/releases)
+  [eai-support/eai-gofer/releases](https://github.com/eai-support/eai-gofer/releases)
 - Public release site:
-  [eai-tools.github.io/eai-gofer/releases](https://eai-tools.github.io/eai-gofer/releases)
+  [eai-support.github.io/eai-gofer/releases](https://eai-support.github.io/eai-gofer/releases)

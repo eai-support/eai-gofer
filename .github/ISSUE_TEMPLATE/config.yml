@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and support
-    url: https://github.com/eai-tools/eai-gofer/discussions
+    url: https://github.com/eai-support/eai-gofer/discussions
     about: Use Discussions for usage questions, setup help, and broader workflow conversations.
   - name: Security policy
-    url: https://github.com/eai-tools/eai-gofer/blob/main/SECURITY.md
+    url: https://github.com/eai-support/eai-gofer/blob/main/SECURITY.md
     about: Please do not report vulnerabilities in public issues.

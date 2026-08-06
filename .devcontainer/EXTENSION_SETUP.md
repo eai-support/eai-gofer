@@ -22,7 +22,7 @@ The extension is automatically installed when:
    start to install extension:
    - First tries to fetch latest version from `releases.json`
    - Downloads VSIX from GitHub Pages:
-     `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-{version}.vsix`
+     `https://eai-support.github.io/eai-gofer/releases/eai-gofer-{version}.vsix`
    - **Fallback**: If download fails, builds extension from local source
 3. **Installs extension** using `code --install-extension --force`
 
@@ -71,10 +71,10 @@ If the automatic installation fails, you can manually install:
 
 ```bash
 # Get latest version
-LATEST=$(curl -s https://eai-tools.github.io/eai-gofer/releases.json | grep -o '"latest_version": "[^"]*"' | cut -d'"' -f4)
+LATEST=$(curl -s https://eai-support.github.io/eai-gofer/releases.json | grep -o '"latest_version": "[^"]*"' | cut -d'"' -f4)
 
 # Download and install
-curl -L -o /tmp/eai-gofer.vsix "https://eai-tools.github.io/eai-gofer/releases/eai-gofer-${LATEST}.vsix"
+curl -L -o /tmp/eai-gofer.vsix "https://eai-support.github.io/eai-gofer/releases/eai-gofer-${LATEST}.vsix"
 code --install-extension /tmp/eai-gofer.vsix
 ```
 
@@ -84,7 +84,7 @@ code --install-extension /tmp/eai-gofer.vsix
 
 - Check the terminal output for errors during setup
 - Verify releases.json is accessible:
-  `curl -s https://eai-tools.github.io/eai-gofer/releases.json`
+  `curl -s https://eai-support.github.io/eai-gofer/releases.json`
 - Try rebuilding: F1 → "Codespaces: Rebuild Container"
 
 **Want a specific version?**

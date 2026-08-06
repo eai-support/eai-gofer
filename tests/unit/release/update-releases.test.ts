@@ -98,7 +98,7 @@ describe('update-releases.js', () => {
       JSON.stringify(
         {
           latest_version: '3.1.9',
-          repository: 'eai-tools/eai-gofer',
+          repository: 'eai-support/eai-gofer',
           last_updated: '2026-05-01T00:00:00.000Z',
           releases: [
             {
@@ -114,7 +114,7 @@ describe('update-releases.js', () => {
               version: '3.1.9',
               tag_name: 'v3.1.9',
               published_at: '2026-04-30T00:00:00.000Z',
-              download_url: 'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-3.1.9.vsix',
+              download_url: 'https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.1.9.vsix',
               notes: 'Previous release',
               prerelease: false,
               size_mb: 8.5,
@@ -135,28 +135,28 @@ describe('update-releases.js', () => {
     );
 
     expect(updated.latest_version).toBe(duplicateVersion);
-    expect(updated.public_base_url).toBe('https://eai-tools.github.io/eai-gofer/releases');
+    expect(updated.public_base_url).toBe('https://eai-support.github.io/eai-gofer/releases');
     expect(matchingEntries).toHaveLength(1);
     expect(updated.releases[0].tag_name).toBe(`v${duplicateVersion}`);
     expect(updated.releases[0].notes).toBe('Fresh release notes');
     expect(updated.releases[0].download_url).toBe(
-      `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-${duplicateVersion}.vsix`
+      `https://eai-support.github.io/eai-gofer/releases/eai-gofer-${duplicateVersion}.vsix`
     );
     expect(updated.releases[0].size_mb).toBe(1);
     expect(updated.releases[0].assets?.claude?.download_url).toBe(
-      `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-${duplicateVersion}.zip`
+      `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-${duplicateVersion}.zip`
     );
     expect(updated.releases[0].assets?.claude?.bundle_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer'
     );
     expect(updated.releases[0].assets?.codex?.manifest_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json'
     );
     expect(updated.releases[0].assets?.gemini?.manifest_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
     );
     expect(updated.releases[0].assets?.gemini?.commands_manifest_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json'
     );
     expect(updated.releases[1].version).toBe('3.1.9');
   });
@@ -170,7 +170,7 @@ describe('update-releases.js', () => {
       JSON.stringify(
         {
           latest_version: '3.2.0',
-          repository: 'eai-tools/eai-gofer',
+          repository: 'eai-support/eai-gofer',
           last_updated: '2026-05-01T00:00:00.000Z',
           releases: [],
         },
@@ -195,7 +195,7 @@ describe('update-releases.js', () => {
         version: releaseVersion,
         tag_name: `v${releaseVersion}`,
         published_at: '2026-05-01T00:00:00.000Z',
-        download_url: `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-${releaseVersion}.vsix`,
+        download_url: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-${releaseVersion}.vsix`,
         notes: `Release ${releaseVersion}`,
         prerelease: false,
         size_mb: 8.5,
@@ -207,7 +207,7 @@ describe('update-releases.js', () => {
       JSON.stringify(
         {
           latest_version: '3.3.1',
-          repository: 'eai-tools/eai-gofer',
+          repository: 'eai-support/eai-gofer',
           last_updated: '2026-05-01T00:00:00.000Z',
           releases: existingReleases,
         },

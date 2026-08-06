@@ -41,10 +41,10 @@ Internally, Gofer still runs a staged pipeline:
 ## Release Feed
 
 - Docs and downloads:
-  [eai-tools.github.io/eai-gofer](https://eai-tools.github.io/eai-gofer/)
+  [eai-support.github.io/eai-gofer](https://eai-support.github.io/eai-gofer/)
 - Releases page:
-  [eai-tools.github.io/eai-gofer/releases](https://eai-tools.github.io/eai-gofer/releases)
-- Release feed: `https://eai-tools.github.io/eai-gofer/releases.json`
+  [eai-support.github.io/eai-gofer/releases](https://eai-support.github.io/eai-gofer/releases)
+- Release feed: `https://eai-support.github.io/eai-gofer/releases.json`
 
 ## Start Here
 
@@ -60,7 +60,7 @@ Internally, Gofer still runs a staged pipeline:
 | Surface            | Recommended source                       |
 | ------------------ | ---------------------------------------- |
 | VS Code            | Marketplace first, VSIX as fallback      |
-| Claude Code        | `eai-tools/eai-gofer` GitHub marketplace |
+| Claude Code        | `eai-support/eai-gofer` GitHub marketplace |
 | Codex              | GitHub repo marketplace                  |
 | GitHub Copilot CLI | GitHub repo marketplace                  |
 | Gemini CLI         | GitHub repo install with `--auto-update` |
@@ -78,15 +78,15 @@ policy.
 ## Community
 
 - Discussions:
-  [github.com/eai-tools/eai-gofer/discussions](https://github.com/eai-tools/eai-gofer/discussions)
+  [github.com/eai-support/eai-gofer/discussions](https://github.com/eai-support/eai-gofer/discussions)
 - Issues:
-  [github.com/eai-tools/eai-gofer/issues](https://github.com/eai-tools/eai-gofer/issues)
+  [github.com/eai-support/eai-gofer/issues](https://github.com/eai-support/eai-gofer/issues)
 - Wiki:
-  [github.com/eai-tools/eai-gofer/wiki](https://github.com/eai-tools/eai-gofer/wiki)
+  [github.com/eai-support/eai-gofer/wiki](https://github.com/eai-support/eai-gofer/wiki)
 - Contributing:
-  [CONTRIBUTING.md](https://github.com/eai-tools/eai-gofer/blob/main/CONTRIBUTING.md)
+  [CONTRIBUTING.md](https://github.com/eai-support/eai-gofer/blob/main/CONTRIBUTING.md)
 - Security:
-  [SECURITY.md](https://github.com/eai-tools/eai-gofer/blob/main/SECURITY.md)
+  [SECURITY.md](https://github.com/eai-support/eai-gofer/blob/main/SECURITY.md)
 
 ## References
 

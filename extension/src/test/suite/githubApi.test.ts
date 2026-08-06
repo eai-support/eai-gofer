@@ -18,8 +18,8 @@ suite('GitHubApiClient release normalization', () => {
       name: 'Gofer v9.9.9',
       body: 'Release notes',
       published_at: '2026-06-18T00:00:00Z',
-      zipball_url: 'https://api.github.com/repos/eai-tools/eai-gofer/zipball/v9.9.9',
-      tarball_url: 'https://api.github.com/repos/eai-tools/eai-gofer/tarball/v9.9.9',
+      zipball_url: 'https://api.github.com/repos/eai-support/eai-gofer/zipball/v9.9.9',
+      tarball_url: 'https://api.github.com/repos/eai-support/eai-gofer/tarball/v9.9.9',
       prerelease: false,
       draft: false,
       assets: [
@@ -30,7 +30,7 @@ suite('GitHubApiClient release normalization', () => {
           size: 42,
           download_count: 7,
           browser_download_url:
-            'https://github.com/eai-tools/eai-gofer/releases/download/v9.9.9/eai-gofer-agent-plugin-9.9.9.zip',
+            'https://github.com/eai-support/eai-gofer/releases/download/v9.9.9/eai-gofer-agent-plugin-9.9.9.zip',
           updated_at: '2026-06-18T00:00:00Z',
         },
       ],
@@ -41,7 +41,7 @@ suite('GitHubApiClient release normalization', () => {
       assert.strictEqual(release.version, 'v9.9.9');
       assert.strictEqual(
         release.downloadUrl,
-        'https://api.github.com/repos/eai-tools/eai-gofer/zipball/v9.9.9'
+        'https://api.github.com/repos/eai-support/eai-gofer/zipball/v9.9.9'
       );
       assert.strictEqual(release.isPrerelease, false);
       assert.strictEqual(release.description, 'Release notes');

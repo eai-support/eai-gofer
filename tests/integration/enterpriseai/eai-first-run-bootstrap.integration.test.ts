@@ -25,7 +25,7 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('npm config get @enterpriseai:registry');
     expect(command).toContain('npm install -g eai-cli');
     expect(command).toContain(
-      'npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/'
+      'npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-support.github.io/eai/registry/'
     );
     expect(command).toContain('eai update --check');
     expect(command).toContain('eai --describe');

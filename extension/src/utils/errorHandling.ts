@@ -494,7 +494,7 @@ export class ErrorHandler {
       ].join('\n')
     );
 
-    const issueUrl = `https://github.com/eai-tools/eai-gofer/issues/new?title=${encodeURIComponent(`Error: ${error.message}`)}&body=${issueBody}`;
+    const issueUrl = `https://github.com/eai-support/eai-gofer/issues/new?title=${encodeURIComponent(`Error: ${error.message}`)}&body=${issueBody}`;
 
     await vscode.env.openExternal(vscode.Uri.parse(issueUrl));
   }

@@ -394,9 +394,9 @@ CLI-agnostic. You can start a feature in one CLI and continue in another.
 
 ### Community
 
-- [Gofer GitHub Repository](https://github.com/eai-tools/eai-gofer)
-- [Report Issues](https://github.com/eai-tools/eai-gofer/issues)
-- [Feature Requests](https://github.com/eai-tools/eai-gofer/discussions)
+- [Gofer GitHub Repository](https://github.com/eai-support/eai-gofer)
+- [Report Issues](https://github.com/eai-support/eai-gofer/issues)
+- [Feature Requests](https://github.com/eai-support/eai-gofer/discussions)
 
 ---
 
@@ -443,4 +443,4 @@ context is CLI-specific. Each CLI maintains its own session history.
    memory
 
 **Need help?** Open an issue at
-[github.com/eai-tools/eai-gofer/issues](https://github.com/eai-tools/eai-gofer/issues)
+[github.com/eai-support/eai-gofer/issues](https://github.com/eai-support/eai-gofer/issues)

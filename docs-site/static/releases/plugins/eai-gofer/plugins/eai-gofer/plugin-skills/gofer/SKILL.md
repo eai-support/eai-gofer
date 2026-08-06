@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Gofer
 
-Version: 3.7.28
+Version: 3.7.29
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -90,7 +90,7 @@ Install or update this plugin by replacing the stable local folder:
 The public release feed is available at:
 
 ```text
-https://eai-tools.github.io/eai-gofer/releases.json
+https://eai-support.github.io/eai-gofer/releases.json
 ```
 
 Gemini CLI users can also copy the bundled `.gemini/` directory into a repository root to activate the same public command set there.
