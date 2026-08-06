@@ -368,14 +368,17 @@ export class AutoUpdater {
         const errorMsg = cliError instanceof Error ? cliError.message : String(cliError);
 
         if (errorMsg.includes('command not found') || errorMsg.includes('not found')) {
-          throw new Error(`Cannot auto-install update. Please install manually:
+          throw new Error(
+            `Cannot auto-install update. Please install manually:
 
 1. Download: https://eai-support.github.io/eai-gofer/releases/eai-gofer-${this.getCurrentVersionFromPath(vsixPath)}.vsix
 2. Open VS Code Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
 3. Run "Extensions: Install from VSIX..."
 4. Select the downloaded file
 
-Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`, { cause: cliError });
+Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
+            { cause: cliError }
+          );
         } else {
           throw new Error(`Failed to install extension: ${errorMsg}`, { cause: cliError });
         }
@@ -560,7 +563,7 @@ Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
       if (errorMessage.includes('not found') || errorMessage.includes('404')) {
         vscode.window
           .showInformationMessage(
-            `� GitHub Pages release site not found.\n\nCurrent version: v${this.currentVersion}\n\nPlease check that GitHub Pages is enabled for the repository.\n\nSite URL: https://eai-support.github.io/eai-gofer`,
+            `GitHub Pages release site not found.\n\nCurrent version: v${this.currentVersion}\n\nPlease check that GitHub Pages is enabled for the repository.\n\nSite URL: https://eai-support.github.io/eai-gofer`,
             'Open Release Site',
             'OK'
           )
