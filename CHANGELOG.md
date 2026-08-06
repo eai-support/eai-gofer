@@ -43,9 +43,10 @@ and this project adheres to
 
 ### Fixed
 
-- Migrated Gofer repository, release-feed, updater, and generated plugin URLs
-  from the retired `eai-tools` GitHub owner to `eai-support`. Headless release
-  descriptors and updater download allow-lists now reject the pre-rename owner.
+- Restored the versioned v3.7.28 and v3.7.29 Pages plugin bundles to their
+  published immutable bytes and restored the original release chronology.
+  Headless release descriptors and updater download allow-lists now reject the
+  retired `eai-tools` owner.
 - Codex skill-budget incident (2026-04-25): 176 redundant skill bundles disabled
   via `[[skills.config]] enabled = false` in `~/.codex/config.toml`.
 
