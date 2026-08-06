@@ -4,10 +4,10 @@
   "description": "Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.",
   "author": {
     "name": "EAI Tools",
-    "url": "https://github.com/eai-tools/eai-gofer"
+    "url": "https://github.com/eai-support/eai-gofer"
   },
-  "homepage": "https://github.com/eai-tools/eai-gofer",
-  "repository": "https://github.com/eai-tools/eai-gofer",
+  "homepage": "https://github.com/eai-support/eai-gofer",
+  "repository": "https://github.com/eai-support/eai-gofer",
   "license": "Apache-2.0",
   "keywords": [
     "eai-gofer",
@@ -29,7 +29,7 @@
       "Interactive",
       "Write"
     ],
-    "websiteURL": "https://github.com/eai-tools/eai-gofer",
+    "websiteURL": "https://github.com/eai-support/eai-gofer",
     "defaultPrompt": [
       "Set up my first EAI Platform app with Gofer",
       "Run Gofer research for this feature",
@@ -74,8 +74,8 @@
       "gofer:vocabulary",
       "gofer:zoom-out"
     ],
-    "marketplacePath": "https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer",
-    "releaseAsset": "https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.7.28.zip",
-    "vsixAsset": "https://eai-tools.github.io/eai-gofer/releases/eai-gofer-3.7.28.vsix"
+    "marketplacePath": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.7.28.zip",
+    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.7.28.vsix"
   }
 }

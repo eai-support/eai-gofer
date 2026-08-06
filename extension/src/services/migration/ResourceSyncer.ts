@@ -1666,7 +1666,7 @@ validation quality gate.
 
 ## Learn More
 
-- **Full Documentation**: https://github.com/eai-tools/eai-gofer
+- **Full Documentation**: https://github.com/eai-support/eai-gofer
 - **AI Agent Guidelines**: See AGENTS.md in your project root
 - **Gofer Extension**: View specs and progress in VSCode sidebar
 `;

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/eai-tools/eai-gofer/schemas/config.schema.json",
+  "$id": "https://github.com/eai-support/eai-gofer/schemas/config.schema.json",
   "title": "Gofer Configuration Schema",
   "description": "JSON Schema for validating Gofer extension configuration",
   "type": "object",

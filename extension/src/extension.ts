@@ -180,7 +180,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Setup auto-updater (using GitHub Pages API for private repo)
   const autoUpdater = new AutoUpdater(
-    'eai-tools/eai-gofer', // GitHub repo
+    'eai-support/eai-gofer', // GitHub repo
     packageJson.version, // Current version
     'eai-gofer' // Extension name for VSIX filename
   );

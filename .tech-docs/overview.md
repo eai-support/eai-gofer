@@ -23,7 +23,7 @@ source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
 - **Version:** 3.7.24
 - **Documentation Updated:** 2026-07-17
 - **Publisher:** EAI Tools
-- **Repository:** [eai-tools/eai-gofer](https://github.com/eai-tools/eai-gofer)
+- **Repository:** [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
 
 **Description:** Spec-driven delivery system for AI assistants. Users start with
 `/eai`, `#eai`, or `$eai` depending on the host. Gofer then checks readiness,
@@ -169,7 +169,7 @@ npm run gofer:codex-doctor                          # Diagnostic tool
 
 **Owner:** EAI Tools  
 **Primary Contact:**
-[eai-tools/eai-gofer](https://github.com/eai-tools/eai-gofer)
+[eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
 
 **Key Maintainer Information:**
 
@@ -229,7 +229,7 @@ gofer/
 
    ```bash
    # From GitHub Releases
-   gh release download --repo eai-tools/eai-gofer --pattern "*.vsix"
+   gh release download --repo eai-support/eai-gofer --pattern "*.vsix"
    code --install-extension gofer-*.vsix
    ```
 

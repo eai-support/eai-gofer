@@ -5,9 +5,9 @@ easy to understand, and easy to adapt across different AI coding hosts.
 
 ## Before You Start
 
-- Use [GitHub Discussions](https://github.com/eai-tools/eai-gofer/discussions)
+- Use [GitHub Discussions](https://github.com/eai-support/eai-gofer/discussions)
   for questions, ideas, and design conversations.
-- Use [GitHub Issues](https://github.com/eai-tools/eai-gofer/issues) for bugs,
+- Use [GitHub Issues](https://github.com/eai-support/eai-gofer/issues) for bugs,
   broken docs, regressions, and scoped feature requests.
 - For security issues, follow [SECURITY.md](./SECURITY.md) instead of opening a
   public issue.

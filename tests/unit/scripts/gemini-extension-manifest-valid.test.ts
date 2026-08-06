@@ -68,16 +68,16 @@ describe('gemini extension manifest (T167)', () => {
   it('advertises the public Gemini bundle and manifest URLs', (): void => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) as Manifest;
     expect(manifest.gofer?.bundle_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer'
     );
     expect(manifest.gofer?.manifest_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
     );
     expect(manifest.gofer?.commands_manifest_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json'
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json'
     );
     expect(manifest.gofer?.latest_download_url).toBe(
-      'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip'
+      'https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip'
     );
   });
 

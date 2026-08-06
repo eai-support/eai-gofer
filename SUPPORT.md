@@ -3,11 +3,11 @@
 ## Where to Ask What
 
 - **Questions and usage help**:
-  [GitHub Discussions](https://github.com/eai-tools/eai-gofer/discussions)
+  [GitHub Discussions](https://github.com/eai-support/eai-gofer/discussions)
 - **Longer-form project reference**:
-  [GitHub Wiki](https://github.com/eai-tools/eai-gofer/wiki)
+  [GitHub Wiki](https://github.com/eai-support/eai-gofer/wiki)
 - **Bug reports and regressions**:
-  [GitHub Issues](https://github.com/eai-tools/eai-gofer/issues)
+  [GitHub Issues](https://github.com/eai-support/eai-gofer/issues)
 - **Security reports**: see [SECURITY.md](./SECURITY.md)
 
 ## Before Opening A Ticket
@@ -23,5 +23,5 @@
 ## Self-Serve References
 
 - [README.md](./README.md)
-- [Docs site](https://eai-tools.github.io/eai-gofer/docs)
-- [Releases](https://eai-tools.github.io/eai-gofer/releases)
+- [Docs site](https://eai-support.github.io/eai-gofer/docs)
+- [Releases](https://eai-support.github.io/eai-gofer/releases)

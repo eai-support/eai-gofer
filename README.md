@@ -171,8 +171,8 @@ not auto-update VSIX installs by default.
 Public release assets:
 
 - Latest VSIX:
-  `https://eai-tools.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
-- Versioned releases: `https://eai-tools.github.io/eai-gofer/releases/`
+  `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
+- Versioned releases: `https://eai-support.github.io/eai-gofer/releases/`
 
 VS Code and Copilot agent mode also receive repo-local customization files:
 `.github/agents/`, `.github/skills/`, `.github/prompts/`,
@@ -194,7 +194,7 @@ global PATs are being retired.
 Recommended install path:
 
 ```bash
-claude plugin marketplace add eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer
+claude plugin marketplace add eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer
 claude plugin install eai-gofer@eai-gofer --scope user
 ```
 
@@ -209,7 +209,7 @@ References:
 Recommended install path:
 
 ```bash
-codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer
+codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer
 codex plugin add eai-gofer@eai-gofer
 ```
 
@@ -228,7 +228,7 @@ from `.agents/skills/`.
 Recommended install path:
 
 ```bash
-copilot plugin marketplace add https://github.com/eai-tools/eai-gofer
+copilot plugin marketplace add https://github.com/eai-support/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
@@ -243,7 +243,7 @@ References:
 Recommended install path:
 
 ```bash
-gemini extensions install https://github.com/eai-tools/eai-gofer --auto-update
+gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
 ```
 
 Reference:
@@ -255,14 +255,14 @@ Reference:
 For offline testing or pinned installs, use the public agent bundle zip:
 
 ```bash
-curl -fsSL https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip \
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip \
   -o /tmp/eai-gofer-agent-plugin-latest.zip
 ```
 
 The public release feed is:
 
 ```text
-https://eai-tools.github.io/eai-gofer/releases.json
+https://eai-support.github.io/eai-gofer/releases.json
 ```
 
 ## First EAI Platform App Setup
@@ -280,7 +280,7 @@ When first-run setup is needed, Gofer:
 - asks before installing Git, Node.js, npm, EAI CLI, opening browser login, or
   changing tenant/project state
 - uses `npm install -g eai-cli` when EAI CLI installation is approved, with
-  `npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/`
+  `npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-support.github.io/eai/registry/`
   as the static-registry fallback when npmjs is unavailable
 - runs `eai update --check`, `eai --describe`, `eai whoami`, and
   `eai tenant list --format json` before assuming CLI syntax or tenant readiness
@@ -347,10 +347,10 @@ npm run gofer:package-plugin -- --sync-repo
 ## Community
 
 - Questions and usage help:
-  [GitHub Discussions](https://github.com/eai-tools/eai-gofer/discussions)
+  [GitHub Discussions](https://github.com/eai-support/eai-gofer/discussions)
 - Bugs and feature requests:
-  [GitHub Issues](https://github.com/eai-tools/eai-gofer/issues)
-- Project wiki: [GitHub Wiki](https://github.com/eai-tools/eai-gofer/wiki)
+  [GitHub Issues](https://github.com/eai-support/eai-gofer/issues)
+- Project wiki: [GitHub Wiki](https://github.com/eai-support/eai-gofer/wiki)
 - Security guidance: [SECURITY.md](./SECURITY.md)
 - Contribution guidance: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Support policy: [SUPPORT.md](./SUPPORT.md)

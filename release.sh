@@ -37,7 +37,7 @@ resolve_github_repo() {
             echo "${remote_url#https://github.com/}" | sed 's/\.git$//'
             ;;
         *)
-            echo "eai-tools/eai-gofer"
+            echo "eai-support/eai-gofer"
             ;;
     esac
 }
@@ -458,7 +458,7 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
     wait_for_release_workflow "$CURRENT_VERSION"
     verify_vscode_marketplace_version "$CURRENT_VERSION"
 
-    VSIX_URL="https://eai-tools.github.io/eai-gofer/releases/eai-gofer-$CURRENT_VERSION.vsix"
+    VSIX_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-$CURRENT_VERSION.vsix"
     print_info "Verifying GitHub Pages release asset..."
     HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$VSIX_URL?cachebust=$(date +%s)")
     if [ "$HTTP_STATUS" = "200" ]; then
@@ -833,18 +833,18 @@ exit 0
 set +e
 
 # Verify the public release assets are actually downloadable from GitHub Pages
-VSIX_URL="https://eai-tools.github.io/eai-gofer/releases/eai-gofer-$NEW_VERSION.vsix"
-AGENT_PLUGIN_URL="https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip"
-CLAUDE_MARKETPLACE_URL="https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json"
-CODEX_PLUGIN_URL="https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json"
-GEMINI_EXTENSION_URL="https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
+VSIX_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-$NEW_VERSION.vsix"
+AGENT_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip"
+CLAUDE_MARKETPLACE_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json"
+CODEX_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json"
+GEMINI_EXTENSION_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
 print_info "Verifying VSIX is downloadable at: $VSIX_URL"
 HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$VSIX_URL?cachebust=$(date +%s)")
 if [ "$HTTP_STATUS" = "200" ]; then
     print_success "VSIX file is accessible (HTTP $HTTP_STATUS)"
 else
     print_warning "VSIX file returned HTTP $HTTP_STATUS - users may not be able to auto-update"
-    print_warning "Check GitHub Pages deployment: https://eai-tools.github.io/eai-gofer/releases"
+    print_warning "Check GitHub Pages deployment: https://eai-support.github.io/eai-gofer/releases"
 fi
 
 print_info "Verifying agent plugin zip is downloadable at: $AGENT_PLUGIN_URL"
@@ -881,7 +881,7 @@ fi
 
 # Simulate auto-updater flow (what other VSCode instances will do)
 print_info "Simulating auto-update flow for other VSCode instances..."
-RELEASES_JSON=$(curl -s "https://eai-tools.github.io/eai-gofer/releases.json?cachebust=$(date +%s)")
+RELEASES_JSON=$(curl -s "https://eai-support.github.io/eai-gofer/releases.json?cachebust=$(date +%s)")
 
 # Parse latest_version (try/catch guards against malformed JSON from partial deployment)
 REMOTE_VERSION=$(echo "$RELEASES_JSON" | node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); console.log(j.latest_version || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
@@ -939,21 +939,21 @@ print_success "🎉 Release $NEW_VERSION complete!"
 echo ""
 print_success "Extension Update:"
 echo "  • Users can now update to v$NEW_VERSION via the extension's update button"
-echo "  • Download URL: https://eai-tools.github.io/eai-gofer/releases/eai-gofer-$NEW_VERSION.vsix"
+echo "  • Download URL: https://eai-support.github.io/eai-gofer/releases/eai-gofer-$NEW_VERSION.vsix"
 echo ""
 print_success "Agent Plugin Update:"
-echo "  • Shared public bundle directory: https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer"
-echo "  • Agent plugin zip: https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip"
-echo "  • Public repo install source: https://github.com/eai-tools/eai-gofer"
+echo "  • Shared public bundle directory: https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer"
+echo "  • Agent plugin zip: https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip"
+echo "  • Public repo install source: https://github.com/eai-support/eai-gofer"
 echo "  • Claude repo marketplace path: .claude-plugin + plugins/eai-gofer"
 echo "  • Codex repo marketplace path: .agents/plugins + plugins/eai-gofer"
 echo "  • Copilot repo marketplace path: .github/plugin + plugins/eai-gofer"
-echo "  • Gemini manifest: https://eai-tools.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
+echo "  • Gemini manifest: https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
 echo ""
 print_info "GitHub Resources:"
-echo "  • Releases: https://github.com/eai-tools/eai-gofer/releases"
-echo "  • Actions: https://github.com/eai-tools/eai-gofer/actions"
-echo "  • GitHub Pages: https://eai-tools.github.io/eai-gofer/"
+echo "  • Releases: https://github.com/eai-support/eai-gofer/releases"
+echo "  • Actions: https://github.com/eai-support/eai-gofer/actions"
+echo "  • GitHub Pages: https://eai-support.github.io/eai-gofer/"
 echo ""
 print_info "Local VSIX file: ./eai-gofer-$NEW_VERSION.vsix"
 print_info "Local agent plugin zip: ./dist/eai-gofer-agent-plugin-$NEW_VERSION.zip"

@@ -2,26 +2,34 @@
   "name": "eai-gofer",
   "owner": {
     "name": "EAI Tools",
-    "url": "https://github.com/eai-tools/eai-gofer"
+    "url": "https://github.com/eai-support/eai-gofer"
   },
   "metadata": {
     "description": "Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.",
-    "version": "3.7.29"
+    "version": "3.7.28"
   },
   "plugins": [
     {
       "name": "eai-gofer",
       "source": "./plugins/eai-gofer",
       "description": "Gofer single-entry delivery command with internal pipeline routing.",
-      "version": "3.7.29",
+      "version": "3.7.28",
       "author": {
         "name": "EAI Tools",
-        "url": "https://github.com/eai-tools/eai-gofer"
+        "url": "https://github.com/eai-support/eai-gofer"
       },
-      "homepage": "https://github.com/eai-tools/eai-gofer",
-      "repository": "https://github.com/eai-tools/eai-gofer",
+      "homepage": "https://github.com/eai-support/eai-gofer",
+      "repository": "https://github.com/eai-support/eai-gofer",
       "category": "Coding",
-      "tags": ["eai-gofer", "gofer", "claude", "codex", "copilot", "gemini", "spec-driven-development"]
+      "tags": [
+        "eai-gofer",
+        "gofer",
+        "claude",
+        "codex",
+        "copilot",
+        "gemini",
+        "spec-driven-development"
+      ]
     }
   ]
 }

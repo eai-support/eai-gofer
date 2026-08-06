@@ -90,7 +90,7 @@ Install or update this plugin by replacing the stable local folder:
 The public release feed is available at:
 
 ```text
-https://eai-tools.github.io/eai-gofer/releases.json
+https://eai-support.github.io/eai-gofer/releases.json
 ```
 
 Gemini CLI users can also copy the bundled `.gemini/` directory into a repository root to activate the same public command set there.

@@ -25,7 +25,7 @@ const CREATED_AT = '2026-07-15T00:00:00.000Z';
  */
 export const TEST_GOFER_RELEASE_DESCRIPTOR: Readonly<GoferReleaseDescriptor> = Object.freeze({
   contractVersion: GOFER_RELEASE_CONTRACT_VERSION,
-  repository: 'eai-tools/eai-gofer',
+  repository: 'eai-support/eai-gofer',
   version: '3.7.28',
   ref: 'v3.7.28',
   commitSha: '43628f620259bd016d5fb26d3ab2b77a926309b3',
