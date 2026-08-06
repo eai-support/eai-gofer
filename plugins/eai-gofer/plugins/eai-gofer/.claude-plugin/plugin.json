@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.7.28",
+  "version": "3.7.29",
   "description": "Gofer single-entry delivery command with internal pipeline routing.",
   "author": {
     "name": "EAI Tools",
