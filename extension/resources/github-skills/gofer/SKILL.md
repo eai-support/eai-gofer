@@ -5,7 +5,7 @@ description: "Start or continue the Gofer delivery pipeline."
 
 # Gofer
 
-Version: 3.7.29
+Version: 3.7.30
 Host: VS Code and GitHub Copilot
 
 # Gofer
