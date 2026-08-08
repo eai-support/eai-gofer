@@ -25,6 +25,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(scenarioCommand).toContain('gofer-ui-preview.mjs');
     expect(scenarioCommand).toContain('after every');
     expect(scenarioCommand).toContain('UI-facing change');
+    expect(scenarioCommand).toContain('business-scenarios.json');
+    expect(scenarioCommand).toContain('--require-scenarios');
     expect(scenarioCommand).toContain('Non-app work');
 
     expect(researchCommand).toContain('ui-preview-brief.md');
@@ -51,6 +53,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(planCommand).toContain('public-readiness');
     expect(planCommand).toContain('block-porting');
     expect(planCommand).toContain('package-profile');
+    expect(planCommand).toContain('business-scenario-report.json');
 
     expect(tasksCommand).toContain('App-Delivery Preconditions Inside Shared Stages');
     expect(tasksCommand).toContain('ui-show-and-tell.md');
@@ -64,6 +67,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(tasksCommand).toContain('report the opened preview URL and screenshot path');
     expect(tasksCommand).toContain('external/internal/hybrid');
     expect(tasksCommand).toContain('eai resources schema --format json');
+    expect(tasksCommand).toContain('business-scenarios.json');
+    expect(tasksCommand).toContain('test:business-scenarios');
 
     expect(implementCommand).toContain('ui-show-and-tell.md');
     expect(implementCommand).toContain('build-map.md');
@@ -75,6 +80,8 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(implementCommand).toContain('public-readiness');
     expect(implementCommand).toContain('eai resources schema --format json');
     expect(implementCommand).toContain('source-platform internals');
+    expect(implementCommand).toContain('business-scenario-report.json');
+    expect(implementCommand).toContain('--require-scenarios');
 
     expect(validateCommand).toContain('ui-review-log.md');
     expect(validateCommand).toContain('build-map.md');
@@ -86,6 +93,9 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
     expect(validateCommand).toContain('For explicit non-app work');
     expect(validateCommand).toContain('Storybook story IDs');
     expect(validateCommand).toContain('theme override points');
+    expect(validateCommand).toContain('business-scenarios.json');
+    expect(validateCommand).toContain('integrated browser');
+    expect(validateCommand).toContain('Playwright');
   });
 
   it('ships app-delivery templates for preview, show-and-tell, and service-fit artifacts', () => {
@@ -94,6 +104,7 @@ describe('enterpriseai ui-first app-delivery guidance (root integration)', () =>
       '.specify/templates/build-map-template.md',
       '.specify/templates/ui-review-log-template.md',
       '.specify/templates/ui-show-and-tell-template.md',
+      '.specify/templates/business-scenarios-template.json',
       '.specify/templates/service-fit-matrix-template.md',
       '.specify/templates/contract-pack-template.md',
       '.specify/templates/reuse-scan-template.md',

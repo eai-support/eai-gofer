@@ -5,23 +5,36 @@ description:
 
 # Gofer Constitution
 
-## EAI Platform Session Preflight
+## Application Classification And EAI Preflight
 
-Before any Gofer stage/helper command does pipeline work:
+Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   and every other stack only by explicit exception.
-2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
-   and an active tenant is visible.
-3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
-   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
-   approve login/setup before continuing.
-4. For EAI app delivery, do not continue into research, specification, planning,
+1. Classify the request as **EAI app delivery** or **non-application work** using
+   the signals in `.specify/commands/0_gofer_start.md`.
+2. If the request is EAI app delivery or ambiguous, continue directly into the
+   EAI app delivery path. Do not ask for confirmation just because app delivery
+   is inferred.
+3. If the request is clearly non-application work, confirm once before taking
+   the non-app path:
+   - **"This looks like non-app work, so I will skip EAI tenant/app setup and
+     continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision in the feature discovery or
+   context bundle, do not run `eai whoami`, `eai tenant select`, `eai init`, or
+   `/gofer:eai-first-run`, and continue the appropriate non-app pipeline path.
+5. If the user says it is app work, switch to EAI app delivery and run EAI app
+   preflight.
+6. For EAI app delivery, treat durable delivery as EAI Platform delivery by
+   default, with Azure second and every other stack only by explicit exception.
+7. For EAI app delivery, run `eai whoami` and confirm the EAI CLI is installed,
+   the user is logged in, and an active tenant is visible.
+8. If app-delivery readiness is missing, stop and run `/gofer:eai-first-run` or
+   ask the user to approve login/setup before continuing.
+9. For EAI app delivery, do not continue into research, specification, planning,
    tasks, implementation, or validation until
    `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
    app-readiness, and next-action evidence.
-5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
-   Gofer artifacts; record only product-safe readiness status and evidence.
+10. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+    Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->

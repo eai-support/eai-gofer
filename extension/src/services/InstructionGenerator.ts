@@ -252,6 +252,8 @@ export class InstructionGenerator {
       '## EAI Repo Contract',
       '',
       '- This repo appears to be initialized from the EAI app template. Read `.specify/references/platform/eai-repo-contract.md` and `.specify/references/platform/eai-error-catalog.yaml` before app-delivery work.',
+      '- Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI tenant/app setup.',
+      '- Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery, not for confirmed non-app research/docs/audit/planning.',
       '- Use the public `gofer` or `eai` entrypoint when CLI, login, tenant, template, or Gofer readiness is missing or stale; then follow the internal first-run setup contract in `.specify/commands/gofer_eai_first_run.md` when present.',
       '- Check `eai update --check`, `eai --describe`, `eai agent guide --format json`, `eai template check --format json`, `eai gofer refresh --check --format json`, and `eai workflow readiness --format json` when the CLI advertises them.',
       '- After any `eai` command error, use `eai errors explain <code-or-reason> --format json` before guessing remediation.',

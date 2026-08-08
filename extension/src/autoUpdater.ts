@@ -99,7 +99,7 @@ export class AutoUpdater {
   private async getLatestVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'eai-support.github.io',
+        hostname: RELEASES_HOST,
         path: '/eai-gofer/releases.json',
         headers: {
           userAgent: 'VSCode-Extension-Updater',
@@ -234,7 +234,7 @@ export class AutoUpdater {
   private async getDownloadUrl(version: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'eai-support.github.io',
+        hostname: RELEASES_HOST,
         path: '/eai-gofer/releases.json',
         headers: {
           userAgent: 'VSCode-Extension-Updater',
