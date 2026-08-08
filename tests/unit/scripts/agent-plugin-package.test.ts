@@ -192,7 +192,9 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain(
         'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain('gemini extensions install https://github.com/eai-support/eai-gofer');
+      expect(readme).toContain(
+        'gemini extensions install https://github.com/eai-support/eai-gofer'
+      );
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain(

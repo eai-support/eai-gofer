@@ -61,7 +61,10 @@ describe('publish-public-release-assets.mjs', () => {
     fs.mkdirSync(path.join(pluginRoot, '.agents', 'plugins'), { recursive: true });
     fs.mkdirSync(path.join(pluginRoot, '.github', 'plugin'), { recursive: true });
     fs.mkdirSync(path.join(pluginRoot, '.gemini', 'commands', 'gofer'), { recursive: true });
-    fs.writeFileSync(path.join(pluginRoot, '.claude-plugin', 'plugin.json'), '{"name":"eai-gofer"}');
+    fs.writeFileSync(
+      path.join(pluginRoot, '.claude-plugin', 'plugin.json'),
+      '{"name":"eai-gofer"}'
+    );
     fs.writeFileSync(
       path.join(pluginRoot, '.claude-plugin', 'marketplace.json'),
       '{"name":"eai-gofer"}'
@@ -71,7 +74,10 @@ describe('publish-public-release-assets.mjs', () => {
       path.join(pluginRoot, '.agents', 'plugins', 'marketplace.json'),
       '{"name":"eai-gofer"}'
     );
-    fs.writeFileSync(path.join(pluginRoot, '.github', 'plugin', 'plugin.json'), '{"name":"eai-gofer"}');
+    fs.writeFileSync(
+      path.join(pluginRoot, '.github', 'plugin', 'plugin.json'),
+      '{"name":"eai-gofer"}'
+    );
     fs.writeFileSync(
       path.join(pluginRoot, '.github', 'plugin', 'marketplace.json'),
       '{"name":"eai-gofer"}'
@@ -106,12 +112,12 @@ describe('publish-public-release-assets.mjs', () => {
 
     expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-3.4.0.vsix'))).toBe(true);
     expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-latest.vsix'))).toBe(true);
-    expect(
-      fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-agent-plugin-3.4.0.zip'))
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-agent-plugin-latest.zip'))
-    ).toBe(true);
+    expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-agent-plugin-3.4.0.zip'))).toBe(
+      true
+    );
+    expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-agent-plugin-latest.zip'))).toBe(
+      true
+    );
 
     expect(fs.existsSync(path.join(publicPluginRoot, 'claude-marketplace.json'))).toBe(true);
     expect(fs.existsSync(path.join(publicPluginRoot, 'claude-plugin.json'))).toBe(true);
@@ -120,9 +126,7 @@ describe('publish-public-release-assets.mjs', () => {
     expect(fs.existsSync(path.join(publicPluginRoot, 'copilot-marketplace.json'))).toBe(true);
     expect(fs.existsSync(path.join(publicPluginRoot, 'copilot-plugin.json'))).toBe(true);
     expect(fs.existsSync(path.join(publicPluginRoot, 'gemini-extension.json'))).toBe(true);
-    expect(fs.existsSync(path.join(publicPluginRoot, 'gemini-commands-manifest.json'))).toBe(
-      true
-    );
+    expect(fs.existsSync(path.join(publicPluginRoot, 'gemini-commands-manifest.json'))).toBe(true);
 
     expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-3.2.0.vsix'))).toBe(false);
     expect(fs.existsSync(path.join(publicReleasesDir, 'eai-gofer-agent-plugin-3.2.0.zip'))).toBe(

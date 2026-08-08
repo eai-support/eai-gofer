@@ -57,13 +57,13 @@ Internally, Gofer still runs a staged pipeline:
 
 ## Install Surfaces
 
-| Surface            | Recommended source                       |
-| ------------------ | ---------------------------------------- |
-| VS Code            | Marketplace first, VSIX as fallback      |
+| Surface            | Recommended source                         |
+| ------------------ | ------------------------------------------ |
+| VS Code            | Marketplace first, VSIX as fallback        |
 | Claude Code        | `eai-support/eai-gofer` GitHub marketplace |
-| Codex              | GitHub repo marketplace                  |
-| GitHub Copilot CLI | GitHub repo marketplace                  |
-| Gemini CLI         | GitHub repo install with `--auto-update` |
+| Codex              | GitHub repo marketplace                    |
+| GitHub Copilot CLI | GitHub repo marketplace                    |
+| Gemini CLI         | GitHub repo install with `--auto-update`   |
 
 ## Model And Cost Policy
 

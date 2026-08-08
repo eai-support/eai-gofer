@@ -23,7 +23,8 @@ source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
 - **Version:** 3.7.24
 - **Documentation Updated:** 2026-07-17
 - **Publisher:** EAI Tools
-- **Repository:** [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
+- **Repository:**
+  [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
 
 **Description:** Spec-driven delivery system for AI assistants. Users start with
 `/eai`, `#eai`, or `$eai` depending on the host. Gofer then checks readiness,

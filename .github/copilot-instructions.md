@@ -6,17 +6,16 @@
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. In GitHub Copilot Chat, run
-`#0_gofer_start` to start the core pipeline: Gofer Start -> research -> specify
--> plan -> tasks -> implement -> validate.
+This project uses Gofer for spec-driven development. In GitHub Copilot Chat, use
+`#gofer` or `#eai` to start or continue the core pipeline: Gofer Start ->
+research -> specify -> plan -> tasks -> implement -> validate.
 
-Key prompts: `#1_gofer_research`, `#2_gofer_specify`, `#3_gofer_plan`,
-`#4_gofer_tasks`, `#5_gofer_implement`, `#6_gofer_validate`. `#6_gofer_validate`
-is the terminal quality gate and includes the final engineering review loop. Use
-`#7_gofer_save` for checkpoints and `#8_gofer_branding` for branded
-document/deck templates. Optional helpers like `#0a_problem_validation`,
-`/gofer:check-workspace`, and `/gofer:bootstrap-workspace` support the workflow
-without adding extra core stages. Artifacts in `.specify/specs/{feature}/`.
+Gofer routes internally through `.specify/commands/*.md` contracts, so numbered
+stage prompts stay hidden unless explicitly needed for internals. Before EAI
+readiness, classify the request: app delivery continues directly, while clear
+non-app work asks once before skipping EAI tenant/app setup. Validation is the
+terminal quality gate and includes the final engineering review loop. Artifacts
+live in `.specify/specs/{feature}/`.
 
 ## Token And Cost Policy
 

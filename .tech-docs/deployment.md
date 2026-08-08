@@ -77,7 +77,8 @@ flowchart TB
 
 ### GitHub Repository
 
-- **Repository:** [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
+- **Repository:**
+  [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
 - **Primary Branch:** `main`
 - **Protected Branches:** `main`, `develop`
 - **Required Checks:** CI tests, linting, type checking

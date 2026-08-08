@@ -6,6 +6,13 @@ describe('gofer-ui-preview helper', () => {
   let preview: {
     detectPackageManagerFromNames: (fileNames: string[]) => string;
     selectPreviewScript: (scripts: Record<string, string>) => string | null;
+    selectBusinessScenarioScript: (scripts: Record<string, string>) => string | null;
+    isBrowserScenarioCommand: (command: string) => boolean;
+    validateBusinessScenarioManifest: (manifest: unknown) => {
+      valid: boolean;
+      errors: string[];
+      scenarioCount: number;
+    };
     buildPackageScriptCommand: (packageManager: string, scriptName: string | null) => string | null;
     buildCandidateUrls: (options?: {
       explicitUrl?: string | null;
@@ -35,6 +42,9 @@ describe('gofer-ui-preview helper', () => {
       open: string;
       screenshot: boolean;
       timeoutMs: number;
+      scenarioTimeoutMs: number;
+      scenarioCommand: string | null;
+      scenarios: string;
       json: boolean;
       dryRun: boolean;
     };
@@ -68,6 +78,42 @@ describe('gofer-ui-preview helper', () => {
     ).toBe('storybook');
 
     expect(preview.selectPreviewScript({ test: 'vitest run' })).toBeNull();
+  });
+
+  it('selects executable browser business-scenario scripts in priority order', () => {
+    expect(
+      preview.selectBusinessScenarioScript({
+        'test:playwright': 'playwright test',
+        'test:business-scenarios': 'playwright test tests/business',
+      })
+    ).toBe('test:business-scenarios');
+    expect(preview.selectBusinessScenarioScript({ test: 'vitest run' })).toBeNull();
+    expect(preview.isBrowserScenarioCommand('playwright test')).toBe(true);
+    expect(preview.isBrowserScenarioCommand('vitest run')).toBe(false);
+  });
+
+  it('requires traceable scenarios, screens, and executable test files in the manifest', () => {
+    expect(
+      preview.validateBusinessScenarioManifest({
+        schemaVersion: '1.0',
+        scenarios: [
+          {
+            id: 'BS-001',
+            userStory: 'US-01',
+            screens: ['Start', 'Review'],
+            testFiles: ['tests/e2e/business.spec.ts'],
+          },
+        ],
+      })
+    ).toEqual({ valid: true, errors: [], scenarioCount: 1 });
+
+    const invalid = preview.validateBusinessScenarioManifest({
+      schemaVersion: '1.0',
+      scenarios: [{ id: 'BS-001', userStory: 'US-01', screens: [], testFiles: [] }],
+    });
+    expect(invalid.valid).toBe(false);
+    expect(invalid.errors.join(' ')).toContain('screens');
+    expect(invalid.errors.join(' ')).toContain('testFiles');
   });
 
   it('builds package-manager-specific script commands', () => {
@@ -125,6 +171,11 @@ describe('gofer-ui-preview helper', () => {
       '--no-screenshot',
       '--timeout-ms',
       '5000',
+      '--scenario-command',
+      'playwright test tests/business',
+      '--require-scenarios',
+      '--scenario-timeout-ms',
+      '6000',
       '--json',
       '--dry-run',
     ]);
@@ -134,6 +185,9 @@ describe('gofer-ui-preview helper', () => {
     expect(args.open).toBe('none');
     expect(args.screenshot).toBe(false);
     expect(args.timeoutMs).toBe(5000);
+    expect(args.scenarioCommand).toBe('playwright test tests/business');
+    expect(args.scenarios).toBe('required');
+    expect(args.scenarioTimeoutMs).toBe(6000);
     expect(args.json).toBe(true);
     expect(args.dryRun).toBe(true);
     expect(preview.markdownCell('one\\two|three\nfour')).toBe('one\\\\two\\|three<br>four');
