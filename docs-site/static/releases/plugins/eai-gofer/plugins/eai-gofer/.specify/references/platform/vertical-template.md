@@ -1,7 +1,7 @@
 # Vertical Template Reference
 
-Use `https://github.com/eai-support/eai-app-template` as the canonical public app
-template for EnterpriseAI app-delivery work.
+Use `https://github.com/eai-support/eai-app-template` as the canonical public
+app template for EnterpriseAI app-delivery work.
 
 This file is the preferred alias for the legacy `eai-app-template.md` fallback
 reference. Both names are kept so older EnterpriseAI consumers and newer public

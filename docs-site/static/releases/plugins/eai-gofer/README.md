@@ -1,6 +1,6 @@
 # Gofer Agent Plugin
 
-Version: 3.7.29
+Version: 3.7.30
 
 This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
@@ -22,8 +22,8 @@ That host publishes:
 
 - Latest VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Latest agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip`
-- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.7.29.vsix`
-- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.7.29.zip`
+- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.7.30.vsix`
+- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.7.30.zip`
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
@@ -31,7 +31,7 @@ That host publishes:
 
 ## First EAI Platform App
 
-Start with `/gofer`, `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` depending on the host. Gofer then routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. That setup path is allowed before `.specify/` exists. It checks Git, Node.js, npm, EAI CLI, registry, `eai update --check`, `eai --describe`, `eai agent guide --format json` when advertised, login, tenant, `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`, Gofer scaffold readiness, and `eai errors explain <code-or-reason> --format json` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Start with `/gofer`, `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before `.specify/` exists. It checks Git, Node.js, npm, EAI CLI, registry, `eai update --check`, `eai --describe`, `eai agent guide --format json` when advertised, login, tenant, `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`, Gofer scaffold readiness, and `eai errors explain <code-or-reason> --format json` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
 
 For EAI errors, Gofer expects agents to run live EAI guidance first, use `.specify/references/platform/eai-error-catalog.yaml` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval. For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 

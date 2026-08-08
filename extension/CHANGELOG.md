@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.30] - 2026-08-08
+
+Route non-app Gofer work before EAI readiness
+
 ## [3.7.28] - 2026-07-29
 
 Validate strict PublicAPI v4 resource mutation contracts

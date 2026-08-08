@@ -276,11 +276,19 @@ Use this as the single user-facing Gofer command. Users should run \`/${entry.na
 4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${host} --include-mirrors\`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
+## App vs Non-App Routing
+
+1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
+2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path; do not ask for confirmation just because app delivery is inferred.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+4. When the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate Gofer research, documentation, audit, migration, or planning path.
+5. If the user says it is app work, switch to EAI app delivery and run EAI readiness.
+
 ## EAI Platform Readiness
 
-1. Run \`eai whoami\` before EAI app delivery work.
+1. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
 2. Confirm the user is logged in, an active tenant is available, and the repo is ready for the EAI app template.
-3. If EAI CLI, login, tenant, or template readiness is missing, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\` when present.
+3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\` when present.
 4. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
 5. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
 
@@ -569,20 +577,28 @@ function injectPipelineContinuation(content, platform, commandName) {
 
 function buildEaiPlatformSessionPreflightSection() {
   return `
-## EAI Platform Session Preflight
+## Application Classification And EAI Preflight
 
-Before any Gofer stage/helper command does pipeline work:
+Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
-2. Run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
-3. If \`eai\` is missing, \`eai whoami\` fails, the token is expired, or no active tenant is available, stop and run \`/gofer:eai-first-run\` or ask the user to approve login/setup before continuing.
-4. For EAI app delivery, do not continue into research, specification, planning, tasks, implementation, or validation until \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, template, app-readiness, and next-action evidence.
-5. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in \`.specify/commands/0_gofer_start.md\`.
+2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path. Do not ask for confirmation just because app delivery is inferred.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision in the feature discovery or context bundle, do not run \`eai whoami\`, \`eai tenant select\`, \`eai init\`, or \`/gofer:eai-first-run\`, and continue the appropriate non-app pipeline path.
+5. If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
+6. For EAI app delivery, treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
+7. For EAI app delivery, run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
+8. If app-delivery readiness is missing, stop and run \`/gofer:eai-first-run\` or ask the user to approve login/setup before continuing.
+9. For EAI app delivery, do not continue into research, specification, planning, tasks, implementation, or validation until \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, template, app-readiness, and next-action evidence.
+10. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
 `.trim();
 }
 
 function injectEaiPlatformSessionPreflight(content) {
-  if (content.includes('## EAI Platform Session Preflight')) {
+  if (
+    content.includes('## Application Classification And EAI Preflight') ||
+    content.includes('## EAI Platform Session Preflight')
+  ) {
     return content;
   }
 
@@ -661,7 +677,8 @@ function injectWorkspacePreflight(content, commandName, host = 'auto') {
 
   const section = buildWorkspacePreflightSection(
     host,
-    !content.includes('## EAI Platform Session Preflight')
+    !content.includes('## Application Classification And EAI Preflight') &&
+      !content.includes('## EAI Platform Session Preflight')
   );
   const headingMatch = content.match(/^# [^\n]+\n+/);
   if (!headingMatch) {
@@ -740,7 +757,11 @@ function injectBusinessProgressContract(content) {
       : `${content.slice(0, headingIndex).trimEnd()}\n\n${section}\n`;
   }
 
-  for (const heading of ['## Token And Cost Policy', '## EAI Platform Session Preflight']) {
+  for (const heading of [
+    '## Token And Cost Policy',
+    '## Application Classification And EAI Preflight',
+    '## EAI Platform Session Preflight',
+  ]) {
     const headingIndex = content.indexOf(heading);
     if (headingIndex === -1) continue;
     const nextHeading = content.indexOf('\n## ', headingIndex + 1);
@@ -890,7 +911,7 @@ async function emitDocumentationSkill(root, baseDir, dryRun, label) {
 function buildUmbrellaSkillContent(version, stages, hostLabel) {
   const stageList = buildInternalStageList(stages);
 
-  return `---\nname: eai\ndescription: "Use Gofer's repo-owned pipeline, scripts, and validation tools through one clean command surface."\n---\n\n# Eai\n\nVersion: ${version}\nHost: ${hostLabel}\n\nUse this skill when the user asks to install, update, diagnose, run, or understand Gofer from an AI coding app.\n\n## Clean Surface Contract\n\n- User-facing pickers should expose only \`gofer\` and \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly request internal details.\n- Keep the full pipeline available by routing internally through \`.specify/commands/*.md\` stage contracts.\n- Check workspace health before stage work: \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`.\n- If missing or stale, ask the user before running: \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`.\n\n## Light Plugin And Repo Scripts\n\nThe light plugin installs durable Gofer knowledge and app integration metadata. The repository remains the source of truth for executable scripts, commands, templates, specs, and memory. After bootstrap, agents should prefer repo-local scripts over bundled fallback copies because the repo can be updated by \`eai gofer refresh\` or the VS Code extension.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use this public entrypoint and then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. That setup path is intentionally allowed before \`.specify/\` exists.\n\n## Internal Pipeline Contracts\n\n${stageList}\n`;
+  return `---\nname: eai\ndescription: "Use Gofer's repo-owned pipeline, scripts, and validation tools through one clean command surface."\n---\n\n# Eai\n\nVersion: ${version}\nHost: ${hostLabel}\n\nUse this skill when the user asks to install, update, diagnose, run, or understand Gofer from an AI coding app.\n\n## Clean Surface Contract\n\n- User-facing pickers should expose only \`gofer\` and \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly request internal details.\n- Keep the full pipeline available by routing internally through \`.specify/commands/*.md\` stage contracts.\n- Check workspace health before stage work: \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`.\n- If missing or stale, ask the user before running: \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`.\n\n## Light Plugin And Repo Scripts\n\nThe light plugin installs durable Gofer knowledge and app integration metadata. The repository remains the source of truth for executable scripts, commands, templates, specs, and memory. After bootstrap, agents should prefer repo-local scripts over bundled fallback copies because the repo can be updated by \`eai gofer refresh\` or the VS Code extension.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use this public entrypoint and then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. That setup path is intentionally allowed before \`.specify/\` exists.\n\n## Internal Pipeline Contracts\n\n${stageList}\n`;
 }
 
 function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
@@ -1286,6 +1307,7 @@ Do not expose numbered or helper stage commands in user-facing pickers. They rem
 
 ## EAI CLI Discovery And Recovery
 
+- Classify work before EAI readiness: app delivery continues directly; clear non-app work asks once before skipping EAI tenant/app setup.
 - Run \`eai update --check\` before first EAI platform work when the CLI may be stale.
 - Run \`eai --describe\` before assuming command syntax.
 - If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.
