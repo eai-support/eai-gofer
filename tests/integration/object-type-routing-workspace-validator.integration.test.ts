@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -6,6 +7,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const tool = path.resolve('.specify/scripts/node/validate-object-type-routing-workspace.mjs');
 const workspace = path.resolve('../..');
+const hasCoordinatedWorkspace = existsSync(
+  path.join(workspace, 'ops', 'tech-docs', 'static', 'contracts', 'object-type-routing-v1.json')
+);
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {
@@ -37,13 +41,23 @@ describe('Object Type routing workspace reducer', () => {
     expect(canonical).not.toContain('diff -U0 -- src/app/core/telemetry.py');
   });
 
-  it('reduces the real local workspace deterministically without writing by default', async () => {
+  it('reduces the coordinated workspace deterministically or fails closed in an isolated checkout', async () => {
     const before = await readdir(path.resolve('.specify/scripts/node'));
     const first = runTool('--workspace', workspace, '--json');
     const second = runTool('--workspace', workspace, '--json');
 
-    expect([0, 2]).toContain(first.status);
     expect(second.status).toBe(first.status);
+    if (!hasCoordinatedWorkspace) {
+      expect(first.status).toBe(4);
+      expect(first.stdout).toBe('');
+      expect(first.stderr).toContain('CONTRACT_UNREADABLE');
+      expect(second.stdout).toBe(first.stdout);
+      expect(second.stderr).toBe(first.stderr);
+      expect(await readdir(path.resolve('.specify/scripts/node'))).toEqual(before);
+      return;
+    }
+
+    expect([0, 2]).toContain(first.status);
     expect(first.stderr).toBe('');
     expect(second.stderr).toBe('');
     expect(second.stdout).toBe(first.stdout);
@@ -81,12 +95,20 @@ describe('Object Type routing workspace reducer', () => {
     expect(await readdir(path.resolve('.specify/scripts/node'))).toEqual(before);
   }, 30_000);
 
-  it('writes only when --output is supplied and makes the file equal stdout JSON', async () => {
+  it('writes only for a coordinated workspace when --output is supplied', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'object-type-routing-workspace-'));
     temporaryRoots.push(root);
     const output = path.join(root, 'nested', 'compatibility.json');
 
     const result = runTool('--workspace', workspace, '--output', output, '--json');
+    if (!hasCoordinatedWorkspace) {
+      expect(result.status).toBe(4);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toContain('CONTRACT_UNREADABLE');
+      expect(await readdir(root)).toEqual([]);
+      return;
+    }
+
     expect([0, 2]).toContain(result.status);
     const fromStdout = JSON.parse(result.stdout);
     const fromFile = JSON.parse(await readFile(output, 'utf8'));

@@ -13,7 +13,7 @@ import {
 } from '../../.specify/scripts/node/validate-object-type-identifiers.mjs';
 
 const script = path.resolve('.specify/scripts/node/validate-object-type-identifiers.mjs');
-const contractPath = path.resolve('../tech-docs/static/contracts/object-type-routing-v1.json');
+const contractPath = path.resolve('.specify/contracts/object-type-routing-v1.json');
 const schemaPath = path.resolve('.specify/schemas/object-type-identifier-audit-v1.schema.json');
 const configPath = path.resolve('.specify/config/object-type-routing.json');
 const fixtureRoot = path.resolve('tests/fixtures/object-type-routing');

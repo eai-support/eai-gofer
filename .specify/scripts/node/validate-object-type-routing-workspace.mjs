@@ -74,9 +74,19 @@ const COVERAGE_OWNERS = Object.freeze([
 
 const MIRRORS = Object.freeze([
   {
+    component: 'eai-gofer-contract',
+    source: 'ops/tech-docs/static/contracts/object-type-routing-v1.json',
+    installed: 'ops/gofer/.specify/contracts/object-type-routing-v1.json',
+  },
+  {
     component: 'eai-gofer-extension',
     source: 'ops/gofer/.specify/config/object-type-routing.json',
     installed: 'ops/gofer/extension/resources/specify-config/object-type-routing.json',
+  },
+  {
+    component: 'eai-gofer-extension',
+    source: 'ops/gofer/.specify/contracts/object-type-routing-v1.json',
+    installed: 'ops/gofer/extension/resources/contracts/object-type-routing-v1.json',
   },
   {
     component: 'eai-gofer-extension',
@@ -93,6 +103,11 @@ const MIRRORS = Object.freeze([
     component: 'eai-cli-installed-gofer',
     source: 'ops/gofer/.specify/config/object-type-routing.json',
     installed: 'ops/eai-cli/resources/gofer/config/object-type-routing.json',
+  },
+  {
+    component: 'eai-cli-installed-gofer',
+    source: 'ops/gofer/.specify/contracts/object-type-routing-v1.json',
+    installed: 'ops/eai-cli/resources/gofer/contracts/object-type-routing-v1.json',
   },
   {
     component: 'eai-cli-installed-gofer',

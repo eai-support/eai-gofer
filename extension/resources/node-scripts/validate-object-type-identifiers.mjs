@@ -25,6 +25,8 @@ const DEFAULT_SCHEMA_PATH = path.resolve(
   'object-type-identifier-audit-v1.schema.json'
 );
 const DEFAULT_CONTRACT_CANDIDATES = [
+  path.resolve(SCRIPT_DIRECTORY, '..', '..', 'contracts', 'object-type-routing-v1.json'),
+  path.resolve(SCRIPT_DIRECTORY, '..', 'contracts', 'object-type-routing-v1.json'),
   path.resolve(
     SCRIPT_DIRECTORY,
     '..',

@@ -20,6 +20,7 @@ const SYNC_PAIRS = [
   ['.gemini', 'extension/resources/gemini'],
   ['.specify/commands', 'extension/resources/specify-commands'],
   ['.specify/config', 'extension/resources/specify-config'],
+  ['.specify/contracts', 'extension/resources/contracts'],
   ['.specify/references', 'extension/resources/references'],
   ['.specify/schemas', 'extension/resources/schemas'],
   ['.specify/scripts/bash', 'extension/resources/bash-scripts'],

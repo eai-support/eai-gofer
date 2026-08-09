@@ -91,9 +91,15 @@ describe('ResourceSyncer workspace sync', () => {
     expect(await fs.readFile(commandPath, 'utf8')).toContain('name: 6_gofer_validate');
   });
 
-  it('installGoferCLI provisions the immutable object-type routing config and audit schemas', async (): Promise<void> => {
+  it('installGoferCLI provisions the immutable object-type routing contract, config, and audit schemas', async (): Promise<void> => {
     await syncer.installGoferCLI();
 
+    const contractPath = path.join(
+      workspace,
+      '.specify',
+      'contracts',
+      'object-type-routing-v1.json'
+    );
     const configPath = path.join(workspace, '.specify', 'config', 'object-type-routing.json');
     const auditSchemaPath = path.join(
       workspace,
@@ -102,6 +108,10 @@ describe('ResourceSyncer workspace sync', () => {
       'object-type-identifier-audit-v1.schema.json'
     );
 
+    expect(JSON.parse(await fs.readFile(contractPath, 'utf8'))).toMatchObject({
+      contractVersion: 'eai.object-type-routing/v1',
+      authoritativeTransportIdentifier: 'slug',
+    });
     expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toMatchObject({
       contractVersion: 'eai.object-type-routing/v1',
       soleOwner: 'front/eai-app-template/packages/platform-sdk/src/resource-routing.ts',

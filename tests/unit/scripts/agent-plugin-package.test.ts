@@ -131,6 +131,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/references/platform/eai-repo-contract.md',
         'eai-gofer/.specify/references/platform/eai-error-catalog.yaml',
         'eai-gofer/.specify/config/object-type-routing.json',
+        'eai-gofer/.specify/contracts/object-type-routing-v1.json',
         'eai-gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
         'eai-gofer/.specify/schemas/object-type-routing-phase-bundle-v1.schema.json',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',

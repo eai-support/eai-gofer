@@ -2,11 +2,13 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { constants as fsConstants } from 'node:fs';
 import {
   chmod,
   lstat,
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readlink,
   realpath,
@@ -109,11 +111,23 @@ async function currentEntry(repository, relativePath) {
       return { kind: 'symlink', mode: '120000', content: Buffer.from(await readlink(absolutePath), 'utf8') };
     }
     if (!stat.isFile()) return null;
-    return {
-      kind: 'file',
-      mode: (stat.mode & 0o111) !== 0 ? '100755' : '100644',
-      content: await readFile(absolutePath),
-    };
+    const handle = await open(
+      absolutePath,
+      fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
+    );
+    try {
+      const openedStat = await handle.stat();
+      if (!openedStat.isFile()) {
+        throw new Error(`Bundle entry changed type while being read: ${relativePath}`);
+      }
+      return {
+        kind: 'file',
+        mode: (openedStat.mode & 0o111) !== 0 ? '100755' : '100644',
+        content: await handle.readFile(),
+      };
+    } finally {
+      await handle.close();
+    }
   } catch (error) {
     if (error?.code === 'ENOENT') return null;
     throw error;
@@ -259,7 +273,6 @@ async function reconstructBundle(bundle) {
     }
 
     for (const entry of bundle.entries) {
-      const target = path.join(root, ...entry.path.split('/'));
       const current = await currentEntry(root, entry.path);
       if (entry.deleted && current !== null) throw new Error(`reconstruction retained deleted path: ${entry.path}`);
       if (!entry.deleted) {
