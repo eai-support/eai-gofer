@@ -5,7 +5,6 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { constants as fsConstants } from 'node:fs';
 import {
   chmod,
-  lstat,
   mkdir,
   mkdtemp,
   open,
@@ -122,11 +121,6 @@ function listWorktreePaths(repository) {
 async function currentEntry(repository, relativePath) {
   const absolutePath = path.join(repository, ...relativePath.split('/'));
   try {
-    const stat = await lstat(absolutePath);
-    if (stat.isSymbolicLink()) {
-      return { kind: 'symlink', mode: '120000', content: Buffer.from(await readlink(absolutePath), 'utf8') };
-    }
-    if (!stat.isFile()) return null;
     const handle = await open(
       absolutePath,
       fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
@@ -146,6 +140,13 @@ async function currentEntry(repository, relativePath) {
     }
   } catch (error) {
     if (error?.code === 'ENOENT') return null;
+    if (error?.code === 'ELOOP') {
+      return {
+        kind: 'symlink',
+        mode: '120000',
+        content: Buffer.from(await readlink(absolutePath), 'utf8'),
+      };
+    }
     throw error;
   }
 }
