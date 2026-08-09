@@ -22,6 +22,21 @@ function runTool(...arguments_: string[]) {
 }
 
 describe('Object Type routing workspace reducer', () => {
+  it('verifies committed feature changes relative to origin/main and keeps the extension mirror exact', async () => {
+    const canonical = await readFile(
+      path.resolve('.specify/scripts/bash/verify-object-type-routing-workspace.sh'),
+      'utf8'
+    );
+    const mirror = await readFile(
+      path.resolve('extension/resources/bash-scripts/verify-object-type-routing-workspace.sh'),
+      'utf8'
+    );
+
+    expect(mirror).toBe(canonical);
+    expect(canonical.match(/diff -U0 origin\/main --/g)).toHaveLength(2);
+    expect(canonical).not.toContain('diff -U0 -- src/app/core/telemetry.py');
+  });
+
   it('reduces the real local workspace deterministically without writing by default', async () => {
     const before = await readdir(path.resolve('.specify/scripts/node'));
     const first = runTool('--workspace', workspace, '--json');

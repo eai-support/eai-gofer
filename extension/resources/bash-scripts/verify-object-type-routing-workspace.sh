@@ -163,13 +163,13 @@ node "$WORKSPACE_ROOT/ops/gofer/.specify/scripts/node/object-type-routing-phase-
   --json >/dev/null
 
 for repo in "$WORKSPACE_ROOT/front/Configurator" "$WORKSPACE_ROOT/mid/ResourceAPI"; do
-  if git -C "$repo" diff -U0 | grep -E '^\+.*(create_counter|create_histogram|Counter\(|Histogram\(|publish\(|emit\()' >/dev/null; then
+  if git -C "$repo" diff -U0 origin/main -- | grep -E '^\+.*(create_counter|create_histogram|Counter\(|Histogram\(|publish\(|emit\()' >/dev/null; then
     echo "Unexpected Configurator/ResourceAPI instrumentation addition in $repo" >&2
     exit 2
   fi
 done
 
-if [[ "$(git -C "$WORKSPACE_ROOT/mid/PublicAPI" diff -U0 -- src/app/core/telemetry.py | grep -c '^+.*eai.publicapi.object_type_routing.rejections' || true)" -ne 2 ]]; then
+if [[ "$(git -C "$WORKSPACE_ROOT/mid/PublicAPI" diff -U0 origin/main -- src/app/core/telemetry.py | grep -c '^+.*eai.publicapi.object_type_routing.rejections' || true)" -ne 2 ]]; then
   echo "PublicAPI must contain the one counter name in initial and reset meter construction only." >&2
   exit 2
 fi
