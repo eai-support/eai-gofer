@@ -438,6 +438,8 @@ export class ResourceSyncer implements IResourceOperations {
     // Create structure and resources
     await this.createGoferStructure();
     await this.syncCanonicalCommands();
+    await this.copyBundledConfig();
+    await this.copyBundledSchemas();
     await this.copyBundledTemplates();
     await this.copyBundledReferences();
     await this.ensureDefaultModelPolicy();
@@ -460,12 +462,14 @@ export class ResourceSyncer implements IResourceOperations {
 
     const folders = [
       'commands',
+      'config',
       'memory',
       'references',
       'scripts/bash',
       'scripts/hooks',
       'scripts/node',
       'scripts/powershell',
+      'schemas',
       'specs',
       'templates',
     ];
@@ -1904,6 +1908,22 @@ validation quality gate.
       'public references',
       'references',
       path.join(this.specifyPath, 'references')
+    );
+  }
+
+  public async copyBundledConfig(): Promise<void> {
+    await this.syncBundledDirectory(
+      'immutable Gofer config',
+      'specify-config',
+      path.join(this.specifyPath, 'config')
+    );
+  }
+
+  public async copyBundledSchemas(): Promise<void> {
+    await this.syncBundledDirectory(
+      'Gofer audit schemas',
+      'schemas',
+      path.join(this.specifyPath, 'schemas')
     );
   }
 

@@ -54,6 +54,7 @@
     "generate-commands": "tsx scripts/generate-commands.ts",
     "_comment_codex_doctor": "extension subpackage may re-expose the same script but root is canonical for `npm test` discovery",
     "gofer:generate": "node .specify/scripts/node/generate-commands.mjs && node .specify/scripts/node/sync-extension-resources.mjs",
+    "gofer:generate:check": "node .specify/scripts/node/generate-commands.mjs --check && node .specify/scripts/node/sync-extension-resources.mjs --check",
     "gofer:package-plugin": "node .specify/scripts/node/package-agent-plugin.mjs",
     "gofer:mermaid-export": "node .specify/scripts/node/mermaid-export.mjs",
     "gofer:closed-loop-audit": "node .specify/scripts/node/gofer-closed-loop-audit.mjs",

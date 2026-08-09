@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  OBJECT_TYPE_ROUTING_AUDIT_CONFIG,
   validateSourceContent,
   validateWorkspace,
 } from '../../../.specify/scripts/node/validate-v4-resource-contract.mjs';
@@ -20,6 +21,17 @@ afterEach(async () => {
 });
 
 describe('PublicAPI v4 resource mutation contract validator', () => {
+  it('pins the raw-route audit denominator to the canonical roots and sole SDK owner', () => {
+    expect(OBJECT_TYPE_ROUTING_AUDIT_CONFIG).toMatchObject({
+      fixedRoots: ['src', 'app', 'pages', 'lib', 'packages'],
+      governedRepositoryRoots: ['front/eai-app-template'],
+      soleOwner: 'front/eai-app-template/packages/platform-sdk/src/resource-routing.ts',
+    });
+    expect(OBJECT_TYPE_ROUTING_AUDIT_CONFIG.excludedDirectories).toEqual(
+      expect.arrayContaining(['node_modules', 'docs', 'generated', 'tests'])
+    );
+  });
+
   it('accepts canonical create, update, action, and updateFrom calls', () => {
     const source = `
       await platformFetch(\`/api/eai/v4/data/resources/\${tenant}/project\`, {
@@ -43,6 +55,117 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     `;
 
     expect(validateSourceContent(source, 'src/client.ts')).toEqual([]);
+  });
+
+  it('accepts every canonical ResourceRouting route method', () => {
+    const source = `
+      await platformFetch(this.routing.collection(objectType), {
+        method: 'POST',
+        body: JSON.stringify({ data }),
+      });
+      await platformFetch(this.routing.member(objectType, id), {
+        method: 'PUT',
+        body: JSON.stringify({ data, version }),
+      });
+      await platformFetch(this.routing.subresource(objectType, id, 'files', propertyName), {
+        method: 'POST',
+        body: file,
+      });
+      await platformFetch(this.routing.subresource(objectType, id, dynamicSegment), {
+        method: 'POST',
+        body: request,
+      });
+      await platformFetch(this.routing.subresource(objectType, id, 'actions', action), {
+        method: 'POST',
+        body: JSON.stringify({ params }),
+      });
+      await platformFetch(this.routing.collectionOperation(objectType, 'batch', 'create'), {
+        method: 'POST',
+        body: JSON.stringify({ items }),
+      });
+      await platformFetch(this.routing.query(), {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+      await platformFetch(this.routing.search(), {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+      await platformFetch(this.routing.schema());
+      await platformFetch(this.routing.objectTypes(), {
+        method: 'POST',
+        body: JSON.stringify(definition),
+      });
+      await platformFetch(this.routing.objectType(objectTypeId), {
+        method: 'PATCH',
+        body: JSON.stringify(definition),
+      });
+      await platformFetch(this.routing.parent(objectType, id, parentType, parentId), {
+        method: 'DELETE',
+      });
+    `;
+
+    expect(validateSourceContent(source, 'src/resources.ts')).toEqual([]);
+  });
+
+  it('enforces mutation contracts after resolving canonical ResourceRouting calls', () => {
+    const invalid = `
+      await platformFetch(this.routing.collection(objectType), {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      await platformFetch(this.routing.member(objectType, id), {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      await platformFetch(this.routing.subresource(objectType, id, 'actions', action), {
+        method: 'POST',
+        body: JSON.stringify(params),
+      });
+    `;
+
+    expect(validateSourceContent(invalid, 'src/resources.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_ENVELOPE_REQUIRED' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_ENVELOPE_REQUIRED' }),
+    ]);
+  });
+
+  it('validates canonical ResourceRouting calls stored in local bindings', () => {
+    const source = `
+      const route = this.routing.member(objectType, id);
+      await platformFetch(route, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    `;
+
+    expect(validateSourceContent(source, 'src/resources.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' }),
+    ]);
+  });
+
+  it('does not trust approved method names on arbitrary routing helpers', () => {
+    const invalid = `
+      await platformFetch(resourceRouting.subresource(objectType, id, 'files'), {
+        method: 'POST',
+        body: file,
+      });
+      await platformFetch(this.otherResourceRouting.member(objectType, id), {
+        method: 'PUT',
+        body: JSON.stringify({ data, version }),
+      });
+      await platformFetch(this.routing.dynamicResource(objectType, id), {
+        method: 'PUT',
+        body: JSON.stringify({ data, version }),
+      });
+    `;
+
+    expect(validateSourceContent(invalid, 'src/resources.ts')).toEqual([
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' }),
+      expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' }),
+    ]);
   });
 
   it('rejects PATCH resource record updates but permits Object Type PATCH', () => {
@@ -389,10 +512,80 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     const result = await validateWorkspace(workspace);
 
     expect(result.filesScanned).toBe(1);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: path.join('src', 'client.ts'),
+          ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
+        }),
+      ])
+    );
+  });
+
+  it('reports deterministic structured raw-route findings from immutable roots and preserves the sole owner', async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), 'gofer-object-type-route-audit-'));
+    temporaryWorkspaces.push(workspace);
+    const rawRoute = "'/v4/data/resources/' + tenantId + '/Project'";
+    const appRoot = path.join(workspace, 'front', 'eai-app-template');
+
+    await mkdir(path.join(appRoot, 'src', 'features'), { recursive: true });
+    await mkdir(path.join(appRoot, 'docs'), { recursive: true });
+    await mkdir(path.join(appRoot, 'node_modules', 'fixture'), { recursive: true });
+    await mkdir(path.join(appRoot, 'tests', 'fixtures'), { recursive: true });
+    await mkdir(path.join(appRoot, 'packages', 'platform-sdk', 'src'), { recursive: true });
+    await mkdir(path.join(workspace, 'front', 'DAISY', 'src'), { recursive: true });
+    await mkdir(path.join(workspace, '.specify', 'config'), { recursive: true });
+
+    await writeFile(
+      path.join(appRoot, 'src', 'features', 'feature.ts'),
+      `const route = ${rawRoute};`
+    );
+    await writeFile(path.join(appRoot, 'docs', 'example.ts'), `const route = ${rawRoute};`);
+    await writeFile(
+      path.join(appRoot, 'node_modules', 'fixture', 'index.ts'),
+      `const route = ${rawRoute};`
+    );
+    await writeFile(
+      path.join(appRoot, 'tests', 'fixtures', 'example.ts'),
+      `const route = ${rawRoute};`
+    );
+    await writeFile(
+      path.join(workspace, 'front', 'DAISY', 'src', 'unrelated.ts'),
+      `const route = ${rawRoute};`
+    );
+    await writeFile(
+      path.join(
+        workspace,
+        'front',
+        'eai-app-template',
+        'packages',
+        'platform-sdk',
+        'src',
+        'resource-routing.ts'
+      ),
+      `export const resourceRoute = ${rawRoute};`
+    );
+    // A workspace must not be able to widen the canonical audit denominator.
+    await writeFile(
+      path.join(workspace, '.specify', 'config', 'object-type-routing.json'),
+      JSON.stringify({ fixedRoots: ['docs'], soleOwner: 'docs/example.ts' })
+    );
+
+    const result = await validateWorkspace(workspace);
+
+    expect(result.filesScanned).toBe(2);
     expect(result.violations).toEqual([
       expect.objectContaining({
-        file: path.join('src', 'client.ts'),
-        ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
+        rule: 'OBJECT_TYPE_DIRECT_ROUTE_CONSTRUCTION',
+        classification: 'blocking_source_drift',
+        severity: 'error',
+        location: {
+          kind: 'source',
+          file: path.join('front', 'eai-app-template', 'src', 'features', 'feature.ts'),
+          line: 1,
+          column: 16,
+        },
+        remediation: expect.stringContaining('shared platform SDK'),
       }),
     ]);
   });
@@ -416,7 +609,70 @@ describe('PublicAPI v4 resource mutation contract validator', () => {
     expect(JSON.parse(result.stdout)).toEqual(
       expect.objectContaining({
         valid: false,
-        violations: [expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' })],
+        violations: expect.arrayContaining([
+          expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN' }),
+          expect.objectContaining({ rule: 'OBJECT_TYPE_DIRECT_ROUTE_CONSTRUCTION' }),
+        ]),
+      })
+    );
+  });
+
+  it('accepts canonical ResourceRouting calls through the CLI workspace audit', async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), 'gofer-v4-routing-cli-'));
+    temporaryWorkspaces.push(workspace);
+    await mkdir(path.join(workspace, 'src'), { recursive: true });
+    await writeFile(
+      path.join(workspace, 'src', 'resources.ts'),
+      `
+        await platformFetch(this.routing.subresource(objectType, id, 'files', propertyName), {
+          method: 'POST',
+          body: file,
+        });
+        await platformFetch(this.routing.subresource(objectType, id, 'actions', action), {
+          method: 'POST',
+          body: JSON.stringify({ params }),
+        });
+      `
+    );
+    const script = path.resolve('.specify/scripts/node/validate-v4-resource-contract.mjs');
+
+    const result = spawnSync(process.execPath, [script, '--workspace', workspace, '--json'], {
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual(
+      expect.objectContaining({ valid: true, filesScanned: 1, violations: [] })
+    );
+  });
+
+  it('fails closed on arbitrary routing helpers through the CLI workspace audit', async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), 'gofer-v4-routing-cli-'));
+    temporaryWorkspaces.push(workspace);
+    await mkdir(path.join(workspace, 'src'), { recursive: true });
+    await writeFile(
+      path.join(workspace, 'src', 'resources.ts'),
+      `
+        await platformFetch(this.otherRouting.subresource(objectType, id, 'files'), {
+          method: 'POST',
+          body: file,
+        });
+      `
+    );
+    const script = path.resolve('.specify/scripts/node/validate-v4-resource-contract.mjs');
+
+    const result = spawnSync(process.execPath, [script, '--workspace', workspace, '--json'], {
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual(
+      expect.objectContaining({
+        valid: false,
+        filesScanned: 1,
+        violations: [expect.objectContaining({ ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED' })],
       })
     );
   });

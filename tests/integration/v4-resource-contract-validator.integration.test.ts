@@ -35,9 +35,9 @@ function runValidator(workspace: string) {
 }
 
 describe('PublicAPI v4 resource validator process integration', () => {
-  it('passes a representative workspace using a member platformFetch wrapper', async () => {
+  it('passes a representative workspace using canonical ResourceRouting', async () => {
     const workspace = await workspaceWith(`
-      client.platformFetch('/v4/data/resources/tenant/project/id', {
+      client.platformFetch(this.routing.member(objectType, id), {
         method: 'PUT',
         body: JSON.stringify({ data, version }),
       });
@@ -69,11 +69,41 @@ describe('PublicAPI v4 resource validator process integration', () => {
     expect(result.stderr).toBe('');
     expect(output.valid).toBe(false);
     expect(output.filesScanned).toBe(1);
-    expect(output.violations).toEqual([
+    expect(output.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: path.join('src', 'client.ts'),
+          ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
+        }),
+        expect.objectContaining({ rule: 'OBJECT_TYPE_DIRECT_ROUTE_CONSTRUCTION' }),
+      ])
+    );
+  });
+
+  it('fails closed when an arbitrary helper uses a canonical routing method name', async () => {
+    const workspace = await workspaceWith(`
+      client.platformFetch(this.otherRouting.subresource(objectType, id, 'files'), {
+        method: 'POST',
+        body: file,
+      });
+    `);
+
+    const result = runValidator(workspace);
+    const output = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(output).toEqual(
       expect.objectContaining({
-        file: path.join('src', 'client.ts'),
-        ruleId: 'EAI_V4_RESOURCE_PATCH_FORBIDDEN',
-      }),
-    ]);
+        valid: false,
+        filesScanned: 1,
+        violations: [
+          expect.objectContaining({
+            file: path.join('src', 'client.ts'),
+            ruleId: 'EAI_V4_RESOURCE_PATTERN_UNRESOLVED',
+          }),
+        ],
+      })
+    );
   });
 });

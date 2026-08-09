@@ -9,6 +9,7 @@ export const GOFER_VERSION_FILE = path.join('.specify', '.gofer-version');
 export const CORE_SENTINELS = [
   GOFER_VERSION_FILE,
   path.join('.specify', 'commands', '0_gofer_start.md'),
+  path.join('.specify', 'config', 'object-type-routing.json'),
   path.join('.specify', 'templates', 'spec-template.md'),
   path.join('.specify', 'templates', 'build-map-template.md'),
   path.join('.specify', 'templates', 'loop-contract-template.json'),
@@ -80,7 +81,9 @@ const EAI_RUNTIME_CONTRACT_MARKER = 'eai.runtime.json';
 
 const EXTENSION_RESOURCE_PATHS = new Map([
   [path.join('.specify', 'commands'), path.join('resources', 'specify-commands')],
+  [path.join('.specify', 'config'), path.join('resources', 'specify-config')],
   [path.join('.specify', 'references'), path.join('resources', 'references')],
+  [path.join('.specify', 'schemas'), path.join('resources', 'schemas')],
   [path.join('.specify', 'templates'), path.join('resources', 'templates')],
   [path.join('.specify', 'scripts', 'bash'), path.join('resources', 'bash-scripts')],
   [path.join('.specify', 'scripts', 'node'), path.join('resources', 'node-scripts')],
@@ -1046,7 +1049,9 @@ export async function bootstrapWorkspace({
 
   const coreCopies = [
     path.join('.specify', 'commands'),
+    path.join('.specify', 'config'),
     path.join('.specify', 'references'),
+    path.join('.specify', 'schemas'),
     path.join('.specify', 'templates'),
     path.join('.specify', 'scripts', 'bash'),
     path.join('.specify', 'scripts', 'node'),

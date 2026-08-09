@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
 const { accessMock } = vi.hoisted(() => ({
   accessMock: vi.fn(),
@@ -21,7 +23,8 @@ describe('sync-extension-resources pathExists', () => {
     error.code = 'ENOENT';
     accessMock.mockRejectedValueOnce(error);
 
-    const { pathExists } = await import('../../../.specify/scripts/node/sync-extension-resources.mjs');
+    const { pathExists } =
+      await import('../../../.specify/scripts/node/sync-extension-resources.mjs');
 
     await expect(pathExists('/missing-path')).resolves.toBe(false);
   });
@@ -31,8 +34,19 @@ describe('sync-extension-resources pathExists', () => {
     error.code = 'EACCES';
     accessMock.mockRejectedValueOnce(error);
 
-    const { pathExists } = await import('../../../.specify/scripts/node/sync-extension-resources.mjs');
+    const { pathExists } =
+      await import('../../../.specify/scripts/node/sync-extension-resources.mjs');
 
     await expect(pathExists('/denied-path')).rejects.toBe(error);
+  });
+});
+
+describe('sync-extension-resources check mode', () => {
+  it('verifies the checked-in extension resources without writing them', () => {
+    const script = path.resolve('.specify/scripts/node/sync-extension-resources.mjs');
+    const result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('extension/resources/ is in sync');
   });
 });

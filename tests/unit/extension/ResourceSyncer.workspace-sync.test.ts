@@ -91,6 +91,24 @@ describe('ResourceSyncer workspace sync', () => {
     expect(await fs.readFile(commandPath, 'utf8')).toContain('name: 6_gofer_validate');
   });
 
+  it('installGoferCLI provisions the immutable object-type routing config and audit schemas', async (): Promise<void> => {
+    await syncer.installGoferCLI();
+
+    const configPath = path.join(workspace, '.specify', 'config', 'object-type-routing.json');
+    const auditSchemaPath = path.join(
+      workspace,
+      '.specify',
+      'schemas',
+      'object-type-identifier-audit-v1.schema.json'
+    );
+
+    expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toMatchObject({
+      contractVersion: 'eai.object-type-routing/v1',
+      soleOwner: 'front/eai-app-template/packages/platform-sdk/src/resource-routing.ts',
+    });
+    expect(await pathExists(auditSchemaPath)).toBe(true);
+  });
+
   it('setupGeminiCommands keeps include targets resolvable', async (): Promise<void> => {
     await syncer.setupGeminiCommands();
 
