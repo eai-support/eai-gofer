@@ -22,6 +22,15 @@ import path from 'node:path';
 
 const SCHEMA_VERSION = 'eai.object-type-routing.phase-bundle/v1';
 const PHASES = new Set(['P0', 'A0', 'P1', 'A1']);
+const CALLER_GIT_CONTEXT_KEYS = [
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_COMMON_DIR',
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_PREFIX',
+  'GIT_WORK_TREE',
+];
 
 function usage() {
   return `Usage:
@@ -68,9 +77,16 @@ function without(object, key) {
   return Object.fromEntries(Object.entries(object).filter(([name]) => name !== key));
 }
 
+function isolatedGitEnvironment() {
+  const environment = { ...process.env };
+  for (const key of CALLER_GIT_CONTEXT_KEYS) delete environment[key];
+  return environment;
+}
+
 function git(repository, args, options = {}) {
   return execFileSync('git', ['-C', repository, ...args], {
     encoding: options.encoding === 'buffer' ? null : (options.encoding ?? 'utf8'),
+    env: isolatedGitEnvironment(),
     maxBuffer: 128 * 1024 * 1024,
   });
 }
@@ -249,6 +265,7 @@ async function reconstructBundle(bundle) {
   const root = await mkdtemp(path.join(tmpdir(), 'object-type-routing-phase-'));
   try {
     const archive = spawnSync('git', ['-C', repository, 'archive', bundle.baselineSha], {
+      env: isolatedGitEnvironment(),
       maxBuffer: 128 * 1024 * 1024,
     });
     if (archive.status !== 0) throw new Error(archive.stderr?.toString() || 'git archive failed');

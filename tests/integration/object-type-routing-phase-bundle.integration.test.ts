@@ -6,6 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const temporaryRoots: string[] = [];
 const tool = path.resolve('.specify/scripts/node/object-type-routing-phase-bundle.mjs');
+const CALLER_GIT_CONTEXT_KEYS = [
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_COMMON_DIR',
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_PREFIX',
+  'GIT_WORK_TREE',
+];
 
 afterEach(async () => {
   await Promise.all(
@@ -13,8 +22,17 @@ afterEach(async () => {
   );
 });
 
+function isolatedGitEnvironment(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  for (const key of CALLER_GIT_CONTEXT_KEYS) delete environment[key];
+  return environment;
+}
+
 function git(repository: string, args: string[]): string {
-  return execFileSync('git', ['-C', repository, ...args], { encoding: 'utf8' }).trim();
+  return execFileSync('git', ['-C', repository, ...args], {
+    encoding: 'utf8',
+    env: isolatedGitEnvironment(),
+  }).trim();
 }
 
 async function createFixtureRepository(): Promise<{ repository: string; baseline: string }> {
@@ -33,7 +51,10 @@ async function createFixtureRepository(): Promise<{ repository: string; baseline
 }
 
 function run(args: string[]) {
-  return spawnSync(process.execPath, [tool, ...args], { encoding: 'utf8' });
+  return spawnSync(process.execPath, [tool, ...args], {
+    encoding: 'utf8',
+    env: isolatedGitEnvironment(),
+  });
 }
 
 describe('Object Type routing phase bundle', () => {
