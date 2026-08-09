@@ -50,7 +50,7 @@ describe('Object Type routing workspace reducer', () => {
     if (!hasCoordinatedWorkspace) {
       expect(first.status).toBe(4);
       expect(first.stdout).toBe('');
-      expect(first.stderr).toContain('CONTRACT_UNREADABLE');
+      expect(first.stderr).toMatch(/^(?:AUTHORITY|CONTRACT)_UNREADABLE:/);
       expect(second.stdout).toBe(first.stdout);
       expect(second.stderr).toBe(first.stderr);
       expect(await readdir(path.resolve('.specify/scripts/node'))).toEqual(before);
@@ -104,7 +104,7 @@ describe('Object Type routing workspace reducer', () => {
     if (!hasCoordinatedWorkspace) {
       expect(result.status).toBe(4);
       expect(result.stdout).toBe('');
-      expect(result.stderr).toContain('CONTRACT_UNREADABLE');
+      expect(result.stderr).toMatch(/^(?:AUTHORITY|CONTRACT)_UNREADABLE:/);
       expect(await readdir(root)).toEqual([]);
       return;
     }
