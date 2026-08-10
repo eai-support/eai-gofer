@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.32] - 2026-08-10
+
+Fix VS Code Marketplace managed identity publishing
+
 ## [3.7.31] - 2026-08-10
 
 Enforce controlled English across Gofer surfaces
