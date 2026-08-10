@@ -8,6 +8,14 @@ import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_PREVIEW_PORTS = [3000, 5173, 4173, 6006, 8080, 8000];
 export const PREVIEW_SCRIPT_PRIORITY = ['dev', 'start', 'preview', 'serve', 'storybook', 'docs:dev'];
+export const BUSINESS_SCENARIO_SCRIPT_PRIORITY = [
+  'test:business-scenarios',
+  'test:e2e',
+  'test:playwright',
+  'e2e',
+  'playwright',
+];
+export const BUSINESS_SCENARIO_MANIFEST = 'business-scenarios.json';
 export const UI_REVIEW_LOG_COLUMNS = [
   'Time',
   'Change Trigger',
@@ -43,6 +51,15 @@ export async function detectPackageManager(workspaceRoot) {
 
 export function selectPreviewScript(scripts = {}) {
   for (const scriptName of PREVIEW_SCRIPT_PRIORITY) {
+    if (typeof scripts[scriptName] === 'string' && scripts[scriptName].trim()) {
+      return scriptName;
+    }
+  }
+  return null;
+}
+
+export function selectBusinessScenarioScript(scripts = {}) {
+  for (const scriptName of BUSINESS_SCENARIO_SCRIPT_PRIORITY) {
     if (typeof scripts[scriptName] === 'string' && scripts[scriptName].trim()) {
       return scriptName;
     }
@@ -91,6 +108,171 @@ export async function discoverPreviewCommand(workspaceRoot, explicitCommand = nu
     source: scriptName ? 'package-json' : 'missing-preview-script',
     packageManager,
     scriptName,
+  };
+}
+
+export function isBrowserScenarioCommand(command = '') {
+  return /\b(playwright|cypress|puppeteer|webdriver|browser)\b/i.test(command);
+}
+
+export function validateBusinessScenarioManifest(manifest) {
+  const errors = [];
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    return { valid: false, errors: ['Manifest must be a JSON object.'], scenarioCount: 0 };
+  }
+  if (manifest.schemaVersion !== '1.0') {
+    errors.push('schemaVersion must be "1.0".');
+  }
+  if (!Array.isArray(manifest.scenarios) || manifest.scenarios.length === 0) {
+    errors.push('scenarios must contain at least one business journey.');
+  }
+
+  const ids = new Set();
+  for (const [index, scenario] of (manifest.scenarios ?? []).entries()) {
+    const label = `scenarios[${index}]`;
+    if (!scenario?.id || typeof scenario.id !== 'string') {
+      errors.push(`${label}.id is required.`);
+    } else if (ids.has(scenario.id)) {
+      errors.push(`${label}.id duplicates "${scenario.id}".`);
+    } else {
+      ids.add(scenario.id);
+    }
+    if (!scenario?.userStory || typeof scenario.userStory !== 'string') {
+      errors.push(`${label}.userStory is required.`);
+    }
+    if (!Array.isArray(scenario?.screens) || scenario.screens.length === 0) {
+      errors.push(`${label}.screens must name at least one screen.`);
+    }
+    if (!Array.isArray(scenario?.testFiles) || scenario.testFiles.length === 0) {
+      errors.push(`${label}.testFiles must name at least one executable browser test.`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    scenarioCount: Array.isArray(manifest.scenarios) ? manifest.scenarios.length : 0,
+  };
+}
+
+export async function loadBusinessScenarioManifest(workspaceRoot, featureDir) {
+  if (!featureDir) {
+    return {
+      path: null,
+      exists: false,
+      valid: false,
+      errors: ['A feature directory is required for business-scenario validation.'],
+      scenarioCount: 0,
+      manifest: null,
+    };
+  }
+
+  const manifestPath = path.join(featureDir, BUSINESS_SCENARIO_MANIFEST);
+  let manifest;
+  try {
+    manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  } catch (error) {
+    return {
+      path: manifestPath,
+      exists: error?.code !== 'ENOENT',
+      valid: false,
+      errors: [
+        error?.code === 'ENOENT'
+          ? `${BUSINESS_SCENARIO_MANIFEST} is missing.`
+          : `${BUSINESS_SCENARIO_MANIFEST} is invalid JSON: ${error.message}`,
+      ],
+      scenarioCount: 0,
+      manifest: null,
+    };
+  }
+
+  const validation = validateBusinessScenarioManifest(manifest);
+  const errors = [...validation.errors];
+  const rootPrefix = `${path.resolve(workspaceRoot)}${path.sep}`;
+  for (const scenario of manifest.scenarios ?? []) {
+    for (const testFile of scenario.testFiles ?? []) {
+      const resolvedTestFile = path.resolve(workspaceRoot, testFile);
+      if (
+        resolvedTestFile !== path.resolve(workspaceRoot) &&
+        !resolvedTestFile.startsWith(rootPrefix)
+      ) {
+        errors.push(`${scenario.id} test file escapes the workspace: ${testFile}`);
+        continue;
+      }
+      try {
+        await fs.access(resolvedTestFile);
+      } catch {
+        errors.push(`${scenario.id} test file is missing: ${testFile}`);
+      }
+    }
+  }
+
+  return {
+    path: manifestPath,
+    exists: true,
+    valid: errors.length === 0,
+    errors,
+    scenarioCount: validation.scenarioCount,
+    manifest,
+  };
+}
+
+export async function discoverBusinessScenarioCommand(
+  workspaceRoot,
+  explicitCommand = null,
+  manifestCommand = null
+) {
+  const selectedExplicitCommand = explicitCommand?.trim() || manifestCommand?.trim();
+  if (selectedExplicitCommand) {
+    let browserRunner = isBrowserScenarioCommand(selectedExplicitCommand);
+    if (!browserRunner) {
+      const scriptMatch = selectedExplicitCommand.match(
+        /^(?:npm|pnpm|bun)\s+run\s+([^\s]+)|^yarn\s+([^\s]+)/
+      );
+      const scriptName = scriptMatch?.[1] ?? scriptMatch?.[2];
+      if (scriptName) {
+        try {
+          const packageJson = JSON.parse(
+            await fs.readFile(path.join(workspaceRoot, 'package.json'), 'utf8')
+          );
+          browserRunner = isBrowserScenarioCommand(packageJson.scripts?.[scriptName] ?? '');
+        } catch {
+          browserRunner = false;
+        }
+      }
+    }
+    return {
+      command: selectedExplicitCommand,
+      source: explicitCommand?.trim() ? 'explicit' : 'manifest',
+      packageManager: null,
+      scriptName: null,
+      browserRunner,
+    };
+  }
+
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
+  let packageJson;
+  try {
+    packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+  } catch (error) {
+    return {
+      command: null,
+      source: error?.code === 'ENOENT' ? 'missing-package-json' : 'invalid-package-json',
+      packageManager: null,
+      scriptName: null,
+      browserRunner: false,
+    };
+  }
+
+  const scriptName = selectBusinessScenarioScript(packageJson.scripts);
+  const packageManager = await detectPackageManager(workspaceRoot);
+  const command = buildPackageScriptCommand(packageManager, scriptName);
+  return {
+    command,
+    source: scriptName ? 'package-json' : 'missing-business-scenario-script',
+    packageManager,
+    scriptName,
+    browserRunner: isBrowserScenarioCommand(packageJson.scripts?.[scriptName] ?? ''),
   };
 }
 
@@ -202,6 +384,8 @@ export function resolveFeatureLogPaths(workspaceRoot, featureDir = null) {
     reviewLogPath: featureDir ? path.join(baseDir, 'ui-review-log.md') : null,
     processLogPath: path.join(baseDir, 'preview-server.log'),
     pidPath: path.join(baseDir, 'preview-server.pid'),
+    scenarioLogPath: path.join(baseDir, 'business-scenarios.log'),
+    scenarioReportPath: path.join(baseDir, 'business-scenario-report.json'),
   };
 }
 
@@ -265,6 +449,70 @@ async function startPreviewServer(command, workspaceRoot, logPath, pidPath) {
   child.unref();
   await fs.writeFile(pidPath, `${child.pid}\n`, 'utf8');
   return { pid: child.pid, logPath, pidPath };
+}
+
+async function runBusinessScenarioCommand(command, workspaceRoot, logPath, timeoutMs = 300000) {
+  await fs.mkdir(path.dirname(logPath), { recursive: true });
+  const out = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
+  out.write(`\n\n[${new Date().toISOString()}] Running business scenarios: ${command}\n`);
+
+  return await new Promise((resolve) => {
+    const child = spawn(command, {
+      cwd: workspaceRoot,
+      env: {
+        ...process.env,
+        CI: process.env.CI ?? '1',
+      },
+      shell: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    child.stdout.pipe(out, { end: false });
+    child.stderr.pipe(out, { end: false });
+    let settled = false;
+    let timer = null;
+    const finish = (report) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      out.end();
+      resolve(report);
+    };
+    timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      finish({
+        ok: false,
+        status: 'failed',
+        exitCode: null,
+        error: `Business-scenario command exceeded ${timeoutMs}ms.`,
+        logPath,
+      });
+    }, timeoutMs);
+
+    child.once('error', (error) => {
+      finish({
+        ok: false,
+        status: 'failed',
+        exitCode: null,
+        error: error.message,
+        logPath,
+      });
+    });
+    child.once('exit', (code, signal) => {
+      finish({
+        ok: code === 0,
+        status: code === 0 ? 'passed' : 'failed',
+        exitCode: code,
+        error:
+          code === 0
+            ? null
+            : `Business-scenario command exited with ${
+                code === null ? `signal ${signal}` : `code ${code}`
+              }.`,
+        logPath,
+      });
+    });
+  });
 }
 
 async function openBrowser(url, mode) {
@@ -415,7 +663,7 @@ function buildPreviewOpenIssues({ browser, screenshotPath, status, notes }) {
     issues.push(`Screenshot missing: ${notes}`);
   }
   if (status === 'blocked') {
-    issues.push('Preview URL did not become reachable before timeout.');
+    issues.push('Preview or required business-scenario evidence is blocked; inspect the scenario report and preview log.');
   }
   return issues.length > 0 ? issues.join(' ') : 'none';
 }
@@ -485,6 +733,9 @@ export function parseArgs(argv) {
     open: 'auto',
     screenshot: true,
     timeoutMs: 45000,
+    scenarioTimeoutMs: 300000,
+    scenarioCommand: null,
+    scenarios: 'auto',
     change: 'manual preview refresh',
     json: false,
     dryRun: false,
@@ -504,6 +755,10 @@ export function parseArgs(argv) {
     else if (arg === '--screenshot') options.screenshot = true;
     else if (arg === '--no-screenshot') options.screenshot = false;
     else if (arg === '--timeout-ms') options.timeoutMs = Number(next());
+    else if (arg === '--scenario-timeout-ms') options.scenarioTimeoutMs = Number(next());
+    else if (arg === '--scenario-command') options.scenarioCommand = next();
+    else if (arg === '--require-scenarios') options.scenarios = 'required';
+    else if (arg === '--skip-scenarios') options.scenarios = 'skip';
     else if (arg === '--change') options.change = next();
     else if (arg === '--json') options.json = true;
     else if (arg === '--dry-run') options.dryRun = true;
@@ -516,6 +771,9 @@ export function parseArgs(argv) {
   }
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs < 1000) {
     throw new Error('--timeout-ms must be at least 1000');
+  }
+  if (!Number.isFinite(options.scenarioTimeoutMs) || options.scenarioTimeoutMs < 1000) {
+    throw new Error('--scenario-timeout-ms must be at least 1000');
   }
 
   return options;
@@ -541,6 +799,12 @@ Options:
   --screenshot              Capture screenshot evidence with Playwright. Default.
   --no-screenshot           Skip screenshot capture.
   --timeout-ms <ms>         URL readiness timeout. Defaults to 45000.
+  --scenario-command <cmd>  Executable browser business-scenario command.
+  --require-scenarios       Block unless a valid manifest and browser suite pass.
+                            This is automatic when --feature-dir is present.
+  --skip-scenarios          Explicitly skip scenario execution (early red work only).
+  --scenario-timeout-ms <ms>
+                            Scenario timeout. Defaults to 300000.
   --change <text>           Change trigger recorded in ui-review-log.md.
   --json                    Print machine-readable output.
   --dry-run                 Detect command/URLs only; do not start/open/capture.
@@ -550,6 +814,24 @@ Options:
 export async function runUiPreview(rawOptions) {
   const workspaceRoot = path.resolve(rawOptions.workspace);
   const paths = resolveFeatureLogPaths(workspaceRoot, rawOptions.featureDir);
+  const featureDir = rawOptions.featureDir
+    ? path.resolve(workspaceRoot, rawOptions.featureDir)
+    : null;
+  const scenariosRequired =
+    rawOptions.scenarios !== 'skip' &&
+    (rawOptions.scenarios === 'required' || Boolean(featureDir));
+  const scenarioManifest =
+    rawOptions.scenarios === 'skip'
+      ? null
+      : await loadBusinessScenarioManifest(workspaceRoot, featureDir);
+  const scenarioCommandInfo =
+    rawOptions.scenarios === 'skip'
+      ? null
+      : await discoverBusinessScenarioCommand(
+          workspaceRoot,
+          rawOptions.scenarioCommand,
+          scenarioManifest?.manifest?.command
+        );
   const commandInfo = rawOptions.url
     ? {
         command: rawOptions.command?.trim() || null,
@@ -566,7 +848,7 @@ export async function runUiPreview(rawOptions) {
   const baseReport = {
     status: 'planned',
     workspaceRoot,
-    featureDir: rawOptions.featureDir ? path.resolve(workspaceRoot, rawOptions.featureDir) : null,
+    featureDir,
     command: commandInfo.command,
     commandSource: commandInfo.source,
     candidateUrls,
@@ -575,17 +857,33 @@ export async function runUiPreview(rawOptions) {
     screenshot: null,
     reviewLogPath: paths.reviewLogPath,
     server: null,
+    businessScenarios: {
+      required: scenariosRequired,
+      manifest: scenarioManifest,
+      command: scenarioCommandInfo,
+      run: null,
+      reportPath: paths.scenarioReportPath,
+    },
     nextActions: [],
   };
 
   if (rawOptions.dryRun) {
+    const scenarioReady =
+      !scenariosRequired ||
+      (scenarioManifest?.valid &&
+        scenarioCommandInfo?.command &&
+        scenarioCommandInfo?.browserRunner);
     return {
       ...baseReport,
-      status: commandInfo.command || rawOptions.url ? 'ready' : 'blocked',
+      status:
+        (commandInfo.command || rawOptions.url) && scenarioReady ? 'ready' : 'blocked',
       nextActions:
-        commandInfo.command || rawOptions.url
+        (commandInfo.command || rawOptions.url) && scenarioReady
           ? ['Run without --dry-run after a UI-facing change.']
-          : ['Pass --command or --url, or add a package.json dev/start/preview script.'],
+          : [
+              'Provide a preview command/URL and a valid business-scenarios.json.',
+              'Add a Playwright/Cypress/browser package script or pass --scenario-command.',
+            ],
     };
   }
 
@@ -645,6 +943,88 @@ export async function runUiPreview(rawOptions) {
     );
   }
 
+  let scenarioRun = {
+    ok: rawOptions.scenarios === 'skip',
+    status: rawOptions.scenarios === 'skip' ? 'skipped' : 'not-run',
+    exitCode: null,
+    error: null,
+    logPath: null,
+  };
+  const scenarioPreflightErrors = [];
+  if (rawOptions.scenarios !== 'skip') {
+    if (!scenarioManifest?.valid) {
+      scenarioPreflightErrors.push(...(scenarioManifest?.errors ?? []));
+    }
+    if (!scenarioCommandInfo?.command) {
+      scenarioPreflightErrors.push('No executable business-scenario command was found.');
+    } else if (!scenarioCommandInfo.browserRunner) {
+      scenarioPreflightErrors.push(
+        'The business-scenario command does not use a recognized browser runner.'
+      );
+    }
+
+    if (scenarioPreflightErrors.length === 0) {
+      scenarioRun = await runBusinessScenarioCommand(
+        scenarioCommandInfo.command,
+        workspaceRoot,
+        paths.scenarioLogPath,
+        rawOptions.scenarioTimeoutMs
+      );
+    } else {
+      scenarioRun = {
+        ok: false,
+        status: 'blocked',
+        exitCode: null,
+        error: scenarioPreflightErrors.join(' '),
+        logPath: null,
+      };
+    }
+  }
+
+  const businessScenarios = {
+    required: scenariosRequired,
+    manifest: scenarioManifest,
+    command: scenarioCommandInfo,
+    run: scenarioRun,
+    reportPath: paths.scenarioReportPath,
+  };
+  await fs.mkdir(path.dirname(paths.scenarioReportPath), { recursive: true });
+  await fs.writeFile(
+    paths.scenarioReportPath,
+    `${JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        workspaceRoot,
+        featureDir,
+        selectedUrl,
+        status:
+          scenarioRun.ok || (!scenariosRequired && scenarioRun.status === 'not-run')
+            ? 'passed'
+            : 'blocked',
+        manifestPath: scenarioManifest?.path ?? null,
+        scenarioCount: scenarioManifest?.scenarioCount ?? 0,
+        command: scenarioCommandInfo?.command ?? null,
+        browserRunner: scenarioCommandInfo?.browserRunner ?? false,
+        run: scenarioRun,
+      },
+      null,
+      2
+    )}\n`,
+    { encoding: 'utf8', mode: 0o600 }
+  );
+
+  const scenarioBlocked =
+    scenariosRequired &&
+    (!scenarioManifest?.valid ||
+      !scenarioCommandInfo?.command ||
+      !scenarioCommandInfo?.browserRunner ||
+      !scenarioRun.ok);
+  const previewStatus =
+    browser.ok && (screenshot.ok || !rawOptions.screenshot)
+      ? 'shown'
+      : 'shown-with-open-issues';
+  const status = scenarioBlocked ? 'blocked' : previewStatus;
+
   const reviewLogPath = await appendReviewLog({
     reviewLogPath: paths.reviewLogPath,
     change: rawOptions.change,
@@ -652,15 +1032,16 @@ export async function runUiPreview(rawOptions) {
     url: selectedUrl,
     browserTarget: buildBrowserTargetLabel(rawOptions.open, browser),
     screenshotPath: screenshot.path,
-    status:
-      browser.ok && (screenshot.ok || !rawOptions.screenshot)
-        ? 'shown'
-        : 'shown-with-open-issues',
-    notes: screenshot.ok ? 'Preview opened and screenshot captured.' : screenshot.error,
+    status,
+    notes: [
+      screenshot.ok ? 'Preview opened and screenshot captured.' : screenshot.error,
+      `Business scenarios: ${scenarioRun.status}.`,
+      scenarioRun.error,
+    ]
+      .filter(Boolean)
+      .join(' '),
     browser,
   });
-  const status =
-    browser.ok && (screenshot.ok || !rawOptions.screenshot) ? 'shown' : 'shown-with-open-issues';
 
   return {
     ...baseReport,
@@ -670,9 +1051,12 @@ export async function runUiPreview(rawOptions) {
     screenshot,
     reviewLogPath,
     server,
+    businessScenarios,
     nextActions: [
       'Tell the user the preview URL and screenshot path.',
-      'After the next UI-facing change, rerun this helper before reporting completion.',
+      scenarioBlocked
+        ? 'Fix the business-scenario manifest or browser suite, then rerun this helper.'
+        : 'After the next UI-facing change, rerun this helper and browser scenarios before reporting completion.',
     ],
   };
 }
@@ -688,6 +1072,10 @@ function printReport(report, json) {
   if (report.selectedUrl) console.log(`URL: ${report.selectedUrl}`);
   if (report.screenshot?.path) console.log(`Screenshot: ${report.screenshot.path}`);
   if (report.reviewLogPath) console.log(`Review log: ${report.reviewLogPath}`);
+  if (report.businessScenarios?.reportPath) {
+    console.log(`Business scenarios: ${report.businessScenarios.run?.status ?? 'not-run'}`);
+    console.log(`Scenario report: ${report.businessScenarios.reportPath}`);
+  }
   if (report.server?.logPath) console.log(`Server log: ${report.server.logPath}`);
   for (const action of report.nextActions ?? []) {
     console.log(`Next: ${action}`);

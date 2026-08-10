@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "eai.object-type-routing.inventory/v1",
+  "contractVersion": "eai.object-type-routing/v1",
+  "status": "complete",
+  "writeAttemptCount": 0,
+  "environment": "dev",
+  "region": "ae",
+  "snapshotStartedAt": "2026-08-09T00:00:00.000Z",
+  "snapshotCompletedAt": "2026-08-09T00:01:00.000Z",
+  "releaseOwnerUserRef": "hmac-sha256:user-ref",
+  "identityKind": "USER",
+  "roleVisibilityComplete": true,
+  "snapshotBasis": "stable_pre_post_enumeration",
+  "sourceEndpoints": {
+    "tenants": "GET /v4/platform/tenants?where[status][equals]=active&depth=0&limit=100&page={page}&sort=id",
+    "objectTypes": "GET /v4/data/resources/object-types?depth=0&limit=100&page={page}&sort=id"
+  },
+  "tenantSetDigestAlgorithm": "HMAC-SHA256",
+  "expectedActiveTenantCount": 1,
+  "scannedTenantCount": 1,
+  "expectedTenantSetDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scannedTenantSetDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "preTenantSetDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "postTenantSetDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "prePostUniverseStable": true,
+  "tenantPagination": { "pageCount": 1, "recordCount": 1, "terminal": true },
+  "objectTypePagination": [
+    { "tenantRef": "hmac-sha256:tenant-ref", "pageCount": 1, "recordCount": 1, "terminal": true }
+  ],
+  "objectTypePageCount": 1,
+  "objectTypeRecordCount": 1,
+  "sourceErrorCount": 0,
+  "findingsSummary": {
+    "blocking_source_drift": 0,
+    "report_only_persisted_legacy_drift": 0,
+    "activation_blocker": 0
+  },
+  "findings": [],
+  "digestAlgorithm": "SHA-256/RFC8785",
+  "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}

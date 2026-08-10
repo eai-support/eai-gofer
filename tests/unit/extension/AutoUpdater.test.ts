@@ -13,7 +13,7 @@ describe('AutoUpdater - Version Comparison', () => {
   let updater: AutoUpdater;
 
   beforeEach(() => {
-    updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0', 'eai-gofer');
+    updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
   });
 
   describe('isNewerVersion', () => {
@@ -112,7 +112,7 @@ describe('AutoUpdater - URL and Path Extraction', () => {
   let updater: AutoUpdater;
 
   beforeEach(() => {
-    updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0', 'eai-gofer');
+    updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
   });
 
   describe('getCurrentVersionFromPath', () => {
@@ -157,33 +157,33 @@ describe('AutoUpdater - URL and Path Extraction', () => {
 
 describe('AutoUpdater - Constructor and Initialization', () => {
   it('should initialize with correct repository', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0', 'eai-gofer');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
     expect(updater).toBeDefined();
-    expect((updater as any).githubRepo).toBe('eai-tools/eai-gofer');
+    expect((updater as any).githubRepo).toBe('eai-support/eai-gofer');
   });
 
   it('should initialize with correct current version', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.3', 'eai-gofer');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.3', 'eai-gofer');
     expect((updater as any).currentVersion).toBe('2.5.3');
   });
 
   it('should initialize with correct extension name', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0', 'eai-gofer');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
     expect((updater as any).extensionName).toBe('eai-gofer');
   });
 
   it('should use default extension name if not provided', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     expect((updater as any).extensionName).toBe('eai-gofer');
   });
 
   it('should initialize check interval to 24 hours', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     expect((updater as any).checkInterval).toBe(24 * 60 * 60 * 1000);
   });
 
   it('should initialize with null interval ID', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     expect((updater as any).intervalId).toBeNull();
   });
 });
@@ -196,12 +196,12 @@ describe('AutoUpdater - Release Data Parsing', () => {
         releases: [
           {
             version: '2.5.3',
-            download_url: 'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix',
+            download_url: 'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix',
             release_date: '2025-01-15',
           },
           {
             version: '2.5.2',
-            download_url: 'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.2.vsix',
+            download_url: 'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.2.vsix',
             release_date: '2025-01-10',
           },
         ],
@@ -218,7 +218,7 @@ describe('AutoUpdater - Release Data Parsing', () => {
         releases: [
           {
             version: '2.5.3',
-            download_url: 'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix',
+            download_url: 'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix',
             release_date: '2025-01-15',
           },
         ],
@@ -457,15 +457,17 @@ describe('AutoUpdater - Download URL Construction', () => {
   let updater: AutoUpdater;
 
   beforeEach(() => {
-    updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0', 'eai-gofer');
+    updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
   });
 
   it('should construct correct GitHub Pages download URL', () => {
     const version = '2.5.3';
     const extensionName = 'eai-gofer';
-    const expectedUrl = `https://eai-tools.github.io/eai-gofer/releases/${extensionName}-${version}.vsix`;
+    const expectedUrl = `https://eai-support.github.io/eai-gofer/releases/${extensionName}-${version}.vsix`;
 
-    expect(expectedUrl).toBe('https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix');
+    expect(expectedUrl).toBe(
+      'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
+    );
   });
 
   it('should construct correct GitHub releases API URL', () => {
@@ -476,23 +478,23 @@ describe('AutoUpdater - Download URL Construction', () => {
   });
 
   it('should construct correct GitHub release notes URL', () => {
-    const repo = 'eai-tools/eai-gofer';
+    const repo = 'eai-support/eai-gofer';
     const url = `https://github.com/${repo}/releases/latest`;
 
-    expect(url).toBe('https://github.com/eai-tools/eai-gofer/releases/latest');
+    expect(url).toBe('https://github.com/eai-support/eai-gofer/releases/latest');
   });
 
   it('should construct correct GitHub Pages base URL', () => {
-    const hostname = 'eai-tools.github.io';
+    const hostname = 'eai-support.github.io';
     const path = '/eai-gofer/releases.json';
     const fullUrl = `https://${hostname}${path}`;
 
-    expect(fullUrl).toBe('https://eai-tools.github.io/eai-gofer/releases.json');
+    expect(fullUrl).toBe('https://eai-support.github.io/eai-gofer/releases.json');
   });
 
   it('should allow canonical GitHub Pages VSIX downloads', () => {
     const allowed = (updater as any).isAllowedDownloadUrl(
-      'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
+      'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
     );
 
     expect(allowed).toBe(true);
@@ -500,7 +502,7 @@ describe('AutoUpdater - Download URL Construction', () => {
 
   it('should allow legacy VSIX names from the canonical release host', () => {
     const allowed = (updater as any).isAllowedDownloadUrl(
-      'https://eai-tools.github.io/eai-gofer/releases/gofer-2.5.3.vsix'
+      'https://eai-support.github.io/eai-gofer/releases/gofer-2.5.3.vsix'
     );
 
     expect(allowed).toBe(true);
@@ -508,10 +510,23 @@ describe('AutoUpdater - Download URL Construction', () => {
 
   it('should allow canonical GitHub Release asset URLs', () => {
     const allowed = (updater as any).isAllowedDownloadUrl(
-      'https://github.com/eai-tools/eai-gofer/releases/download/v2.5.3/eai-gofer-2.5.3.vsix'
+      'https://github.com/eai-support/eai-gofer/releases/download/v2.5.3/eai-gofer-2.5.3.vsix'
     );
 
     expect(allowed).toBe(true);
+  });
+
+  it('should reject pre-rename release hosts and repository paths', () => {
+    expect(
+      (updater as any).isAllowedDownloadUrl(
+        'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.vsix'
+      )
+    ).toBe(false);
+    expect(
+      (updater as any).isAllowedDownloadUrl(
+        'https://github.com/eai-tools/eai-gofer/releases/download/v2.5.3/eai-gofer-2.5.3.vsix'
+      )
+    ).toBe(false);
   });
 
   it('should reject VSIX downloads from untrusted hosts', () => {
@@ -524,7 +539,7 @@ describe('AutoUpdater - Download URL Construction', () => {
 
   it('should reject non-VSIX assets even on the release host', () => {
     const allowed = (updater as any).isAllowedDownloadUrl(
-      'https://eai-tools.github.io/eai-gofer/releases/eai-gofer-2.5.3.zip'
+      'https://eai-support.github.io/eai-gofer/releases/eai-gofer-2.5.3.zip'
     );
 
     expect(allowed).toBe(false);
@@ -660,21 +675,21 @@ describe('AutoUpdater - CLI Command Detection', () => {
 describe('AutoUpdater - Integration Scenarios', () => {
   describe('Update Flow Paths', () => {
     it('should determine no update needed when versions match', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.3');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.3');
       const isNewer = (updater as any).isNewerVersion('2.5.3', '2.5.3');
 
       expect(isNewer).toBe(false);
     });
 
     it('should determine update needed when newer version available', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.2');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.2');
       const isNewer = (updater as any).isNewerVersion('2.5.3', '2.5.2');
 
       expect(isNewer).toBe(true);
     });
 
     it('should skip update when current version is newer (dev build)', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '3.0.0-dev');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '3.0.0-dev');
       // In real scenario, would need to strip -dev suffix
       const current = '3.0.0';
       const latest = '2.5.3';
@@ -686,7 +701,7 @@ describe('AutoUpdater - Integration Scenarios', () => {
 
   describe('Error Recovery Paths', () => {
     it('should handle network error gracefully', () => {
-      const error = new Error('ENOTFOUND eai-tools.github.io');
+      const error = new Error('ENOTFOUND eai-support.github.io');
       expect(error.message).toContain('ENOTFOUND');
     });
 
@@ -720,7 +735,7 @@ describe('AutoUpdater - Integration Scenarios', () => {
 
 describe('AutoUpdater - Periodic Check Management', () => {
   it('should set check interval to 24 hours by default', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     const interval = (updater as any).checkInterval;
 
     expect(interval).toBe(24 * 60 * 60 * 1000);
@@ -728,7 +743,7 @@ describe('AutoUpdater - Periodic Check Management', () => {
   });
 
   it('should initialize with no active interval', () => {
-    const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     const intervalId = (updater as any).intervalId;
 
     expect(intervalId).toBeNull();
@@ -745,28 +760,28 @@ describe('AutoUpdater - Periodic Check Management', () => {
 describe('AutoUpdater - Real-World Scenarios', () => {
   describe('Common Update Scenarios', () => {
     it('should handle fresh installation (v1.0.0 to v2.5.3)', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '1.0.0');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
       const isNewer = (updater as any).isNewerVersion('2.5.3', '1.0.0');
 
       expect(isNewer).toBe(true);
     });
 
     it('should handle minor version update (v2.5.2 to v2.5.3)', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.2');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.2');
       const isNewer = (updater as any).isNewerVersion('2.5.3', '2.5.2');
 
       expect(isNewer).toBe(true);
     });
 
     it('should handle major version update (v2.5.3 to v3.0.0)', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.3');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.3');
       const isNewer = (updater as any).isNewerVersion('3.0.0', '2.5.3');
 
       expect(isNewer).toBe(true);
     });
 
     it('should handle already up-to-date (v2.5.3 to v2.5.3)', () => {
-      const updater = new AutoUpdater('eai-tools/eai-gofer', '2.5.3');
+      const updater = new AutoUpdater('eai-support/eai-gofer', '2.5.3');
       const isNewer = (updater as any).isNewerVersion('2.5.3', '2.5.3');
 
       expect(isNewer).toBe(false);

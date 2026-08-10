@@ -45,6 +45,12 @@ Default user-facing updates must be concise, business-level, and easy to scan.
 Keep the technical work rigorous in artifacts, tests, logs, and code, but do
 not lead with implementation jargon unless the user asks for it.
 
+Use ASD-STE100 Simplified Technical English as the target writing standard for
+all Gofer-authored chat, documents, commands, summaries, PR notes, error
+guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of
+ASD; do not bundle the protected ASD dictionary and do not claim ASD
+certification.
+
 1. Explain progress as what is being connected, changed, checked, or fixed and
    why it matters to the business outcome.
 2. Use the running build map: create or update
@@ -60,7 +66,17 @@ not lead with implementation jargon unless the user asks for it.
    - `Working on`: the build-map area or stakeholder outcome
    - `Why it matters`: user/business impact
    - `Status`: done, checking, fixing, blocked, or needs decision
-6. Do not remove technical validation, security checks, EAI preflights, tests,
+6. Use one action per instruction.
+7. Keep instructions to 20 words or fewer where possible.
+8. Use active voice unless the actor is unknown or not important.
+9. Use simple verb forms: simple present, simple past, simple future,
+   infinitive, or imperative.
+10. Define acronyms on first use and use approved project terms.
+11. Avoid idioms, marketing adjectives, vague praise, and hedging.
+12. Use vertical lists for complex information and one topic per paragraph.
+13. For errors, state what happened, why it matters, what to do next, and the
+    exact safe command when one exists.
+14. Do not remove technical validation, security checks, EAI preflights, tests,
    or loop evidence. This contract changes presentation, not engineering
    standards.
 <!-- gofer:business-progress:end -->
@@ -106,22 +122,35 @@ Before doing stage/helper work:
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
 7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
 
-## EAI Platform Session Preflight
+## Application Classification And EAI Preflight
 
-Before any Gofer stage/helper command does pipeline work:
+Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
-1. Treat durable delivery as EAI Platform delivery by default, with Azure second
-   and every other stack only by explicit exception.
-2. Run `eai whoami` and confirm the EAI CLI is installed, the user is logged in,
-   and an active tenant is visible.
-3. If `eai` is missing, `eai whoami` fails, the token is expired, or no active
-   tenant is available, stop and run `/gofer:eai-first-run` or ask the user to
-   approve login/setup before continuing.
-4. For EAI app delivery, do not continue into research, specification, planning,
+1. Classify the request as **EAI app delivery** or **non-application work** using
+   the signals in Step 2.6.
+2. If the request is EAI app delivery or ambiguous, continue directly into the
+   EAI app delivery path. Do not ask for confirmation just because app delivery
+   is inferred.
+3. If the request is clearly non-application work, confirm once before taking
+   the non-app path:
+   - **"This looks like non-app work, so I will skip EAI tenant/app setup and
+     continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision in the feature discovery or
+   context bundle, do not run `eai whoami`, `eai tenant select`, `eai init`, or
+   `/gofer:eai-first-run`, and continue the appropriate non-app pipeline path.
+5. If the user says it is app work, switch to EAI app delivery and run EAI app
+   preflight.
+6. For EAI app delivery, treat durable delivery as EAI Platform delivery by
+   default, with Azure second and every other stack only by explicit exception.
+7. For EAI app delivery, run `eai whoami` and confirm the EAI CLI is installed,
+   the user is logged in, and an active tenant is visible.
+8. If app-delivery readiness is missing, stop and run `/gofer:eai-first-run` or
+   ask the user to approve login/setup before continuing.
+9. For EAI app delivery, do not continue into research, specification, planning,
    tasks, implementation, or validation until
    `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
    app-readiness, and next-action evidence.
-5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
+10. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
    Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## EAI App Delivery Preflight
@@ -136,11 +165,11 @@ the EAI Gofer app-delivery path before continuing.
 
 Use current public EAI documentation as the safe source of truth:
 
-- EAI CLI docs: `https://eai-tools.github.io/eai/docs/overview`
-- EAI API reference: `https://eai-tools.github.io/eai/docs/api-reference`
-- EAI static registry: `https://eai-tools.github.io/eai/registry/`
-- EAI scenario library: `https://eai-tools.github.io/eai/scenarios`
-- EAI app template: `https://github.com/eai-tools/eai-app-template`
+- EAI CLI docs: `https://eai-support.github.io/eai/docs/overview`
+- EAI API reference: `https://eai-support.github.io/eai/docs/api-reference`
+- EAI static registry: `https://eai-support.github.io/eai/registry/`
+- EAI scenario library: `https://eai-support.github.io/eai/scenarios`
+- EAI app template: `https://github.com/eai-support/eai-app-template`
 
 ### EAI Platform And Azure App Stack Policy
 
@@ -180,10 +209,13 @@ with an unrelated non-EAI stack.
    - If the user asks for a non-EAI app stack, ask whether they want to leave the
      EAI Gofer app-delivery path. If yes, record the exception and stop EAI app
      implementation guidance; if no, keep the EAI Platform/Azure stack policy.
-2. **Run first-run setup when prerequisites are missing**
-   - If Git, Node.js, npm, `eai`, login, tenant access, the EAI app template, or
-     the Gofer scaffold is missing or stale, run `/gofer:eai-first-run` before
-     research, specification, planning, or implementation.
+2. **Run first-run setup when app-delivery prerequisites are missing**
+   - For EAI app delivery, if Git, Node.js, npm, `eai`, login, tenant access, the
+     EAI app template, or the Gofer scaffold is missing or stale, run
+     `/gofer:eai-first-run` before research, specification, planning, or
+     implementation.
+   - Do not run `/gofer:eai-first-run`, `eai whoami`, tenant selection, or
+     template setup for confirmed non-app work.
    - `/gofer:eai-first-run` is the cross-platform setup contract for macOS,
      Linux, Windows, GitHub Codespaces, Claude Code, Codex, Copilot, Gemini, and
      VS Code. It checks first, asks only when action is needed, installs the EAI
@@ -201,7 +233,7 @@ with an unrelated non-EAI stack.
      ```bash
      npm install -g eai-cli
      # If npmjs is unavailable:
-     npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-tools.github.io/eai/registry/
+     npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-support.github.io/eai/registry/
      eai --version
      ```
    - On Windows, use the same npm commands in PowerShell and avoid shell
@@ -719,7 +751,12 @@ Classify as non-app only when the user is asking for work such as:
 - Codebase exploration, cloud audit, engineering review, or migration planning.
 - A one-off analysis task where no durable user workflow will be implemented.
 
-If non-app, record this explicitly in `discovery.md`:
+If non-app, first confirm once:
+
+> This looks like non-app work, so I will skip EAI tenant/app setup and continue
+> the Gofer research/docs path. Is that right?
+
+If the user confirms, record this explicitly in `discovery.md`:
 
 ```markdown
 ## Application Classification
@@ -731,8 +768,11 @@ If non-app, record this explicitly in `discovery.md`:
 | Four-step AI journey required | No |
 ```
 
-Then continue through the pipeline without creating a four-step AI-augmented app
-journey.
+Then continue through the pipeline without running EAI app setup and without
+creating a four-step AI-augmented app journey.
+
+If the user says this is actually app work, switch back to app delivery, run the
+EAI app-delivery preflight, and continue to Step 2.7.
 
 If app delivery is selected or inferred, continue to Step 2.7 and create the
 AI-augmented journey.
@@ -784,7 +824,7 @@ For app delivery, the default early process is:
    interaction behavior, run:
 
    ```bash
-   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --open auto --screenshot --change "<change summary>"
+   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --require-scenarios --open auto --screenshot --change "<change summary>"
    ```
 
    If auto-detection is wrong, pass `--command "<preview command>"`; if a server
@@ -794,6 +834,11 @@ For app delivery, the default early process is:
    user the current UI as often as useful. Pause only when the user asks for
    changes or a real business, security, platform, or release decision is
    required.
+   Before a UI change is treated as complete, require
+   `{FEATURE_DIR}/business-scenarios.json` to map the customer outcomes and all
+   screens to executable browser tests, and require the helper-generated
+   `business-scenario-report.json` to pass. Use the integrated browser for the
+   visible walkthrough when available and Playwright/Cypress for repeatability.
 4. **EnterpriseAI service-fit review** — once the first concrete UI direction is
    visible, review which platform services are accessible now, purchasable but
    unavailable now, or unsupported, and lock that decision before plan/tasks are

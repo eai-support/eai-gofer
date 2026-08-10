@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.7.28
+Version: 3.7.32
 Host: VS Code and GitHub Copilot
 
 # Eai
@@ -19,6 +19,23 @@ Use this as the single user-facing Gofer command. Users should run `/eai`, `$eai
 - Keep all Gofer functions available by routing internally to the right stage contract.
 - Explain progress in business language first; provide technical details when the user asks.
 
+## Controlled English Contract
+
+Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.
+
+Apply these rules before any user-facing output:
+
+1. Use short sentences. Keep instructions to 20 words or fewer where possible.
+2. Use one action per instruction.
+3. Use active voice. Use passive voice only when the actor is unknown or not important.
+4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.
+5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.
+6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.
+7. Use vertical lists for complex information.
+8. Put one topic in each paragraph.
+9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
+10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
 ## Workspace Preflight
 
 1. Resolve the repository root.
@@ -27,11 +44,19 @@ Use this as the single user-facing Gofer command. Users should run `/eai`, `$eai
 4. If the user says yes, run `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host copilot --include-mirrors`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
+## App vs Non-App Routing
+
+1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
+2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path; do not ask for confirmation just because app delivery is inferred.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+4. When the user confirms non-app, do not run `eai whoami`, tenant selection, `eai init`, or first-run setup. Record the decision and continue the appropriate Gofer research, documentation, audit, migration, or planning path.
+5. If the user says it is app work, switch to EAI app delivery and run EAI readiness.
+
 ## EAI Platform Readiness
 
-1. Run `eai whoami` before EAI app delivery work.
+1. Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery.
 2. Confirm the user is logged in, an active tenant is available, and the repo is ready for the EAI app template.
-3. If EAI CLI, login, tenant, or template readiness is missing, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md` when present.
+3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md` when present.
 4. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
 5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
 

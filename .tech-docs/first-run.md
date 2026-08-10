@@ -9,7 +9,7 @@ source_commit: 'manual-public-onboarding'
 Use this path to verify that Gofer is installed, the repository scaffold exists,
 and `/eai` can start or continue the delivery pipeline.
 
-![Gofer first run demo](https://raw.githubusercontent.com/eai-tools/eai-gofer/main/assets/gofer-first-run.svg)
+![Gofer first run demo](https://raw.githubusercontent.com/eai-support/eai-gofer/main/assets/gofer-first-run.svg)
 
 ## What Success Looks Like
 
@@ -36,7 +36,7 @@ The public Gofer command should also be available on the host you installed:
 Install from the Marketplace when published, or use the public VSIX fallback:
 
 ```bash
-curl -fsSL https://eai-tools.github.io/eai-gofer/releases/eai-gofer-latest.vsix \
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix \
   -o /tmp/eai-gofer-latest.vsix
 code --install-extension /tmp/eai-gofer-latest.vsix
 ```
@@ -44,28 +44,28 @@ code --install-extension /tmp/eai-gofer-latest.vsix
 ### Claude Code
 
 ```bash
-claude plugin marketplace add eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer
+claude plugin marketplace add eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer
 claude plugin install eai-gofer@eai-gofer --scope user
 ```
 
 ### Codex
 
 ```bash
-codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer
+codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer
 codex plugin add eai-gofer@eai-gofer
 ```
 
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add https://github.com/eai-tools/eai-gofer
+copilot plugin marketplace add https://github.com/eai-support/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/eai-tools/eai-gofer --auto-update
+gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
 ```
 
 ## 2. Initialize The Repository

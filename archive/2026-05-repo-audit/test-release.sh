@@ -75,7 +75,7 @@ fi
 # 8. Test curl to GitHub Pages (optional, may fail if not deployed)
 echo ""
 echo -e "${BLUE}Testing GitHub Pages endpoint...${NC}"
-if LATEST=$(curl -s "https://eai-tools.github.io/eai-gofer/releases.json" | grep -o '"latest_version"[^,]*' | cut -d'"' -f4); then
+if LATEST=$(curl -s "https://eai-support.github.io/eai-gofer/releases.json" | grep -o '"latest_version"[^,]*' | cut -d'"' -f4); then
     echo -e "${GREEN}✓${NC} GitHub Pages is accessible (latest: v$LATEST)"
 else
     echo -e "${YELLOW}⚠ Could not fetch from GitHub Pages (may not be deployed yet)${NC}"

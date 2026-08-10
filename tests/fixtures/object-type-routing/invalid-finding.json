@@ -1,0 +1,10 @@
+{
+  "contractVersion": "eai.object-type-routing/v1",
+  "rule": "OBJECT_TYPE_SLUG_DERIVATION_MISMATCH",
+  "classification": "report_only_persisted_legacy_drift",
+  "severity": "warning",
+  "location": "tenant-raw-id",
+  "field": "slug",
+  "offendingValue": "github-connection",
+  "remediation": "Rename it."
+}

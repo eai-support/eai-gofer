@@ -63,7 +63,7 @@ Cross-host install/update parity
 Leave the current flow as-is and document a workaround.
 `,
       labels: [{ name: 'enhancement' }],
-      html_url: 'https://github.com/eai-tools/eai-gofer/issues/42',
+      html_url: 'https://github.com/eai-support/eai-gofer/issues/42',
     };
 
     const analysis = analyzeIssue(issue, POLICY);
@@ -88,7 +88,7 @@ Leave the current flow as-is and document a workaround.
       title: '[Question]: How do I install this in Codex?',
       body: 'I am trying to understand which command to run first.',
       labels: [],
-      html_url: 'https://github.com/eai-tools/eai-gofer/issues/9',
+      html_url: 'https://github.com/eai-support/eai-gofer/issues/9',
     };
 
     const analysis = analyzeIssue(issue, POLICY);
@@ -104,7 +104,7 @@ Leave the current flow as-is and document a workaround.
       title: '[Feature]: Make it better',
       body: 'Please improve this.',
       labels: [{ name: 'enhancement' }],
-      html_url: 'https://github.com/eai-tools/eai-gofer/issues/77',
+      html_url: 'https://github.com/eai-support/eai-gofer/issues/77',
     };
 
     const analysis = analyzeIssue(issue, POLICY);

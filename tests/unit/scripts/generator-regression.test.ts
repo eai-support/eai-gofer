@@ -184,7 +184,9 @@ describe('generator regression (T054)', () => {
 
     it('reports a stage-loading error about missing .specify/commands/', () => {
       const combined = stdout + stderr;
-      expect(combined).toContain('Stage loading failed: .specify/commands/ not found');
+      expect(combined).toContain(
+        'Canonical command normalization failed: .specify/commands/ not found'
+      );
     });
   });
 

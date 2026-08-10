@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PUBLIC_RELEASES_BASE_URL = 'https://eai-tools.github.io/eai-gofer/releases';
+const PUBLIC_RELEASES_BASE_URL = 'https://eai-support.github.io/eai-gofer/releases';
 
 function buildVsixUrl(version) {
   return `${PUBLIC_RELEASES_BASE_URL}/eai-gofer-${version}.vsix`;

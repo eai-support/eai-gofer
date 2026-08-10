@@ -9,10 +9,10 @@ import { promisify } from 'util';
 import { Logger } from './services/Logger';
 
 const execFileAsync = promisify(execFile);
-const RELEASES_HOST = 'eai-tools.github.io';
+const RELEASES_HOST = 'eai-support.github.io';
 const RELEASES_PATH_PREFIX = '/eai-gofer/releases/';
 const GITHUB_RELEASES_HOST = 'github.com';
-const GITHUB_RELEASES_PATH_PREFIX = '/eai-tools/eai-gofer/releases/download/';
+const GITHUB_RELEASES_PATH_PREFIX = '/eai-support/eai-gofer/releases/download/';
 const GITHUB_ASSET_HOSTS = new Set([
   'objects.githubusercontent.com',
   'github-releases.githubusercontent.com',
@@ -46,7 +46,7 @@ export class AutoUpdater {
     extensionName: string = 'eai-gofer',
     logger?: Logger
   ) {
-    this.githubRepo = githubRepo; // e.g., "eai-tools/eai-gofer"
+    this.githubRepo = githubRepo; // e.g., "eai-support/eai-gofer"
     this.currentVersion = currentVersion;
     this.extensionName = extensionName;
     this.logger = logger;
@@ -99,7 +99,7 @@ export class AutoUpdater {
   private async getLatestVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'eai-tools.github.io',
+        hostname: RELEASES_HOST,
         path: '/eai-gofer/releases.json',
         headers: {
           userAgent: 'VSCode-Extension-Updater',
@@ -234,7 +234,7 @@ export class AutoUpdater {
   private async getDownloadUrl(version: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'eai-tools.github.io',
+        hostname: RELEASES_HOST,
         path: '/eai-gofer/releases.json',
         headers: {
           userAgent: 'VSCode-Extension-Updater',
@@ -368,14 +368,17 @@ export class AutoUpdater {
         const errorMsg = cliError instanceof Error ? cliError.message : String(cliError);
 
         if (errorMsg.includes('command not found') || errorMsg.includes('not found')) {
-          throw new Error(`Cannot auto-install update. Please install manually:
+          throw new Error(
+            `Cannot auto-install update. Please install manually:
 
-1. Download: https://eai-tools.github.io/eai-gofer/releases/eai-gofer-${this.getCurrentVersionFromPath(vsixPath)}.vsix
+1. Download: https://eai-support.github.io/eai-gofer/releases/eai-gofer-${this.getCurrentVersionFromPath(vsixPath)}.vsix
 2. Open VS Code Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
 3. Run "Extensions: Install from VSIX..."
 4. Select the downloaded file
 
-Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`, { cause: cliError });
+Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
+            { cause: cliError }
+          );
         } else {
           throw new Error(`Failed to install extension: ${errorMsg}`, { cause: cliError });
         }
@@ -505,7 +508,7 @@ Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
 
         if (manualChoice === 'Download & Install Manually') {
           // Open the GitHub Pages release page directly
-          vscode.env.openExternal(vscode.Uri.parse('https://eai-tools.github.io/eai-gofer/'));
+          vscode.env.openExternal(vscode.Uri.parse('https://eai-support.github.io/eai-gofer/'));
 
           // Show installation instructions
           vscode.window.showInformationMessage(
@@ -532,7 +535,7 @@ Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
         );
 
         if (fallbackChoice === 'Download Manually') {
-          vscode.env.openExternal(vscode.Uri.parse('https://eai-tools.github.io/eai-gofer/'));
+          vscode.env.openExternal(vscode.Uri.parse('https://eai-support.github.io/eai-gofer/'));
         }
       }
     }
@@ -560,13 +563,13 @@ Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
       if (errorMessage.includes('not found') || errorMessage.includes('404')) {
         vscode.window
           .showInformationMessage(
-            `� GitHub Pages release site not found.\n\nCurrent version: v${this.currentVersion}\n\nPlease check that GitHub Pages is enabled for the repository.\n\nSite URL: https://eai-tools.github.io/eai-gofer`,
+            `GitHub Pages release site not found.\n\nCurrent version: v${this.currentVersion}\n\nPlease check that GitHub Pages is enabled for the repository.\n\nSite URL: https://eai-support.github.io/eai-gofer`,
             'Open Release Site',
             'OK'
           )
           .then((choice) => {
             if (choice === 'Open Release Site') {
-              vscode.env.openExternal(vscode.Uri.parse('https://eai-tools.github.io/eai-gofer'));
+              vscode.env.openExternal(vscode.Uri.parse('https://eai-support.github.io/eai-gofer'));
             }
           });
       } else if (errorMessage.includes('rate limit')) {

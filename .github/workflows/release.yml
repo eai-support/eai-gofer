@@ -149,12 +149,12 @@ jobs:
             echo
             echo "## Public Release Host"
             echo
-            echo "https://eai-tools.github.io/eai-gofer/releases/"
+            echo "https://eai-support.github.io/eai-gofer/releases/"
             echo
             echo "## Public Agent Plugin Install"
             echo
             echo '```bash'
-            echo "curl -fsSL https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip \\"
+            echo "curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip \\"
             echo "  -o /tmp/eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip"
             echo
             echo "rm -rf ~/plugins/eai-gofer"
@@ -164,27 +164,27 @@ jobs:
             echo "Claude Code:"
             echo
             echo '```bash'
-            echo "claude plugin marketplace add https://github.com/eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer"
+            echo "claude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer"
             echo "claude plugin install eai-gofer@eai-gofer --scope user"
             echo '```'
             echo
             echo "Codex:"
             echo
             echo '```bash'
-            echo "codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer"
+            echo "codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer"
             echo "codex plugin add eai-gofer@eai-gofer"
             echo '```'
             echo
             echo "Gemini CLI:"
             echo
             echo '```bash'
-            echo "gemini extensions install https://github.com/eai-tools/eai-gofer"
+            echo "gemini extensions install https://github.com/eai-support/eai-gofer"
             echo '```'
             echo
             echo "Copilot CLI:"
             echo
             echo '```bash'
-            echo "copilot plugin marketplace add https://github.com/eai-tools/eai-gofer"
+            echo "copilot plugin marketplace add https://github.com/eai-support/eai-gofer"
             echo "copilot plugin install eai-gofer@eai-gofer"
             echo '```'
           } >> release-notes.md
@@ -225,13 +225,11 @@ jobs:
 
       - name: Publish VS Code Marketplace Extension
         id: marketplace_publish
-        continue-on-error: true
         working-directory: ./extension
         env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          VSCE_AZURE_CLIENT_ID: ${{ vars.VSCE_AZURE_CLIENT_ID }}
-          VSCE_AZURE_TENANT_ID: ${{ vars.VSCE_AZURE_TENANT_ID }}
-          VSCE_AZURE_SUBSCRIPTION_ID: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: ${{ vars.VSCE_AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.VSCE_AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.VSCE_AZURE_SUBSCRIPTION_ID }}
           IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -239,32 +237,19 @@ jobs:
             exit 0
           fi
 
-          if [ -n "$VSCE_AZURE_CLIENT_ID" ] && [ -n "$VSCE_AZURE_TENANT_ID" ] && [ -n "$VSCE_AZURE_SUBSCRIPTION_ID" ]; then
-            echo "Publishing EnterpriseAI.gofer with Microsoft Entra ID workload identity."
-            if npx @vscode/vsce verify-pat EnterpriseAI --azure-credential \
-              && npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" --azure-credential; then
-              exit 0
-            fi
-
-            if [ -n "$VSCE_PAT" ]; then
-              echo "::warning::Microsoft Entra Marketplace publish failed; falling back to legacy VSCE_PAT. Add the managed identity reported above as a Contributor on the EnterpriseAI Marketplace publisher before removing this fallback."
-            else
-              echo "::error::Microsoft Entra Marketplace publish failed and no VSCE_PAT fallback is configured."
-              exit 1
-            fi
+          if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
+            echo "::error::Stable releases must configure VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID repository variables."
+            exit 1
           fi
 
-          if [ -n "$VSCE_PAT" ]; then
-            echo "::warning::Publishing EnterpriseAI.gofer with legacy VSCE_PAT fallback. Configure Entra workload identity publishing before Azure DevOps global PAT retirement."
-            npx @vscode/vsce verify-pat EnterpriseAI -p "$VSCE_PAT"
-            npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" -p "$VSCE_PAT"
-            exit 0
-          fi
+          echo "Publishing EnterpriseAI.gofer with Microsoft Entra workload identity."
+          marketplace_token="$(az account get-access-token \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 \
+            --query accessToken \
+            --output tsv)"
 
-          echo "::error::Stable releases must publish EnterpriseAI.gofer to the VS Code Marketplace."
-          echo "::error::Preferred setup: configure repository variables VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
-          echo "::error::Legacy fallback: configure VSCE_PAT with Marketplace Manage scope."
-          exit 1
+          npx @vscode/vsce verify-pat EnterpriseAI -p "$marketplace_token"
+          npx @vscode/vsce publish --packagePath "eai-gofer-${{ steps.version.outputs.version }}.vsix" -p "$marketplace_token"
 
       - name: Summarize VS Code Marketplace Status
         if: always() && steps.version.outputs.prerelease != 'true'
@@ -283,6 +268,6 @@ jobs:
               echo
               echo "Next fixes:"
               echo "- Add the managed identity shown in the workflow logs as a Contributor on the EnterpriseAI Marketplace publisher."
-              echo "- Or rotate the legacy VSCE_PAT with Marketplace Manage scope while the Entra path is being repaired."
+              echo "- Confirm the repository VSCE_AZURE_* variables point at that managed identity."
             } >> "$GITHUB_STEP_SUMMARY"
           fi

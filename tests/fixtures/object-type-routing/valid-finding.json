@@ -1,0 +1,15 @@
+{
+  "contractVersion": "eai.object-type-routing/v1",
+  "rule": "OBJECT_TYPE_SLUG_DERIVATION_MISMATCH",
+  "classification": "report_only_persisted_legacy_drift",
+  "severity": "warning",
+  "location": {
+    "kind": "persisted",
+    "tenantRef": "hmac-sha256:tenant-ref",
+    "recordRef": "hmac-sha256:record-ref"
+  },
+  "field": "slug",
+  "offendingValue": "github-connection",
+  "expectedValue": "git-hub-connection",
+  "remediation": "Preserve the stored identifier; use a separately approved tenant-scoped migration if a rename is required."
+}

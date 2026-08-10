@@ -202,7 +202,7 @@ export class InitializationService {
       await migrator.upgrade();
       // After upgrade, handled in handleGoferFormat path
     } else if (choice === 'Learn More') {
-      vscode.env.openExternal(vscode.Uri.parse('https://github.com/eai-tools/eai-gofer'));
+      vscode.env.openExternal(vscode.Uri.parse('https://github.com/eai-support/eai-gofer'));
     }
   }
 

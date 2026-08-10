@@ -41,6 +41,12 @@ Default user-facing updates must be concise, business-level, and easy to scan.
 Keep the technical work rigorous in artifacts, tests, logs, and code, but do
 not lead with implementation jargon unless the user asks for it.
 
+Use ASD-STE100 Simplified Technical English as the target writing standard for
+all Gofer-authored chat, documents, commands, summaries, PR notes, error
+guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of
+ASD; do not bundle the protected ASD dictionary and do not claim ASD
+certification.
+
 1. Explain progress as what is being connected, changed, checked, or fixed and
    why it matters to the business outcome.
 2. Use the running build map: create or update
@@ -56,7 +62,17 @@ not lead with implementation jargon unless the user asks for it.
    - `Working on`: the build-map area or stakeholder outcome
    - `Why it matters`: user/business impact
    - `Status`: done, checking, fixing, blocked, or needs decision
-6. Do not remove technical validation, security checks, EAI preflights, tests,
+6. Use one action per instruction.
+7. Keep instructions to 20 words or fewer where possible.
+8. Use active voice unless the actor is unknown or not important.
+9. Use simple verb forms: simple present, simple past, simple future,
+   infinitive, or imperative.
+10. Define acronyms on first use and use approved project terms.
+11. Avoid idioms, marketing adjectives, vague praise, and hedging.
+12. Use vertical lists for complex information and one topic per paragraph.
+13. For errors, state what happened, why it matters, what to do next, and the
+    exact safe command when one exists.
+14. Do not remove technical validation, security checks, EAI preflights, tests,
    or loop evidence. This contract changes presentation, not engineering
    standards.
 <!-- gofer:business-progress:end -->
@@ -86,7 +102,7 @@ Use the first source that exists:
 3. Download the latest public bundle zip and extract it to a temporary folder:
 
 ```bash
-curl -fsSL https://eai-tools.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip \
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip \
   -o /tmp/eai-gofer-agent-plugin-latest.zip
 rm -rf /tmp/eai-gofer-bootstrap
 mkdir -p /tmp/eai-gofer-bootstrap

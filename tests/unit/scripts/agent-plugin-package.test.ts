@@ -130,6 +130,10 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/references/platform/eai.md',
         'eai-gofer/.specify/references/platform/eai-repo-contract.md',
         'eai-gofer/.specify/references/platform/eai-error-catalog.yaml',
+        'eai-gofer/.specify/config/object-type-routing.json',
+        'eai-gofer/.specify/contracts/object-type-routing-v1.json',
+        'eai-gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
+        'eai-gofer/.specify/schemas/object-type-routing-phase-bundle-v1.schema.json',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',
         'eai-gofer/commands/gofer.md',
         'eai-gofer/commands/eai.md',
@@ -184,15 +188,17 @@ describe('Gofer agent plugin package', () => {
         path: './plugins/eai-gofer',
       });
       expect(readme).toContain(
-        'claude plugin marketplace add https://github.com/eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
+        'claude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
       );
       expect(readme).toContain(
-        'codex plugin marketplace add https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
+        'codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
       );
       expect(readme).toContain(
-        'copilot plugin marketplace add https://github.com/eai-tools/eai-gofer'
+        'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain('gemini extensions install https://github.com/eai-tools/eai-gofer');
+      expect(readme).toContain(
+        'gemini extensions install https://github.com/eai-support/eai-gofer'
+      );
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain(
@@ -208,6 +214,10 @@ describe('Gofer agent plugin package', () => {
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(umbrellaSkill).toContain('eai publicapi');
+      expect(umbrellaSkill).toContain('## Controlled English Contract');
+      expect(umbrellaSkill).toContain('ASD-STE100 Simplified Technical English');
+      expect(umbrellaSkill).toContain('Use one action per instruction');
+      expect(umbrellaSkill).toContain('do not claim ASD certification');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);
@@ -288,15 +298,18 @@ describe('Gofer agent plugin package', () => {
 
     expect(workflow).toContain('npm run gofer:package-plugin');
     expect(workflow).toContain('eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip');
-    expect(workflow).toContain('VSCE_PAT');
+    expect(workflow).toContain('az account get-access-token');
+    expect(workflow).toContain('--resource 499b84ac-1321-427f-aa17-267ca6975798');
+    expect(workflow).toContain('VSCE_AZURE_CLIENT_ID');
+    expect(workflow).not.toContain('VSCE_PAT');
     expect(workflow).toContain('vsce publish --packagePath');
     expect(workflow).toContain('softprops/action-gh-release@v3');
     expect(workflow).toContain(
-      'https://github.com/eai-tools/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
+      'https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
     );
     expect(workflow).toContain(
-      'https://github.com/eai-tools/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
+      'https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer'
     );
-    expect(workflow).toContain('https://github.com/eai-tools/eai-gofer');
+    expect(workflow).toContain('https://github.com/eai-support/eai-gofer');
   });
 });

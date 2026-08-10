@@ -6,14 +6,14 @@ echo "🔌 Installing EAI-GOFER extension..."
 # Try to install from GitHub releases
 install_from_github() {
   echo "   Attempting to install from GitHub releases..."
-  RELEASES_JSON="https://eai-tools.github.io/eai-gofer/releases.json"
+  RELEASES_JSON="https://eai-support.github.io/eai-gofer/releases.json"
   
   # Try to get latest version
   LATEST_VERSION=$(curl -s "$RELEASES_JSON" 2>/dev/null | grep -o '"latest_version": "[^"]*"' | cut -d'"' -f4)
   
   if [ -n "$LATEST_VERSION" ]; then
     # Try the new name first, then fall back to old name
-    VSIX_URL="https://eai-tools.github.io/eai-gofer/releases/eai-gofer-${LATEST_VERSION}.vsix"
+    VSIX_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-${LATEST_VERSION}.vsix"
     VSIX_FILE="/tmp/eai-gofer-${LATEST_VERSION}.vsix"
     
     echo "   Downloading version $LATEST_VERSION..."
@@ -27,7 +27,7 @@ install_from_github() {
     fi
     
     # Fall back to the historical VSIX filename for already-published releases.
-    VSIX_URL="https://eai-tools.github.io/eai-gofer/releases/gofer-${LATEST_VERSION}.vsix"
+    VSIX_URL="https://eai-support.github.io/eai-gofer/releases/gofer-${LATEST_VERSION}.vsix"
     VSIX_FILE="/tmp/gofer-${LATEST_VERSION}.vsix"
     
     echo "   Trying legacy filename..."

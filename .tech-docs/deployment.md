@@ -25,7 +25,7 @@ tagging and semantic versioning.
 flowchart TB
     subgraph "Development"
         Dev["Developer"]
-        Git["Git Repository<br/>eai-tools/eai-gofer"]
+        Git["Git Repository<br/>eai-support/eai-gofer"]
     end
 
     subgraph "CI/CD (GitHub Actions)"
@@ -37,7 +37,7 @@ flowchart TB
     subgraph "Distribution"
         VSCodeMarketplace["VS Code Marketplace<br/>Gofer"]
         GitHubReleases["GitHub Releases<br/>VSIX + Plugin ZIP"]
-        ClaudeMarket["Claude Plugin Marketplace<br/>eai-tools/eai-gofer"]
+        ClaudeMarket["Claude Plugin Marketplace<br/>eai-support/eai-gofer"]
         CopilotMarket["Copilot Plugin Marketplace"]
         LocalPlugins["Local Plugin Installs<br/>~/plugins/eai-gofer"]
     end
@@ -77,7 +77,8 @@ flowchart TB
 
 ### GitHub Repository
 
-- **Repository:** [eai-tools/eai-gofer](https://github.com/eai-tools/eai-gofer)
+- **Repository:**
+  [eai-support/eai-gofer](https://github.com/eai-support/eai-gofer)
 - **Primary Branch:** `main`
 - **Protected Branches:** `main`, `develop`
 - **Required Checks:** CI tests, linting, type checking
@@ -162,7 +163,7 @@ flowchart TB
    - Deploy to GitHub Pages
 
 **Published URL:**
-[eai-tools.github.io/eai-gofer/docs](https://eai-tools.github.io/eai-gofer/docs)
+[eai-support.github.io/eai-gofer/docs](https://eai-support.github.io/eai-gofer/docs)
 
 ### GitHub Pages
 
@@ -183,7 +184,7 @@ flowchart TB
 ### CI Health Monitoring
 
 - **GitHub Actions Status:**
-  [eai-tools/eai-gofer/actions](https://github.com/eai-tools/eai-gofer/actions)
+  [eai-support/eai-gofer/actions](https://github.com/eai-support/eai-gofer/actions)
 - **Coverage Reports:** Artifacts uploaded to GitHub Actions
 - **Test Results:** CTRF JSON reports
 
@@ -242,7 +243,7 @@ Each GitHub Release includes:
 **Marketplace Registration:**
 
 ```bash
-claude plugin marketplace add eai-tools/eai-gofer --scope user
+claude plugin marketplace add eai-support/eai-gofer --scope user
 claude plugin install eai-gofer@eai-gofer --scope user
 ```
 
@@ -251,7 +252,7 @@ claude plugin install eai-gofer@eai-gofer --scope user
 ```bash
 # Download release ZIP
 gh release download v3.4.0 \
-  --repo eai-tools/eai-gofer \
+  --repo eai-support/eai-gofer \
   --pattern "eai-gofer-agent-plugin-3.4.0.zip" \
   --dir /tmp/eai-gofer-plugin
 
@@ -269,7 +270,7 @@ claude plugin install eai-gofer@eai-gofer-local --scope user
 **Marketplace Registration:**
 
 ```bash
-copilot plugin marketplace add eai-tools/eai-gofer
+copilot plugin marketplace add eai-support/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
@@ -294,13 +295,13 @@ copilot plugin install eai-gofer@eai-gofer-local
 
 1. **Identify Last Known Good Version**
    - Check GitHub Releases:
-     [eai-tools/eai-gofer/releases](https://github.com/eai-tools/eai-gofer/releases)
+     [eai-support/eai-gofer/releases](https://github.com/eai-support/eai-gofer/releases)
    - Example: `v3.3.1`
 
 2. **Download Previous VSIX**
 
    ```bash
-   gh release download v3.3.1 --repo eai-tools/eai-gofer --pattern "*.vsix"
+   gh release download v3.3.1 --repo eai-support/eai-gofer --pattern "*.vsix"
    ```
 
 3. **Uninstall Current Version**
@@ -332,7 +333,7 @@ copilot plugin install eai-gofer@eai-gofer-local
    ```bash
    # Download previous release
    gh release download v3.3.1 \
-     --repo eai-tools/eai-gofer \
+     --repo eai-support/eai-gofer \
      --pattern "eai-gofer-agent-plugin-3.3.1.zip"
 
    # Install previous version
@@ -389,7 +390,7 @@ copilot plugin install eai-gofer@eai-gofer-local
 
 ```bash
 # Clone repository
-git clone https://github.com/eai-tools/eai-gofer.git
+git clone https://github.com/eai-support/eai-gofer.git
 cd eai-gofer
 
 # Install dependencies

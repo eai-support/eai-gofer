@@ -67,7 +67,7 @@ describe('Config - Constants', () => {
 
   describe('GitHub Constants', () => {
     it('should have correct GitHub owner', () => {
-      expect(GITHUB_OWNER).toBe('eai-tools');
+      expect(GITHUB_OWNER).toBe('eai-support');
     });
 
     it('should have correct GitHub repo', () => {

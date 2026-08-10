@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Gofer
 
-Version: 3.7.28
+Version: 3.7.32
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -19,6 +19,23 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 
 Before stage work, resolve the repository root and run `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json` when available. If the repo is missing or stale, ask before running `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors`, then resume the original command.
 
+## Controlled English Contract
+
+Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.
+
+Apply these rules before any user-facing output:
+
+1. Use short sentences. Keep instructions to 20 words or fewer where possible.
+2. Use one action per instruction.
+3. Use active voice. Use passive voice only when the actor is unknown or not important.
+4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.
+5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.
+6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.
+7. Use vertical lists for complex information.
+8. Put one topic in each paragraph.
+9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
+10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
 ## Business-Friendly Progress
 
 - Keep user-facing progress short and business-level by default.
@@ -26,13 +43,21 @@ Before stage work, resolve the repository root and run `node .specify/scripts/no
 - Use `.specify/specs/{feature}/build-map.md` as the shared picture of the build when app delivery applies.
 - Keep technical detail, logs, tests, and security evidence in artifacts; show deeper detail when the user asks.
 
+## App vs Non-App Routing
+
+- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.
+- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.
+- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+- If the user confirms non-app, do not run `eai whoami`, tenant selection, `eai init`, or first-run setup. Record the decision and continue the appropriate non-app path.
+- If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
+
 ## First EAI Platform App
 
 If the user is starting a first EAI Platform app, use the public `gofer` or `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
 
 ## EAI CLI Discovery And Recovery
 
-- Run `eai whoami` before Gofer pipeline work and require a valid login plus an active tenant.
+- Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery, not for confirmed non-app research/docs/audit/planning.
 - Run `eai update --check` before first EAI platform work when the CLI may be stale.
 - Run `eai --describe` before assuming command syntax.
 - If advertised, run `eai agent guide --format json` before planning or fixing EAI workflows.
@@ -90,7 +115,7 @@ Install or update this plugin by replacing the stable local folder:
 The public release feed is available at:
 
 ```text
-https://eai-tools.github.io/eai-gofer/releases.json
+https://eai-support.github.io/eai-gofer/releases.json
 ```
 
 Gemini CLI users can also copy the bundled `.gemini/` directory into a repository root to activate the same public command set there.

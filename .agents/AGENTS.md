@@ -3,7 +3,7 @@
 This file documents the public Gofer command surface and internal pipeline
 contracts.
 
-Generated: 2026-08-02T23:40:58.788Z
+Generated: 2026-08-10T08:59:13.358Z
 
 ## Public Entrypoints
 
@@ -15,6 +15,8 @@ remain available as internal contracts under `.specify/commands/`.
 
 ## EAI CLI Discovery And Recovery
 
+- Classify work before EAI readiness: app delivery continues directly; clear
+  non-app work asks once before skipping EAI tenant/app setup.
 - Run `eai update --check` before first EAI platform work when the CLI may be
   stale.
 - Run `eai --describe` before assuming command syntax.
