@@ -298,7 +298,10 @@ describe('Gofer agent plugin package', () => {
 
     expect(workflow).toContain('npm run gofer:package-plugin');
     expect(workflow).toContain('eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip');
-    expect(workflow).toContain('VSCE_PAT');
+    expect(workflow).toContain('az account get-access-token');
+    expect(workflow).toContain('--resource 499b84ac-1321-427f-aa17-267ca6975798');
+    expect(workflow).toContain('VSCE_AZURE_CLIENT_ID');
+    expect(workflow).not.toContain('VSCE_PAT');
     expect(workflow).toContain('vsce publish --packagePath');
     expect(workflow).toContain('softprops/action-gh-release@v3');
     expect(workflow).toContain(
