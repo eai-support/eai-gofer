@@ -31,11 +31,8 @@ describe('Gofer public execution-depth guidance', () => {
 
   it('keeps the controlled-English contract in public entrypoint skills', () => {
     for (const file of [
-      '.agents/skills/gofer/SKILL.md',
       '.agents/skills/eai/SKILL.md',
-      'plugins/eai-gofer/skills/gofer/SKILL.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
-      'plugins/eai-gofer/plugin-skills/gofer/SKILL.md',
       'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');

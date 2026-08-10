@@ -697,10 +697,10 @@ priority: "P1"
 
 <!--
   To generate a complete implementation, use the public Gofer entrypoint:
-  /gofer ${specTitle}
+  /eai ${specTitle}
 
-  Use /eai, #gofer, #eai, $gofer, or $eai where that syntax
-  fits the host. Gofer routes internally through .specify/commands/*.md:
+  Use /eai, #eai, or $eai where that syntax fits the host.
+  Gofer routes internally through .specify/commands/*.md:
   1_gofer_research  → Creates research.md
   2_gofer_specify   → Updates this spec.md
   3_gofer_plan      → Creates plan.md, data-model.md, contracts/

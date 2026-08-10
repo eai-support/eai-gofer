@@ -5,27 +5,84 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DOCS_URL = 'https://docs.eai.software/services/publicapi/v4/resource-mutation-contract';
+const OBJECT_TYPE_ROUTING_CONFIG_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'config',
+  'object-type-routing.json'
+);
 const SOURCE_EXTENSIONS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.mts', '.ts', '.tsx', '.vue']);
-const EXCLUDED_DIRECTORIES = new Set([
-  '.git',
-  '.next',
-  '.specify',
-  'coverage',
-  'dist',
-  'node_modules',
-  'out',
-  'playwright-report',
-  'test-results',
-  'tests',
-  '__tests__',
-]);
 const RESOURCE_URL_PATTERN =
   /(?:\/api\/eai)?\/v4\/data\/resources|(?<![\w$])(?:this\s*\.\s*)?(?:resources?BaseUrl|resourceUrl)\s*\(/;
 const NON_RECORD_MUTATION_PATTERN =
   /\/(?:object-types|query|search|aggregate|batch|files|links|shares|parents|storage)(?:\/|['"`}]|$)/;
+const RESOURCE_ROUTING_METHODS = Object.freeze([
+  'collection',
+  'member',
+  'subresource',
+  'collectionOperation',
+  'query',
+  'search',
+  'schema',
+  'objectTypes',
+  'objectType',
+  'parent',
+]);
+const RESOURCE_ROUTING_CALLEE_PATTERN =
+  `this\\s*\\.\\s*routing\\s*\\.\\s*(?:${RESOURCE_ROUTING_METHODS.join('|')})`;
+const RESOURCE_ROUTING_ROUTE_PREFIX = 'eai-resource-routing:';
+const RESOURCE_ROUTING_NON_RECORD_FAMILIES = new Set([
+  'subresource',
+  'collectionOperation',
+  'query',
+  'search',
+  'schema',
+  'parent',
+]);
 const NON_NETWORK_ROUTE_CONSUMERS = new Set(['URL']);
 const IS_DIRECT_RUN =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const FIXED_AUDIT_ROOTS = ['src', 'app', 'pages', 'lib', 'packages'];
+const GOVERNED_REPOSITORY_ROOTS = ['front/eai-app-template'];
+const SOLE_ROUTE_OWNER = 'front/eai-app-template/packages/platform-sdk/src/resource-routing.ts';
+
+function assertObjectTypeRoutingConfig(config) {
+  if (
+    config?.schemaVersion !== 'eai.object-type-routing.source-audit-config/v1' ||
+    config?.contractVersion !== 'eai.object-type-routing/v1' ||
+    !Array.isArray(config.fixedRoots) ||
+    !Array.isArray(config.governedRepositoryRoots) ||
+    !Array.isArray(config.excludedDirectories) ||
+    typeof config.soleOwner !== 'string' ||
+    typeof config.canonicalGuidance !== 'string' ||
+    JSON.stringify(config.fixedRoots) !== JSON.stringify(FIXED_AUDIT_ROOTS) ||
+    JSON.stringify(config.governedRepositoryRoots) !==
+      JSON.stringify(GOVERNED_REPOSITORY_ROOTS) ||
+    config.soleOwner !== SOLE_ROUTE_OWNER
+  ) {
+    throw new Error(`Invalid immutable Object Type routing config: ${OBJECT_TYPE_ROUTING_CONFIG_PATH}`);
+  }
+  return Object.freeze({
+    fixedRoots: Object.freeze([...config.fixedRoots]),
+    governedRepositoryRoots: Object.freeze([...config.governedRepositoryRoots]),
+    excludedDirectories: new Set(config.excludedDirectories),
+    soleOwner: config.soleOwner.replace(/\\/g, '/'),
+    canonicalGuidance: config.canonicalGuidance,
+  });
+}
+
+const OBJECT_TYPE_ROUTING_CONFIG = assertObjectTypeRoutingConfig(
+  JSON.parse(await fs.readFile(OBJECT_TYPE_ROUTING_CONFIG_PATH, 'utf8'))
+);
+
+export const OBJECT_TYPE_ROUTING_AUDIT_CONFIG = Object.freeze({
+  fixedRoots: [...OBJECT_TYPE_ROUTING_CONFIG.fixedRoots],
+  governedRepositoryRoots: [...OBJECT_TYPE_ROUTING_CONFIG.governedRepositoryRoots],
+  excludedDirectories: [...OBJECT_TYPE_ROUTING_CONFIG.excludedDirectories].sort(),
+  soleOwner: OBJECT_TYPE_ROUTING_CONFIG.soleOwner,
+  canonicalGuidance: OBJECT_TYPE_ROUTING_CONFIG.canonicalGuidance,
+});
 
 function lineNumber(content, index) {
   return content.slice(0, index).split(/\r?\n/).length;
@@ -180,6 +237,35 @@ function callArguments(snippet, openOffset) {
   return splitTopLevel(snippet.slice(openIndex + 1, -1));
 }
 
+function literalRouteSegment(expression) {
+  const match = expression.trim().match(/^(['"`])([^'"`]*)\1$/);
+  if (!match || match[2].includes('${')) return undefined;
+  return match[2].replace(/^\/+|\/+$/g, '') || undefined;
+}
+
+function canonicalResourceRoutingRoute(expression) {
+  const call = callSnippets(expression, RESOURCE_ROUTING_CALLEE_PATTERN)[0];
+  if (!call) return undefined;
+
+  const prefix = expression.slice(0, call.start);
+  const suffix = expression.slice(call.end);
+  if (!/^\s*\(*\s*$/.test(prefix) || !/^\s*\)*\s*$/.test(suffix)) return undefined;
+
+  const method = call.callee.split('.').at(-1);
+  const args = callArguments(call.text, call.openOffset);
+  const family =
+    method === 'subresource' && literalRouteSegment(args[2] || '') === 'actions'
+      ? 'action'
+      : method;
+  return `${RESOURCE_ROUTING_ROUTE_PREFIX}${family}`;
+}
+
+function canonicalResourceRoutingFamily(route) {
+  return route.startsWith(RESOURCE_ROUTING_ROUTE_PREFIX)
+    ? route.slice(RESOURCE_ROUTING_ROUTE_PREFIX.length)
+    : undefined;
+}
+
 function objectLiteralBody(expression) {
   let candidate = expression.trim();
   const stringifyMatch = /^JSON\s*\.\s*stringify\s*\(/.exec(maskNonCode(candidate));
@@ -326,20 +412,26 @@ function simpleResourceBindings(content) {
     let expressionEnd = masked.indexOf(';', expressionStart);
     if (expressionEnd === -1) expressionEnd = content.length;
     const expression = content.slice(expressionStart, expressionEnd).trim();
-    if (RESOURCE_URL_PATTERN.test(expression)) {
-      bindings.set(match[1], expression);
+    const canonicalRoute = canonicalResourceRoutingRoute(expression);
+    if (canonicalRoute || RESOURCE_URL_PATTERN.test(expression)) {
+      bindings.set(match[1], canonicalRoute || expression);
     }
   }
   return bindings;
 }
 
 function resolvedResourceRoute(expression, bindings) {
+  const canonicalRoute = canonicalResourceRoutingRoute(expression);
+  if (canonicalRoute) return canonicalRoute;
   if (RESOURCE_URL_PATTERN.test(expression)) return expression;
   const identifier = expression.trim().match(/^([A-Za-z_$][\w$]*)$/)?.[1];
   return identifier ? bindings.get(identifier) : undefined;
 }
 
 function isResourceMemberRoute(route) {
+  const routingFamily = canonicalResourceRoutingFamily(route);
+  if (routingFamily) return routingFamily === 'member';
+
   const resourceUrlCall = route.match(/(?:this\s*\.\s*)?resourceUrl\s*\(([\s\S]*?)\)/);
   if (resourceUrlCall) {
     return splitTopLevel(resourceUrlCall[1]).length >= 2;
@@ -559,13 +651,18 @@ export function validateSourceContent(content, file = '<memory>') {
 
     const method = methodResult.method;
     const bodyExpression = topLevelPropertyExpression(optionsExpression, 'body') || '';
-    const isObjectTypeManagement = /\/object-types(?:\/|['"`}]|$)/.test(route);
-    const isAction = /\/actions\//.test(route);
+    const routingFamily = canonicalResourceRoutingFamily(route);
+    const isObjectTypeManagement =
+      /\/object-types(?:\/|['"`}]|$)/.test(route) ||
+      routingFamily === 'objectTypes' ||
+      routingFamily === 'objectType';
+    const isAction = /\/actions\//.test(route) || routingFamily === 'action';
     const isOperation = /\/operations\//.test(route);
     const routeShapeResolved =
       /\/v4\/data\/resources/.test(route) ||
       /\b(?:this\.)?resources?BaseUrl\s*\(/.test(route) ||
-      /\b(?:this\.)?resourceUrl\s*\(/.test(route);
+      /\b(?:this\.)?resourceUrl\s*\(/.test(route) ||
+      routingFamily !== undefined;
 
     if (method === 'PATCH' && !isObjectTypeManagement) {
       violations.push(
@@ -627,7 +724,11 @@ export function validateSourceContent(content, file = '<memory>') {
       }
       continue;
     }
-    if (isObjectTypeManagement || NON_RECORD_MUTATION_PATTERN.test(route)) {
+    if (
+      isObjectTypeManagement ||
+      NON_RECORD_MUTATION_PATTERN.test(route) ||
+      RESOURCE_ROUTING_NON_RECORD_FAMILIES.has(routingFamily)
+    ) {
       continue;
     }
     if (isResourceMemberRoute(route)) {
@@ -710,13 +811,48 @@ export function validateSourceContent(content, file = '<memory>') {
   return violations;
 }
 
+function rawObjectTypeRouteFindings(content, file) {
+  if (file.replace(/\\/g, '/') === OBJECT_TYPE_ROUTING_CONFIG.soleOwner) return [];
+
+  const findings = [];
+  const pattern = /(?:\/api\/eai)?\/v4\/data\/resources\b/g;
+  let match;
+  while ((match = pattern.exec(content)) !== null) {
+    const prefix = content.slice(0, match.index);
+    const lineStart = Math.max(prefix.lastIndexOf('\n'), prefix.lastIndexOf('\r')) + 1;
+    findings.push({
+      contractVersion: 'eai.object-type-routing/v1',
+      rule: 'OBJECT_TYPE_DIRECT_ROUTE_CONSTRUCTION',
+      classification: 'blocking_source_drift',
+      severity: 'error',
+      location: {
+        kind: 'source',
+        file,
+        line: lineNumber(content, match.index),
+        column: match.index - lineStart + 1,
+      },
+      field: null,
+      offendingValue: match[0],
+      expectedValue: 'shared platform SDK or approved BFF route owner',
+      remediation: OBJECT_TYPE_ROUTING_CONFIG.canonicalGuidance,
+    });
+  }
+  return findings;
+}
+
 async function sourceFiles(root) {
   const files = [];
 
   async function visit(directory) {
-    const entries = await fs.readdir(directory, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await fs.readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      throw error;
+    }
     for (const entry of entries) {
-      if (entry.isDirectory() && EXCLUDED_DIRECTORIES.has(entry.name)) continue;
+      if (entry.isDirectory() && OBJECT_TYPE_ROUTING_CONFIG.excludedDirectories.has(entry.name)) continue;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) {
         await visit(absolute);
@@ -726,8 +862,18 @@ async function sourceFiles(root) {
     }
   }
 
-  await visit(root);
-  return files;
+  for (const repositoryRoot of ['', ...OBJECT_TYPE_ROUTING_CONFIG.governedRepositoryRoots]) {
+    for (const fixedRoot of OBJECT_TYPE_ROUTING_CONFIG.fixedRoots) {
+      await visit(path.join(root, repositoryRoot, fixedRoot));
+    }
+  }
+  const soleOwner = path.join(root, ...OBJECT_TYPE_ROUTING_CONFIG.soleOwner.split('/'));
+  try {
+    if ((await fs.stat(soleOwner)).isFile()) files.push(soleOwner);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  return [...new Set(files)].sort((left, right) => left.localeCompare(right));
 }
 
 export async function validateWorkspace(workspace) {
@@ -736,8 +882,19 @@ export async function validateWorkspace(workspace) {
   const violations = [];
   for (const file of files) {
     const content = await fs.readFile(file, 'utf8');
-    violations.push(...validateSourceContent(content, path.relative(root, file)));
+    const relativeFile = path.relative(root, file).split(path.sep).join('/');
+    violations.push(...validateSourceContent(content, relativeFile));
+    violations.push(...rawObjectTypeRouteFindings(content, relativeFile));
   }
+  violations.sort((left, right) => {
+    const leftFile = left.location?.file ?? left.file ?? '';
+    const rightFile = right.location?.file ?? right.file ?? '';
+    return (
+      leftFile.localeCompare(rightFile) ||
+      (left.location?.line ?? left.line ?? 0) - (right.location?.line ?? right.line ?? 0) ||
+      String(left.rule ?? left.ruleId).localeCompare(String(right.rule ?? right.ruleId))
+    );
+  });
   return {
     valid: violations.length === 0,
     filesScanned: files.length,
@@ -780,9 +937,12 @@ async function main() {
     );
   } else {
     for (const item of result.violations) {
+      const rule = item.rule ?? item.ruleId;
+      const location = item.location ?? { file: item.file, line: item.line };
       process.stderr.write(
-        `${item.file}:${item.line} ${item.ruleId}: ${item.message}\n` +
-          `  Fix: ${item.remediation}\n  Docs: ${item.documentation}\n`
+        `${location.file}:${location.line} ${rule}: ${item.message ?? item.remediation}\n` +
+          `  Fix: ${item.remediation}\n` +
+          (item.documentation ? `  Docs: ${item.documentation}\n` : '')
       );
     }
   }

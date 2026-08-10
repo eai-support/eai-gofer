@@ -21,10 +21,10 @@
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run `/gofer` or `/eai` to
-start or continue the core pipeline (Gofer Start -> research -> specify -> plan
--> tasks -> implement -> validate). Use `#gofer` or `#eai` in Copilot-style
-prompts and `$gofer` or `$eai` in hosts that use dollar-prefixed skills. Gofer
+This project uses Gofer for spec-driven development. Run `/eai` to start or
+continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks
+-> implement -> validate). Use `#eai` in Copilot-style prompts and `$eai` in
+hosts that use dollar-prefixed skills. Gofer
 routes internally through `.specify/commands/*.md` contracts; validation is the
 terminal quality gate and includes the final engineering review loop. Before EAI
 readiness, classify the request: app delivery continues directly, while clear

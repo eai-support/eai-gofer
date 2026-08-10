@@ -22,7 +22,7 @@ Use this as the single user-facing Gofer command. Users should run `/eai`, `$eai
 
 ## User-Facing Contract
 
-- Keep the command window simple: expose `gofer` and `eai` only.
+- Keep the command window simple: expose `eai` only.
 - Treat `.specify/commands/*.md` as internal stage contracts, not user-facing commands.
 - Keep all Gofer functions available by routing internally to the right stage contract.
 - Explain progress in business language first; provide technical details when the user asks.

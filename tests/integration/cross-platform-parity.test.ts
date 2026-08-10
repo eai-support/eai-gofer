@@ -1,7 +1,7 @@
 /**
  * Integration tests for cross-platform Gofer parity.
  *
- * Public surfaces intentionally expose only `gofer` and `eai`. The full
+ * Public surfaces intentionally expose only `eai`. The full
  * numbered/helper pipeline remains available as internal `.specify/commands/*`
  * contracts routed by those public entrypoints.
  */
@@ -69,10 +69,9 @@ describe('Cross-Platform Feature Parity', () => {
     });
 
     it('provides clean public command syntax for each platform', () => {
-      expect(router.getCommandSyntax('gofer', 'claude')).toBe('/gofer');
-      expect(router.getCommandSyntax('gofer', 'copilot')).toBe('#gofer');
-      expect(router.getCommandSyntax('gofer', 'codex')).toBe('/gofer');
-      expect(router.getCommandSyntax('gofer', 'gemini')).toBe('/gofer');
+      expect(router.getCommandSyntax('eai', 'claude')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'copilot')).toBe('#eai');
+      expect(router.getCommandSyntax('eai', 'codex')).toBe('/eai');
       expect(router.getCommandSyntax('eai', 'gemini')).toBe('/eai');
     });
   });
@@ -167,14 +166,14 @@ describe('Cross-Platform Feature Parity', () => {
 
   describe('Cross-Platform Command Router', () => {
     it('detects public command availability correctly', () => {
-      expect(router.isCommandAvailable('gofer')).toBe(true);
+      expect(router.isCommandAvailable('gofer')).toBe(false);
       expect(router.isCommandAvailable('eai')).toBe(true);
       expect(router.isCommandAvailable('1_gofer_research')).toBe(false);
       expect(router.isCommandAvailable('nonexistent_command')).toBe(false);
     });
 
     it('loads public command content for available commands', async () => {
-      const content = await router.loadSkillForPlatform('gofer', 'claude');
+      const content = await router.loadSkillForPlatform('eai', 'claude');
 
       expect(content).toBeDefined();
       expect(content.length).toBeGreaterThan(0);

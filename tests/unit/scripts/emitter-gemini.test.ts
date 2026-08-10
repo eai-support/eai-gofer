@@ -150,9 +150,9 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('gemini emitter (T065)', () => {
-  it('emits gofer.md to .gemini/commands/gofer/', async () => {
+  it('does not emit retired gofer.md to .gemini/commands/gofer/', async () => {
     const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.md');
-    expect(await fileExists(outPath)).toBe(true);
+    expect(await fileExists(outPath)).toBe(false);
   });
 
   it('emits eai.md to .gemini/commands/gofer/', async () => {
@@ -161,9 +161,9 @@ describe('gemini emitter (T065)', () => {
   });
 
   it('written file contains public wrapper guidance', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.md');
+    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.md');
     const content = await readFile(outPath);
-    expect(content).toContain('# Gofer');
+    expect(content).toContain('# Eai');
     expect(content).toContain('## User-Facing Contract');
     expect(content).toContain('.specify/commands/*.md');
     expect(content).toContain('1_gofer_research');
@@ -209,7 +209,7 @@ describe('gemini manifest (T066)', () => {
   it('manifest.commands contains the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toContain('gofer');
+    expect(manifest.commands).not.toContain('gofer');
     expect(manifest.commands).toContain('eai');
   });
 
@@ -229,6 +229,6 @@ describe('gemini manifest (T066)', () => {
   it('manifest.commands contains only the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toEqual(['eai', 'gofer']);
+    expect(manifest.commands).toEqual(['eai']);
   });
 });

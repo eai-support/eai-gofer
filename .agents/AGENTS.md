@@ -3,12 +3,11 @@
 This file documents the public Gofer command surface and internal pipeline
 contracts.
 
-Generated: 2026-08-10T08:59:13.358Z
+Generated: 2026-08-10T09:59:43.822Z
 
 ## Public Entrypoints
 
-- `gofer` - Start or continue Gofer from one user-facing command.
-- `eai` - Alias for the same public EAI Gofer entrypoint.
+- `eai` - Start or continue Gofer from one user-facing command.
 
 Do not expose numbered or helper stage commands in user-facing pickers. They
 remain available as internal contracts under `.specify/commands/`.

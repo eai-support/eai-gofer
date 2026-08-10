@@ -209,7 +209,8 @@ describe('Gofer workspace bootstrap scripts', () => {
     const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
 
     expect(agents).toContain('## EAI Repo Contract');
-    expect(agents).toContain('/gofer:eai-first-run');
+    expect(agents).toContain('public `eai` entrypoint');
+    expect(agents).toContain('.specify/commands/gofer_eai_first_run.md');
     expect(agents).toContain('.specify/references/platform/eai-error-catalog.yaml');
     expect(agents).toContain('eai agent guide --format json');
     expect(agents).toContain('eai errors explain <code-or-reason> --format json');
@@ -271,6 +272,47 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(JSON.stringify(bootstrap.payload.changed)).toContain('archived legacy');
   });
 
+  it('archives stale user-visible stage and alias mirrors during refresh', () => {
+    const staleFiles = new Map([
+      ['.claude/commands/gofer.md', '# Local stale Gofer alias\n'],
+      ['.claude/commands/1_gofer_research.md', '# Local stale research command\n'],
+      ['.github/prompts/gofer.prompt.md', '# Local stale Gofer prompt\n'],
+      ['.github/prompts/1_gofer_research.prompt.md', '# Local stale research prompt\n'],
+      ['.agents/skills/gofer/SKILL.md', '# Local stale Gofer skill\n'],
+      ['.system/skills/1_gofer_research/SKILL.md', '# Local stale research skill\n'],
+      ['.gemini/commands/gofer/gofer.toml', 'prompt = "{{include: ./gofer.md}}"\n'],
+      ['.gemini/commands/gofer/1_gofer_research.md', '# Local stale Gemini command\n'],
+    ]);
+
+    for (const [relativePath, content] of staleFiles) {
+      const filePath = path.join(workspaceRoot, relativePath);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, content);
+    }
+
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'claude',
+      '--include-mirrors',
+    ]);
+    expect(bootstrap.exitCode).toBe(0);
+
+    for (const relativePath of staleFiles.keys()) {
+      expect(fs.existsSync(path.join(workspaceRoot, relativePath)), relativePath).toBe(false);
+    }
+    expect(fs.existsSync(path.join(workspaceRoot, '.claude/commands/eai.md'))).toBe(true);
+    expect(fs.existsSync(path.join(workspaceRoot, '.agents/skills/eai/SKILL.md'))).toBe(true);
+
+    const archiveRoot = path.join(workspaceRoot, '.specify', 'logs', 'legacy-command-backups');
+    const archivedFiles = findFiles(archiveRoot);
+    for (const relativePath of staleFiles.keys()) {
+      const archived = archivedFiles.find((filePath) => filePath.endsWith(relativePath));
+      expect(archived, `${relativePath} should be archived`).toBeTruthy();
+    }
+  });
+
   it('can include host app mirror resources for Claude, Codex, Copilot, and Gemini', () => {
     const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
       '--workspace',
@@ -285,7 +327,6 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.claude/skills/eai/SKILL.md',
       '.github/agents/gofer-business.agent.md',
       '.github/skills/eai/SKILL.md',
-      '.agents/skills/gofer/SKILL.md',
       '.agents/skills/eai/SKILL.md',
       '.gemini/extension.json',
     ]) {

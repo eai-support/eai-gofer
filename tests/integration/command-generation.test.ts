@@ -334,19 +334,19 @@ describe('Command Generation Integration (US-3)', () => {
         );
 
         const generatedCodex = await fs.readFile(
-          path.join(fixtureRoot, '.agents', 'skills', 'gofer', 'SKILL.md'),
+          path.join(fixtureRoot, '.agents', 'skills', 'eai', 'SKILL.md'),
           'utf-8'
         );
         const generatedCopilot = await fs.readFile(
-          path.join(fixtureRoot, '.github', 'prompts', 'gofer.prompt.md'),
+          path.join(fixtureRoot, '.github', 'prompts', 'eai.prompt.md'),
           'utf-8'
         );
         const repoCodex = await fs.readFile(
-          path.join(process.cwd(), '.agents', 'skills', 'gofer', 'SKILL.md'),
+          path.join(process.cwd(), '.agents', 'skills', 'eai', 'SKILL.md'),
           'utf-8'
         );
         const repoCopilot = await fs.readFile(
-          path.join(process.cwd(), '.github', 'prompts', 'gofer.prompt.md'),
+          path.join(process.cwd(), '.github', 'prompts', 'eai.prompt.md'),
           'utf-8'
         );
 

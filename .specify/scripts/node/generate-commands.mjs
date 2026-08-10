@@ -47,12 +47,6 @@ const PUBLIC_RELEASES_URL = `${PUBLIC_SITE_URL}/releases`;
 const PUBLIC_PLUGIN_URL = `${PUBLIC_RELEASES_URL}/plugins/eai-gofer`;
 const PUBLIC_ENTRYPOINTS = [
   {
-    stem: 'gofer',
-    name: 'gofer',
-    title: 'Gofer',
-    description: 'Start or continue the Gofer delivery pipeline.',
-  },
-  {
     stem: 'eai',
     name: 'eai',
     title: 'Eai',
@@ -263,7 +257,7 @@ Use this as the single user-facing Gofer command. Users should run \`/${entry.na
 
 ## User-Facing Contract
 
-- Keep the command window simple: expose \`gofer\` and \`eai\` only.
+- Keep the command window simple: expose \`eai\` only.
 - Treat \`.specify/commands/*.md\` as internal stage contracts, not user-facing commands.
 - Keep all Gofer functions available by routing internally to the right stage contract.
 - Explain progress in business language first; provide technical details when the user asks.
@@ -981,7 +975,7 @@ async function emitDocumentationSkill(root, baseDir, dryRun, label) {
 function buildUmbrellaSkillContent(version, stages, hostLabel) {
   const stageList = buildInternalStageList(stages);
 
-  return `---\nname: eai\ndescription: "Use Gofer's repo-owned pipeline, scripts, and validation tools through one clean command surface."\n---\n\n# Eai\n\nVersion: ${version}\nHost: ${hostLabel}\n\nUse this skill when the user asks to install, update, diagnose, run, or understand Gofer from an AI coding app.\n\n## Clean Surface Contract\n\n- User-facing pickers should expose only \`gofer\` and \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly request internal details.\n- Keep the full pipeline available by routing internally through \`.specify/commands/*.md\` stage contracts.\n- Check workspace health before stage work: \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`.\n- If missing or stale, ask the user before running: \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`.\n\n## Controlled English Contract\n\nUse ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.\n\nApply these rules before any user-facing output:\n\n1. Use short sentences. Keep instructions to 20 words or fewer where possible.\n2. Use one action per instruction.\n3. Use active voice. Use passive voice only when the actor is unknown or not important.\n4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.\n5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.\n6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.\n7. Use vertical lists for complex information.\n8. Put one topic in each paragraph.\n9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.\n10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.\n\n## Light Plugin And Repo Scripts\n\nThe light plugin installs durable Gofer knowledge and app integration metadata. The repository remains the source of truth for executable scripts, commands, templates, specs, and memory. After bootstrap, agents should prefer repo-local scripts over bundled fallback copies because the repo can be updated by \`eai gofer refresh\` or the VS Code extension.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use this public entrypoint and then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. That setup path is intentionally allowed before \`.specify/\` exists.\n\n## Internal Pipeline Contracts\n\n${stageList}\n`;
+  return `---\nname: eai\ndescription: "Use Gofer's repo-owned pipeline, scripts, and validation tools through one clean command surface."\n---\n\n# Eai\n\nVersion: ${version}\nHost: ${hostLabel}\n\nUse this skill when the user asks to install, update, diagnose, run, or understand Gofer from an AI coding app.\n\n## Clean Surface Contract\n\n- User-facing pickers should expose only \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly request internal details.\n- Keep the full pipeline available by routing internally through \`.specify/commands/*.md\` stage contracts.\n- Check workspace health before stage work: \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`.\n- If missing or stale, ask the user before running: \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`.\n\n## Controlled English Contract\n\nUse ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.\n\nApply these rules before any user-facing output:\n\n1. Use short sentences. Keep instructions to 20 words or fewer where possible.\n2. Use one action per instruction.\n3. Use active voice. Use passive voice only when the actor is unknown or not important.\n4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.\n5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.\n6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.\n7. Use vertical lists for complex information.\n8. Put one topic in each paragraph.\n9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.\n10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.\n\n## Light Plugin And Repo Scripts\n\nThe light plugin installs durable Gofer knowledge and app integration metadata. The repository remains the source of truth for executable scripts, commands, templates, specs, and memory. After bootstrap, agents should prefer repo-local scripts over bundled fallback copies because the repo can be updated by \`eai gofer refresh\` or the VS Code extension.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use this public entrypoint and then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. That setup path is intentionally allowed before \`.specify/\` exists.\n\n## Internal Pipeline Contracts\n\n${stageList}\n`;
 }
 
 function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
@@ -1034,11 +1028,11 @@ function getGithubAgentSpecs() {
       body: `
 You are the Gofer start agent.
 
-Start by checking Gofer workspace health. If the repo is missing or stale, ask before bootstrapping. Keep the user-facing surface simple: users see only gofer or eai; numbered stages and helpers are internal contracts.
+Start by checking Gofer workspace health. If the repo is missing or stale, ask before bootstrapping. Keep the user-facing surface simple: users see only eai; numbered stages and helpers are internal contracts.
 
 Primary outputs:
 
-- A clear route into the public \`gofer\` / \`eai\` entrypoint, first-run setup, or standalone research.
+- A clear route into the public \`eai\` entrypoint, first-run setup, or standalone research.
 - A concise statement of whether the repo has the Gofer scaffold, plugin/app support, and EAI first-run prerequisites.
 `,
     },
@@ -1370,8 +1364,7 @@ Generated: ${timestamp}
 
 ## Public Entrypoints
 
-- \`gofer\` - Start or continue Gofer from one user-facing command.
-- \`eai\` - Alias for the same public EAI Gofer entrypoint.
+- \`eai\` - Start or continue Gofer from one user-facing command.
 
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under \`.specify/commands/\`.
 
