@@ -166,9 +166,8 @@ ensure_vscode_marketplace_publish_ready() {
         return 0
     fi
 
-    local github_variables github_secrets
+    local github_variables
     github_variables="$(gh variable list --repo "$repo" 2>/dev/null | awk '{print $1}' || true)"
-    github_secrets="$(gh secret list --repo "$repo" 2>/dev/null | awk '{print $1}' || true)"
 
     if has_github_config_name "$github_variables" "VSCE_AZURE_CLIENT_ID" \
         && has_github_config_name "$github_variables" "VSCE_AZURE_TENANT_ID" \
@@ -177,21 +176,14 @@ ensure_vscode_marketplace_publish_ready() {
         return 0
     fi
 
-    if has_github_config_name "$github_secrets" "VSCE_PAT"; then
-        print_warning "VS Code Marketplace legacy secret VSCE_PAT is configured for $repo"
-        print_warning "Preferred secure publishing is Entra workload identity with VSCE_AZURE_* repository variables."
-        return 0
-    fi
-
     if should_enforce_vscode_marketplace_publish; then
         print_error "Stable releases must publish EnterpriseAI.gofer to the Visual Studio Marketplace."
-        print_error "Preferred setup: configure VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID repository variables for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
-        print_error "Legacy fallback: add VSCE_PAT with Marketplace Manage scope using: gh secret set VSCE_PAT --repo $repo"
+        print_error "Configure VSCE_AZURE_CLIENT_ID, VSCE_AZURE_TENANT_ID, and VSCE_AZURE_SUBSCRIPTION_ID repository variables for an Entra workload identity that is a Contributor on the EnterpriseAI Marketplace publisher."
         print_error "Only bypass this for an intentional dry/internal release with SKIP_VSCODE_MARKETPLACE_PUBLISH=1."
         exit 1
     fi
 
-    print_warning "No VS Code Marketplace publishing credentials were found for $repo."
+    print_warning "No VS Code Marketplace Entra workload identity variables were found for $repo."
     print_warning "Core public release assets will still be published."
 }
 
