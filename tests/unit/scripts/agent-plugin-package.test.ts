@@ -210,6 +210,10 @@ describe('Gofer agent plugin package', () => {
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(umbrellaSkill).toContain('eai publicapi');
+      expect(umbrellaSkill).toContain('## Controlled English Contract');
+      expect(umbrellaSkill).toContain('ASD-STE100 Simplified Technical English');
+      expect(umbrellaSkill).toContain('Use one action per instruction');
+      expect(umbrellaSkill).toContain('do not claim ASD certification');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);
