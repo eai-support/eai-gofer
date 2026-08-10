@@ -202,8 +202,8 @@ describe('agents-md emitter (T067)', () => {
   it('AGENTS.md documents the public entrypoints', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
-    expect(content).toContain('`gofer` - Start or continue Gofer');
-    expect(content).toContain('`eai` - Alias');
+    expect(content).toContain('`eai` - Start or continue Gofer');
+    expect(content).not.toContain('`gofer` - Start or continue Gofer');
   });
 
   it('AGENTS.md contains internal contract entries for stages', async () => {

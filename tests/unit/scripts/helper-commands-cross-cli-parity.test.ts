@@ -190,7 +190,7 @@ describe('helper commands cross-CLI parity', () => {
     });
 
     it(`${helper.name} is named by the public wrapper's internal contract list`, () => {
-      const publicWrapper = readFile('.claude/commands/gofer.md');
+      const publicWrapper = readFile('.claude/commands/eai.md');
       expect(publicWrapper).toContain(`\`${helper.file}\``);
       expect(publicWrapper).toContain(
         String(readMarkdownFrontmatter(readFile(sourceRelativePath)).description)

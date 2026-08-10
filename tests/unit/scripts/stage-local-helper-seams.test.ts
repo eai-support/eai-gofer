@@ -83,7 +83,7 @@ describe('stage-local helper seams', () => {
         expect(sourceContent).toContain(phrase);
       });
 
-      const publicWrapper = readFile('.claude/commands/gofer.md');
+      const publicWrapper = readFile('.claude/commands/eai.md');
       expect(publicWrapper).toContain(`\`${stage.stageName}\``);
       expect(fs.existsSync(path.join(REPO_ROOT, `.claude/commands/${stage.stageName}.md`))).toBe(
         false

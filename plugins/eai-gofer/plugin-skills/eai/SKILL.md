@@ -11,7 +11,7 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 
 ## Clean Surface Contract
 
-- User-facing command and skill pickers should expose only `gofer` and `eai`.
+- User-facing command and skill pickers should expose only `eai`.
 - Do not ask users to run numbered/helper stage commands such as `/0_gofer_start`, `/1_gofer_research`, or `/6_gofer_validate` unless they explicitly ask for low-level internals.
 - Preserve all Gofer functions by routing internally through the stage contracts in `.specify/commands/*.md`.
 
@@ -53,7 +53,7 @@ Apply these rules before any user-facing output:
 
 ## First EAI Platform App
 
-If the user is starting a first EAI Platform app, use the public `gofer` or `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
+If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
 
 ## EAI CLI Discovery And Recovery
 

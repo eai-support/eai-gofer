@@ -122,7 +122,7 @@ describe('ResourceSyncer workspace sync', () => {
   it('setupGeminiCommands keeps include targets resolvable', async (): Promise<void> => {
     await syncer.setupGeminiCommands();
 
-    const geminiCommandPath = path.join(workspace, '.gemini', 'commands', 'gofer', 'gofer.toml');
+    const geminiCommandPath = path.join(workspace, '.gemini', 'commands', 'gofer', 'eai.toml');
     const canonicalCommandPath = path.join(
       workspace,
       '.specify',
@@ -133,7 +133,7 @@ describe('ResourceSyncer workspace sync', () => {
     const includeTarget = extractGeminiInclude(geminiContent);
 
     expect(path.resolve(path.dirname(geminiCommandPath), includeTarget)).toBe(
-      path.join(workspace, '.gemini', 'commands', 'gofer', 'gofer.md')
+      path.join(workspace, '.gemini', 'commands', 'gofer', 'eai.md')
     );
     expect(await pathExists(canonicalCommandPath)).toBe(true);
   });
@@ -160,6 +160,42 @@ describe('ResourceSyncer workspace sync', () => {
 
     expect(archivedPromptPath, 'expected archived legacy Copilot prompt').toBeTruthy();
     expect(await fs.readFile(String(archivedPromptPath), 'utf8')).toBe(customPrompt);
+  });
+
+  it('archives stale public aliases and stage mirrors during resource sync', async (): Promise<void> => {
+    const staleFiles = new Map([
+      ['.claude/commands/gofer.md', '# Custom stale Gofer alias\n'],
+      ['.claude/commands/1_gofer_research.md', '# Custom stale research command\n'],
+      ['.github/prompts/gofer.prompt.md', '# Custom stale Gofer prompt\n'],
+      ['.agents/skills/gofer/SKILL.md', '# Custom stale Gofer skill\n'],
+      ['.system/skills/1_gofer_research/SKILL.md', '# Custom stale research skill\n'],
+      ['.gemini/commands/gofer/gofer.toml', 'prompt = "{{include: ./gofer.md}}"\n'],
+      ['.gemini/commands/gofer/1_gofer_research.md', '# Custom stale Gemini command\n'],
+    ]);
+
+    for (const [relativePath, content] of staleFiles) {
+      const filePath = path.join(workspace, relativePath);
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, content, 'utf8');
+    }
+
+    await syncer.setupClaudeCommands();
+    await syncer.setupCopilotPrompts();
+    await syncer.setupGeminiCommands();
+
+    for (const relativePath of staleFiles.keys()) {
+      expect(await pathExists(path.join(workspace, relativePath)), relativePath).toBe(false);
+    }
+    expect(await pathExists(path.join(workspace, '.claude/commands/eai.md'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.github/prompts/eai.prompt.md'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.gemini/commands/gofer/eai.toml'))).toBe(true);
+
+    const archiveRoot = path.join(workspace, '.specify', 'logs', 'legacy-command-backups');
+    const archivedFiles = await findFiles(archiveRoot);
+    for (const relativePath of staleFiles.keys()) {
+      const archived = archivedFiles.find((filePath) => filePath.endsWith(relativePath));
+      expect(archived, `${relativePath} should be archived`).toBeTruthy();
+    }
   });
 
   it('createNodeScripts syncs entrypoints and helper libraries', async (): Promise<void> => {

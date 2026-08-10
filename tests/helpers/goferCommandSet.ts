@@ -50,9 +50,9 @@ export const FULL_COMMAND_NAMES = [
   ...CONTROL_COMMANDS.map((command) => command.name),
 ] as const;
 
-export const PUBLIC_ENTRYPOINT_FILES = ['gofer', 'eai'] as const;
+export const PUBLIC_ENTRYPOINT_FILES = ['eai'] as const;
 
-export const PUBLIC_ENTRYPOINT_NAMES = ['gofer', 'eai'] as const;
+export const PUBLIC_ENTRYPOINT_NAMES = ['eai'] as const;
 
 export const CANONICAL_DESCRIPTION_NAMES = [
   ...PIPELINE_STAGE_FILES,

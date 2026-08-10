@@ -187,10 +187,10 @@ describe('codex-config emitter (T068)', () => {
     expect(content).toContain('[[skills.config]]');
   });
 
-  it('contains entry for gofer', async () => {
+  it('does not contain retired gofer entry', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content).toContain('path = "/full/path/to/repo/.agents/skills/gofer"');
+    expect(content).not.toContain('path = "/full/path/to/repo/.agents/skills/gofer"');
   });
 
   it('contains entry for eai', async () => {
@@ -220,10 +220,10 @@ describe('codex-config emitter (T068)', () => {
     }
   });
 
-  it('keeps exactly two public skill entries', async () => {
+  it('keeps exactly one public skill entry', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content.match(/^\[\[skills\.config\]\]/gm)).toHaveLength(2);
+    expect(content.match(/^\[\[skills\.config\]\]/gm)).toHaveLength(1);
   });
 
   it('does NOT touch ~/.codex/config.toml — path is .specify/outputs not home dir', async () => {

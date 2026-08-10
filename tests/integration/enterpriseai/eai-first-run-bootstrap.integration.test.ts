@@ -72,8 +72,10 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(
       fs.existsSync(path.join(process.cwd(), '.specify/commands/gofer_eai_first_run.md'))
     ).toBe(true);
-    expect(fs.existsSync(path.join(process.cwd(), '.claude/commands/gofer.md'))).toBe(true);
-    expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/gofer/SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), '.claude/commands/gofer.md'))).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/gofer/SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), '.claude/commands/eai.md'))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/eai/SKILL.md'))).toBe(true);
   });
 
   it('does not inject normal workspace preflight into the first-run contract', () => {

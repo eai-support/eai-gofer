@@ -46,6 +46,7 @@ const LEGACY_MANAGED_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
+const RETIRED_PUBLIC_ENTRYPOINT_STEMS = ['gofer'];
 const LEGACY_MANAGED_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 
 export const HOST_POLICIES = {
@@ -225,10 +226,34 @@ async function archiveLegacyManagedPath(workspaceRoot, relativePath, archiveStam
   return archiveRelativePath;
 }
 
-async function removeLegacyManagedPaths(workspaceRoot, dryRun) {
+function buildVisibleSurfacePathsForStem(stem) {
+  return [
+    path.join('.claude', 'commands', `${stem}.md`),
+    path.join('.github', 'prompts', `${stem}.prompt.md`),
+    path.join('.agents', 'skills', stem),
+    path.join('.system', 'skills', stem),
+    path.join('.gemini', 'commands', 'gofer', `${stem}.md`),
+    path.join('.gemini', 'commands', 'gofer', `${stem}.toml`),
+  ];
+}
+
+function buildStaleVisibleManagedPaths(stages) {
+  const staleStems = new Set(RETIRED_PUBLIC_ENTRYPOINT_STEMS);
+  for (const stage of stages) {
+    staleStems.add(String(stage.stem));
+  }
+
+  return Array.from(staleStems).flatMap((stem) => buildVisibleSurfacePathsForStem(stem));
+}
+
+async function removeLegacyManagedPaths(workspaceRoot, dryRun, stages = []) {
   const archived = [];
   const archiveStamp = buildArchiveStamp();
-  for (const relativePath of LEGACY_MANAGED_PATHS) {
+  const legacyPaths = Array.from(
+    new Set([...LEGACY_MANAGED_PATHS, ...buildStaleVisibleManagedPaths(stages)])
+  );
+
+  for (const relativePath of legacyPaths) {
     const targetPath = path.join(workspaceRoot, relativePath);
     if (!(await pathExists(targetPath))) {
       continue;
@@ -250,9 +275,13 @@ async function resolveSourcePath(sourceRoot, relativePath) {
 
   const resourceRelativePath = EXTENSION_RESOURCE_PATHS.get(path.normalize(relativePath));
   if (resourceRelativePath) {
-    const resourcePath = path.join(sourceRoot, resourceRelativePath);
-    if (await pathExists(resourcePath)) {
-      return resourcePath;
+    for (const resourcePath of [
+      path.join(sourceRoot, resourceRelativePath),
+      path.join(sourceRoot, 'extension', resourceRelativePath),
+    ]) {
+      if (await pathExists(resourcePath)) {
+        return resourcePath;
+      }
     }
   }
 
@@ -554,7 +583,7 @@ function buildEaiRepoContractSection(projectInfo) {
 
 - Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI tenant/app setup.
 - This repo is not confirmed as EAI-initialized yet. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-- If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, run \`/gofer:eai-first-run\` before building.
+- If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
 - Build on EAI Platform first and Azure second for app delivery. Treat non-EAI runtimes as explicit exceptions only.
 - Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts.`;
   }
@@ -563,8 +592,8 @@ function buildEaiRepoContractSection(projectInfo) {
 
 - This repo appears to be initialized from the EAI app template. Before app-delivery work, read \`.specify/references/platform/eai-repo-contract.md\` and \`.specify/references/platform/eai-error-catalog.yaml\`.
 - Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI tenant/app setup.
-- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery. If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, run \`/gofer:eai-first-run\` before building.
-- If CLI, login, tenant, template, or Gofer readiness is missing or stale during app delivery, run \`/gofer:eai-first-run\` before building.
+- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery. If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
+- If CLI, login, tenant, template, or Gofer readiness is missing or stale during app delivery, use the public \`eai\` entrypoint and the internal first-run setup contract before building.
 - Use \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\`, \`eai template check --format json\`, \`eai gofer refresh --check --format json\`, and \`eai workflow readiness --format json\` when the CLI advertises them before assuming the repo is current.
 - After any \`eai\` command error, use \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
 - If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
@@ -651,7 +680,7 @@ ${buildCodeStyleSection(projectInfo)}
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+This project uses Gofer for spec-driven development. Run \`/eai\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 Each feature should carry a bounded loop contract:
 
@@ -713,7 +742,7 @@ See @AGENTS.md for project conventions, commands, and code style.
 
 ## Gofer Pipeline
 
-Run \`/gofer\` or \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
+Run \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
 
 For each active feature, keep \`loop-contract.json\`, \`loop-ledger.jsonl\`, and
 \`loop-audit-report.md\` in the feature directory. The loop contract bounds
@@ -736,9 +765,9 @@ export function buildCopilotInstructions(projectInfo) {
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/gofer\` or \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
+This project uses Gofer for spec-driven development. Run \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
 
-Use \`#gofer\` or \`#eai\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+Use \`#eai\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 ${eaiSection}
 
@@ -936,10 +965,10 @@ This folder contains all project specifications for AI-driven feature developmen
 Run the unified Gofer pipeline with one public command:
 
 \`\`\`
-/gofer Add user authentication with OAuth2 and JWT
+/eai Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`/eai\`, \`#gofer\`, \`#eai\`, \`$gofer\`, or \`$eai\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
+Use \`/eai\`, \`#eai\`, or \`$eai\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
 
 Artifacts are stored in \`.specify/specs/{feature}/\`.
 
@@ -1127,7 +1156,7 @@ export async function bootstrapWorkspace({
     }
   }
 
-  const archivedLegacyPaths = await removeLegacyManagedPaths(workspaceRoot, dryRun);
+  const archivedLegacyPaths = await removeLegacyManagedPaths(workspaceRoot, dryRun, stages);
   changed.push(
     ...archivedLegacyPaths.map(
       ({ relativePath, archivePath }) => `${relativePath} (archived legacy to ${archivePath})`

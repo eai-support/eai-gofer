@@ -135,9 +135,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
         'eai-gofer/.specify/schemas/object-type-routing-phase-bundle-v1.schema.json',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',
-        'eai-gofer/commands/gofer.md',
         'eai-gofer/commands/eai.md',
-        'eai-gofer/skills/gofer/SKILL.md',
         'eai-gofer/skills/eai/SKILL.md',
       ]) {
         expect(zipListing).toContain(required);
@@ -231,7 +229,9 @@ describe('Gofer agent plugin package', () => {
         expect(fs.existsSync(path.join(pluginRoot, 'skills', command, 'SKILL.md'))).toBe(false);
       }
       expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
-      expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(true);
+      expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(
+        false
+      );
       expect(
         fs
           .readdirSync(path.join(pluginRoot, 'skills'), { withFileTypes: true })

@@ -19,6 +19,9 @@ import {
 import { type WorkflowProfile, getWorkflowProfile } from '../config/workflowProfile';
 import { Logger } from '../utils/logger';
 
+const PUBLIC_ENTRYPOINTS = new Set(['eai']);
+const RETIRED_PUBLIC_ENTRYPOINTS = new Set(['gofer']);
+
 /**
  * Command routing result
  */
@@ -89,6 +92,9 @@ export class CrossPlatformCommandRouter {
     workflowProfile?: WorkflowProfile
   ): Promise<CommandRoutingResult> {
     validateCommandName(commandName);
+    if (RETIRED_PUBLIC_ENTRYPOINTS.has(commandName)) {
+      throw new Error(`Command "${commandName}" has been retired. Use "eai" instead.`);
+    }
     const resolvedWorkflowProfile = this.resolveWorkflowProfile(workflowProfile);
     const cacheKey = `${commandName}:${targetPlatform || 'auto'}:${resolvedWorkflowProfile}`;
     const cachedResult = this.getCachedResult(cacheKey);
@@ -232,7 +238,9 @@ export class CrossPlatformCommandRouter {
     );
     geminiMetadata.filter(Boolean).forEach((metadata) => commands.add(metadata!.name));
 
-    return Array.from(commands).sort();
+    return Array.from(commands)
+      .filter((commandName) => PUBLIC_ENTRYPOINTS.has(commandName))
+      .sort();
   }
 
   /**
@@ -244,8 +252,11 @@ export class CrossPlatformCommandRouter {
   public isCommandAvailable(commandName: string): boolean {
     try {
       validateCommandName(commandName);
+      if (RETIRED_PUBLIC_ENTRYPOINTS.has(commandName)) {
+        return false;
+      }
       const metadata = this.skillDirectoryManager.findCommand(commandName);
-      return metadata !== null;
+      return metadata !== null && PUBLIC_ENTRYPOINTS.has(commandName);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('Invalid command name')) {
         this.logger.debug('Command rejected during availability check', {
@@ -271,9 +282,8 @@ export class CrossPlatformCommandRouter {
    * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const publicEntrypoints = new Set(['gofer', 'eai']);
     const geminiCommand =
-      publicEntrypoints.has(commandName) || commandName.startsWith('gofer:')
+      PUBLIC_ENTRYPOINTS.has(commandName) || commandName.startsWith('gofer:')
         ? commandName
         : `gofer:${commandName}`;
     const syntaxMap: Record<PlatformType, string> = {

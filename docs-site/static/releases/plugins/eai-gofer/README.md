@@ -31,11 +31,11 @@ That host publishes:
 
 ## First EAI Platform App
 
-Start with `/gofer`, `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before `.specify/` exists. It checks Git, Node.js, npm, EAI CLI, registry, `eai update --check`, `eai --describe`, `eai agent guide --format json` when advertised, login, tenant, `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`, Gofer scaffold readiness, and `eai errors explain <code-or-reason> --format json` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Start with `/eai`, `#eai`, or `$eai` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before `.specify/` exists. It checks Git, Node.js, npm, EAI CLI, registry, `eai update --check`, `eai --describe`, `eai agent guide --format json` when advertised, login, tenant, `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`, Gofer scaffold readiness, and `eai errors explain <code-or-reason> --format json` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
 
 For EAI errors, Gofer expects agents to run live EAI guidance first, use `.specify/references/platform/eai-error-catalog.yaml` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval. For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 
-If `/gofer` or `/eai` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
+If `/eai` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
 
 ## App-Native Surfaces And Repo Scripts
 
@@ -43,12 +43,12 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 | Surface | Best entry point | Repo-owned files used |
 | ------- | ---------------- | --------------------- |
-| Codex App / Codex IDE | `gofer` or `eai` plugin skill when a workspace is open | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json` |
-| GitHub Copilot app / VS Code agent mode | `#gofer` or `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app | `/gofer` or `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
-| Gemini CLI / Gemini Code Assist | `/gofer` or `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json` |
+| Codex App / Codex IDE | `eai` plugin skill when a workspace is open | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json` |
+| GitHub Copilot app / VS Code agent mode | `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app | `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
+| Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json` |
 
-The clean UX rule is: users see only `gofer` or `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
+The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
 
 ## Core Pipeline
 
@@ -124,7 +124,7 @@ codex plugin marketplace add ~/plugins/eai-gofer
 codex plugin add eai-gofer@eai-gofer
 ```
 
-The Codex plugin exposes only `gofer` and `eai` as user-facing skills. The numbered stage contracts remain bundled under `.specify/commands/` so the public skill can route through the full pipeline without cluttering the picker.
+The Codex plugin exposes only `eai` as the user-facing skill. The numbered stage contracts remain bundled under `.specify/commands/` so the public skill can route through the full pipeline without cluttering the picker.
 
 ## Copilot CLI
 

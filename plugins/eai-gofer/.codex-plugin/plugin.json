@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "Gofer",
     "shortDescription": "Spec-driven delivery workflow for agentic coding",
-    "longDescription": "Run Gofer from one public entrypoint: gofer or eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.",
+    "longDescription": "Run Gofer from one public entrypoint: eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.",
     "developerName": "EAI Tools",
     "category": "Coding",
     "capabilities": [
@@ -43,7 +43,6 @@
   },
   "gofer": {
     "publicEntrypoints": [
-      "gofer",
       "eai"
     ],
     "stages": [

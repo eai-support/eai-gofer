@@ -67,7 +67,8 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
 const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
-const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['gofer', 'eai']);
+const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['eai']);
+const RETIRED_PUBLIC_GOFER_ENTRYPOINT_STEMS = ['gofer'];
 
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -208,7 +209,7 @@ export class ResourceSyncer implements IResourceOperations {
     const commandStems = await this.collectBundledInternalCommandStems();
     const relativePaths: string[] = [];
 
-    for (const stem of commandStems) {
+    for (const stem of [...commandStems, ...RETIRED_PUBLIC_GOFER_ENTRYPOINT_STEMS]) {
       if (PUBLIC_GOFER_ENTRYPOINT_STEMS.has(stem)) {
         continue;
       }
@@ -1620,10 +1621,10 @@ This folder contains all project specifications for AI-driven feature developmen
 Run the unified Gofer pipeline with one public command:
 
 \`\`\`
-/gofer Add user authentication with OAuth2 and JWT
+/eai Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`#gofer\` or \`#eai\` in Copilot-style prompts and \`$gofer\` or \`$eai\` in hosts that use dollar-prefixed skills. \`/eai\`, \`#eai\`, and \`$eai\` are equivalent aliases.
+Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. \`/eai\`, \`#eai\`, and \`$eai\` are equivalent aliases.
 
 This automatically chains through all stages:
 1. **Research** → Explores codebase and technology

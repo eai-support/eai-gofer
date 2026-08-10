@@ -22,11 +22,11 @@ function readRegisteredPromptNames(): string[] {
 }
 
 test.describe('VS Code/Copilot slash command registration', () => {
-  test('keeps /eai and /gofer sendable in a Copilot-style chat input', async ({ page }) => {
+  test('keeps only /eai sendable in a Copilot-style chat input', async ({ page }) => {
     const registeredPrompts = readRegisteredPromptNames();
 
     expect(registeredPrompts).toContain('eai');
-    expect(registeredPrompts).toContain('gofer');
+    expect(registeredPrompts).not.toContain('gofer');
 
     await page.setContent(`
       <label for="chat">Copilot chat</label>
@@ -77,6 +77,6 @@ test.describe('VS Code/Copilot slash command registration', () => {
     await expect(status).toHaveText('sent');
 
     await input.fill('/gofer continue the delivery pipeline');
-    await expect(send).toBeEnabled();
+    await expect(send).toBeDisabled();
   });
 });

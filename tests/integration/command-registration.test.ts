@@ -43,7 +43,7 @@ interface WelcomeViewDefinition {
 
 interface MenuDefinition {
   command: string;
-  when: string;
+  when?: string;
   group?: string;
 }
 
@@ -97,6 +97,7 @@ interface PackageJson {
     };
     menus: {
       'view/title': MenuDefinition[];
+      commandPalette?: MenuDefinition[];
     };
     keybindings: KeybindingDefinition[];
   };
@@ -449,17 +450,10 @@ describe('Command Registration Validation', () => {
     const promptFiles = packageJson.contributes.chatPromptFiles ?? [];
     const paths = promptFiles.map((entry) => entry.path);
 
-    expect(paths).toEqual(
-      expect.arrayContaining([
-        './resources/copilot-prompts/eai.prompt.md',
-        './resources/copilot-prompts/gofer.prompt.md',
-      ])
-    );
+    expect(paths).toEqual(expect.arrayContaining(['./resources/copilot-prompts/eai.prompt.md']));
+    expect(paths).not.toContain('./resources/copilot-prompts/gofer.prompt.md');
 
-    for (const promptPath of [
-      './resources/copilot-prompts/eai.prompt.md',
-      './resources/copilot-prompts/gofer.prompt.md',
-    ]) {
+    for (const promptPath of ['./resources/copilot-prompts/eai.prompt.md']) {
       const content = readWorkspaceFile(`../../extension/${promptPath.replace(/^\.\//, '')}`);
       expect(content).toContain('name:');
       expect(content).toContain('agent: agent');
@@ -643,8 +637,10 @@ describe('Command Registration Validation', () => {
     );
 
     expect(progressWelcome?.contents).toContain('[Start Gofer](command:gofer.run)');
-    expect(progressWelcome?.contents).toContain('/gofer');
     expect(progressWelcome?.contents).toContain('/eai');
+    expect(progressWelcome?.contents).not.toContain('/gofer');
+    expect(progressWelcome?.contents).not.toContain('#gofer');
+    expect(progressWelcome?.contents).not.toContain('$gofer');
     expect(progressWelcome?.contents).not.toContain('/0_gofer_start');
     expect(progressWelcome?.contents).toContain(
       'research → specify → plan → tasks → implement → validate'
@@ -740,6 +736,26 @@ describe('Command Registration Validation', () => {
     }
 
     expect(missingCommands).toEqual([]);
+  });
+
+  it('should expose core VS Code management commands in the Command Palette', () => {
+    const commandPalette = packageJson.contributes.menus.commandPalette ?? [];
+    const menuByCommand = new Map(commandPalette.map((entry) => [entry.command, entry]));
+    const expectedVisibleCommands = [
+      'gofer.initialize',
+      'gofer.installOptionalTools',
+      'gofer.upgrade',
+      'gofer.showProgress',
+      'gofer.checkForUpdates',
+      'gofer.updateNow',
+    ];
+
+    for (const command of expectedVisibleCommands) {
+      expect(menuByCommand.get(command), `${command} should be contributed`).toBeDefined();
+      expect(menuByCommand.get(command)?.when, `${command} should be visible`).not.toBe('false');
+    }
+
+    expect(menuByCommand.get('gofer.refreshSpecs')?.when).toBe('false');
   });
 
   it('should register all tree view commands', () => {

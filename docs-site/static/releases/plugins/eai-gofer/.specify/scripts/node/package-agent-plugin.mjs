@@ -31,12 +31,6 @@ const COPILOT_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/copilot-marketplace.json`;
 const GEMINI_EXTENSION_URL = `${PUBLIC_PLUGIN_URL}/gemini-extension.json`;
 const PUBLIC_ENTRYPOINTS = [
   {
-    stem: 'gofer',
-    name: 'gofer',
-    title: 'Gofer',
-    description: 'Start or continue the Gofer delivery pipeline.',
-  },
-  {
     stem: 'eai',
     name: 'eai',
     title: 'Eai',
@@ -177,7 +171,7 @@ function buildCodexManifest(version, stages, paths = {}) {
       displayName: PLUGIN_DISPLAY_NAME,
       shortDescription: 'Spec-driven delivery workflow for agentic coding',
       longDescription:
-        'Run Gofer from one public entrypoint: gofer or eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.',
+        'Run Gofer from one public entrypoint: eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.',
       developerName: 'EAI Tools',
       category: 'Coding',
       capabilities: ['Interactive', 'Write'],
@@ -397,12 +391,12 @@ function buildBundleCodexMarketplace(version) {
   };
 }
 
-function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[1]) {
+function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
   const stageList = stages
     .map((stage) => `- \`${stage.stem}\` - ${stage.frontmatter.description}`)
     .join('\n');
 
-  return `---\nname: ${entry.name}\ndescription: "Run Gofer through one public entrypoint while preserving the full internal pipeline."\n---\n\n# ${entry.title}\n\nVersion: ${version}\n\nUse this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.\n\n## Clean Surface Contract\n\n- User-facing command and skill pickers should expose only \`gofer\` and \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly ask for low-level internals.\n- Preserve all Gofer functions by routing internally through the stage contracts in \`.specify/commands/*.md\`.\n\n## Workspace First\n\nBefore stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.\n\n## Controlled English Contract\n\nUse ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.\n\nApply these rules before any user-facing output:\n\n1. Use short sentences. Keep instructions to 20 words or fewer where possible.\n2. Use one action per instruction.\n3. Use active voice. Use passive voice only when the actor is unknown or not important.\n4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.\n5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.\n6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.\n7. Use vertical lists for complex information.\n8. Put one topic in each paragraph.\n9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.\n10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.\n\n## Business-Friendly Progress\n\n- Keep user-facing progress short and business-level by default.\n- Explain what is being connected, changed, checked, or fixed and why it matters.\n- Use \`.specify/specs/{feature}/build-map.md\` as the shared picture of the build when app delivery applies.\n- Keep technical detail, logs, tests, and security evidence in artifacts; show deeper detail when the user asks.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n- If the user says it is app work, switch to EAI app delivery and run EAI app preflight.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use the public \`gofer\` or \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, \`eai init\`, and Gofer scaffold readiness with user approval gates.\n\n## EAI CLI Discovery And Recovery\n\n- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery, not for confirmed non-app research/docs/audit/planning.\n- Run \`eai update --check\` before first EAI platform work when the CLI may be stale.\n- Run \`eai --describe\` before assuming command syntax.\n- If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.\n- After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.\n- If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.\n- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.\n- Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.\n\n## Token And Cost Policy\n\n- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.\n- Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.\n- Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.\n- Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.\n- After large research, planning, implementation, or validation bursts, checkpoint artifacts and compact/clear/resume context when the host supports it.\n\n## Internal Pipeline And Helper Contracts\n\n${stageList}\n\n## Stable Local Install Path\n\nInstall or update this plugin by replacing the stable local folder:\n\n\`\`\`text\n~/plugins/eai-gofer\n\`\`\`\n\nThe public release feed is available at:\n\n\`\`\`text\n${PUBLIC_SITE_URL}/releases.json\n\`\`\`\n\nGemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.\n`;
+  return `---\nname: ${entry.name}\ndescription: "Run Gofer through one public entrypoint while preserving the full internal pipeline."\n---\n\n# ${entry.title}\n\nVersion: ${version}\n\nUse this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.\n\n## Clean Surface Contract\n\n- User-facing command and skill pickers should expose only \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly ask for low-level internals.\n- Preserve all Gofer functions by routing internally through the stage contracts in \`.specify/commands/*.md\`.\n\n## Workspace First\n\nBefore stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.\n\n## Controlled English Contract\n\nUse ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.\n\nApply these rules before any user-facing output:\n\n1. Use short sentences. Keep instructions to 20 words or fewer where possible.\n2. Use one action per instruction.\n3. Use active voice. Use passive voice only when the actor is unknown or not important.\n4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.\n5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.\n6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.\n7. Use vertical lists for complex information.\n8. Put one topic in each paragraph.\n9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.\n10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.\n\n## Business-Friendly Progress\n\n- Keep user-facing progress short and business-level by default.\n- Explain what is being connected, changed, checked, or fixed and why it matters.\n- Use \`.specify/specs/{feature}/build-map.md\` as the shared picture of the build when app delivery applies.\n- Keep technical detail, logs, tests, and security evidence in artifacts; show deeper detail when the user asks.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n- If the user says it is app work, switch to EAI app delivery and run EAI app preflight.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use the public \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, \`eai init\`, and Gofer scaffold readiness with user approval gates.\n\n## EAI CLI Discovery And Recovery\n\n- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery, not for confirmed non-app research/docs/audit/planning.\n- Run \`eai update --check\` before first EAI platform work when the CLI may be stale.\n- Run \`eai --describe\` before assuming command syntax.\n- If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.\n- After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.\n- If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.\n- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.\n- Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.\n\n## Token And Cost Policy\n\n- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.\n- Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.\n- Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.\n- Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.\n- After large research, planning, implementation, or validation bursts, checkpoint artifacts and compact/clear/resume context when the host supports it.\n\n## Internal Pipeline And Helper Contracts\n\n${stageList}\n\n## Stable Local Install Path\n\nInstall or update this plugin by replacing the stable local folder:\n\n\`\`\`text\n~/plugins/eai-gofer\n\`\`\`\n\nThe public release feed is available at:\n\n\`\`\`text\n${PUBLIC_SITE_URL}/releases.json\n\`\`\`\n\nGemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.\n`;
 }
 
 function withTenantContextErrorGuidance(content) {
@@ -548,11 +542,11 @@ That host publishes:
 
 ## First EAI Platform App
 
-Start with \`/gofer\`, \`/eai\`, \`#gofer\`, \`#eai\`, \`$gofer\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
 
 For EAI errors, Gofer expects agents to run live EAI guidance first, use \`.specify/references/platform/eai-error-catalog.yaml\` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm tenant context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 
-If \`/gofer\` or \`/eai\` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
+If \`/eai\` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
 
 ## App-Native Surfaces And Repo Scripts
 
@@ -560,12 +554,12 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 | Surface | Best entry point | Repo-owned files used |
 | ------- | ---------------- | --------------------- |
-| Codex App / Codex IDE | \`gofer\` or \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
-| GitHub Copilot app / VS Code agent mode | \`#gofer\` or \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
-| Claude Code app | \`/gofer\` or \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
-| Gemini CLI / Gemini Code Assist | \`/gofer\` or \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
+| Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
+| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
 
-The clean UX rule is: users see only \`gofer\` or \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
+The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
 
 ## Core Pipeline
 
@@ -641,7 +635,7 @@ codex plugin marketplace add ~/plugins/eai-gofer
 codex plugin add eai-gofer@eai-gofer
 \`\`\`
 
-The Codex plugin exposes only \`gofer\` and \`eai\` as user-facing skills. The numbered stage contracts remain bundled under \`.specify/commands/\` so the public skill can route through the full pipeline without cluttering the picker.
+The Codex plugin exposes only \`eai\` as the user-facing skill. The numbered stage contracts remain bundled under \`.specify/commands/\` so the public skill can route through the full pipeline without cluttering the picker.
 
 ## Copilot CLI
 
@@ -881,7 +875,10 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
 
   const copiedResources = [
     '.specify/commands',
+    '.specify/config',
+    '.specify/contracts',
     '.specify/references',
+    '.specify/schemas',
     '.specify/templates',
     '.specify/scripts/bash',
     '.specify/scripts/node',
@@ -963,12 +960,12 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
     recursive: true,
     force: true,
   });
+  await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, 'gofer'), {
+    recursive: true,
+    force: true,
+  });
   await writeText(
     path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),
-    withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[1]))
-  );
-  await writeText(
-    path.join(root, UMBRELLA_SKILLS_DIR, 'gofer', 'SKILL.md'),
     withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
   );
 

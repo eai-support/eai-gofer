@@ -1,7 +1,7 @@
 {
-  "claudeSyntax": "/gofer",
-  "copilotSyntax": "#gofer",
-  "codexSyntax": "/gofer",
+  "claudeSyntax": "/eai",
+  "copilotSyntax": "#eai",
+  "codexSyntax": "/eai",
   "sameClaudePathAcrossProfiles": true,
   "standardProfileMatched": true
 }
