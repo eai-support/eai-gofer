@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  APP_CAPABILITY_SCHEMA_VERSION,
   GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
   GOFER_ARTIFACT_MANIFEST_SCHEMA_VERSION,
   GOFER_EXPORT_BUNDLE_SCHEMA_VERSION,
@@ -7,7 +8,10 @@ import {
   GOFER_PIPELINE_STAGES,
   GOFER_REQUIRED_ARTIFACT_KINDS_BY_STAGE,
   GOFER_SOURCE_MANIFEST_SCHEMA_VERSION,
+  GENERATED_APP_CAPABILITY_MANIFEST_PATH,
   type CreateGoferExportBundleRequest,
+  type AppCapabilityRequirement,
+  type AppCapabilityRequirements,
   type GoferApprovalRecord,
   type GoferArtifactManifest,
   type GoferArtifactRecord,
@@ -28,6 +32,10 @@ import {
 import { validateGenerationReadiness } from './validators.js';
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const LOGICAL_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RAW_RECORD_ID_PATTERN =
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -98,6 +106,167 @@ function canonicalSource(source: GoferSourceDocument): GoferSourceDocument {
   };
 }
 
+function canonicalCapabilityRequirement(
+  requirement: AppCapabilityRequirement
+): AppCapabilityRequirement {
+  return {
+    alias: requirement.alias.trim(),
+    capability: requirement.capability.trim(),
+    required: requirement.required,
+    description: requirement.description.trim(),
+    ...(requirement.compatibleProviders
+      ? { compatibleProviders: [...requirement.compatibleProviders].sort(compareText) }
+      : {}),
+    ...(requirement.compatibleAssetTypes
+      ? { compatibleAssetTypes: [...requirement.compatibleAssetTypes].sort(compareText) }
+      : {}),
+  };
+}
+
+function normalizeLogicalKey(value: unknown, field: string, maxLength?: number): string {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (maxLength !== undefined && normalized.length > maxLength) {
+    throw new Error(`${field} must be at most ${maxLength} characters.`);
+  }
+  if (!LOGICAL_KEY_PATTERN.test(normalized) || UUID_PATTERN.test(normalized)) {
+    throw new Error(`${field} must be a logical key.`);
+  }
+  return normalized;
+}
+
+function normalizeLogicalList(value: unknown, field: string): readonly string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${field} must be an array of logical keys.`);
+  }
+  if (value.length > 20) {
+    throw new Error(`${field} must contain at most 20 items.`);
+  }
+  const normalized = value.map((item, index) => {
+    const logicalReference = typeof item === 'string' ? item.trim() : '';
+    const wildcard = logicalReference.endsWith('*');
+    const logicalKey = wildcard ? logicalReference.slice(0, -1) : logicalReference;
+    return `${normalizeLogicalKey(logicalKey, `${field}[${index}]`)}${wildcard ? '*' : ''}`;
+  });
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error(`${field} must not contain duplicate logical keys.`);
+  }
+  return normalized.sort(compareText);
+}
+
+function canonicalCapabilityRequirements(
+  manifest: AppCapabilityRequirements
+): AppCapabilityRequirements {
+  return {
+    schemaVersion: APP_CAPABILITY_SCHEMA_VERSION,
+    appKey: manifest.appKey.trim(),
+    requirements: manifest.requirements
+      .map(canonicalCapabilityRequirement)
+      .sort(
+        (left, right) =>
+          compareText(left.alias, right.alias) || compareText(left.capability, right.capability)
+      ),
+  };
+}
+
+/** Validates the portable capability shape before any generated file is written. */
+export function validateAppCapabilityRequirements(manifest: unknown): AppCapabilityRequirements {
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new Error('capabilityRequirements must be an object.');
+  }
+
+  const record = manifest as Record<string, unknown>;
+  const rootKeys = Object.keys(record).sort(compareText);
+  if (rootKeys.join(',') !== 'appKey,requirements,schemaVersion') {
+    throw new Error('capabilityRequirements contains unsupported fields.');
+  }
+  if (record.schemaVersion !== APP_CAPABILITY_SCHEMA_VERSION) {
+    throw new Error('capabilityRequirements.schemaVersion is unsupported.');
+  }
+  const appKey = normalizeLogicalKey(record.appKey, 'capabilityRequirements.appKey', 120);
+  if (!Array.isArray(record.requirements) || record.requirements.length < 1) {
+    throw new Error('capabilityRequirements.requirements must contain at least one requirement.');
+  }
+  if (record.requirements.length > 100) {
+    throw new Error('capabilityRequirements.requirements must contain at most 100 items.');
+  }
+
+  const aliases = new Set<string>();
+  const requirements = record.requirements.map((candidate, index): AppCapabilityRequirement => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      throw new Error(`capabilityRequirements.requirements[${index}] must be an object.`);
+    }
+    const item = candidate as Record<string, unknown>;
+    const allowedKeys = new Set([
+      'alias',
+      'capability',
+      'description',
+      'required',
+      'compatibleProviders',
+      'compatibleAssetTypes',
+    ]);
+    if (Object.keys(item).some((key) => !allowedKeys.has(key))) {
+      throw new Error(`capabilityRequirements.requirements[${index}] contains unsupported fields.`);
+    }
+
+    const alias = normalizeLogicalKey(
+      item.alias,
+      `capabilityRequirements.requirements[${index}].alias`,
+      120
+    );
+    const capability = normalizeLogicalKey(
+      item.capability,
+      `capabilityRequirements.requirements[${index}].capability`,
+      160
+    );
+    const description = typeof item.description === 'string' ? item.description.trim() : '';
+    if (aliases.has(alias)) {
+      throw new Error(`capabilityRequirements contains duplicate alias "${alias}".`);
+    }
+    aliases.add(alias);
+    if (typeof item.required !== 'boolean') {
+      throw new Error(`capabilityRequirements.requirements[${index}].required must be boolean.`);
+    }
+    if (!description) {
+      throw new Error(`capabilityRequirements.requirements[${index}].description is required.`);
+    }
+    if (description.length > 500) {
+      throw new Error(
+        `capabilityRequirements.requirements[${index}].description must be at most 500 characters.`
+      );
+    }
+    if (RAW_RECORD_ID_PATTERN.test(`${alias} ${capability} ${description}`)) {
+      throw new Error('capabilityRequirements must not contain raw tenant record IDs.');
+    }
+
+    const compatibleProviders = normalizeLogicalList(
+      item.compatibleProviders,
+      `capabilityRequirements.requirements[${index}].compatibleProviders`
+    );
+    const compatibleAssetTypes = normalizeLogicalList(
+      item.compatibleAssetTypes,
+      `capabilityRequirements.requirements[${index}].compatibleAssetTypes`
+    );
+
+    return {
+      alias,
+      capability,
+      required: item.required,
+      description,
+      ...(compatibleProviders ? { compatibleProviders } : {}),
+      ...(compatibleAssetTypes ? { compatibleAssetTypes } : {}),
+    };
+  });
+
+  return canonicalCapabilityRequirements({
+    schemaVersion: APP_CAPABILITY_SCHEMA_VERSION,
+    appKey,
+    requirements,
+  });
+}
+
 function normalizeForJson(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(normalizeForJson);
@@ -156,10 +325,15 @@ export function assertPortableGoferPath(path: string): void {
   }
 }
 
-function assertUniquePaths(files: readonly GoferPortableFileInput[]): void {
+function assertUniquePaths(
+  files: readonly GoferPortableFileInput[],
+  generatedSourcePaths: ReadonlySet<string> = new Set()
+): void {
   const seen = new Set<string>();
   for (const file of files) {
-    assertPortableGoferPath(file.path);
+    if (!generatedSourcePaths.has(file.path)) {
+      assertPortableGoferPath(file.path);
+    }
     if (seen.has(file.path)) {
       throw new Error(`Gofer export contains duplicate path: ${file.path}`);
     }
@@ -324,7 +498,11 @@ export function createGoferHandoff(
   request: CreateGoferExportBundleRequest,
   artifactManifestPath: string,
   sourceManifestPath: string,
-  auditHistoryPath = artifactManifestPath.replace(/artifact-manifest\.json$/, 'audit-history.json')
+  auditHistoryPath = artifactManifestPath.replace(/artifact-manifest\.json$/, 'audit-history.json'),
+  capabilityEvidencePath = artifactManifestPath.replace(
+    /artifact-manifest\.json$/,
+    'app-capabilities.json'
+  )
 ): GoferHandoff {
   const readiness = validateGenerationReadiness(request.run, request.artifacts, request.approvals);
   if (!readiness.valid) {
@@ -370,11 +548,13 @@ export function createGoferHandoff(
     artifactManifestPath,
     sourceManifestPath,
     auditHistoryPath,
+    capabilityManifestPath: GENERATED_APP_CAPABILITY_MANIFEST_PATH,
+    capabilityEvidencePath,
     omissions: [...request.omissions].sort(compareOmissions),
   };
 }
 
-/** Creates a byte-stable, content-addressed `.specify` export for GitHub generation. */
+/** Creates a byte-stable, content-addressed Gofer export for GitHub generation. */
 export function createGoferExportBundle(
   request: CreateGoferExportBundleRequest
 ): GoferExportBundle {
@@ -382,6 +562,28 @@ export function createGoferExportBundle(
     throw new Error('exportedAt must be an ISO8601 timestamp.');
   }
   assertRecordOwnership(request);
+  const capabilityRequirements = validateAppCapabilityRequirements(request.capabilityRequirements);
+  const featureRoot = `.specify/specs/${request.run.featureSlug}`;
+  const artifactManifestPath = `${featureRoot}/artifact-manifest.json`;
+  const capabilityEvidencePath = `${featureRoot}/app-capabilities.json`;
+  const auditHistoryPath = `${featureRoot}/audit-history.json`;
+  const handoffPath = `${featureRoot}/gofer-handoff.json`;
+  const sourceManifestPath = '.specify/sources/source-manifest.json';
+  const versionPath = '.specify/gofer-version.json';
+  const reservedPaths = [
+    GENERATED_APP_CAPABILITY_MANIFEST_PATH,
+    artifactManifestPath,
+    capabilityEvidencePath,
+    auditHistoryPath,
+    handoffPath,
+    sourceManifestPath,
+    versionPath,
+  ];
+  for (const reservedPath of reservedPaths) {
+    if (request.files.some((file) => file.path === reservedPath)) {
+      throw new Error(`Gofer export input must not replace generated manifest ${reservedPath}.`);
+    }
+  }
   assertUniquePaths(request.files);
   const suppliedFiles = request.files.map(contentAddressFile);
   assertPortableGoferScaffold(suppliedFiles, request.run.goferRelease);
@@ -393,25 +595,6 @@ export function createGoferExportBundle(
     ])
   );
   assertRequiredArtifacts(request);
-
-  const featureRoot = `.specify/specs/${request.run.featureSlug}`;
-  const artifactManifestPath = `${featureRoot}/artifact-manifest.json`;
-  const auditHistoryPath = `${featureRoot}/audit-history.json`;
-  const handoffPath = `${featureRoot}/gofer-handoff.json`;
-  const sourceManifestPath = '.specify/sources/source-manifest.json';
-  const versionPath = '.specify/gofer-version.json';
-  const reservedPaths = [
-    artifactManifestPath,
-    auditHistoryPath,
-    handoffPath,
-    sourceManifestPath,
-    versionPath,
-  ];
-  for (const reservedPath of reservedPaths) {
-    if (suppliedFiles.some((file) => file.path === reservedPath)) {
-      throw new Error(`Gofer export input must not replace generated manifest ${reservedPath}.`);
-    }
-  }
 
   const filesByPath = new Map(suppliedFiles.map((file) => [file.path, file]));
   assertArtifactFiles(request, filesByPath);
@@ -442,7 +625,8 @@ export function createGoferExportBundle(
     request,
     artifactManifestPath,
     sourceManifestPath,
-    auditHistoryPath
+    auditHistoryPath,
+    capabilityEvidencePath
   );
 
   const generatedFiles: GoferPortableFileInput[] = [
@@ -461,6 +645,16 @@ export function createGoferExportBundle(
       content: stringifyGoferManifest(artifactManifest),
     },
     {
+      path: capabilityEvidencePath,
+      encoding: 'utf8',
+      content: stringifyGoferManifest(capabilityRequirements),
+    },
+    {
+      path: GENERATED_APP_CAPABILITY_MANIFEST_PATH,
+      encoding: 'utf8',
+      content: stringifyGoferManifest(capabilityRequirements),
+    },
+    {
       path: auditHistoryPath,
       encoding: 'utf8',
       content: stringifyGoferManifest(auditHistory),
@@ -472,7 +666,7 @@ export function createGoferExportBundle(
   const files = [...suppliedFiles, ...generatedFiles.map(contentAddressFile)].sort((left, right) =>
     compareText(left.path, right.path)
   );
-  assertUniquePaths(files);
+  assertUniquePaths(files, new Set([GENERATED_APP_CAPABILITY_MANIFEST_PATH]));
 
   return {
     schemaVersion: GOFER_EXPORT_BUNDLE_SCHEMA_VERSION,
@@ -480,6 +674,7 @@ export function createGoferExportBundle(
     artifactManifest,
     sourceManifest,
     auditHistory,
+    capabilityRequirements,
     files,
   };
 }

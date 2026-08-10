@@ -1,12 +1,12 @@
 {
   "latest_version": "3.8.0",
   "repository": "eai-support/eai-gofer",
-  "last_updated": "2026-08-10T09:00:54.107Z",
+  "last_updated": "2026-08-10T09:14:23.607Z",
   "releases": [
     {
       "version": "3.8.0",
       "tag_name": "v3.8.0",
-      "published_at": "2026-08-10T09:00:54.107Z",
+      "published_at": "2026-08-10T09:14:23.606Z",
       "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.8.0.vsix",
       "notes": "Add canonical object type routing validation",
       "prerelease": false,

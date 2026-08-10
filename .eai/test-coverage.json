@@ -23,6 +23,20 @@
           ]
         },
         {
+          "id": "gofer-app-capability-handoff",
+          "description": "Governed Gofer exports retain deterministic eai.app_capabilities.v1 requirements without tenant records, secrets, or environment-specific bindings.",
+          "owned_paths": ["src/headless/contracts.ts", "src/headless/exportBundle.ts"],
+          "required_repo_tests": ["tests/unit/headless/exportBundle.test.ts"],
+          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_cross_service_surfaces": ["publicapi-platform"],
+          "required_deployed_contracts": [
+            {
+              "repository": "eai-testing-dev",
+              "path": "tests/cross-service/contracts/platform-lifecycle/publicapi-v4-capability-connections.spec.ts"
+            }
+          ]
+        },
+        {
           "id": "customer-delivery-lineage-viewer",
           "description": "Customer-safe delivery lineage authoring, Mermaid generation, and VS Code graph viewing capped at the PublicAPI contract boundary.",
           "owned_paths": [
