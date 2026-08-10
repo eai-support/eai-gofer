@@ -5,6 +5,7 @@ import {
   createGoferScaffoldInventoryDigest,
   createGoferExportBundle,
   isPortableGoferScaffoldPath,
+  validateAppCapabilityRequirements,
 } from '../../../src/headless/index.js';
 import { TEST_GOFER_RELEASE_DESCRIPTOR, createValidExportFixture } from './fixtures.js';
 
@@ -29,6 +30,8 @@ describe('createGoferExportBundle', () => {
       nextAllowedStage: '5_implement',
       repositoryAction: 'generate',
       auditHistoryPath: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
+      capabilityManifestPath: 'src/eai.config/capabilities.generated.json',
+      capabilityEvidencePath: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
       executionReference: {
         provider: 'eai-workflow',
         executionId: 'execution-1',
@@ -54,6 +57,13 @@ describe('createGoferExportBundle', () => {
           path: '.specify/specs/3171-admin-portal-gofer-stages/artifact-manifest.json',
         }),
         expect.objectContaining({
+          path: '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+        }),
+        expect.objectContaining({
+          path: 'src/eai.config/capabilities.generated.json',
+          encoding: 'utf8',
+        }),
+        expect.objectContaining({
           path: '.specify/specs/3171-admin-portal-gofer-stages/audit-history.json',
         }),
         expect.objectContaining({
@@ -69,12 +79,190 @@ describe('createGoferExportBundle', () => {
       runId: 'run-3171',
     });
     expect(first.auditHistory.events.map((event) => event.sequence)).toEqual([1, 2, 3]);
+    expect(first.capabilityRequirements).toEqual({
+      schemaVersion: 'eai.app_capabilities.v1',
+      appKey: 'rates-review',
+      requirements: [
+        expect.objectContaining({ alias: 'assistant-prompt', capability: 'ai.chat' }),
+        expect.objectContaining({ alias: 'primary-workflow', capability: 'workflows.runtime' }),
+      ],
+    });
+    const generatedCapabilityManifest = first.files.find(
+      ({ path }) => path === 'src/eai.config/capabilities.generated.json'
+    );
+    const capabilityEvidence = first.files.find(
+      ({ path }) => path === '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json'
+    );
+    expect(JSON.parse(generatedCapabilityManifest!.content)).toEqual(first.capabilityRequirements);
+    expect(generatedCapabilityManifest!.content).toBe(capabilityEvidence!.content);
+    expect(generatedCapabilityManifest!.sha256).toBe(capabilityEvidence!.sha256);
     const releaseManifest = first.files.find((file) => file.path === '.specify/gofer-version.json');
     expect(JSON.parse(releaseManifest!.content)).toEqual({
       schemaVersion: 'eai.gofer.scaffold.v1',
       contractVersion: GOFER_ADMIN_PORTAL_CONTRACT_VERSION,
       goferRelease: TEST_GOFER_RELEASE_DESCRIPTOR,
     });
+  });
+
+  it('accepts and canonicalizes optional provider and asset compatibility keys', () => {
+    const fixture = createValidExportFixture();
+    const requirement = fixture.capabilityRequirements.requirements[0];
+    const bundle = createGoferExportBundle({
+      ...fixture,
+      capabilityRequirements: {
+        ...fixture.capabilityRequirements,
+        requirements: [
+          {
+            ...requirement,
+            compatibleProviders: ['workflow_engine', 'publicapi'],
+            compatibleAssetTypes: ['shared-workflow-*', 'workflow-template'],
+          },
+        ],
+      },
+    });
+
+    expect(bundle.capabilityRequirements.requirements[0]).toMatchObject({
+      compatibleProviders: ['publicapi', 'workflow_engine'],
+      compatibleAssetTypes: ['shared-workflow-*', 'workflow-template'],
+    });
+  });
+
+  it('enforces the PublicAPI capability manifest wire limits', () => {
+    const fixture = createValidExportFixture();
+    const requirement = fixture.capabilityRequirements.requirements[0];
+    const requirements = Array.from({ length: 100 }, (_, index) => ({
+      ...requirement,
+      alias: index === 0 ? `a${'b'.repeat(119)}` : `requirement-${index}`,
+      capability: index === 0 ? `c${'d'.repeat(159)}` : requirement.capability,
+      description: index === 0 ? 'x'.repeat(500) : requirement.description,
+      compatibleProviders:
+        index === 0
+          ? Array.from({ length: 20 }, (__, itemIndex) => `provider-${itemIndex}`)
+          : undefined,
+    }));
+
+    expect(
+      validateAppCapabilityRequirements({
+        schemaVersion: 'eai.app_capabilities.v1',
+        appKey: `a${'b'.repeat(119)}`,
+        requirements,
+      }).requirements
+    ).toHaveLength(100);
+
+    const overLimitCases = [
+      { appKey: `a${'b'.repeat(120)}`, requirements: [requirement] },
+      {
+        appKey: 'rates-review',
+        requirements: [...requirements, { ...requirement, alias: 'extra' }],
+      },
+      { appKey: 'rates-review', requirements: [{ ...requirement, alias: `a${'b'.repeat(120)}` }] },
+      {
+        appKey: 'rates-review',
+        requirements: [{ ...requirement, capability: `c${'d'.repeat(160)}` }],
+      },
+      { appKey: 'rates-review', requirements: [{ ...requirement, description: 'x'.repeat(501) }] },
+      {
+        appKey: 'rates-review',
+        requirements: [
+          {
+            ...requirement,
+            compatibleAssetTypes: Array.from({ length: 21 }, (__, index) => `asset-${index}`),
+          },
+        ],
+      },
+    ];
+    const errors = [
+      'at most 120 characters',
+      'at most 100 items',
+      'at most 120 characters',
+      'at most 160 characters',
+      'at most 500 characters',
+      'at most 20 items',
+    ];
+    overLimitCases.forEach((manifest, index) => {
+      expect(() =>
+        validateAppCapabilityRequirements({
+          schemaVersion: 'eai.app_capabilities.v1',
+          ...manifest,
+        })
+      ).toThrow(errors[index]);
+    });
+  });
+
+  it('rejects environment-specific capability data and invalid logical contracts', () => {
+    const fixture = createValidExportFixture();
+    const valid = fixture.capabilityRequirements.requirements[0];
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [{ ...valid, tenantId: 'tenant-1' } as typeof valid],
+        },
+      })
+    ).toThrow('contains unsupported fields');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [valid, { ...valid }],
+        },
+      })
+    ).toThrow('duplicate alias');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [
+            {
+              ...valid,
+              description:
+                'Use tenant record 40795709-be42-4fa5-879b-aec8c3f9b3c3 for this workflow.',
+            },
+          ],
+        },
+      })
+    ).toThrow('must not contain raw tenant record IDs');
+
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        capabilityRequirements: {
+          ...fixture.capabilityRequirements,
+          requirements: [
+            {
+              ...valid,
+              compatibleAssetTypes: ['shared-workflow-*', 'shared-workflow-*'],
+            },
+          ],
+        },
+      })
+    ).toThrow('must not contain duplicate logical keys');
+  });
+
+  it.each([
+    '.specify/specs/3171-admin-portal-gofer-stages/app-capabilities.json',
+    'src/eai.config/capabilities.generated.json',
+  ])('does not allow input files to replace generated capability manifest %s', (path) => {
+    const fixture = createValidExportFixture();
+    expect(() =>
+      createGoferExportBundle({
+        ...fixture,
+        files: [
+          ...fixture.files,
+          {
+            path,
+            content: '{}',
+            encoding: 'utf8',
+          },
+        ],
+      })
+    ).toThrow(`must not replace generated manifest ${path}`);
   });
 
   it('refuses to export a legacy run without canonical app identity', () => {

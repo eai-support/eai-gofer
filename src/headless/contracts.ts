@@ -19,6 +19,11 @@ export const GOFER_SOURCE_MANIFEST_SCHEMA_VERSION = 'eai.gofer.sources.v1' as co
 export const GOFER_AUDIT_HISTORY_SCHEMA_VERSION = 'eai.gofer.audit_history.v1' as const;
 /** Schema discriminator for the complete portable repository bundle. */
 export const GOFER_EXPORT_BUNDLE_SCHEMA_VERSION = 'eai.gofer.export_bundle.v1' as const;
+/** Schema discriminator shared with CLI-built and No-Code Builder applications. */
+export const APP_CAPABILITY_SCHEMA_VERSION = 'eai.app_capabilities.v1' as const;
+/** Canonical generated-app source path shared by CLI, NCB, and Gofer adapters. */
+export const GENERATED_APP_CAPABILITY_MANIFEST_PATH =
+  'src/eai.config/capabilities.generated.json' as const;
 
 /** Ordered stages supported by the governed pre-implementation pipeline. */
 export const GOFER_PIPELINE_STAGES = [
@@ -340,6 +345,23 @@ export interface GoferPortableFile extends GoferPortableFileInput {
   sha256: string;
 }
 
+/** Logical control-plane dependency resolved to a tenant-owned binding after export. */
+export interface AppCapabilityRequirement {
+  alias: string;
+  capability: string;
+  required: boolean;
+  description: string;
+  compatibleProviders?: readonly string[];
+  compatibleAssetTypes?: readonly string[];
+}
+
+/** Environment-neutral capability requirements emitted by governed app delivery. */
+export interface AppCapabilityRequirements {
+  schemaVersion: typeof APP_CAPABILITY_SCHEMA_VERSION;
+  appKey: string;
+  requirements: readonly AppCapabilityRequirement[];
+}
+
 /** Portable audit handoff that allows a generated repository to resume at stage 5. */
 export interface GoferHandoff {
   schemaVersion: typeof GOFER_HANDOFF_SCHEMA_VERSION;
@@ -360,6 +382,8 @@ export interface GoferHandoff {
   artifactManifestPath: string;
   sourceManifestPath: string;
   auditHistoryPath: string;
+  capabilityManifestPath: string;
+  capabilityEvidencePath: string;
   omissions: readonly GoferExportOmission[];
 }
 
@@ -402,6 +426,7 @@ export interface CreateGoferExportBundleRequest {
   events: readonly GoferRunEvent[];
   sources: readonly GoferSourceDocument[];
   omissions: readonly GoferExportOmission[];
+  capabilityRequirements: AppCapabilityRequirements;
   files: readonly GoferPortableFileInput[];
 }
 
@@ -412,6 +437,7 @@ export interface GoferExportBundle {
   artifactManifest: GoferArtifactManifest;
   sourceManifest: GoferSourceManifest;
   auditHistory: GoferAuditHistory;
+  capabilityRequirements: AppCapabilityRequirements;
   files: readonly GoferPortableFile[];
 }
 
