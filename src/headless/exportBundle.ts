@@ -554,7 +554,7 @@ export function createGoferHandoff(
   };
 }
 
-/** Creates a byte-stable, content-addressed `.specify` export for GitHub generation. */
+/** Creates a byte-stable, content-addressed Gofer export for GitHub generation. */
 export function createGoferExportBundle(
   request: CreateGoferExportBundleRequest
 ): GoferExportBundle {
