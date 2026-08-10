@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.8.0] - 2026-08-10
+
+Add canonical object type routing validation
+
 ## [3.7.33] - 2026-08-10
 
 Fix VS Code command visibility and single EAI command surface
