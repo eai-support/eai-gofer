@@ -1472,6 +1472,7 @@ const EMITTERS = {
 
 function parseArgs(argv) {
   const args = {
+    check: false,
     dryRun: false,
     surfaces: ALL_SURFACES,
     root: process.cwd(),
@@ -1481,6 +1482,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--dry-run') {
       args.dryRun = true;
+    } else if (arg === '--check') {
+      args.check = true;
     } else if (arg === '--surfaces' && argv[i + 1]) {
       args.surfaces = argv[i + 1].split(',').map((s) => s.trim()).filter(Boolean);
       i++;
@@ -1530,7 +1533,7 @@ function validateExclusions(stages, surfaces) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const { dryRun, surfaces, root } = parseArgs(argv);
+  const { check, dryRun, surfaces, root } = parseArgs(argv);
 
   // Validate canonical descriptions first (budget check)
   try {
@@ -1566,7 +1569,8 @@ async function main() {
   // T043: validate exclusions
   validateExclusions(stages, surfaces);
 
-  if (dryRun) {
+  if (dryRun || check) {
+    if (check) console.log('[check] Generation inputs are valid; no files were written.');
     console.log('[dry-run] Would emit to surfaces:', surfaces.join(', '));
     console.log('[dry-run] Stages:', stages.map((s) => s.frontmatter.name).join(', '));
     process.exit(0);

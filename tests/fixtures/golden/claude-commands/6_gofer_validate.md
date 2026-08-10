@@ -361,6 +361,15 @@ This gate fails when application source:
 - sends a flat create, update, or action body instead of the required envelope;
 - performs an action followed by an update without using the action result's
   version or the canonical `updateFrom(...)` helper.
+- constructs `/v4/data/resources/.../<type>` directly outside the single
+  platform SDK route owner declared in `.specify/config/object-type-routing.json`.
+
+The Object Type route audit has an immutable denominator: it scans only the
+configured source roots, skips dependencies, build outputs, generated mirrors,
+documentation, and declared fixtures, and emits deterministic structured
+`OBJECT_TYPE_DIRECT_ROUTE_CONSTRUCTION` findings. Feature code must use the
+shared platform SDK, `useResources`, or `client.resources`; do not add local
+exceptions or edit a workspace copy of the config to widen the audit.
 
 Object Type management remains a separate contract and may use its documented
 `PATCH /v4/data/resources/object-types/{id}` route. Do not weaken this guard by

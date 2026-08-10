@@ -48,6 +48,13 @@ describe('hook-wiring (T056)', () => {
     );
   });
 
+  it('gofer:generate:check script is present', () => {
+    expect(
+      packageJson.scripts,
+      'package.json is missing gofer:generate:check script'
+    ).toHaveProperty('gofer:generate:check');
+  });
+
   it('gofer:mermaid-export script is present', () => {
     expect(
       packageJson.scripts,
@@ -105,6 +112,13 @@ describe('hook-wiring (T056)', () => {
     expect(script).toContain('sync-extension-resources.mjs');
     expect(script).not.toContain('./scripts/sync-extension-resources.sh');
     expect(script).not.toContain(' cp ');
+  });
+
+  it('gofer:generate:check uses dependency-free check modes for generation and sync', () => {
+    const script = packageJson.scripts['gofer:generate:check'];
+    expect(script).toContain('generate-commands.mjs --check');
+    expect(script).toContain('sync-extension-resources.mjs --check');
+    expect(script).toMatch(/^node\s/);
   });
 
   it('gofer:mermaid-export references mermaid-export.mjs', () => {
