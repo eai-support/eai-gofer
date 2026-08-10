@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.7.31
+Version: 3.7.32
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
