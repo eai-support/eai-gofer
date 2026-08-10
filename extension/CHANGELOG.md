@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.31] - 2026-08-10
+
+Enforce controlled English across Gofer surfaces
+
 ## [3.7.30] - 2026-08-08
 
 Route non-app Gofer work before EAI readiness
