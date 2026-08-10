@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.7.33] - 2026-08-10
+
+Fix VS Code command visibility and single EAI command surface
+
 ## [3.7.32] - 2026-08-10
 
 Fix VS Code Marketplace managed identity publishing
