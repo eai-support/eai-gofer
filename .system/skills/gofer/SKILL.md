@@ -5,7 +5,7 @@ description: "Start or continue the Gofer delivery pipeline."
 
 # Gofer
 
-Version: 3.7.32
+Version: 3.8.0
 Host: Codex
 
 # Gofer
