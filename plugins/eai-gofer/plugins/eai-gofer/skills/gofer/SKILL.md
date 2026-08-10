@@ -19,6 +19,23 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 
 Before stage work, resolve the repository root and run `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json` when available. If the repo is missing or stale, ask before running `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors`, then resume the original command.
 
+## Controlled English Contract
+
+Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.
+
+Apply these rules before any user-facing output:
+
+1. Use short sentences. Keep instructions to 20 words or fewer where possible.
+2. Use one action per instruction.
+3. Use active voice. Use passive voice only when the actor is unknown or not important.
+4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.
+5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.
+6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.
+7. Use vertical lists for complex information.
+8. Put one topic in each paragraph.
+9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
+10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
 ## Business-Friendly Progress
 
 - Keep user-facing progress short and business-level by default.

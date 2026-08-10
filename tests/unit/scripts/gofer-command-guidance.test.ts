@@ -16,10 +16,34 @@ describe('Gofer public execution-depth guidance', () => {
       const content = fs.readFileSync(path.join(commandDir, file), 'utf8');
       expect(content, file).toContain('## Business-Friendly Progress Contract');
       expect(content, file).toContain('<!-- gofer:business-progress:start -->');
+      expect(content, file).toContain('ASD-STE100 Simplified Technical English');
+      expect(content, file).toMatch(/do not claim ASD\s+certification/);
+      expect(content, file).toContain('Use one action per instruction');
+      expect(content, file).toContain(
+        'Avoid idioms, marketing adjectives, vague praise, and hedging'
+      );
       expect(content, file).toContain('`Working on`');
       expect(content, file).toContain('`Why it matters`');
       expect(content, file).toContain('`Status`');
       expect(content, file).toContain('<!-- gofer:business-progress:end -->');
+    }
+  });
+
+  it('keeps the controlled-English contract in public entrypoint skills', () => {
+    for (const file of [
+      '.agents/skills/gofer/SKILL.md',
+      '.agents/skills/eai/SKILL.md',
+      'plugins/eai-gofer/skills/gofer/SKILL.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/gofer/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain('## Controlled English Contract');
+      expect(content, file).toContain('ASD-STE100 Simplified Technical English');
+      expect(content, file).toContain('Use one action per instruction');
+      expect(content, file).toContain('For errors, write: what happened, why it matters');
+      expect(content, file).toContain('do not claim ASD certification');
     }
   });
 

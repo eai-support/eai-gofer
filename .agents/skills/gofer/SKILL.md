@@ -19,6 +19,23 @@ Use this as the single user-facing Gofer command. Users should run `/gofer`, `$g
 - Keep all Gofer functions available by routing internally to the right stage contract.
 - Explain progress in business language first; provide technical details when the user asks.
 
+## Controlled English Contract
+
+Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.
+
+Apply these rules before any user-facing output:
+
+1. Use short sentences. Keep instructions to 20 words or fewer where possible.
+2. Use one action per instruction.
+3. Use active voice. Use passive voice only when the actor is unknown or not important.
+4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.
+5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.
+6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.
+7. Use vertical lists for complex information.
+8. Put one topic in each paragraph.
+9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
+10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
 ## Workspace Preflight
 
 1. Resolve the repository root.
