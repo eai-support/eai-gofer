@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "description": "Spec-driven delivery workflow for VS Code and AI coding CLIs",
   "author": "EAI Tools",
   "license": "Apache-2.0",

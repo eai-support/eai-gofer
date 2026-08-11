@@ -43,6 +43,8 @@ and this project adheres to
 
 ### Fixed
 
+- Canonicalized `GitHubConnection` to `github-connection` across source,
+  extension, and packaged plugin routing contracts for the next release.
 - Restored the versioned v3.7.28 and v3.7.29 Pages plugin bundles to their
   published immutable bytes and restored the original release chronology.
   Headless release descriptors and updater download allow-lists now reject the

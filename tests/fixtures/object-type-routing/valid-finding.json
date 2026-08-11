@@ -9,7 +9,7 @@
     "recordRef": "hmac-sha256:record-ref"
   },
   "field": "slug",
-  "offendingValue": "github-connection",
-  "expectedValue": "git-hub-connection",
+  "offendingValue": "feeditem",
+  "expectedValue": "feed-item",
   "remediation": "Preserve the stored identifier; use a separately approved tenant-scoped migration if a rename is required."
 }
