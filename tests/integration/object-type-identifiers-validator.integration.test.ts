@@ -24,7 +24,7 @@ const orderedVectors = [
   { input: 'APIKey', output: 'api-key', manifestNameValid: true },
   { input: 'HTTPFeedItem', output: 'http-feed-item', manifestNameValid: true },
   { input: 'V2FeedItem', output: 'v2-feed-item', manifestNameValid: true },
-  { input: 'GitHubConnection', output: 'git-hub-connection', manifestNameValid: true },
+  { input: 'GitHubConnection', output: 'github-connection', manifestNameValid: true },
   { input: 'Sent_Post', output: 'sent-post', manifestNameValid: false },
   { input: '  Feed  Item  ', output: 'feed-item', manifestNameValid: false },
   { input: 'Draft--Item', output: 'draft-item', manifestNameValid: false },

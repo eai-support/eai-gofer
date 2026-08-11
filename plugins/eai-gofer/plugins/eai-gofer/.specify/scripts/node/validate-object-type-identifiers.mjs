@@ -44,6 +44,7 @@ const DEFAULT_CONTRACT_CANDIDATES = [
 const SOURCE_CLASSIFICATION = 'blocking_source_drift';
 const PERSISTED_CLASSIFICATION = 'report_only_persisted_legacy_drift';
 const ACTIVATION_CLASSIFICATION = 'activation_blocker';
+const ESTABLISHED_NAME_SLUGS = new Map([['GitHubConnection', 'github-connection']]);
 
 const IS_DIRECT_RUN =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -101,8 +102,14 @@ export function sortIdentifierFindings(findings) {
 
 /** The sole Gofer JavaScript adapter for the ordered v1 algorithm. */
 export function deriveObjectTypeSlugV1(value) {
-  return String(value)
-    .replace(/^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g, '')
+  const normalizedName = String(value).replace(
+    /^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g,
+    ''
+  );
+  const establishedSlug = ESTABLISHED_NAME_SLUGS.get(normalizedName);
+  if (establishedSlug) return establishedSlug;
+
+  return normalizedName
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/[\t\n\v\f\r _]+/g, '-')
@@ -166,6 +173,7 @@ function assertContractAssets(config, schema, routing) {
     routing.name?.pattern !== NAME_RULE ||
     routing.slug?.pattern !== SLUG_RULE ||
     routing.derivation?.algorithm !== CONTRACT_VERSION ||
+    routing.derivation?.establishedNameSlugs?.GitHubConnection !== 'github-connection' ||
     !Array.isArray(routing.derivation?.vectors) ||
     !Array.isArray(routing.slug?.reserved)
   ) {
