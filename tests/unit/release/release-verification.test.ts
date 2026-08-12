@@ -185,14 +185,29 @@ describe('Release Verification', () => {
       const syncResourcesIndex = RELEASE_SCRIPT.indexOf(
         'node .specify/scripts/node/sync-extension-resources.mjs 2>&1'
       );
+      const eaiRefreshLayoutIndex = RELEASE_SCRIPT.indexOf(
+        'npm run gofer:eai-refresh-layout:check 2>&1'
+      );
       const compileIndex = RELEASE_SCRIPT.indexOf('if npm run compile 2>&1; then');
       const packageIndex = RELEASE_SCRIPT.indexOf('npx @vscode/vsce package');
+      const publishModeIndex = RELEASE_SCRIPT.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then');
+      const publishLayoutIndex = RELEASE_SCRIPT.indexOf(
+        'node scripts/verify-eai-refresh-layout.mjs 2>&1',
+        publishModeIndex
+      );
+      const pushTagIndex = RELEASE_SCRIPT.indexOf(
+        'git push --no-verify origin "$TAG_NAME"',
+        publishModeIndex
+      );
 
       expect(goferGenerateIndex).toBeGreaterThan(-1);
       expect(generateCommandsIndex).toBeGreaterThan(goferGenerateIndex);
       expect(syncResourcesIndex).toBeGreaterThan(generateCommandsIndex);
-      expect(compileIndex).toBeGreaterThan(syncResourcesIndex);
+      expect(eaiRefreshLayoutIndex).toBeGreaterThan(syncResourcesIndex);
+      expect(compileIndex).toBeGreaterThan(eaiRefreshLayoutIndex);
       expect(packageIndex).toBeGreaterThan(compileIndex);
+      expect(publishLayoutIndex).toBeGreaterThan(publishModeIndex);
+      expect(pushTagIndex).toBeGreaterThan(publishLayoutIndex);
       expect(RELEASE_SCRIPT).not.toContain('./scripts/sync-extension-resources.sh');
     });
 

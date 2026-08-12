@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.8.2] - 2026-08-12
+
+Gate releases on the eai refresh resource layout
+
 ## [3.8.1] - 2026-08-12
 
 Canonicalize GitHub connection slug derivation across generated app validation.

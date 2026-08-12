@@ -63,6 +63,33 @@
           "required_deployed_contracts": []
         },
         {
+          "id": "eai-gofer-refresh-compatibility",
+          "description": "Gofer releases produce the complete normalized resource layout consumed by eai update, and release preparation and publication both enforce that contract.",
+          "owned_paths": [
+            ".specify/config/**",
+            ".specify/contracts/**",
+            ".specify/commands/**",
+            ".specify/references/**",
+            ".specify/schemas/**",
+            ".system/skills/**",
+            ".agents/skills/**",
+            "extension/resources/**",
+            "scripts/verify-eai-refresh-layout.mjs",
+            "release.sh",
+            "package.json",
+            "tests/unit/release/eai-refresh-layout.test.ts",
+            "tests/unit/release/release-verification.test.ts"
+          ],
+          "required_repo_tests": [
+            "tests/unit/release/eai-refresh-layout.test.ts",
+            "tests/unit/release/release-verification.test.ts",
+            "tests/unit/scripts/sync-extension-resources.test.ts"
+          ],
+          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
+        },
+        {
           "id": "object-type-routing-audit-tooling",
           "description": "Immutable Object Type raw-route ownership audit, portable schemas, and deterministic Gofer resource generation checks.",
           "owned_paths": [
