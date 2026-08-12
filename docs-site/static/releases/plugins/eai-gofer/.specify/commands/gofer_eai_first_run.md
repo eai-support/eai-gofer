@@ -404,7 +404,21 @@ If the current host cannot run slash commands yet, use the installed plugin
 bundle or downloaded public bundle as the bootstrap source described by
 `/gofer:bootstrap-workspace`.
 
-## Step 9: Open Or Attach The Created Project
+## Step 9: Start The Created Project In An AI Workspace
+
+Prefer the provider-neutral EAI handoff:
+
+```bash
+eai start --check
+eai start
+```
+
+The detection command is read-only. The final start action is the user's
+approval for the selected AI provider to read the project and use the provider
+account. If no supported surface is installed, explain why one is needed and
+offer the official provider choices returned by `eai start --check`.
+
+If `eai start` is unavailable, use the host-specific fallback below.
 
 Make sure the active host is working in the initialized EAI app folder:
 

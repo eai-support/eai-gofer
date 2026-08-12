@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.8.2",
+  "version": "3.9.0",
   "description": "Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.",
   "author": {
     "name": "EAI Tools",
@@ -9,7 +9,15 @@
   "homepage": "https://github.com/eai-support/eai-gofer",
   "repository": "https://github.com/eai-support/eai-gofer",
   "license": "Apache-2.0",
-  "keywords": ["eai-gofer", "gofer", "codex", "claude", "copilot", "gemini", "spec-driven-development"],
+  "keywords": [
+    "eai-gofer",
+    "gofer",
+    "codex",
+    "claude",
+    "copilot",
+    "gemini",
+    "spec-driven-development"
+  ],
   "skills": "./plugin-skills/",
   "interface": {
     "displayName": "Gofer",
@@ -17,7 +25,10 @@
     "longDescription": "Run Gofer from one public entrypoint: eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.",
     "developerName": "EAI Tools",
     "category": "Coding",
-    "capabilities": ["Interactive", "Write"],
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
     "websiteURL": "https://github.com/eai-support/eai-gofer",
     "defaultPrompt": [
       "Set up my first EAI Platform app with Gofer",
@@ -31,7 +42,9 @@
     "logo": "./assets/eai-gofer-icon.png"
   },
   "gofer": {
-    "publicEntrypoints": ["eai"],
+    "publicEntrypoints": [
+      "eai"
+    ],
     "stages": [
       "0_gofer_start",
       "0a_problem_validation",
@@ -61,7 +74,7 @@
       "gofer:zoom-out"
     ],
     "marketplacePath": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
-    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.8.2.zip",
-    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.8.2.vsix"
+    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.9.0.zip",
+    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.9.0.vsix"
   }
 }

@@ -101,6 +101,7 @@ const EXTENSION_RESOURCE_PATHS = new Map([
   [path.join('.github', 'instructions'), path.join('resources', 'copilot-instructions')],
   [path.join('.github', 'skills'), path.join('resources', 'github-skills')],
   [path.join('.gemini'), path.join('resources', 'gemini')],
+  [path.join('.grok', 'skills'), path.join('resources', 'grok-skills')],
   [path.join('.agents', 'skills'), 'skills'],
   [path.join('.system', 'skills'), 'skills'],
 ]);
@@ -1029,6 +1030,7 @@ function getMirrorCopyCandidates() {
       target: path.join('.github', 'skills'),
     },
     { sourceRelativePath: '.gemini', target: '.gemini' },
+    { sourceRelativePath: path.join('.grok', 'skills'), target: path.join('.grok', 'skills') },
     { sourceRelativePath: path.join('.agents', 'skills'), target: path.join('.agents', 'skills') },
     { sourceRelativePath: path.join('.system', 'skills'), target: path.join('.system', 'skills') },
   ];

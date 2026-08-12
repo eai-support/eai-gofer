@@ -8,7 +8,7 @@
  *
  * Surfaces: claude, claude-mirror, copilot, github-prompts, github-agents,
  *           github-skills, claude-skills, agents-skills, system-skills,
- *           gemini, agents-md, codex-config
+ *           grok-skills, gemini, agents-md, codex-config
  */
 
 import { promises as fs } from 'fs';
@@ -37,6 +37,7 @@ const ALL_SURFACES = [
   'github-skills',
   'agents-skills',
   'system-skills',
+  'grok-skills',
   'gemini',
   'agents-md',
   'codex-config',
@@ -63,6 +64,7 @@ const SURFACE_WORKSPACE_HOSTS = {
   'github-skills': 'copilot',
   'agents-skills': 'codex',
   'system-skills': 'codex',
+  'grok-skills': 'grok',
   'gemini': 'gemini',
 };
 const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
@@ -302,6 +304,18 @@ Apply these rules before any user-facing output:
 3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\` when present.
 4. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
 5. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
+
+## First Conversation
+
+When this is the first EAI conversation for a new app:
+
+1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
+2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+3. Use the repository and EAI CLI as sources of truth. Run \`eai --describe\` before assuming command syntax and explain known errors before recovery.
+4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+6. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
+7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
 
 ## Route The Pipeline
 
@@ -1267,6 +1281,28 @@ async function emitSystemSkills(stages, root, dryRun) {
   return true;
 }
 
+async function emitGrokSkills(stages, root, dryRun) {
+  const baseDir = path.join(root, '.grok', 'skills');
+  let count = 0;
+  const version = await detectPackageVersion(root);
+  await clearDirectoryEntries(baseDir, (entry) => entry.isDirectory(), dryRun, 'grok-skills');
+  for (const entry of PUBLIC_ENTRYPOINTS) {
+    const skillDir = path.join(baseDir, entry.stem);
+    const outPath = path.join(skillDir, 'SKILL.md');
+    const content = buildPublicEntrypointSkill(entry, version, stages, 'Grok Build', 'grok');
+    if (dryRun) {
+      console.log(`[dry-run] grok-skills: would write ${outPath}`);
+    } else {
+      await ensureDir(skillDir);
+      await fs.writeFile(outPath, content, 'utf8');
+      console.log(`grok-skills: wrote ${outPath}`);
+    }
+    count++;
+  }
+  console.log(`grok-skills: ${count} file(s) emitted`);
+  return true;
+}
+
 /**
  * T065 — gemini emitter
  * Emits plain markdown body and TOML command wrappers to
@@ -1454,6 +1490,7 @@ const EMITTERS = {
   'github-skills': emitGithubSkills,
   'agents-skills': emitAgentsSkills,
   'system-skills': emitSystemSkills,
+  'grok-skills': emitGrokSkills,
   'gemini': emitGemini,
   'agents-md': emitAgentsMd,
   'codex-config': emitCodexConfig,

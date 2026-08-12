@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.9.0] - 2026-08-12
+
+Add guided AI workspace onboarding
+
 ## [3.8.2] - 2026-08-12
 
 Gate releases on the eai refresh resource layout

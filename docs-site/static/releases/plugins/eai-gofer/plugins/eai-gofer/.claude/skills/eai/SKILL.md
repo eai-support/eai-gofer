@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.8.2
+Version: 3.9.0
 Host: Claude Code
 
 # Eai
@@ -59,6 +59,18 @@ Apply these rules before any user-facing output:
 3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md` when present.
 4. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
 5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
+
+## First Conversation
+
+When this is the first EAI conversation for a new app:
+
+1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
+2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+3. Use the repository and EAI CLI as sources of truth. Run `eai --describe` before assuming command syntax and explain known errors before recovery.
+4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+6. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
+7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
 
 ## Route The Pipeline
 
