@@ -67,6 +67,20 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
+  it('keeps the generated Grok skill on the current Gofer version', () => {
+    const { version } = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')
+    ) as { version: string };
+
+    for (const file of [
+      '.grok/skills/eai/SKILL.md',
+      'extension/resources/grok-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain(`Version: ${version}`);
+    }
+  });
+
   it('documents generic risk labels across the six primary pipeline commands', () => {
     for (const file of [
       '1_gofer_research.md',
