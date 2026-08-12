@@ -3,8 +3,8 @@
 EAI Gofer is a business specification-driven delivery workflow for repositories.
 Users talk to one command, `/eai`, and Gofer manages the pipeline that designs
 with you, builds with you, and validates the result. It keeps working artifacts
-in `.specify/` and ships across VS Code, Claude Code, Codex, GitHub Copilot, and
-Gemini.
+in `.specify/` and ships across VS Code, Claude Code, Codex, GitHub Copilot,
+Gemini, and Grok Build.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -50,14 +50,15 @@ repo-owned internal contracts.
 | VS Code / GitHub Copilot app    | `#eai`, plus Gofer custom agents where supported      | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
 | Claude Code app                 | `/eai`                                                | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
 | Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command                       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+| Grok Build                      | Ask Grok to use the EAI skill                         | `.grok/skills/`, `.specify/scripts/`                                                                  |
 
 The UX rule is: users start with `eai`. Gofer keeps numbered stages and helpers
 as internal contracts under `.specify/commands/`, then chooses the right one
 based on the current feature state. The `gofer` entrypoint remains as a
 compatibility alias, but public instructions should teach `/eai`.
 
-For copy-paste commands across VS Code, Claude Code, Codex, Copilot, and Gemini,
-see the [5-minute first run guide](./.tech-docs/first-run.md).
+For copy-paste commands across VS Code, Claude Code, Codex, Copilot, Gemini, and
+Grok, see the [5-minute first run guide](./.tech-docs/first-run.md).
 
 ## How The Pipeline Works
 

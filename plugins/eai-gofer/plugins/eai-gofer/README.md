@@ -47,6 +47,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | GitHub Copilot app / VS Code agent mode | `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
 | Claude Code app | `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
 | Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json` |
+| Grok Build | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/` |
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
 

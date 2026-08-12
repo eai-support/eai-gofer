@@ -27,6 +27,7 @@ The public Gofer command should also be available on the host you installed:
 - Codex: `eai` skill or `$eai`
 - GitHub Copilot: `#eai`
 - Gemini CLI: `/eai`
+- Grok Build: ask Grok to use the repository EAI skill
 - VS Code: **Gofer: Initialize Repository** and the Gofer panel
 
 ## 1. Install A Surface
@@ -67,6 +68,11 @@ copilot plugin install eai-gofer@eai-gofer
 ```bash
 gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
 ```
+
+### Grok Build
+
+Run `eai gofer refresh` in the project, then start Grok with `eai start`. The
+CLI opens the project and asks Grok to use `.grok/skills/eai/SKILL.md`.
 
 ## 2. Initialize The Repository
 
@@ -114,6 +120,7 @@ Use the host-specific command syntax:
 | Codex          | `$eai I want to add passwordless login for customers`                                   |
 | GitHub Copilot | `#eai I want to add passwordless login for customers`                                   |
 | Gemini CLI     | `/eai I want to add passwordless login for customers`                                   |
+| Grok Build     | `Use the repository EAI skill. I want to add passwordless login for customers.`         |
 
 For first EAI Platform app setup, use the same `/eai` command. It will handle
 EAI CLI, login, tenant, app template, and Gofer scaffold readiness before it

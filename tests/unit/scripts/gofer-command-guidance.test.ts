@@ -34,13 +34,36 @@ describe('Gofer public execution-depth guidance', () => {
       '.agents/skills/eai/SKILL.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
       'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       expect(content, file).toContain('## Controlled English Contract');
       expect(content, file).toContain('ASD-STE100 Simplified Technical English');
       expect(content, file).toContain('Use one action per instruction');
       expect(content, file).toContain('For errors, write: what happened, why it matters');
-      expect(content, file).toContain('do not claim ASD certification');
+      expect(content, file).toMatch(/do not claim ASD\s+certification/);
+    }
+  });
+
+  it('starts a new app conversation with business outcomes and one specification approval', () => {
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.github/prompts/eai.prompt.md',
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
+      '.github/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
+      '.gemini/commands/gofer/eai.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain('## First Conversation');
+      expect(content, file).toContain('Start with the business outcome');
+      expect(content, file).toContain('Keep numbered Gofer stages internal');
+      expect(content, file).toContain('Pause once for approval of the business specification');
+      expect(content, file).toContain('Do not create a GitHub repository');
     }
   });
 

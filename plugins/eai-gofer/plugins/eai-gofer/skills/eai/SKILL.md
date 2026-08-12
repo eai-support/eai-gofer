@@ -55,6 +55,18 @@ Apply these rules before any user-facing output:
 
 If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
 
+## First Conversation
+
+When this is the first EAI conversation for a new app:
+
+1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
+2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+3. Use the repository and EAI CLI as sources of truth. Run `eai --describe` before assuming command syntax and explain known errors before recovery.
+4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+6. Pause once for approval of the business specification. Then continue unless a material business, security, cost, deployment, or destructive decision needs approval.
+7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
+
 ## EAI CLI Discovery And Recovery
 
 - Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery, not for confirmed non-app research/docs/audit/planning.
