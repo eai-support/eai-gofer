@@ -18,6 +18,7 @@ const SYNC_PAIRS = [
   ['.github/instructions', 'extension/resources/copilot-instructions'],
   ['.github/skills', 'extension/resources/github-skills'],
   ['.gemini', 'extension/resources/gemini'],
+  ['.grok/skills', 'extension/resources/grok-skills'],
   ['.specify/commands', 'extension/resources/specify-commands'],
   ['.specify/config', 'extension/resources/specify-config'],
   ['.specify/contracts', 'extension/resources/contracts'],
