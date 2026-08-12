@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.8.1",
+  "version": "3.8.2",
   "description": "Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.",
   "author": {
     "name": "EAI Tools",
@@ -74,7 +74,7 @@
       "gofer:zoom-out"
     ],
     "marketplacePath": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
-    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.8.1.zip",
-    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.8.1.vsix"
+    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.8.2.zip",
+    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.8.2.vsix"
   }
 }
