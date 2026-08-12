@@ -424,6 +424,14 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
     print_info "Release mode: publish merged main"
     TAG_NAME="v$CURRENT_VERSION"
 
+    print_info "Re-verifying eai update refresh compatibility before tagging..."
+    if node scripts/verify-eai-refresh-layout.mjs 2>&1; then
+        print_success "EAI refresh layout is complete"
+    else
+        print_error "Gofer cannot produce the resource layout required by eai update"
+        exit 1
+    fi
+
     ensure_release_paths_tracked \
         "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix" \
         "docs-site/static/releases/eai-gofer-latest.vsix" \
@@ -581,6 +589,14 @@ if node .specify/scripts/node/sync-extension-resources.mjs 2>&1; then
     print_success "Extension resources synced"
 else
     print_error "Failed to sync extension resources"
+    exit 1
+fi
+
+print_info "Verifying eai update refresh compatibility..."
+if npm run gofer:eai-refresh-layout:check 2>&1; then
+    print_success "EAI refresh layout is complete"
+else
+    print_error "Gofer cannot produce the resource layout required by eai update"
     exit 1
 fi
 
