@@ -27,6 +27,11 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('eai login');
     expect(scenarioCommand).toContain('eai tenant list --format json');
     expect(scenarioCommand).toContain('eai init <app-name>');
+    expect(scenarioCommand).toContain(
+      'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
+    );
+    expect(scenarioCommand).toContain('any status other than `ready` is a hard stop');
+    expect(scenarioCommand).toContain('Do not accept copied marker files');
     expect(scenarioCommand).toContain('eai template check --format json');
     expect(scenarioCommand).toMatch(/eai gofer\s+refresh --check\s+--format json/);
     expect(scenarioCommand).toContain('eai workflow readiness --format json');
@@ -66,6 +71,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(planCommand).toContain('next recovery command');
     expect(planCommand).toContain('EAI Platform/Azure app stack decision');
     expect(tasksCommand).toContain('EAI readiness unblock -> `eai-preflight.md`');
+    expect(tasksCommand).toContain('App-template readiness cannot be deferred');
     expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
     expect(tasksCommand).toContain(
@@ -85,6 +91,10 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /Record\s+only\s+a\s+redacted\s+callback\s+route\s+pattern\s+and\s+recovery\s+status/i
     );
     expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
+    expect(implementCommand).toContain(
+      'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
+    );
+    expect(implementCommand).toContain('blocks every app');
   });
 
   it('ships the EAI preflight template to canonical and mirrored resources', () => {
@@ -97,6 +107,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(canonicalTemplate).toContain('Execution Order And Gate Tracking');
     expect(canonicalTemplate).toContain('CLI release status');
     expect(canonicalTemplate).toContain('Drift readiness');
+    expect(canonicalTemplate).toContain('eai-app-template-readiness status');
+    expect(canonicalTemplate).toContain('.eai-manifest.json');
+    expect(canonicalTemplate).toContain('eai.runtime.json');
     expect(canonicalTemplate).toContain('Workflow readiness');
     expect(canonicalTemplate).toContain('Object-type publish');
     expect(canonicalTemplate).toContain('Entra redirect readiness');
