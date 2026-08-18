@@ -48,6 +48,7 @@ function isCanonicalTemplateSource(value) {
     .replace(/^git\+/, '')
     .replace(/^git@github\.com:/, 'github.com/')
     .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '')
     .replace(/\.git(?=@|$)/, '')
     .replace(/@[0-9a-f]{7,40}$/i, '')
     .replace(/\s+\(legacy scaffold inferred\)$/i, '')

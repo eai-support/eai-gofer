@@ -128,6 +128,26 @@ describe('EAI app-template readiness gate', () => {
     expect(result.report.ready).toBe(true);
   });
 
+  it('allows the canonical template URL with a trailing slash', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    write(
+      root,
+      '.eai-manifest.json',
+      validManifest({
+        template: {
+          repo: 'https://github.com/eai-support/eai-app-template.git/',
+          initializedAt: '2026-08-18T00:00:00.000Z',
+        },
+      })
+    );
+
+    const result = run(root);
+
+    expect(result.status).toBe(0);
+    expect(result.report.status).toBe('ready');
+  });
+
   it('does not print manifest values that may contain private context', () => {
     const root = makeRoot();
     writeReadyProject(root);
