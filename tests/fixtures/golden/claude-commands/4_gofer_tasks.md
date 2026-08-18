@@ -613,10 +613,12 @@ deploy-doctor evidence exist before any deploy command runs.
      install/update `eai`, run `eai login`, run `eai tenant select`, confirm a
      tenant-admin membership with `eai tenant list --format json`, initialize
      the EAI app template with `eai init <app-name> --skip-prompts
-     --company-tenant <tenant-id>` when confirmed, and confirm app enrollment
-     with `eai app list/create/select`.
-   - Do not emit object-type, UI, implementation, deployment, or service-fit
-     tasks until EAI readiness is `ready` or explicitly deferred by the user.
+     --company-tenant <tenant-id>` when confirmed, enter the created app folder,
+     and run `node .specify/scripts/node/eai-app-template-readiness.mjs --root
+     . --json`.
+   - Do not emit app enrollment, object-type, UI, implementation, deployment,
+     or service-fit tasks until the checker proves eai-init provenance and the
+     supported app-template contract. App-template readiness cannot be deferred.
    - Never invent tenant IDs, app keys, app URLs, or platform capabilities.
      Use `eai --describe`, public EAI docs, and the user's confirmed tenant/app
      selection as evidence.

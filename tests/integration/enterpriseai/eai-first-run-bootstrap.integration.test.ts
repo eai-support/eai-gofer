@@ -43,6 +43,13 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain(
       'eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>'
     );
+    expect(command).toContain(
+      'node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json'
+    );
+    expect(command).toContain('.eai-manifest.json');
+    expect(command).toContain('eai.runtime.json');
+    expect(command).toContain('Do not treat copied marker files');
+    expect(command).toContain('Continue only when the readiness status is `ready`');
     expect(command).toContain('eai template check --format json');
     expect(command).toContain('eai gofer refresh --check --format json');
     expect(command).toContain('eai doctor --check-updates');

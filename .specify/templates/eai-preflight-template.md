@@ -18,7 +18,7 @@ updated: '{{iso_timestamp}}'
 | CLI capabilities discovered | {{ready       | blocked}}             | {{eai --describe timestamp}} |
 | Logged in                   | {{ready       | login_required        | account_required}}           | {{eai whoami summary, no tokens}}                                                  |
 | Tenant ready                | {{ready       | tenant_required       | operator_required}}          | {{tenant role category, no private payloads}}                                      |
-| Template ready              | {{ready       | template_required     | deferred}}                   | {{template markers or eai verify result}}                                          |
+| Template ready              | {{ready       | template_required     | blocked}}                    | {{eai-app-template-readiness status; no manifest values}}                          |
 | Drift readiness             | {{ready       | drift_detected        | not_applicable}}             | {{eai template check / eai gofer refresh --check}}                                 |
 | App enrollment ready        | {{ready       | confirmation_required | blocked                      | deferred}}                                                                         | {{app list/create/select summary}}                                 |
 | Entra redirect readiness    | {{ready       | not_required          | blocked                      | deferred}}                                                                         | {{callback URI, client ID label, and AADSTS50011 recovery status}} |
@@ -47,6 +47,7 @@ updated: '{{iso_timestamp}}'
 | Capability discovery      | `eai --describe`                                                                                                  | {{result}}            |
 | Login check               | `eai whoami`                                                                                                      | {{result}}            |
 | Tenant check              | `eai tenant list --format json`                                                                                   | {{result}}            |
+| App-template readiness    | `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`                                       | {{result_or_not_run}} |
 | Project check             | `eai verify`                                                                                                      | {{result_or_not_run}} |
 | Template drift check      | `eai template check --format json`                                                                                | {{result_or_not_run}} |
 | Gofer drift check         | `eai gofer refresh --check --format json`                                                                         | {{result_or_not_run}} |
@@ -72,6 +73,8 @@ updated: '{{iso_timestamp}}'
 
 | Marker                           | Present |
 | -------------------------------- | ------- | ---- |
+| `.eai-manifest.json`             | {{yes   | no}} |
+| `eai.runtime.json`               | {{yes   | no}} |
 | `src/eai.config/object-types.ts` | {{yes   | no}} |
 | `src/eai.config/register.ts`     | {{yes   | no}} |
 | `.env.example`                   | {{yes   | no}} |
