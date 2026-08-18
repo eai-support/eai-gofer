@@ -413,6 +413,22 @@ function withTenantContextErrorGuidance(content) {
   );
 }
 
+function withEaiAppTemplateGate(content) {
+  if (content.includes('## EAI App Template Gate')) return content;
+
+  const guidance = `## EAI App Template Gate
+
+- Before app research or source changes, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available.
+- A missing checker or any status other than \`ready\` is a hard stop for app delivery.
+- Complete \`eai init\`, enter the created app folder, then rerun the checker, \`eai verify\`, and \`eai template check --format json\`.
+- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
+- Confirmed non-app work is exempt.
+
+`;
+
+  return content.replace('## EAI CLI Discovery And Recovery', `${guidance}## EAI CLI Discovery And Recovery`);
+}
+
 function withFirstConversationGuidance(content) {
   if (content.includes('## First Conversation')) {
     return content;
@@ -878,7 +894,9 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   );
 
   for (const entry of PUBLIC_ENTRYPOINTS) {
-    const skill = withFirstConversationGuidance(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry)));
+    const skill = withFirstConversationGuidance(
+      withEaiAppTemplateGate(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry)))
+    );
     await writeText(path.join(pluginRoot, 'skills', entry.stem, 'SKILL.md'), skill);
     await writeText(path.join(pluginRoot, UMBRELLA_SKILLS_DIR, entry.stem, 'SKILL.md'), skill);
   }
@@ -985,7 +1003,11 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
   });
   await writeText(
     path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),
-    withFirstConversationGuidance(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0])))
+    withFirstConversationGuidance(
+      withEaiAppTemplateGate(
+        withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
+      )
+    )
   );
 
   const iconSource = path.join(root, PLUGIN_ICON_SOURCE);
