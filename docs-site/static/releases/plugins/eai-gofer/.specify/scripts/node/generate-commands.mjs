@@ -300,10 +300,13 @@ Apply these rules before any user-facing output:
 ## EAI Platform Readiness
 
 1. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-2. Confirm the user is logged in, an active tenant is available, and the repo is ready for the EAI app template.
-3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\` when present.
-4. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
-5. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
+2. For app delivery, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when the checker exists.
+3. Treat a missing checker or any result other than \`ready\` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
+4. Run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`. It must run \`eai init\` in the approved target folder and switch the active workspace to the created app.
+5. Rerun the readiness checker, \`eai verify\`, and \`eai template check --format json\`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that \`eai init\` completed.
+7. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
+8. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
 
 ## First Conversation
 
@@ -613,9 +616,11 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 5. If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
 6. For EAI app delivery, treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
 7. For EAI app delivery, run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
-8. If app-delivery readiness is missing, stop and run \`/gofer:eai-first-run\` or ask the user to approve login/setup before continuing.
-9. For EAI app delivery, do not continue into research, specification, planning, tasks, implementation, or validation until \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, template, app-readiness, and next-action evidence.
-10. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+8. Run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available. A missing checker or any status other than \`ready\` blocks all app-delivery stages.
+9. If blocked, run \`/gofer:eai-first-run\`. The first-run path must complete \`eai init\`, enter the created app folder, and rerun the checker.
+10. Do not continue into research, specification, planning, tasks, implementation, or validation until the checker passes and \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, eai-init provenance, template readiness, and next-action evidence.
+11. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
+12. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
 `.trim();
 }
 

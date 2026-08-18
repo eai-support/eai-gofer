@@ -299,24 +299,23 @@ with an unrelated non-EAI stack.
      and tenant access before Gofer can build an EAI app. Do not fabricate
      tenant IDs or continue into implementation.
 6. **Check EAI template/project readiness**
-   - Detect existing template markers before scaffolding:
-     - `src/eai.config/object-types.ts`
-     - `src/eai.config/register.ts`
-     - `.env.example`
-     - `.npmrc`
-     - `package.json`
-   - Run `eai verify` only when the repo appears to be an EAI project. If
-     `eai verify` reports `E001` or "Not in an EAI project", treat the repo as
-     not initialized from the EAI app template.
-   - If the repo appears to be an EAI project and the commands are advertised,
-     run `eai template check --format json` and `eai gofer refresh --check
-     --format json` to identify EAI template or Gofer scaffold drift before
-     planning implementation.
+   - Run `node .specify/scripts/node/eai-app-template-readiness.mjs --root .
+     --json` when available.
+   - A missing checker or any status other than `ready` is a hard stop for app
+     delivery. Do not research, specify, plan, create tasks, or edit app source.
+   - The check must prove `.eai-manifest.json` eai-init provenance and the
+     supported app-template contract, including `eai.runtime.json` and the EAI
+     configuration files.
+   - Do not accept copied marker files, a partial scaffold, or a custom
+     template as readiness evidence.
    - For a new or empty app workspace, ask:
      **"This looks like an EAI app build, but this repo has not been initialized from the EAI app template. Initialize it with `eai init <app-name>` now?"**
    - If the repo is non-empty or already contains source files, do not scaffold
      over it silently. Ask whether to initialize a new sibling EAI app directory
      with `eai init <app-name>`, or to stop and let the user prepare the repo.
+   - After `eai init`, enter the created app folder. Rerun the readiness checker,
+     `eai verify`, `eai template check --format json`, and
+     `eai gofer refresh --check --format json` before continuing.
 7. **Check app enrollment capability before build planning**
    - Once app name and tenant are confirmed, run `eai app list --format
      json` to confirm the tenant's current app enrollments.

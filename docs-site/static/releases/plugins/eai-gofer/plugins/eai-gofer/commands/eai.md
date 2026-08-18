@@ -45,10 +45,13 @@ Apply these rules before any user-facing output:
 ## EAI Platform Readiness
 
 1. Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery.
-2. Confirm the user is logged in, an active tenant is available, and the repo is ready for the EAI app template.
-3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md` when present.
-4. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
-5. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
+2. For app delivery, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json` when the checker exists.
+3. Treat a missing checker or any result other than `ready` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
+4. Run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`. It must run `eai init` in the approved target folder and switch the active workspace to the created app.
+5. Rerun the readiness checker, `eai verify`, and `eai template check --format json`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that `eai init` completed.
+7. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
+8. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
 
 ## First Conversation
 

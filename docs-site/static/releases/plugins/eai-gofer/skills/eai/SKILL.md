@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.9.0
+Version: 3.10.0
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -54,6 +54,14 @@ Apply these rules before any user-facing output:
 ## First EAI Platform App
 
 If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
+
+## EAI App Template Gate
+
+- Before app research or source changes, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json` when available.
+- A missing checker or any status other than `ready` is a hard stop for app delivery.
+- Complete `eai init`, enter the created app folder, then rerun the checker, `eai verify`, and `eai template check --format json`.
+- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
+- Confirmed non-app work is exempt.
 
 ## First Conversation
 
