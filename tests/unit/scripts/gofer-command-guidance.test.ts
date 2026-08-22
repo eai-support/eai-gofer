@@ -91,6 +91,7 @@ describe('Gofer public execution-depth guidance', () => {
     const frontmatter = content.split('---')[1];
 
     expect(frontmatter).toMatch(/^description:\s+.+$/m);
+    expect(frontmatter).not.toMatch(/^description:\s+[|>]/m);
     expect(frontmatter).not.toMatch(/\ndescription:\n\s+/);
   });
 
