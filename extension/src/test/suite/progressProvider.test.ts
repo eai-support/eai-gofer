@@ -21,7 +21,7 @@ suite('ProgressProvider Test Suite', function () {
     await setWorkflowProfile('standard');
 
     // Clean up temporary directory
-    await fs.rmdir(tempDir, { recursive: true }).catch(() => {});
+    await fs.rm(tempDir, { recursive: true, force: true });
   });
 
   setup(async () => {
@@ -30,7 +30,7 @@ suite('ProgressProvider Test Suite', function () {
     // Clean up .specify directory from previous tests
     const specifyDir = path.join(tempDir, '.specify');
     try {
-      await fs.rmdir(specifyDir, { recursive: true });
+      await fs.rm(specifyDir, { recursive: true, force: true });
     } catch (_e) {
       // Ignore if it doesn't exist
     }
