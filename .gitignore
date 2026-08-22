@@ -57,6 +57,7 @@ playwright-report/
 test-results/
 quality-reports/
 tests/integration/test-workspace-*/
+tests/**/.specify/memory/**
 
 # QAgent runtime artifacts
 .qagent/
