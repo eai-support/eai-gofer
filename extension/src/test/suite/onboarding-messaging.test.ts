@@ -21,8 +21,17 @@ function readFile(filePath: string): string {
   return fs.readFileSync(filePath, 'utf8');
 }
 
+function resolveRepoRoot(): string {
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  const repoRoot = candidates.find((candidate) =>
+    fs.existsSync(path.join(candidate, '.specify', 'commands'))
+  );
+  assert.ok(repoRoot, `Unable to resolve repo root from ${process.cwd()}`);
+  return repoRoot;
+}
+
 function readExtensionPackage(): ExtensionPackageShape {
-  const raw = readFile(path.join(process.cwd(), 'package.json'));
+  const raw = readFile(path.join(resolveRepoRoot(), 'extension', 'package.json'));
   return JSON.parse(raw) as ExtensionPackageShape;
 }
 
@@ -37,19 +46,21 @@ suite('onboarding messaging', () => {
       )?.contents ?? '';
 
     assert.ok(displayName.includes('Gofer'));
+    assert.ok(description.includes('/eai'));
     assert.ok(description.includes('core Gofer pipeline'));
-    assert.ok(welcomeContents.includes('Gofer Start'));
+    assert.ok(welcomeContents.includes('/eai'));
     assert.ok(welcomeContents.includes('research'));
     assert.ok(welcomeContents.includes('validate'));
   });
 
   test('keeps public Gofer messaging aligned across docs and extension initialization surface', () => {
-    const extensionReadme = readFile(path.join(process.cwd(), 'README.md'));
-    const rootReadme = readFile(path.join(process.cwd(), '..', 'README.md'));
-    const extensionSource = readFile(path.join(process.cwd(), 'src', 'extension.ts'));
+    const repoRoot = resolveRepoRoot();
+    const extensionReadme = readFile(path.join(repoRoot, 'extension', 'README.md'));
+    const rootReadme = readFile(path.join(repoRoot, 'README.md'));
+    const extensionSource = readFile(path.join(repoRoot, 'extension', 'src', 'extension.ts'));
 
     assert.ok(extensionReadme.includes('Gofer VS Code Extension'));
-    assert.ok(extensionReadme.includes('Gofer Start'));
+    assert.ok(extensionReadme.includes('/eai'));
     assert.deepStrictEqual(
       Array.from(extensionReadme.matchAll(/\]\(([^)]+)\)/g))
         .map((match) => match[1])

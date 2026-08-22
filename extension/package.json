@@ -1,7 +1,7 @@
 {
   "name": "gofer",
   "displayName": "Gofer [PREVIEW]",
-  "description": "Guide repository work from Gofer Start through the core Gofer pipeline to unified validation inside VS Code.",
+  "description": "Guide repository work through one /eai entrypoint to the core Gofer pipeline and unified validation inside VS Code.",
   "version": "3.10.1",
   "publisher": "EnterpriseAI",
   "icon": "icon.png",

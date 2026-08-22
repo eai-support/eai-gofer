@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { generateStakeholderArtifacts } from '../../../services/enterpriseai/internalApi/GenerateStakeholderArtifacts';
@@ -6,7 +7,12 @@ import { generateStakeholderArtifacts } from '../../../services/enterpriseai/int
 const FEATURE_DIR = '.specify/specs/029-enterpriseai-student-vertical-builder';
 
 async function readRootCommandFile(fileName: string): Promise<string> {
-  return fs.readFile(path.join(process.cwd(), '..', '.claude', 'commands', fileName), 'utf8');
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  const repoRoot = candidates.find((candidate) =>
+    fsSync.existsSync(path.join(candidate, '.specify', 'commands'))
+  );
+  assert.ok(repoRoot, `Unable to resolve repo root from ${process.cwd()}`);
+  return fs.readFile(path.join(repoRoot, '.specify', 'commands', fileName), 'utf8');
 }
 
 async function seedStakeholderInputs(workspaceRoot: string): Promise<void> {

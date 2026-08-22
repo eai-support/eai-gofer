@@ -36,6 +36,16 @@ Apply these rules before any user-facing output:
 9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
 10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
 
+## Always-On EAI Contract
+
+Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that prefix as activation for this contract, not as business content.
+
+1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+2. Keep the reply short unless the user asks for detail.
+3. Explain the business effect first.
+4. Put technical evidence in durable artifacts.
+5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+
 ## Workspace Preflight
 
 1. Resolve the repository root.
@@ -43,6 +53,18 @@ Apply these rules before any user-facing output:
 3. If the repo is missing or stale, ask exactly: **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 4. If the user says yes, run `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host copilot --include-mirrors`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
+
+## Journey State
+
+Before routing work, decide where the user is now.
+
+1. Read current feature state from `.specify/specs/`, `goal-ledger.json`, `eai-preflight.md`, `research.md`, `spec.md`, `plan.md`, `tasks.md`, validation reports, loop evidence, and handoff notes when they exist.
+2. Classify the request as conversation, research/docs/audit, EAI app delivery, or ambiguous.
+3. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
+4. For EAI app delivery or ambiguous app work, continue directly into EAI readiness.
+5. Find the earliest missing pipeline artifact or blocked EAI gate.
+6. Run that internal stage next, then continue forward.
+7. Keep the user-facing explanation at the business level.
 
 ## App vs Non-App Routing
 
@@ -62,6 +84,26 @@ Apply these rules before any user-facing output:
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that `eai init` completed.
 7. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
 8. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
+
+## EAI Platform Decision Contract
+
+For app delivery, make EAI Platform choices for the business user.
+
+1. Read `.specify/references/platform/eai-service-patterns.md`, `.specify/references/platform/eai-repo-contract.md`, and `.specify/references/platform/eai.md` before architecture or storage decisions.
+2. Run `eai --describe` before assuming current CLI syntax.
+3. Run `eai agent guide --format json` when the CLI advertises it.
+4. Run `eai resources schema --format json` and `eai workflow readiness --format json` when advertised and relevant.
+5. Create or update `.specify/specs/{feature}/service-fit-matrix.md`.
+6. Prefer the EAI app template, PublicAPI, ResourceAPI, object types, workflows, goals, targets, platform AI services, and tenant identity.
+7. Prefer PostgreSQL for relational, transactional, reporting, and workflow state.
+8. Prefer DocumentDB for flexible JSON documents, nested records, and high-change document models.
+9. Prefer Blob Storage for large files and binary content behind API-mediated access.
+10. Prefer AI Search as a derived search projection, not as the source of record.
+11. Prefer EAI content understanding and document services for classification, extraction, summarization, and Retrieval-Augmented Generation.
+12. Prefer EAI workflows, goals, and targets for approvals, long-running work, service goals, operating targets, and auditable process state.
+13. Use Azure second when the EAI Platform does not yet expose the needed capability.
+14. Use any other platform only as an explicit exception with rationale, owner, expiry, and validation evidence.
+15. Ask the user only for material business, security, cost, deployment, destructive, or external-system decisions.
 
 ## First Conversation
 

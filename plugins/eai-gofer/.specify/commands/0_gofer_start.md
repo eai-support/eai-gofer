@@ -81,6 +81,36 @@ certification.
    standards.
 <!-- gofer:business-progress:end -->
 
+## Always-On EAI Contract
+
+Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that
+prefix as activation for this contract, not as business content.
+
+1. Apply the Controlled English Contract to every Gofer-authored message and
+   artifact.
+2. Keep the reply short unless the user asks for detail.
+3. Explain the business effect first.
+4. Put technical evidence in durable artifacts.
+5. Do not make the user choose pipeline stages. Select the next internal stage
+   yourself.
+
+## Journey State
+
+Before routing work, decide where the user is now.
+
+1. Read current feature state from `.specify/specs/`, `goal-ledger.json`,
+   `eai-preflight.md`, `research.md`, `spec.md`, `plan.md`, `tasks.md`,
+   validation reports, loop evidence, and handoff notes when they exist.
+2. Classify the request as conversation, research/docs/audit, EAI app delivery,
+   or ambiguous.
+3. For conversation or research/docs/audit, continue the non-app Gofer path
+   after the one required non-app confirmation.
+4. For EAI app delivery or ambiguous app work, continue directly into EAI
+   readiness.
+5. Find the earliest missing pipeline artifact or blocked EAI gate.
+6. Run that internal stage next, then continue forward.
+7. Keep the user-facing explanation at the business level.
+
 ## Delivery Lineage Contract
 
 Before completing this stage, read `.specify/references/delivery-lineage.md`
@@ -339,6 +369,10 @@ with an unrelated non-EAI stack.
      business scenario, UI show-and-tell evidence, and service-fit evidence are
      complete.
 8. **Check template block and platform knowledge for research**
+   - Read `.specify/references/platform/eai-service-patterns.md`,
+     `.specify/references/platform/eai-repo-contract.md`, and
+     `.specify/references/platform/eai.md` before recommending architecture,
+     authentication, storage, workflow, search, or AI services.
    - Run or plan to run `eai blocks list --format json`, `eai blocks readiness
      --package-profile <external|internal|hybrid> --format json`, and `eai
      blocks describe <id> --format json` for candidate UI blocks.
@@ -355,6 +389,24 @@ with an unrelated non-EAI stack.
    - Use the EAI scenario library to map the business problem to the common
      four-step pattern: capture demand/context, prepare the decision, execute
      and collaborate, then resolve/explain/improve.
+   - Create or update `{FEATURE_DIR}/service-fit-matrix.md` with the recommended
+     EAI Platform services, the reason for each choice, and any gap or exception.
+   - Prefer PostgreSQL for relational, transactional, reporting, workflow state,
+     audit, and structured tenant business data.
+   - Prefer DocumentDB for flexible JSON documents, nested records, high-change
+     schemas, and user-authored document state.
+   - Prefer Blob Storage for large files, binary content, exports, and
+     file-like resources behind API-mediated access.
+   - Prefer AI Search as a derived search projection, not as the source of
+     record.
+   - Prefer EAI content understanding and document services for extraction,
+     classification, summarization, and Retrieval-Augmented Generation.
+   - Prefer EAI workflows, goals, and targets for approvals, long-running work,
+     service goals, operating targets, and auditable process state.
+   - Prefer platform AI services and workflow-backed agents before direct
+     provider SDKs or provider keys.
+   - Ask the user only when the choice affects cost, security, compliance,
+     deployment, data residency, external systems, or material business scope.
    - Keep private tenant IDs, tokens, secrets, and `.env.local` contents out of
      Gofer artifacts. Record only product-safe readiness states and evidence.
    - Treat `.specify/references/platform/eai-repo-contract.md` and

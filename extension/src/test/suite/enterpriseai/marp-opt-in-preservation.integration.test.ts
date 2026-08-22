@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {
@@ -12,6 +13,15 @@ const FEATURE_SPEC_PATH = `${FEATURE_DIR}/spec.md`;
 const EXPECTED_RELEASE_NOTES = `${FEATURE_DIR}/release-notes.md`;
 const EXPECTED_DEMO_SCRIPT = `${FEATURE_DIR}/demo-script.md`;
 const EXPECTED_MARP_PATH = `${FEATURE_DIR}/presentation.marp.md`;
+
+function resolveRepoRoot(): string {
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  const repoRoot = candidates.find((candidate) =>
+    fsSync.existsSync(path.join(candidate, '.specify', 'commands'))
+  );
+  assert.ok(repoRoot, `Unable to resolve repo root from ${process.cwd()}`);
+  return repoRoot;
+}
 
 async function seedStakeholderInputs(workspaceRoot: string): Promise<void> {
   const featureDirPath = path.join(workspaceRoot, FEATURE_DIR);
@@ -132,9 +142,8 @@ suite('enterpriseai marp opt-in preservation (extension integration)', () => {
 
   test('documents Marp as opt-in and default-recommended for EnterpriseAI while preserving legacy outputs', async () => {
     const commandPath = path.join(
-      process.cwd(),
-      '..',
-      '.claude',
+      resolveRepoRoot(),
+      '.specify',
       'commands',
       '7a_stakeholder_comms.md'
     );

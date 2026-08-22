@@ -31,16 +31,18 @@ Before app-delivery research, planning, implementation, or validation:
 
 1. Read `.specify/specs/{feature}/eai-preflight.md` when it exists.
 2. Read `.specify/references/platform/eai-error-catalog.yaml`.
-3. If CLI, login, tenant, template, or Gofer readiness is missing or stale, run
+3. Read `.specify/references/platform/eai-service-patterns.md` before choosing
+   storage, workflow, content, search, AI, or integration services.
+4. If CLI, login, tenant, template, or Gofer readiness is missing or stale, run
    `/gofer:eai-first-run`.
-4. Use current CLI discovery instead of memory:
+5. Use current CLI discovery instead of memory:
    - `eai update --check`
    - `eai --describe`
    - `eai agent guide --format json` when advertised
    - `eai whoami`
    - `eai tenant list --format json`
    - `eai provision entra` when advertised and identity setup is in scope
-5. When the repo is an EAI project, check drift before further build work:
+6. When the repo is an EAI project, check drift before further build work:
    - `eai template check --format json`
    - `eai gofer refresh --check --format json`
    - `eai workflow readiness --format json` when advertised by the CLI
@@ -65,6 +67,29 @@ For application delivery:
 
 Do not silently replace an unavailable EAI capability with a non-EAI primary
 runtime, database, or hosting stack.
+
+## Platform Service Choice Rule
+
+For normal app work, make the best EAI Platform service choice for the business
+user and record it in `service-fit-matrix.md`.
+
+- Use PostgreSQL for relational, transactional, reporting, workflow state,
+  audit, and structured tenant business data.
+- Use DocumentDB for flexible JSON documents, nested records, high-change
+  schemas, and user-authored document state.
+- Use Blob Storage for large files, binary content, exports, and file-like
+  resources behind API-mediated access.
+- Use AI Search as a derived full-text, vector, or hybrid search projection, not
+  as the source of record.
+- Use EAI content understanding and document services for classification,
+  extraction, summarization, and Retrieval-Augmented Generation.
+- Use EAI workflows, goals, and targets for approvals, long-running work,
+  service goals, operating targets, and auditable process state.
+- Use platform AI services and workflow-backed agents before direct provider
+  SDKs or provider keys.
+
+Ask the user only when the choice affects cost, security, compliance,
+deployment, data residency, external systems, or material business scope.
 
 ## Ordered App-Delivery Gates
 

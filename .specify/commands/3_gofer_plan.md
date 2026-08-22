@@ -148,6 +148,30 @@ Avoid artifact churn. Optional diagrams, extended architecture councils,
 generated issue packs, and broad release plans are only warranted when risk is
 full/dynamic-depth or the user asks for them.
 
+## EAI Platform Service Planning
+
+For EAI app delivery, read `.specify/references/platform/eai-service-patterns.md`
+before writing `plan.md`, `data-model.md`, contracts, or `service-fit-matrix.md`.
+
+Make the normal EAI Platform choice on behalf of the business user:
+
+1. Use PostgreSQL for relational, transactional, reporting, workflow state,
+   audit, and structured tenant business data.
+2. Use DocumentDB for flexible JSON documents, nested records, high-change
+   schemas, and user-authored document state.
+3. Use Blob Storage for large files, binary content, exports, and file-like
+   resources behind API-mediated access.
+4. Use AI Search as a derived search projection, not as the source of record.
+5. Use EAI content understanding and document services for extraction,
+   classification, summarization, and Retrieval-Augmented Generation.
+6. Use EAI workflows, goals, and targets for approvals, long-running work,
+   service goals, operating targets, and auditable process state.
+7. Use platform AI services and workflow-backed agents before direct provider
+   SDKs or provider keys.
+8. Ask the user only when the choice affects cost, security, compliance,
+   deployment, data residency, external systems, or material business scope.
+9. Record each choice, reason, evidence, and exception in `service-fit-matrix.md`.
+
 ## Prerequisites
 
 This command expects in `.specify/specs/{feature}/`:

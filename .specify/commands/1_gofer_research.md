@@ -200,8 +200,27 @@ This is the **first stage** of the unified Gofer pipeline. Your job is to:
 - `.specify/specs/{feature}/ui-preview-brief.md` (application delivery default)
 - `.specify/specs/{feature}/context-bundle.md` (EnterpriseAI profile only)
 - `.specify/specs/{feature}/reuse-scan.md` (EnterpriseAI profile only)
+- `.specify/specs/{feature}/service-fit-matrix.md` (EAI app delivery default;
+  platform services, recommended choice, evidence, gaps, and exceptions)
 
 ---
+
+## EAI Platform Capability Research
+
+For EAI app delivery, research the EAI Platform before recommending any app
+architecture.
+
+1. Read `.specify/references/platform/eai-service-patterns.md`,
+   `.specify/references/platform/eai-repo-contract.md`, and
+   `.specify/references/platform/eai.md`.
+2. Run `eai --describe` before assuming current CLI syntax.
+3. Run `eai agent guide --format json` when advertised.
+4. Run `eai resources schema --format json` and
+   `eai workflow readiness --format json` when advertised and relevant.
+5. Record candidate services in `service-fit-matrix.md`.
+6. Prefer EAI Platform services before Azure.
+7. Use non-EAI platforms only as explicit exceptions.
+8. Keep private tenant IDs, secrets, and `.env` values out of artifacts.
 
 ## Step 0: Context Health Check
 

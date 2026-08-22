@@ -161,6 +161,7 @@ This command expects:
 - `research.md` completed from `/1_gofer_research`
 - `goal-ledger.json` seeded from `/1_gofer_research`
 - `loop-contract.json` seeded from `/1_gofer_research`
+- `service-fit-matrix.md` when the feature is EAI app delivery
 - `proposal-review.md` if research created supporting review context
 
 If these don't exist, prompt user to run `/1_gofer_research` first.
@@ -181,6 +182,22 @@ do not continue to planning.
 Downstream stages use repo scripts that fail on missing, empty, or still-template
 specs. Treat that failure as a required return to `/2_gofer_specify`, not as a
 script problem to bypass.
+
+## EAI Platform Requirement Capture
+
+For EAI app delivery, the specification must carry the platform decision into
+testable requirements.
+
+1. Read `service-fit-matrix.md` and
+   `.specify/references/platform/eai-service-patterns.md`.
+2. State which user journeys need authentication, tenant access, data storage,
+   file handling, search, content understanding, workflows, goals, targets, and
+   platform AI services.
+3. Prefer EAI Platform services before Azure.
+4. Use non-EAI platforms only as explicit exceptions.
+5. Include acceptance criteria for login, tenant selection, storage behavior,
+   workflow readiness, AI-service behavior, and error recovery when relevant.
+6. Keep secrets, private tenant IDs, and `.env` values out of `spec.md`.
 
 ## Outline
 
