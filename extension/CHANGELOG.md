@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.2] - 2026-08-22
+
+Make the eai entrypoint platform-aware and preserve internal Gofer pipeline
+
 ## [3.10.1] - 2026-08-22
 
 Fix Codex EAI plugin discovery

@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.",
-    "version": "3.10.1"
+    "version": "3.10.2"
   },
   "plugins": [
     {
       "name": "eai-gofer",
       "source": "./plugins/eai-gofer",
       "description": "Gofer single-entry delivery command with internal pipeline routing.",
-      "version": "3.10.1",
+      "version": "3.10.2",
       "author": {
         "name": "EAI Tools",
         "url": "https://github.com/eai-support/eai-gofer"
