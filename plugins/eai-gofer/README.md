@@ -1,6 +1,6 @@
 # Gofer Agent Plugin
 
-Version: 3.7.33
+Version: 3.10.0
 
 This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
@@ -22,8 +22,8 @@ That host publishes:
 
 - Latest VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Latest agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip`
-- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.7.33.vsix`
-- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.7.33.zip`
+- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.10.0.vsix`
+- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.10.0.zip`
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
@@ -47,6 +47,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | GitHub Copilot app / VS Code agent mode | `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
 | Claude Code app | `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
 | Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json` |
+| Grok Build | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/` |
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
 

@@ -8,7 +8,7 @@
  *
  * Surfaces: claude, claude-mirror, copilot, github-prompts, github-agents,
  *           github-skills, claude-skills, agents-skills, system-skills,
- *           gemini, agents-md, codex-config
+ *           grok-skills, gemini, agents-md, codex-config
  */
 
 import { promises as fs } from 'fs';
@@ -37,6 +37,7 @@ const ALL_SURFACES = [
   'github-skills',
   'agents-skills',
   'system-skills',
+  'grok-skills',
   'gemini',
   'agents-md',
   'codex-config',
@@ -63,6 +64,7 @@ const SURFACE_WORKSPACE_HOSTS = {
   'github-skills': 'copilot',
   'agents-skills': 'codex',
   'system-skills': 'codex',
+  'grok-skills': 'grok',
   'gemini': 'gemini',
 };
 const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
@@ -298,10 +300,25 @@ Apply these rules before any user-facing output:
 ## EAI Platform Readiness
 
 1. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-2. Confirm the user is logged in, an active tenant is available, and the repo is ready for the EAI app template.
-3. If EAI CLI, login, tenant, or template readiness is missing for app delivery, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\` when present.
-4. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
-5. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
+2. For app delivery, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when the checker exists.
+3. Treat a missing checker or any result other than \`ready\` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
+4. Run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`. It must run \`eai init\` in the approved target folder and switch the active workspace to the created app.
+5. Rerun the readiness checker, \`eai verify\`, and \`eai template check --format json\`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that \`eai init\` completed.
+7. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
+8. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
+
+## First Conversation
+
+When this is the first EAI conversation for a new app:
+
+1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
+2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+3. Use the repository and EAI CLI as sources of truth. Run \`eai --describe\` before assuming command syntax and explain known errors before recovery.
+4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+6. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
+7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
 
 ## Route The Pipeline
 
@@ -599,9 +616,11 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 5. If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
 6. For EAI app delivery, treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
 7. For EAI app delivery, run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
-8. If app-delivery readiness is missing, stop and run \`/gofer:eai-first-run\` or ask the user to approve login/setup before continuing.
-9. For EAI app delivery, do not continue into research, specification, planning, tasks, implementation, or validation until \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, template, app-readiness, and next-action evidence.
-10. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+8. Run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available. A missing checker or any status other than \`ready\` blocks all app-delivery stages.
+9. If blocked, run \`/gofer:eai-first-run\`. The first-run path must complete \`eai init\`, enter the created app folder, and rerun the checker.
+10. Do not continue into research, specification, planning, tasks, implementation, or validation until the checker passes and \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, eai-init provenance, template readiness, and next-action evidence.
+11. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
+12. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
 `.trim();
 }
 
@@ -1267,6 +1286,28 @@ async function emitSystemSkills(stages, root, dryRun) {
   return true;
 }
 
+async function emitGrokSkills(stages, root, dryRun) {
+  const baseDir = path.join(root, '.grok', 'skills');
+  let count = 0;
+  const version = await detectPackageVersion(root);
+  await clearDirectoryEntries(baseDir, (entry) => entry.isDirectory(), dryRun, 'grok-skills');
+  for (const entry of PUBLIC_ENTRYPOINTS) {
+    const skillDir = path.join(baseDir, entry.stem);
+    const outPath = path.join(skillDir, 'SKILL.md');
+    const content = buildPublicEntrypointSkill(entry, version, stages, 'Grok Build', 'grok');
+    if (dryRun) {
+      console.log(`[dry-run] grok-skills: would write ${outPath}`);
+    } else {
+      await ensureDir(skillDir);
+      await fs.writeFile(outPath, content, 'utf8');
+      console.log(`grok-skills: wrote ${outPath}`);
+    }
+    count++;
+  }
+  console.log(`grok-skills: ${count} file(s) emitted`);
+  return true;
+}
+
 /**
  * T065 — gemini emitter
  * Emits plain markdown body and TOML command wrappers to
@@ -1454,6 +1495,7 @@ const EMITTERS = {
   'github-skills': emitGithubSkills,
   'agents-skills': emitAgentsSkills,
   'system-skills': emitSystemSkills,
+  'grok-skills': emitGrokSkills,
   'gemini': emitGemini,
   'agents-md': emitAgentsMd,
   'codex-config': emitCodexConfig,

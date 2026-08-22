@@ -94,6 +94,8 @@ This command is intentionally allowed to run before `.specify/` exists.
 - Prefer existing tools over reinstalling. Keep working Git, Node.js, npm, and
   EAI CLI installations.
 - Do not scaffold over a non-empty repo silently.
+- Do not start app research, specification, planning, tasks, or source changes
+  until the EAI app-template readiness check passes.
 - Use the EAI Platform app template first, Azure second, and non-EAI stacks only
   by explicit exception.
 - In GitHub Codespaces, avoid `sudo` or host-level package installs unless the
@@ -301,18 +303,31 @@ Collect or confirm:
 
 ## Step 7: Initialize The EAI App Template
 
-Detect existing template markers before scaffolding:
+Use the deterministic app-template gate when it exists:
 
+```bash
+node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json
+```
+
+The gate requires the `.eai-manifest.json` provenance written by `eai init`
+and the supported EAI app-template contract:
+
+- `.eai-manifest.json`
+- `eai.runtime.json`
 - `src/eai.config/object-types.ts`
 - `src/eai.config/register.ts`
 - `.env.example`
 - `.npmrc`
 - `package.json`
 
-If the repo already looks like an EAI app, run `eai verify` and continue with
-the existing project. If the installed CLI advertises them, also run:
+Do not treat copied marker files, a partial scaffold, or a custom template as
+proof that `eai init` completed. A missing checker or any status other than
+`ready` blocks app delivery.
+
+If the gate returns `ready`, run:
 
 ```bash
+eai verify
 eai template check --format json
 eai gofer refresh --check --format json
 ```
@@ -331,6 +346,17 @@ eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>
 If the CLI requires additional safe answers, gather them first. If the repo is
 non-empty and not an EAI app, ask whether to initialize a new sibling EAI app
 directory or stop.
+
+After `eai init` succeeds, enter the created app folder and rerun:
+
+```bash
+node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json
+eai verify
+eai template check --format json
+```
+
+Continue only when the readiness status is `ready`. Record the safe status in
+`eai-preflight.md`; do not copy manifest values into the artifact.
 
 ## Step 8: Recover Known Entra Redirect Mismatches
 
@@ -404,7 +430,21 @@ If the current host cannot run slash commands yet, use the installed plugin
 bundle or downloaded public bundle as the bootstrap source described by
 `/gofer:bootstrap-workspace`.
 
-## Step 9: Open Or Attach The Created Project
+## Step 9: Start The Created Project In An AI Workspace
+
+Prefer the provider-neutral EAI handoff:
+
+```bash
+eai start --check
+eai start
+```
+
+The detection command is read-only. The final start action is the user's
+approval for the selected AI provider to read the project and use the provider
+account. If no supported surface is installed, explain why one is needed and
+offer the official provider choices returned by `eai start --check`.
+
+If `eai start` is unavailable, use the host-specific fallback below.
 
 Make sure the active host is working in the initialized EAI app folder:
 

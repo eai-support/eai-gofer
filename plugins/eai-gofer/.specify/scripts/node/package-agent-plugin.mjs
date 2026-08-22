@@ -404,6 +404,40 @@ function withTenantContextErrorGuidance(content) {
   );
 }
 
+function withEaiAppTemplateGate(content) {
+  if (content.includes('## EAI App Template Gate')) return content;
+
+  const guidance = `## EAI App Template Gate
+
+- Before app research or source changes, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available.
+- A missing checker or any status other than \`ready\` is a hard stop for app delivery.
+- Complete \`eai init\`, enter the created app folder, then rerun the checker, \`eai verify\`, and \`eai template check --format json\`.
+- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
+- Confirmed non-app work is exempt.
+
+`;
+
+  return content.replace('## EAI CLI Discovery And Recovery', `${guidance}## EAI CLI Discovery And Recovery`);
+}
+
+function withFirstConversationGuidance(content) {
+  if (content.includes('## First Conversation')) {
+    return content;
+  }
+  const section = `## First Conversation
+
+When this is the first EAI conversation for a new app:
+
+1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
+2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+3. Use the repository and EAI CLI as sources of truth. Run \`eai --describe\` before assuming command syntax and explain known errors before recovery.
+4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+6. Pause once for approval of the business specification. Then continue unless a material business, security, cost, deployment, or destructive decision needs approval.
+7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.`;
+  return content.replace('## EAI CLI Discovery And Recovery', `${section}\n\n## EAI CLI Discovery And Recovery`);
+}
+
 function buildWorkspacePreflightSection() {
   return `
 ## Workspace Preflight
@@ -549,6 +583,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
 | Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
 | Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| Grok Build | Ask Grok to use the EAI skill | \`.grok/skills/\`, \`.specify/scripts/\` |
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
 
@@ -850,7 +885,9 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   );
 
   for (const entry of PUBLIC_ENTRYPOINTS) {
-    const skill = withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry));
+    const skill = withFirstConversationGuidance(
+      withEaiAppTemplateGate(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry)))
+    );
     await writeText(path.join(pluginRoot, 'skills', entry.stem, 'SKILL.md'), skill);
     await writeText(path.join(pluginRoot, UMBRELLA_SKILLS_DIR, entry.stem, 'SKILL.md'), skill);
   }
@@ -963,8 +1000,10 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
     recursive: true,
     force: true,
   });
-  const rootUmbrellaSkill = withTenantContextErrorGuidance(
-    buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0])
+  const rootUmbrellaSkill = withFirstConversationGuidance(
+    withEaiAppTemplateGate(
+      withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
+    )
   );
   await writeText(
     path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),

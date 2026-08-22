@@ -2,6 +2,26 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.0] - 2026-08-18
+
+Require eai init and the supported app template before app delivery
+
+## [3.9.0] - 2026-08-12
+
+Add guided AI workspace onboarding
+
+## [3.8.2] - 2026-08-12
+
+Gate releases on the eai refresh resource layout
+
+## [3.8.1] - 2026-08-12
+
+Canonicalize GitHub connection slug derivation across generated app validation.
+
+## [3.8.0] - 2026-08-10
+
+Add canonical object type routing validation
+
 ## [3.7.33] - 2026-08-10
 
 Fix VS Code command visibility and single EAI command surface
