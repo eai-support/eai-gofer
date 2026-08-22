@@ -177,7 +177,8 @@ describe('Gofer agent plugin package', () => {
       expect(claudeManifest.skills).toBe('./skills/');
       expect(claudeManifest.agents).toBeUndefined();
       expect(claudeManifest.commands).toBeUndefined();
-      expect(codexManifest.skills).toBe('./plugin-skills/');
+      expect(codexManifest.skills).toBe('./skills/');
+      expect(codexManifest).not.toHaveProperty('gofer');
       expect(claudeMarketplace.name).toBe('eai-gofer');
       expect(claudeMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
       expect(codexMarketplace.name).toBe('eai-gofer');
@@ -232,6 +233,8 @@ describe('Gofer agent plugin package', () => {
       expect(fs.existsSync(path.join(pluginRoot, 'plugin-skills', 'gofer', 'SKILL.md'))).toBe(
         false
       );
+      expect(fs.existsSync(path.join(pluginRoot, 'skills', 'eai', 'SKILL.md'))).toBe(true);
+      expect(fs.existsSync(path.join(pluginRoot, 'skills', 'gofer', 'SKILL.md'))).toBe(false);
       expect(
         fs
           .readdirSync(path.join(pluginRoot, 'skills'), { withFileTypes: true })

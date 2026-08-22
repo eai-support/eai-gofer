@@ -128,13 +128,19 @@ async function main() {
       path.join(REPO_ROOT, `gofer-${version}.vsix`),
       path.join(REPO_ROOT, 'extension', `eai-gofer-${version}.vsix`),
       path.join(REPO_ROOT, 'extension', `gofer-${version}.vsix`),
+      path.join(PUBLIC_RELEASES_DIR, `eai-gofer-${version}.vsix`),
+      path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-latest.vsix'),
     ],
     'VSIX artifact'
   );
 
   const pluginZipPath = await resolveArtifact(
     version,
-    [path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}.zip`)],
+    [
+      path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}.zip`),
+      path.join(PUBLIC_RELEASES_DIR, `eai-gofer-agent-plugin-${version}.zip`),
+      path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-agent-plugin-latest.zip'),
+    ],
     'agent plugin zip'
   );
 

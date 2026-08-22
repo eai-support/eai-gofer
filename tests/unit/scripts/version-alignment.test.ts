@@ -20,7 +20,7 @@ describe('check-version-alignment', () => {
     expect(result.aligned).toBe(true);
     expect(result.expectedVersion).toBe(EXPECTED_VERSION);
     expect(result.versions.map((entry: { path: string }) => entry.path)).toContain(
-      '.codex-plugin/plugin.json#gofer.releaseAsset'
+      '.agents/plugins/marketplace.json'
     );
   });
 });

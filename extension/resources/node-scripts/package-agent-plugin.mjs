@@ -166,7 +166,7 @@ function buildCodexManifest(version, stages, paths = {}) {
       'gemini',
       'spec-driven-development',
     ],
-    skills: paths.skills ?? `./${UMBRELLA_SKILLS_DIR}/`,
+    skills: paths.skills ?? './skills/',
     interface: {
       displayName: PLUGIN_DISPLAY_NAME,
       shortDescription: 'Spec-driven delivery workflow for agentic coding',
@@ -179,20 +179,11 @@ function buildCodexManifest(version, stages, paths = {}) {
       defaultPrompt: [
         'Set up my first EAI Platform app with Gofer',
         'Run Gofer research for this feature',
-        'Create a Gofer implementation plan',
-        'Show the delivery lineage diagram for this feature',
         'Validate this branch with Gofer',
       ],
       brandColor: '#145DA0',
       composerIcon: paths.icon ?? `./${PLUGIN_ICON_TARGET}`,
       logo: paths.icon ?? `./${PLUGIN_ICON_TARGET}`,
-    },
-    gofer: {
-      publicEntrypoints: PUBLIC_ENTRYPOINTS.map((entry) => entry.name),
-      stages: stageNames(stages),
-      marketplacePath: PUBLIC_PLUGIN_URL,
-      releaseAsset: buildPublicAgentPluginZipUrl(version),
-      vsixAsset: buildPublicVsixUrl(version),
     },
   };
 }
@@ -959,7 +950,7 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
   await writeJson(
     path.join(root, '.codex-plugin', 'plugin.json'),
     buildCodexManifest(version, stages, {
-      skills: `./${UMBRELLA_SKILLS_DIR}/`,
+      skills: './skills/',
       icon: './assets/eai-gofer-icon.png',
     })
   );
@@ -1001,13 +992,26 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
     recursive: true,
     force: true,
   });
+  await fs.rm(path.join(root, 'skills', 'eai-gofer'), {
+    recursive: true,
+    force: true,
+  });
+  await fs.rm(path.join(root, 'skills', 'gofer'), {
+    recursive: true,
+    force: true,
+  });
+  const rootUmbrellaSkill = withFirstConversationGuidance(
+    withEaiAppTemplateGate(
+      withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
+    )
+  );
   await writeText(
     path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),
-    withFirstConversationGuidance(
-      withEaiAppTemplateGate(
-        withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
-      )
-    )
+    rootUmbrellaSkill
+  );
+  await writeText(
+    path.join(root, 'skills', 'eai', 'SKILL.md'),
+    rootUmbrellaSkill
   );
 
   const iconSource = path.join(root, PLUGIN_ICON_SOURCE);

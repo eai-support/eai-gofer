@@ -96,7 +96,8 @@ describe('workspace preflight surface generation', () => {
     const publicGeminiManifest = readPublicPlugin(
       path.join('.gemini', 'commands', 'gofer', 'manifest.json')
     );
-    expect(publicCodexManifest.gofer.publicEntrypoints).toEqual(['eai']);
+    expect(publicCodexManifest.skills).toBe('./skills/');
+    expect(publicCodexManifest.gofer).toBeUndefined();
     expect(publicCodexManifestText).not.toContain('0_business_scenario');
     expect(publicGeminiManifest).toContain('"eai"');
     expect(publicGeminiManifest).not.toContain('"gofer"');
