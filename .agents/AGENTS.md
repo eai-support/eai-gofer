@@ -2,13 +2,26 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-08-22T07:57:10.564Z
+Generated: 2026-08-22T21:02:27.175Z
 
 ## Public Entrypoints
 
 - `eai` - Start or continue Gofer from one user-facing command.
 
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under `.specify/commands/`.
+
+## Verified EAI CLI Command Contract
+
+Do not invent, guess, or complete EAI CLI commands from memory.
+
+1. Before you suggest or run an `eai ...` command, verify the exact command from the installed CLI.
+2. Start with `eai --describe` and use its command map as the source of truth.
+3. For a specific command, run `eai <command> --help` or the CLI-described equivalent before using flags, subcommands, or examples.
+4. Use `eai agent guide --format json` when the CLI advertises it.
+5. Use `eai errors explain <code-or-reason> --format json` after errors when the CLI advertises it.
+6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
+7. Record the verified command and source in `eai-preflight.md`, `service-fit-matrix.md`, or the active feature notes before the command changes files or external systems.
+8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
 
 ## EAI CLI Discovery And Recovery
 

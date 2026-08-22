@@ -200,6 +200,7 @@ describe('Gofer agent plugin package', () => {
       );
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
+      expect(readme).toContain('does not invent EAI CLI commands');
       expect(readme).toContain(
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );
@@ -209,6 +210,11 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('Claude Code app');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
+      expect(umbrellaSkill).toContain(
+        'Do not invent, guess, or complete EAI CLI commands from memory'
+      );
+      expect(umbrellaSkill).toContain('eai <command> --help');
+      expect(umbrellaSkill).toContain('If the command is not listed or help fails, do not run it');
       expect(umbrellaSkill).toContain(
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );

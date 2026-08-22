@@ -214,6 +214,8 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(agents).toContain('.specify/references/platform/eai-error-catalog.yaml');
     expect(agents).toContain('eai agent guide --format json');
     expect(agents).toContain('eai errors explain <code-or-reason> --format json');
+    expect(agents).toContain('Do not invent, guess, or complete EAI CLI commands from memory');
+    expect(agents).toContain('command-specific `--help`');
     expect(agents).toContain(
       'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
     );
@@ -223,6 +225,7 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(claude).toContain('## EAI Repo Contract');
     expect(claude).toContain('eai agent guide --format json');
     expect(claude).toContain('eai template check --format json');
+    expect(claude).toContain('Do not invent, guess, or complete EAI CLI commands from memory');
   });
 
   it('does not classify a repo as EAI-initialized when only manifest.yml exists', () => {

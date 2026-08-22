@@ -10,6 +10,15 @@ Use this fallback when external CLI documentation is unavailable.
 
 ## Command Guidance Contract
 
+- Do not invent, guess, or complete EAI CLI commands from memory.
+- Before suggesting or running an `eai ...` command, verify the exact command
+  and flags from the installed CLI.
+- Start with `eai --describe`.
+- For a specific command, run `eai <command> --help` or the CLI-described
+  equivalent before using subcommands, flags, or examples.
+- If the command is not listed or help fails, do not run it. Say the installed
+  EAI CLI does not expose that command, then choose a safe listed command or
+  ask the user to update EAI CLI.
 - Use live CLI discovery before assuming syntax:
   - `eai update --check`
   - `eai --describe`

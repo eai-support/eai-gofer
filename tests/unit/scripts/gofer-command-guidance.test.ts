@@ -64,6 +64,11 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('Keep numbered Gofer stages internal');
       expect(content, file).toContain('Pause once for approval of the business specification');
       expect(content, file).toContain('Do not create a GitHub repository');
+      expect(content, file).toContain('## Verified EAI CLI Command Contract');
+      expect(content, file).toContain(
+        'Do not invent, guess, or complete EAI CLI commands from memory'
+      );
+      expect(content, file).toContain('eai <command> --help');
     }
   });
 
@@ -79,6 +84,16 @@ describe('Gofer public execution-depth guidance', () => {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       expect(content, file).toContain(`Version: ${version}`);
     }
+  });
+
+  it('keeps the root eai skill frontmatter compatible with line-based parsers', () => {
+    const content = fs.readFileSync(path.join(REPO_ROOT, 'skills/eai/SKILL.md'), 'utf8');
+    const frontmatter = content.split('---')[1];
+
+    expect(frontmatter).toMatch(
+      /^description:\s+['"]Run Gofer through one public entrypoint\.['"]$/m
+    );
+    expect(frontmatter).not.toMatch(/\ndescription:\n\s+/);
   });
 
   it('documents generic risk labels across the six primary pipeline commands', () => {

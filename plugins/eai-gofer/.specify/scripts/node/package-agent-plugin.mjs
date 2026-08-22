@@ -408,6 +408,21 @@ Before routing work, decide where the user is now.
 7. Keep the user-facing explanation at the business level.`;
 }
 
+function buildVerifiedEaiCliCommandContract() {
+  return `## Verified EAI CLI Command Contract
+
+Do not invent, guess, or complete EAI CLI commands from memory.
+
+1. Before you suggest or run an \`eai ...\` command, verify the exact command from the installed CLI.
+2. Start with \`eai --describe\` and use its command map as the source of truth.
+3. For a specific command, run \`eai <command> --help\` or the CLI-described equivalent before using flags, subcommands, or examples.
+4. Use \`eai agent guide --format json\` when the CLI advertises it.
+5. Use \`eai errors explain <code-or-reason> --format json\` after errors when the CLI advertises it.
+6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
+7. Record the verified command and source in \`eai-preflight.md\`, \`service-fit-matrix.md\`, or the active feature notes before the command changes files or external systems.
+8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.`;
+}
+
 function buildEaiPlatformDecisionSection() {
   return `## EAI Platform Decision Contract
 
@@ -506,6 +521,8 @@ If the user is starting a first EAI Platform app, use the public \`eai\` entrypo
 - If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
 - For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.
 - Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.
+
+${buildVerifiedEaiCliCommandContract()}
 
 ${buildEaiPlatformDecisionSection()}
 
@@ -717,6 +734,8 @@ That host publishes:
 ## First EAI Platform App
 
 Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, tenant, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI tenant/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+
+Gofer does not invent EAI CLI commands. It verifies command paths and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them. If the installed CLI does not list a command, Gofer does not run it.
 
 For EAI errors, Gofer expects agents to run live EAI guidance first, use \`.specify/references/platform/eai-error-catalog.yaml\` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm tenant context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 
