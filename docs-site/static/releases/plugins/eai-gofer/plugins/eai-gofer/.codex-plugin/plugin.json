@@ -18,7 +18,7 @@
     "gemini",
     "spec-driven-development"
   ],
-  "skills": "./plugin-skills/",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Gofer",
     "shortDescription": "Spec-driven delivery workflow for agentic coding",
@@ -33,48 +33,10 @@
     "defaultPrompt": [
       "Set up my first EAI Platform app with Gofer",
       "Run Gofer research for this feature",
-      "Create a Gofer implementation plan",
-      "Show the delivery lineage diagram for this feature",
       "Validate this branch with Gofer"
     ],
     "brandColor": "#145DA0",
     "composerIcon": "./assets/eai-gofer-icon.png",
     "logo": "./assets/eai-gofer-icon.png"
-  },
-  "gofer": {
-    "publicEntrypoints": [
-      "eai"
-    ],
-    "stages": [
-      "0_gofer_start",
-      "0a_problem_validation",
-      "1_gofer_research",
-      "2_gofer_specify",
-      "3_gofer_plan",
-      "4_gofer_tasks",
-      "5_gofer_implement",
-      "6_gofer_validate",
-      "7_gofer_save",
-      "7a_stakeholder_comms",
-      "8_gofer_branding",
-      "9_gofer_tests",
-      "10_gofer_cloud",
-      "gofer:bootstrap-workspace",
-      "gofer:check-workspace",
-      "gofer_constitution",
-      "gofer:diagnose",
-      "gofer:eai-first-run",
-      "gofer_hydrate",
-      "gofer:personality",
-      "gofer:plan",
-      "gofer:side",
-      "gofer:spec-summary",
-      "gofer:tdd",
-      "gofer:vocabulary",
-      "gofer:zoom-out"
-    ],
-    "marketplacePath": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
-    "releaseAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.10.0.zip",
-    "vsixAsset": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.10.0.vsix"
   }
 }
