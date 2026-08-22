@@ -1,8 +1,6 @@
 ---
 name: eai
-description:
-  'Run Gofer through one public entrypoint while preserving the full internal
-  pipeline.'
+description: 'Run Gofer through one public entrypoint.'
 ---
 
 # Eai

@@ -86,6 +86,16 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
+  it('keeps the root eai skill frontmatter compatible with line-based parsers', () => {
+    const content = fs.readFileSync(path.join(REPO_ROOT, 'skills/eai/SKILL.md'), 'utf8');
+    const frontmatter = content.split('---')[1];
+
+    expect(frontmatter).toMatch(
+      /^description:\s+['"]Run Gofer through one public entrypoint\.['"]$/m
+    );
+    expect(frontmatter).not.toMatch(/\ndescription:\n\s+/);
+  });
+
   it('documents generic risk labels across the six primary pipeline commands', () => {
     for (const file of [
       '1_gofer_research.md',
