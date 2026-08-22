@@ -64,6 +64,11 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('Keep numbered Gofer stages internal');
       expect(content, file).toContain('Pause once for approval of the business specification');
       expect(content, file).toContain('Do not create a GitHub repository');
+      expect(content, file).toContain('## Verified EAI CLI Command Contract');
+      expect(content, file).toContain(
+        'Do not invent, guess, or complete EAI CLI commands from memory'
+      );
+      expect(content, file).toContain('eai <command> --help');
     }
   });
 

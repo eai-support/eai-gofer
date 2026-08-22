@@ -285,6 +285,9 @@ When first-run setup is needed, Gofer:
   as the static-registry fallback when npmjs is unavailable
 - runs `eai update --check`, `eai --describe`, `eai whoami`, and
   `eai tenant list --format json` before assuming CLI syntax or tenant readiness
+- does not invent EAI CLI commands; it verifies command paths and flags with
+  `eai --describe` and command-specific `--help` before suggesting or running
+  them
 - runs `eai agent guide --format json` when advertised, and after `eai` errors
   uses `eai errors explain <code-or-reason> --format json` before guessing a
   workaround

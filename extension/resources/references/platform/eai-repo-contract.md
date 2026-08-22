@@ -42,7 +42,11 @@ Before app-delivery research, planning, implementation, or validation:
    - `eai whoami`
    - `eai tenant list --format json`
    - `eai provision entra` when advertised and identity setup is in scope
-6. When the repo is an EAI project, check drift before further build work:
+6. Do not invent, guess, or complete EAI CLI commands from memory. Before
+   suggesting or running an `eai ...` command, verify the exact command and
+   flags from `eai --describe` and command-specific `--help`. If the installed
+   CLI does not list it, do not run it.
+7. When the repo is an EAI project, check drift before further build work:
    - `eai template check --format json`
    - `eai gofer refresh --check --format json`
    - `eai workflow readiness --format json` when advertised by the CLI

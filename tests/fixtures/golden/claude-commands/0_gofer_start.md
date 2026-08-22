@@ -258,8 +258,15 @@ with an unrelated non-EAI stack.
    - If `eai` is already installed, run `eai update --check`. If the CLI is
      behind, record `upgrade_required` and ask before running `eai update`.
 4. **Discover CLI capabilities before assuming syntax**
+   - Do not invent, guess, or complete EAI CLI commands from memory.
    - Run `eai --describe` and prefer advertised subcommands/options over stale
      remembered syntax.
+   - Before suggesting or running a specific `eai ...` command, verify its
+     command path and flags with command-specific `--help` or the equivalent
+     help path advertised by the CLI.
+   - If the installed CLI does not list a command, do not run it. Tell the user
+     that this EAI CLI version does not expose the command, then choose a safe
+     listed command or ask the user to update EAI CLI.
    - If advertised, run `eai agent guide --format json` before planning EAI
      platform work so the agent uses current CLI contracts and safe recovery
      patterns.
