@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.3] - 2026-08-23
+
+Require verified EAI CLI commands and parser-safe Gofer entrypoint packaging.
+
 ## [3.10.2] - 2026-08-22
 
 Make the eai entrypoint platform-aware and preserve internal Gofer pipeline

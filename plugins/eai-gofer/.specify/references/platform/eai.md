@@ -17,8 +17,8 @@ Use this fallback when external CLI documentation is unavailable.
 - For a specific command, run `eai <command> --help` or the CLI-described
   equivalent before using subcommands, flags, or examples.
 - If the command is not listed or help fails, do not run it. Say the installed
-  EAI CLI does not expose that command, then choose a safe listed command or
-  ask the user to update EAI CLI.
+  EAI CLI does not expose that command, then choose a safe listed command or ask
+  the user to update EAI CLI.
 - Use live CLI discovery before assuming syntax:
   - `eai update --check`
   - `eai --describe`

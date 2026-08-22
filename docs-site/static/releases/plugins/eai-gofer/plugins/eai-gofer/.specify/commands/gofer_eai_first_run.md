@@ -173,6 +173,8 @@ the user explicitly chooses a non-EAI path.
 
 ## Step 4: Discover EAI CLI Capabilities
 
+Do not invent, guess, or complete EAI CLI commands from memory.
+
 Run:
 
 ```bash
@@ -186,7 +188,15 @@ eai agent guide --format json
 ```
 
 Prefer commands and options advertised by the installed CLI over remembered
-syntax. Use JSON only where the CLI advertises it. Record a safe summary in the
+syntax. Before suggesting or running a specific `eai ...` command, verify its
+command path and flags with command-specific `--help` or the equivalent help
+path advertised by the CLI.
+
+If the installed CLI does not list a command, do not run it. Tell the user that
+this EAI CLI version does not expose the command, then choose a safe listed
+command or ask the user to update EAI CLI.
+
+Use JSON only where the CLI advertises it. Record a safe summary in the
 first-run report.
 
 When any later `eai` command fails, use the CLI's error guidance before
