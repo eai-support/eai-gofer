@@ -1,7 +1,7 @@
 # EAI Gofer VS Code Extension
 
 EAI Gofer brings the business specification-driven workflow into VS Code. It
-keeps repository work visible from Gofer Start through validation, mirrors the
+keeps repository work visible from `/eai` through validation, mirrors the
 repo-owned `.specify/` scaffold, and packages the resources needed by the EAI
 Gofer pipeline.
 

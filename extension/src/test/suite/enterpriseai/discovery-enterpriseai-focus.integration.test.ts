@@ -3,7 +3,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 function readRootCommandFile(fileName: string): string {
-  return fs.readFileSync(path.join(process.cwd(), '..', '.claude', 'commands', fileName), 'utf8');
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  const repoRoot = candidates.find((candidate) =>
+    fs.existsSync(path.join(candidate, '.specify', 'commands'))
+  );
+  assert.ok(repoRoot, `Unable to resolve repo root from ${process.cwd()}`);
+  return fs.readFileSync(path.join(repoRoot, '.specify', 'commands', fileName), 'utf8');
 }
 
 suite('enterpriseai discovery enterpriseai focus (extension integration)', () => {

@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import { createHash } from 'crypto';
+import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { CrossPlatformCommandRouter } from '../../../council/CrossPlatformCommandRouter';
@@ -15,6 +16,15 @@ interface BaselineProvenance {
 
 function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function resolveRepoRoot(): string {
+  const candidates = [process.cwd(), path.resolve(process.cwd(), '..')];
+  const repoRoot = candidates.find((candidate) =>
+    fsSync.existsSync(path.join(candidate, '.specify', 'commands'))
+  );
+  assert.ok(repoRoot, `Unable to resolve repo root from ${process.cwd()}`);
+  return repoRoot;
 }
 
 async function seedStakeholderInputs(workspaceRoot: string): Promise<void> {
@@ -55,20 +65,20 @@ suite('enterpriseai non-eai routing regression (extension integration)', () => {
   });
 
   test('preserves provider routing syntaxes and baseline standard artifact behavior', async () => {
-    const workspaceRoot = path.resolve(process.cwd(), '..');
+    const workspaceRoot = resolveRepoRoot();
     const router = new CrossPlatformCommandRouter(workspaceRoot);
 
-    const standardClaude = await router.routeCommand('0_gofer_start', 'claude', 'standard');
-    const enterpriseClaude = await router.routeCommand('0_gofer_start', 'claude', 'enterpriseai');
-    const standardCodex = await router.routeCommand('0_gofer_start', 'codex', 'standard');
-    const standardCopilot = await router.routeCommand('0_gofer_start', 'copilot', 'standard');
+    const standardClaude = await router.routeCommand('eai', 'claude', 'standard');
+    const enterpriseClaude = await router.routeCommand('eai', 'claude', 'enterpriseai');
+    const standardCodex = await router.routeCommand('eai', 'codex', 'standard');
+    const standardCopilot = await router.routeCommand('eai', 'copilot', 'standard');
 
     assert.strictEqual(normalizeWorkflowProfile(undefined), 'standard');
     assert.strictEqual(normalizeWorkflowProfile('unexpected-value'), 'standard');
 
-    assert.strictEqual(standardClaude.syntax, '/0_gofer_start');
-    assert.strictEqual(standardCodex.syntax, '/0_gofer_start');
-    assert.strictEqual(standardCopilot.syntax, '#0_gofer_start');
+    assert.strictEqual(standardClaude.syntax, '/eai');
+    assert.strictEqual(standardCodex.syntax, '/eai');
+    assert.strictEqual(standardCopilot.syntax, '#eai');
     assert.strictEqual(standardClaude.filePath, enterpriseClaude.filePath);
     assert.strictEqual(standardClaude.profileMatched, true);
 

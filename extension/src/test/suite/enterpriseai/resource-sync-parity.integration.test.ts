@@ -5,12 +5,14 @@ import { ResourceSyncer } from '../../../services/migration/ResourceSyncer';
 import { Logger } from '../../../services/Logger';
 
 const TEST_COMMAND_CONTENT = `---
-description: EnterpriseAI research command
+description: Start or continue the EAI Gofer delivery pipeline.
+gofer:
+  canonicalSource: .specify/commands/0_gofer_start.md
 ---
 
-# Research
+# Eai
 
-Run /2_gofer_specify after this stage.
+Use this as the single user-facing Gofer command. Route internally through .specify/commands.
 `;
 
 suite('enterpriseai resource sync parity (extension integration)', () => {
@@ -29,7 +31,7 @@ suite('enterpriseai resource sync parity (extension integration)', () => {
     await fs.mkdir(path.dirname(customAgentSkillPath), { recursive: true });
 
     await fs.writeFile(
-      path.join(fixtureWorkspace, '.claude', 'commands', '1_gofer_research.md'),
+      path.join(fixtureWorkspace, '.claude', 'commands', 'eai.md'),
       TEST_COMMAND_CONTENT,
       'utf8'
     );
@@ -46,27 +48,15 @@ suite('enterpriseai resource sync parity (extension integration)', () => {
 
     await syncer.setupCodexSkills();
 
-    const codexSkillPath = path.join(
-      fixtureWorkspace,
-      '.system',
-      'skills',
-      '1_gofer_research',
-      'SKILL.md'
-    );
-    const mirroredAgentPath = path.join(
-      fixtureWorkspace,
-      '.agents',
-      'skills',
-      '1_gofer_research',
-      'SKILL.md'
-    );
+    const codexSkillPath = path.join(fixtureWorkspace, '.system', 'skills', 'eai', 'SKILL.md');
+    const mirroredAgentPath = path.join(fixtureWorkspace, '.agents', 'skills', 'eai', 'SKILL.md');
 
     const codexSkillContent = await fs.readFile(codexSkillPath, 'utf8');
     const mirroredAgentContent = await fs.readFile(mirroredAgentPath, 'utf8');
     const preservedCustomSkill = await fs.readFile(customAgentSkillPath, 'utf8');
 
     assert.strictEqual(mirroredAgentContent, codexSkillContent);
-    assert.ok(codexSkillContent.includes('canonicalSource: .specify/commands/1_gofer_research.md'));
+    assert.ok(codexSkillContent.includes('Route internally through .specify/commands.'));
     assert.strictEqual(preservedCustomSkill, '# Custom Skill\n\nDo not overwrite.');
   });
 });

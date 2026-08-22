@@ -51,6 +51,47 @@ describe('workspace preflight surface generation', () => {
     expect(fs.existsSync(path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'))).toBe(true);
   });
 
+  it('carries business English, journey routing, and EAI service choices across public surfaces', () => {
+    for (const surfacePath of [
+      'extension/resources/claude-commands/eai.md',
+      '.github/prompts/eai.prompt.md',
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.gemini/commands/gofer/eai.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+    ]) {
+      const surface = read(surfacePath);
+      expect(surface).toContain('## Always-On EAI Contract');
+      expect(surface).toContain('## Journey State');
+      expect(surface).toContain('## EAI Platform Decision Contract');
+      expect(surface).toContain('Apply the Controlled English Contract to every Gofer-authored');
+      expect(surface).toContain('Find the earliest missing pipeline artifact or blocked EAI gate');
+      expect(surface).toContain('Prefer PostgreSQL for relational');
+      expect(surface).toContain('Prefer DocumentDB for flexible JSON documents');
+      expect(surface).toContain('Prefer EAI content understanding and document services');
+      expect(surface).toContain('Prefer EAI workflows, goals, and targets');
+      expect(surface).toContain('Use any other platform only as an explicit exception');
+    }
+  });
+
+  it('keeps EAI platform service guidance in repo-owned stage contracts', () => {
+    expect(read('.specify/commands/0_gofer_start.md')).toContain('## Always-On EAI Contract');
+    expect(read('.specify/commands/0_gofer_start.md')).toContain('## Journey State');
+    expect(read('.specify/commands/1_gofer_research.md')).toContain(
+      '## EAI Platform Capability Research'
+    );
+    expect(read('.specify/commands/2_gofer_specify.md')).toContain(
+      '## EAI Platform Requirement Capture'
+    );
+    expect(read('.specify/commands/3_gofer_plan.md')).toContain('## EAI Platform Service Planning');
+    expect(read('.specify/references/platform/eai-service-patterns.md')).toContain(
+      '| Goals and targets'
+    );
+    expect(read('.specify/references/platform/eai-repo-contract.md')).toContain(
+      '## Platform Service Choice Rule'
+    );
+  });
+
   it('does not expose pure control commands in user-visible command folders', () => {
     expect(fs.existsSync(path.join(REPO_ROOT, '.claude/commands/gofer_plan.md'))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, '.agents/skills/gofer_plan'))).toBe(false);

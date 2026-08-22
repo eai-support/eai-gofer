@@ -36,6 +36,16 @@ Apply these rules before any user-facing output:
 9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
 10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
 
+## Always-On EAI Contract
+
+Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that prefix as activation for this contract, not as business content.
+
+1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+2. Keep the reply short unless the user asks for detail.
+3. Explain the business effect first.
+4. Put technical evidence in durable artifacts.
+5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+
 ## Business-Friendly Progress
 
 - Keep user-facing progress short and business-level by default.
@@ -50,6 +60,18 @@ Apply these rules before any user-facing output:
 - If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
 - If the user confirms non-app, do not run `eai whoami`, tenant selection, `eai init`, or first-run setup. Record the decision and continue the appropriate non-app path.
 - If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
+
+## Journey State
+
+Before routing work, decide where the user is now.
+
+1. Read current feature state from `.specify/specs/`, `goal-ledger.json`, `eai-preflight.md`, `research.md`, `spec.md`, `plan.md`, `tasks.md`, validation reports, loop evidence, and handoff notes when they exist.
+2. Classify the request as conversation, research/docs/audit, EAI app delivery, or ambiguous.
+3. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
+4. For EAI app delivery or ambiguous app work, continue directly into EAI readiness.
+5. Find the earliest missing pipeline artifact or blocked EAI gate.
+6. Run that internal stage next, then continue forward.
+7. Keep the user-facing explanation at the business level.
 
 ## First EAI Platform App
 
@@ -86,6 +108,26 @@ When this is the first EAI conversation for a new app:
 - For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
 - For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
+
+## EAI Platform Decision Contract
+
+For app delivery, make EAI Platform choices for the business user.
+
+1. Read `.specify/references/platform/eai-service-patterns.md`, `.specify/references/platform/eai-repo-contract.md`, and `.specify/references/platform/eai.md` before architecture or storage decisions.
+2. Run `eai --describe` before assuming current CLI syntax.
+3. Run `eai agent guide --format json` when the CLI advertises it.
+4. Run `eai resources schema --format json` and `eai workflow readiness --format json` when advertised and relevant.
+5. Create or update `.specify/specs/{feature}/service-fit-matrix.md`.
+6. Prefer the EAI app template, PublicAPI, ResourceAPI, object types, workflows, goals, targets, platform AI services, and tenant identity.
+7. Prefer PostgreSQL for relational, transactional, reporting, and workflow state.
+8. Prefer DocumentDB for flexible JSON documents, nested records, and high-change document models.
+9. Prefer Blob Storage for large files and binary content behind API-mediated access.
+10. Prefer AI Search as a derived search projection, not as the source of record.
+11. Prefer EAI content understanding and document services for classification, extraction, summarization, and Retrieval-Augmented Generation.
+12. Prefer EAI workflows, goals, and targets for approvals, long-running work, service goals, operating targets, and auditable process state.
+13. Use Azure second when the EAI Platform does not yet expose the needed capability.
+14. Use any other platform only as an explicit exception with rationale, owner, expiry, and validation evidence.
+15. Ask the user only for material business, security, cost, deployment, destructive, or external-system decisions.
 
 ## Token And Cost Policy
 
