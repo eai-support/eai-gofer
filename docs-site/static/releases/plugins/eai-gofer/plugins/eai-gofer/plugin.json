@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.10.0",
+  "version": "3.10.1",
   "description": "Gofer single-entry delivery command with internal pipeline routing for Claude, Gemini, Codex, Copilot, and VS Code.",
   "author": {
     "name": "EAI Tools",

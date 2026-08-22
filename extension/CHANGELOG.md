@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.1] - 2026-08-22
+
+Fix Codex EAI plugin discovery
+
 ## [3.10.0] - 2026-08-18
 
 Require eai init and the supported app template before app delivery
