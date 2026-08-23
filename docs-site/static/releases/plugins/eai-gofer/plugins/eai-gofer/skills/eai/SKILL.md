@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.10.2
+Version: 3.10.3
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -108,6 +108,19 @@ When this is the first EAI conversation for a new app:
 - For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
 - For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
+
+## Verified EAI CLI Command Contract
+
+Do not invent, guess, or complete EAI CLI commands from memory.
+
+1. Before you suggest or run an `eai ...` command, verify the exact command from the installed CLI.
+2. Start with `eai --describe` and use its command map as the source of truth.
+3. For a specific command, run `eai <command> --help` or the CLI-described equivalent before using flags, subcommands, or examples.
+4. Use `eai agent guide --format json` when the CLI advertises it.
+5. Use `eai errors explain <code-or-reason> --format json` after errors when the CLI advertises it.
+6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
+7. Record the verified command and source in `eai-preflight.md`, `service-fit-matrix.md`, or the active feature notes before the command changes files or external systems.
+8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
 
 ## EAI Platform Decision Contract
 
