@@ -13,7 +13,7 @@
             "tests/unit/headless/stageExecutor.test.ts",
             "tests/unit/headless/deliveryLineage.test.ts"
           ],
-          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": ["adminportal-adminapi"],
           "required_deployed_contracts": [
             {
@@ -27,7 +27,7 @@
           "description": "Governed Gofer exports retain deterministic eai.app_capabilities.v1 requirements without tenant records, secrets, or environment-specific bindings.",
           "owned_paths": ["src/headless/contracts.ts", "src/headless/exportBundle.ts"],
           "required_repo_tests": ["tests/unit/headless/exportBundle.test.ts"],
-          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": ["publicapi-platform"],
           "required_deployed_contracts": [
             {
@@ -58,7 +58,7 @@
             "tests/unit/ui/deliveryLineageCorpus.test.ts",
             "tests/unit/ui/deliveryLineageViewer.test.ts"
           ],
-          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": [],
           "required_deployed_contracts": []
         },
@@ -73,19 +73,43 @@
             ".specify/schemas/**",
             ".system/skills/**",
             ".agents/skills/**",
+            ".specify/scripts/node/generate-commands.mjs",
+            ".specify/scripts/node/package-agent-plugin.mjs",
+            ".specify/scripts/node/workspace-bootstrap-lib.mjs",
+            "AGENTS.md",
             "extension/resources/**",
+            "plugins/eai-gofer/**",
             "scripts/verify-eai-refresh-layout.mjs",
             "release.sh",
             "package.json",
+            "tasks/lessons.md",
+            "tasks/todo.md",
+            "tests/fixtures/golden/claude-commands/**",
+            "tests/unit/scripts/agent-plugin-package.test.ts",
+            "tests/unit/scripts/agents-md-shape.test.ts",
+            "tests/unit/scripts/byte-equivalence.test.ts",
+            "tests/unit/scripts/emitter-agents-md.test.ts",
+            "tests/unit/scripts/gofer-command-guidance.test.ts",
+            "tests/unit/scripts/gofer-workspace-bootstrap.test.ts",
+            "tests/unit/scripts/test-coverage-ci-alignment.test.ts",
+            "tests/unit/scripts/workspace-preflight-surfaces.test.ts",
             "tests/unit/release/eai-refresh-layout.test.ts",
             "tests/unit/release/release-verification.test.ts"
           ],
           "required_repo_tests": [
             "tests/unit/release/eai-refresh-layout.test.ts",
             "tests/unit/release/release-verification.test.ts",
+            "tests/unit/scripts/agent-plugin-package.test.ts",
+            "tests/unit/scripts/agents-md-shape.test.ts",
+            "tests/unit/scripts/byte-equivalence.test.ts",
+            "tests/unit/scripts/emitter-agents-md.test.ts",
+            "tests/unit/scripts/gofer-command-guidance.test.ts",
+            "tests/unit/scripts/gofer-workspace-bootstrap.test.ts",
+            "tests/unit/scripts/test-coverage-ci-alignment.test.ts",
+            "tests/unit/scripts/workspace-preflight-surfaces.test.ts",
             "tests/unit/scripts/sync-extension-resources.test.ts"
           ],
-          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": [],
           "required_deployed_contracts": []
         },
@@ -125,7 +149,7 @@
             "tests/unit/scripts/hook-wiring.test.ts",
             "tests/unit/extension/ResourceSyncer.workspace-sync.test.ts"
           ],
-          "required_ci_checks": ["ci/quality-gates", "ci/build-test-required"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": [],
           "required_deployed_contracts": []
         }

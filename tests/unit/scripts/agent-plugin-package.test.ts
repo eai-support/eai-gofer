@@ -223,6 +223,8 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('ASD-STE100 Simplified Technical English');
       expect(umbrellaSkill).toContain('Use one action per instruction');
       expect(umbrellaSkill).toContain('do not claim ASD certification');
+      expect(umbrellaSkill).toContain('## User-Facing Response Gate');
+      expect(umbrellaSkill).toContain('If any check fails, rewrite the reply before sending it');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);

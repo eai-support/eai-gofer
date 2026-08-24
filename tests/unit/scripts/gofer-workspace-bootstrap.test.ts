@@ -140,6 +140,10 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(fs.existsSync(path.join(workspaceRoot, '.claude', 'commands'))).toBe(false);
     expect(fs.existsSync(path.join(workspaceRoot, '.agents', 'skills'))).toBe(false);
 
+    const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('## User-Facing Response Gate');
+    expect(agents).toContain('If any check fails, rewrite the reply before sending it');
+
     const post = runJson(CHECK_SCRIPT, [
       '--workspace',
       workspaceRoot,

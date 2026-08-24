@@ -75,6 +75,9 @@ certification.
 14. Do not remove technical validation, security checks, EAI preflights, tests,
    or loop evidence. This contract changes presentation, not engineering
    standards.
+15. Before each user-facing reply, check that it leads with the business effect,
+    uses concise simple language, and includes only useful technical detail.
+16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 
 Open a side conversation in the active CLI without disturbing the main Gofer

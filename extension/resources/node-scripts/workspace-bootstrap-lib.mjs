@@ -606,6 +606,17 @@ function buildEaiRepoContractSection(projectInfo) {
 - Keep provisioning, types seed, schema/storage health, workflow readiness, and preview as separate gates.`;
 }
 
+function buildUserFacingResponseGateSection() {
+  return `## User-Facing Response Gate
+
+Before each user-facing reply, check the draft against these rules:
+
+1. Lead with the business outcome, effect, risk, or decision.
+2. Use concise, simple language.
+3. Include technical detail only when it supports a decision or the user asks for it.
+4. If any check fails, rewrite the reply before sending it.`;
+}
+
 export function buildAgentsMd(projectInfo, stages) {
   const corePipelineOrder = [
     '0_gofer_start',
@@ -652,6 +663,8 @@ export function buildAgentsMd(projectInfo, stages) {
   return `# AGENTS.md
 
 **Project**: ${projectInfo.name} | **Language**: ${formatLanguage(projectInfo.language)}${frameworkLine} | **Package Manager**: ${projectInfo.packageManager || 'Not detected'}
+
+${buildUserFacingResponseGateSection()}
 
 ## Core Pipeline Stages
 
