@@ -54,6 +54,10 @@ required_paths=(
   "mid/PublicAPI/src/tests/unit/test_v4_management_routes.py"
   "mid/PublicAPI/src/tests/unit/test_legacy_resource_routes.py"
   "mid/PublicAPI/src/tests/unit/test_telemetry.py"
+  "mid/AdminAPI/src/services/object_type_identifiers.py"
+  "mid/AdminAPI/tests/test_object_type_identifiers.py"
+  "mid/AdminAPI/tests/test_platform_storage.py"
+  "mid/AdminAPI/tests/test_v4_platform_manifest_models.py"
   "mid/ResourceAPI/tests/unit/test_object_type_identifiers.py"
   "mid/ResourceAPI/tests/unit/test_reserved_object_type_routes.py"
   "mid/ResourceAPI/tests/unit/test_object_type_models.py"
@@ -80,6 +84,7 @@ coverage_maps=(
   "ops/gofer/.eai/test-coverage.json"
   "front/Configurator/.eai/test-coverage.json"
   "mid/PublicAPI/.eai/test-coverage.json"
+  "mid/AdminAPI/.eai/test-coverage.json"
   "mid/ResourceAPI/.eai/test-coverage.json"
   "ops/tech-docs/.eai/test-coverage.json"
   "ops/cloud-monitor/.eai/test-coverage.json"
@@ -91,6 +96,7 @@ commands=(
   "eai-gofer|npm test -- --run tests/unit/scripts/v4-resource-contract-validator.test.ts tests/integration/v4-resource-contract-validator.integration.test.ts tests/integration/object-type-identifier-audit-schema.integration.test.ts tests/integration/object-type-identifiers-validator.integration.test.ts tests/integration/object-type-routing-phase-bundle.integration.test.ts tests/integration/object-type-routing-workspace-validator.integration.test.ts tests/unit/extension/ResourceSyncer.workspace-sync.test.ts && npm run gofer:generate:check && npm run typecheck && npm run lint && npm run build && npm run gofer:validate-v4-resource-contract -- --workspace ../.. --json"
   "Configurator|npx jest --config testing/config/jest.config.js --runInBand --runTestsByPath testing/__tests__/unit/collections/object-types-identifier-contract.test.ts testing/__tests__/unit/collections/object-types-scope.test.ts testing/__tests__/unit/collections/object-types-reserved-slugs.test.ts testing/__tests__/unit/collections/object-types-api-error-status.test.ts testing/__tests__/unit/api/tenant-starter-bootstrap-seeds.test.ts testing/__tests__/integration/api/data-api-remote-proxy.test.ts testing/__tests__/unit/app-api-remote-proxy-guardrail.test.ts tests/unit/eai-product-catalog-seed.test.ts && npm run typecheck && npm run lint && npm run build"
   "PublicAPI|uv run pytest src/tests/unit/test_object_type_identifiers.py src/tests/unit/test_object_type_contract.py src/tests/unit/test_resources_proxy_router.py src/tests/unit/test_v4_openapi_sections.py src/tests/unit/test_region_aware_apim_workflows.py src/tests/unit/test_opa_auth_middleware.py src/tests/unit/test_v4_management_routes.py src/tests/unit/test_legacy_resource_routes.py src/tests/unit/test_telemetry.py && uv run ruff check src/app/core/telemetry.py src/app/middleware/entra_auth.py src/app/middleware/opa_auth.py src/app/models/object_type_contract.py src/app/routers/v4/__init__.py src/app/routers/v4/data_contracts.py src/app/routers/v4/data_resources.py src/app/routers/v4/metadata.py src/app/services/object_type_identifiers.py src/app/services/resource_proxy_paths.py src/main.py src/tests/unit/test_object_type_identifiers.py src/tests/unit/test_object_type_contract.py src/tests/unit/test_resources_proxy_router.py src/tests/unit/test_v4_openapi_sections.py && uv run mypy src/app/core/telemetry.py src/app/middleware/entra_auth.py src/app/middleware/opa_auth.py src/app/models/object_type_contract.py src/app/routers/v4/__init__.py src/app/routers/v4/data_contracts.py src/app/routers/v4/data_resources.py src/app/routers/v4/metadata.py src/app/services/object_type_identifiers.py src/app/services/resource_proxy_paths.py src/main.py && uv build"
+  "AdminAPI|uv run pytest tests/test_object_type_identifiers.py tests/test_platform_storage.py tests/test_v4_platform_manifest_models.py && uv run ruff check src/api/routes/platform.py src/services/object_type_identifiers.py tests/test_object_type_identifiers.py tests/test_platform_storage.py tests/test_v4_platform_manifest_models.py && uv run python -m compileall -q src tests/test_object_type_identifiers.py tests/test_platform_storage.py tests/test_v4_platform_manifest_models.py"
   "ResourceAPI|uv run pytest tests/unit/test_object_type_identifiers.py tests/unit/test_reserved_object_type_routes.py tests/unit/test_object_type_models.py tests/unit/test_object_type_cache.py tests/unit/test_resource_service_routing.py tests/unit/test_object_type_routing_boundary.py && uv run ruff check src/services/object_type_identifiers.py src/routers/v4/resources.py src/routers/v4/query.py src/models/object_type.py src/services/object_type_cache.py tests/unit/test_object_type_identifiers.py tests/unit/test_reserved_object_type_routes.py tests/unit/test_object_type_models.py tests/unit/test_object_type_cache.py tests/unit/test_object_type_routing_boundary.py && uv run python -m compileall -q src tests/unit && uv build"
   "tech-docs|npm run contracts:check && node .github/scripts/validate-object-type-routing-contract.mjs && node .github/scripts/validate-object-type-routing-schemas.mjs && node .github/scripts/sync-object-type-routing-runtime-assets.mjs --check && npm run typecheck && npm run build"
   "cloud-monitor|node --import tsx --test tests/helpers/inventory-object-type-routing.test.ts tests/helpers/object-type-routing-canary.test.ts tests/helpers/publicapi-route-family-probes.test.ts tests/helpers/cross-service-scope.test.ts && npx playwright test --list tests/cross-service/contracts/backend/object-type-routing.spec.ts tests/cross-service/contracts/backend/v4-route-family-apim.spec.ts --project=services-dev && npm run guard:e2e-data && npm run guard:cross-service-scope && npm run guard:cross-service-contracts && npm run guard:cross-service-data-lifecycle && npm run typecheck && npm run lint && npm run build"
@@ -103,6 +109,7 @@ repo_dir() {
     eai-gofer) echo "$WORKSPACE_ROOT/ops/gofer" ;;
     Configurator) echo "$WORKSPACE_ROOT/front/Configurator" ;;
     PublicAPI) echo "$WORKSPACE_ROOT/mid/PublicAPI" ;;
+    AdminAPI) echo "$WORKSPACE_ROOT/mid/AdminAPI" ;;
     ResourceAPI) echo "$WORKSPACE_ROOT/mid/ResourceAPI" ;;
     tech-docs) echo "$WORKSPACE_ROOT/ops/tech-docs" ;;
     cloud-monitor) echo "$WORKSPACE_ROOT/ops/cloud-monitor" ;;
@@ -174,4 +181,4 @@ if [[ "$(git -C "$WORKSPACE_ROOT/mid/PublicAPI" diff -U0 origin/main -- src/app/
   exit 2
 fi
 
-echo "VERIFY_OBJECT_TYPE_ROUTING_WORKSPACE_OK repositories=8 coverage_maps=8"
+echo "VERIFY_OBJECT_TYPE_ROUTING_WORKSPACE_OK repositories=9 coverage_maps=9"

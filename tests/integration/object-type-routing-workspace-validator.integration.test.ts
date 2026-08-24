@@ -72,6 +72,12 @@ describe('Object Type routing workspace reducer', () => {
     expect(mirror).toBe(canonical);
     expect(canonical.match(/diff -U0 origin\/main --/g)).toHaveLength(2);
     expect(canonical).not.toContain('diff -U0 -- src/app/core/telemetry.py');
+    expect(canonical).toContain('"mid/AdminAPI/.eai/test-coverage.json"');
+    expect(canonical).toContain('"AdminAPI|uv run pytest tests/test_object_type_identifiers.py');
+    expect(canonical).toContain('AdminAPI) echo "$WORKSPACE_ROOT/mid/AdminAPI"');
+    expect(canonical).toContain(
+      'VERIFY_OBJECT_TYPE_ROUTING_WORKSPACE_OK repositories=9 coverage_maps=9'
+    );
   });
 
   it('reduces the coordinated workspace deterministically or fails closed in an isolated checkout', async () => {
