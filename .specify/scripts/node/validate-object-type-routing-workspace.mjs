@@ -31,6 +31,29 @@ const SLUG_PATTERN = '^[a-z0-9]+(?:-[a-z0-9]+)*$';
 const OPENAPI_FIELD_ALIASES = Object.freeze({
   parent_object_type: Object.freeze(['parent_object_type', 'parentType']),
 });
+const RELATIONSHIP_REFERENCES = Object.freeze({
+  sourceField: 'linkTypes[].targetObjectType',
+  sourceAcceptedIdentifiers: Object.freeze(['same-manifest-name', 'slug']),
+  adapterMustEmit: 'slug',
+  persistedIdentifier: 'slug',
+  runtimeField: 'target_type',
+  runtimeIdentifier: 'slug',
+  historicalStoredSlugIsAuthoritative: true,
+});
+const RELATIONSHIP_REFERENCE_VECTORS = Object.freeze([
+  Object.freeze({
+    declaredName: 'GitHubConnection',
+    declaredSlug: 'github-connection',
+    sourceReference: 'GitHubConnection',
+    emittedReference: 'github-connection',
+  }),
+  Object.freeze({
+    declaredName: 'OPAMeasure',
+    declaredSlug: 'opameasure',
+    sourceReference: 'OPAMeasure',
+    emittedReference: 'opameasure',
+  }),
+]);
 
 const ADAPTERS = Object.freeze([
   {
@@ -500,7 +523,7 @@ async function reduceAdapter(workspace, definition, vectors, contract) {
   };
 }
 
-function validateAuthority(contract, manifestSchema, actionSchema) {
+function validateAuthority(contract, manifestSchema, actionSchema, auditConfig) {
   const findings = [];
   if (contract.contractVersion !== CONTRACT_VERSION) {
     findings.push(
@@ -536,6 +559,31 @@ function validateAuthority(contract, manifestSchema, actionSchema) {
         'ops/tech-docs/static/contracts/object-type-routing-v1.json',
         'CONTRACT_SHAPE_DRIFT',
         'The contract patterns, reserved slugs, governed fields, algorithm, or vector count drifted.'
+      )
+    );
+  }
+  if (canonicalJson(contract.relationshipReferences) !== canonicalJson(RELATIONSHIP_REFERENCES)) {
+    findings.push(
+      finding(
+        'tech-docs',
+        'ops/tech-docs/static/contracts/object-type-routing-v1.json',
+        'RELATIONSHIP_REFERENCE_CONTRACT_DRIFT',
+        'Relationship references must resolve same-manifest names to exact declared slugs before publication and runtime use.'
+      )
+    );
+  }
+  const relationshipGuidance = String(auditConfig?.canonicalGuidance ?? '');
+  if (
+    !relationshipGuidance.includes('linkTypes[].targetObjectType') ||
+    !relationshipGuidance.includes('target_type') ||
+    !relationshipGuidance.includes('same-manifest name shorthand')
+  ) {
+    findings.push(
+      finding(
+        'eai-gofer',
+        'ops/gofer/.specify/config/object-type-routing.json',
+        'RELATIONSHIP_SOURCE_AUDIT_DRIFT',
+        'The source audit must require linkTypes[].targetObjectType and runtime target_type to use the declared slug after same-manifest name resolution.'
       )
     );
   }
@@ -592,6 +640,25 @@ function validateAuthority(contract, manifestSchema, actionSchema) {
         'The resource action schema is not the closed Draft 2020-12 v1 schema.'
       )
     );
+  }
+  return findings;
+}
+
+function validateRelationshipReferenceVectors() {
+  const findings = [];
+  for (const vector of RELATIONSHIP_REFERENCE_VECTORS) {
+    const emitted = String(vector.emittedReference ?? '');
+    const declared = String(vector.declaredSlug ?? '');
+    if (emitted !== declared || !new RegExp(SLUG_PATTERN).test(emitted)) {
+      findings.push(
+        finding(
+          'tech-docs',
+          'ops/tech-docs/static/contracts/object-type-routing-v1.json',
+          'RELATIONSHIP_REFERENCE_VECTOR_INVALID',
+          `Relationship vector ${String(vector.declaredName ?? '<unknown>')} does not emit its exact declared slug.`
+        )
+      );
+    }
   }
   return findings;
 }
@@ -999,7 +1066,7 @@ export async function reduceObjectTypeRoutingWorkspace(workspaceInput) {
   const manifestSchema = parseJson(authority.manifestSchema.bytes, authority.manifestSchema.path);
   const actionSchema = parseJson(authority.actionSchema.bytes, authority.actionSchema.path);
   parseJson(authority.auditSchema.bytes, authority.auditSchema.path);
-  parseJson(authority.auditConfig.bytes, authority.auditConfig.path);
+  const auditConfig = parseJson(authority.auditConfig.bytes, authority.auditConfig.path);
 
   const identifierContract = await loadIdentifierValidationContract({
     contractPath: path.join(workspace, authority.contract.path),
@@ -1007,7 +1074,10 @@ export async function reduceObjectTypeRoutingWorkspace(workspaceInput) {
     configPath: path.join(workspace, authority.auditConfig.path),
   });
   const vectors = contractDocument.derivation?.vectors ?? [];
-  const allFindings = validateAuthority(contractDocument, manifestSchema, actionSchema);
+  const allFindings = [
+    ...validateAuthority(contractDocument, manifestSchema, actionSchema, auditConfig),
+    ...validateRelationshipReferenceVectors(),
+  ];
 
   const adapters = [];
   for (const definition of ADAPTERS) {

@@ -59,6 +59,41 @@ describe('Object Type routing workspace reducer', () => {
     expect(derive('GitHubConnection')).toBe('github-connection');
   });
 
+  it('keeps relationship publication vectors pinned to exact declared slugs', async () => {
+    const contract = JSON.parse(
+      await readFile(path.resolve('.specify/contracts/object-type-routing-v1.json'), 'utf8')
+    );
+    expect(contract.relationshipReferences).toMatchObject({
+      sourceField: 'linkTypes[].targetObjectType',
+      adapterMustEmit: 'slug',
+      runtimeField: 'target_type',
+      runtimeIdentifier: 'slug',
+    });
+    const relationshipVectors = [
+      {
+        declaredName: 'GitHubConnection',
+        declaredSlug: 'github-connection',
+        sourceReference: 'GitHubConnection',
+        emittedReference: 'github-connection',
+      },
+      {
+        declaredName: 'OPAMeasure',
+        declaredSlug: 'opameasure',
+        sourceReference: 'OPAMeasure',
+        emittedReference: 'opameasure',
+      },
+    ];
+    expect(
+      relationshipVectors.every((vector) => vector.emittedReference === vector.declaredSlug)
+    ).toBe(true);
+    const auditConfig = JSON.parse(
+      await readFile(path.resolve('.specify/config/object-type-routing.json'), 'utf8')
+    );
+    expect(auditConfig.canonicalGuidance).toContain('linkTypes[].targetObjectType');
+    expect(auditConfig.canonicalGuidance).toContain('target_type');
+    expect(auditConfig.canonicalGuidance).toContain('same-manifest name shorthand');
+  });
+
   it('verifies committed feature changes relative to origin/main and keeps the extension mirror exact', async () => {
     const canonical = await readFile(
       path.resolve('.specify/scripts/bash/verify-object-type-routing-workspace.sh'),
