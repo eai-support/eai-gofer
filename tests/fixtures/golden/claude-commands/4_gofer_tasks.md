@@ -700,6 +700,13 @@ evidence:
   object-type seeding or preview readiness.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.
+- Object-type request compatibility -> run `eai types seed --dry-run` first.
+  Let the maintained CLI serialize the app manifest. Do not copy the source
+  name/slug schema into a direct PublicAPI request.
+- Object-type identifier use -> verify each declared PascalCase `name` keeps one
+  exact kebab-case `slug` through relationship targets, Curate resource routes,
+  resource query fields, `useResources`, and `client.resources`. Create a task
+  to remove any generated PascalCase transport value or locally re-derived slug.
 - Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`
   before preview/runtime signoff.
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or

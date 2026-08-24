@@ -28,6 +28,9 @@ const GOVERNED_FIELDS = Object.freeze([
 const RESERVED_SLUGS = Object.freeze(['operations', 'query', 'search', 'storage']);
 const NAME_PATTERN = '^[A-Z][A-Za-z0-9]*$';
 const SLUG_PATTERN = '^[a-z0-9]+(?:-[a-z0-9]+)*$';
+const OPENAPI_FIELD_ALIASES = Object.freeze({
+  parent_object_type: Object.freeze(['parent_object_type', 'parentType']),
+});
 
 const ADAPTERS = Object.freeze([
   {
@@ -56,6 +59,11 @@ const ADAPTERS = Object.freeze([
     path: 'mid/PublicAPI/src/app/services/object_type_identifiers.py',
   },
   {
+    component: 'AdminAPI',
+    kind: 'python',
+    path: 'mid/AdminAPI/src/services/object_type_identifiers.py',
+  },
+  {
     component: 'ResourceAPI',
     kind: 'python',
     path: 'mid/ResourceAPI/src/services/object_type_identifiers.py',
@@ -68,6 +76,7 @@ const COVERAGE_OWNERS = Object.freeze([
   ['eai-cli', 'ops/eai-cli/.eai/test-coverage.json'],
   ['eai-gofer', 'ops/gofer/.eai/test-coverage.json'],
   ['PublicAPI', 'mid/PublicAPI/.eai/test-coverage.json'],
+  ['AdminAPI', 'mid/AdminAPI/.eai/test-coverage.json'],
   ['ResourceAPI', 'mid/ResourceAPI/.eai/test-coverage.json'],
   ['tech-docs', 'ops/tech-docs/.eai/test-coverage.json'],
 ]);
@@ -252,20 +261,63 @@ function matchingBrace(source, openIndex) {
   return -1;
 }
 
-function executableTypeScriptDeriver(source, component) {
-  const declaration =
-    /export\s+function\s+deriveObjectTypeSlugV1\s*\(\s*([A-Za-z_$][\w$]*)[^)]*\)\s*(?::\s*string\s*)?\{/m.exec(
-      source
-    );
-  if (!declaration) throw new Error(`${component} does not export deriveObjectTypeSlugV1().`);
+function typeScriptFunctionBody(source, functionName, component) {
+  const declaration = new RegExp(
+    `(?:export\\s+)?function\\s+${functionName}\\s*\\(\\s*([A-Za-z_$][\\w$]*)[^)]*\\)\\s*(?::\\s*[A-Za-z_$][\\w$<>[\\]| ]*\\s*)?\\{`,
+    'm'
+  ).exec(source);
+  if (!declaration) throw new Error(`${component} does not declare ${functionName}().`);
   const openIndex = declaration.index + declaration[0].lastIndexOf('{');
   const closeIndex = matchingBrace(source, openIndex);
-  if (closeIndex === -1) throw new Error(`${component} derivation function is incomplete.`);
-  const body = source.slice(openIndex + 1, closeIndex);
+  if (closeIndex === -1) throw new Error(`${component} ${functionName}() is incomplete.`);
+  return {
+    parameter: declaration[1],
+    body: source.slice(openIndex + 1, closeIndex),
+  };
+}
+
+export function executableTypeScriptDeriver(source, component) {
+  const { parameter, body } = typeScriptFunctionBody(
+    source,
+    'deriveObjectTypeSlugV1',
+    component
+  );
   if (!/^\s*return\s+/m.test(body)) {
     throw new Error(`${component} derivation function has no executable return expression.`);
   }
-  return Function(declaration[1], `'use strict';\n${body}`);
+
+  const mapDeclaration =
+    /ESTABLISHED_NAME_SLUGS\s*=\s*new Map(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*;?/m.exec(source);
+  if (!mapDeclaration) {
+    throw new Error(`${component} does not declare ESTABLISHED_NAME_SLUGS.`);
+  }
+  const establishedNameSlugs = new Map(
+    Function(`'use strict'; return (${mapDeclaration[1]});`)()
+  );
+
+  let trimAsciiWhitespace;
+  if (/\btrimAsciiWhitespace\s*\(/.test(body)) {
+    const asciiHelper = typeScriptFunctionBody(source, 'isAsciiWhitespace', component);
+    const trimHelper = typeScriptFunctionBody(source, 'trimAsciiWhitespace', component);
+    const isAsciiWhitespace = Function(
+      asciiHelper.parameter,
+      `'use strict';\n${asciiHelper.body}`
+    );
+    const executeTrim = Function(
+      'isAsciiWhitespace',
+      trimHelper.parameter,
+      `'use strict';\n${trimHelper.body}`
+    );
+    trimAsciiWhitespace = (value) => executeTrim(isAsciiWhitespace, value);
+  }
+
+  const executeDerivation = Function(
+    'ESTABLISHED_NAME_SLUGS',
+    'trimAsciiWhitespace',
+    parameter,
+    `'use strict';\n${body}`
+  );
+  return (value) => executeDerivation(establishedNameSlugs, trimAsciiWhitespace, value);
 }
 
 function sourcePatterns(source, component) {
@@ -686,9 +738,14 @@ function validateOpenApi(document) {
     );
   }
   for (const field of GOVERNED_FIELDS.slice(2)) {
+    const fieldNames = OPENAPI_FIELD_ALIASES[field] ?? [field];
     const represented = Object.values(schemas).some(
       (schema) =>
-        schema?.properties?.[field] && containsReference(schema.properties[field], slugReference)
+        fieldNames.some(
+          (fieldName) =>
+            schema?.properties?.[fieldName] &&
+            containsReference(schema.properties[fieldName], slugReference)
+        )
     );
     if (!represented) {
       findings.push(

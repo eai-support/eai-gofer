@@ -352,11 +352,28 @@ with an unrelated non-EAI stack.
    - Do not claim platform readiness from app creation alone. Later stages must
      keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate`,
+     `eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
      `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
      `eai resources storage doctor --tenant-id <tenant-id> --format json`,
      `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
      preview/runtime readiness.
+   - The EAI CLI is the only app-manifest request serializer. Keep the
+     PascalCase source `name` and explicit kebab-case source `slug`, but do not
+     copy that source schema into a direct PublicAPI request. The CLI adapts it
+     to the request shape accepted by the deployed app-manifest endpoint.
+   - Apply one Object Type identifier contract everywhere: source `name` is
+     PascalCase; source and stored `slug` are lowercase kebab-case; relationship
+     targets, Curate resource routes, resource query fields, and runtime calls
+     use the exact declared slug. Generated code passes the declared slug to
+     `useResources` and `client.resources`; it does not recreate a slug from the
+     name.
+   - The CLI sends explicit `name` plus `slug` first. A name-only retry is a
+     temporary compatibility path for an older deployed receiver, not the app
+     contract and not a pattern for generated code.
+   - If seed returns `app_manifest_validation_failed`, run `eai update --check`
+     and the dry run above. Retry once through `eai types seed`. Do not remove
+     source validation or hand-edit the HTTP request body.
    - Provision storage, Entra app registration, environment sync, object types,
      and deployment only in the later plan/tasks/implement stages after the
      business scenario, UI show-and-tell evidence, and service-fit evidence are

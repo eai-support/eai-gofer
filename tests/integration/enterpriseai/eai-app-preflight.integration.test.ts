@@ -39,6 +39,13 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain(
       'eai app provision <key> --tenant-id <tenant-id> --select --format json'
     );
+    expect(scenarioCommand).toContain('The EAI CLI is the only app-manifest request serializer');
+    expect(scenarioCommand).toContain('Apply one Object Type identifier contract everywhere');
+    expect(scenarioCommand).toContain('Curate resource routes');
+    expect(scenarioCommand).toContain('The CLI sends explicit `name` plus `slug` first');
+    expect(scenarioCommand).toContain(
+      'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
+    );
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
     expect(scenarioCommand).toMatch(
@@ -74,6 +81,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(tasksCommand).toContain('App-template readiness cannot be deferred');
     expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
+    expect(tasksCommand).toMatch(
+      /Do not copy the source\s+name\/slug schema into a direct PublicAPI request/
+    );
     expect(tasksCommand).toContain(
       'Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`'
     );
@@ -91,6 +101,8 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /Record\s+only\s+a\s+redacted\s+callback\s+route\s+pattern\s+and\s+recovery\s+status/i
     );
     expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
+    expect(implementCommand).toContain('app_manifest_validation_failed');
+    expect(implementCommand).toContain('PascalCase transport value');
     expect(implementCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
     );

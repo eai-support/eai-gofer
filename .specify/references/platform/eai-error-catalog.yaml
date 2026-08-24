@@ -170,6 +170,19 @@ catalog:
       - 'eai types validate --tenant-key <key> --tenant-id <tenant-id>'
       - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json'
     nextGate: types_publish_ready
+  - errorId: EAI_APP_MANIFEST_VALIDATION_FAILED
+    match:
+      containsAny:
+        - 'app_manifest_validation_failed'
+        - 'app manifest save failed for both supported request shapes'
+    meaning: The maintained CLI could not match the deployed app-manifest request contract.
+    likelyCause: The installed CLI is old, or another manifest field fails after request-shape negotiation.
+    recovery:
+      - 'eai update --check'
+      - 'eai types validate --tenant-key <key> --tenant-id <tenant-id>'
+      - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
+      - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json'
+    nextGate: types_publish_ready
   - errorId: EAI_RESOURCE_NOT_READY
     match:
       containsAny:
