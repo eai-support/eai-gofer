@@ -972,3 +972,11 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - All NEEDS CLARIFICATION must be resolved before completing
 - Plan must be specific enough for task generation
 - Log stage completion for observability tracking
+
+## Distributable Application Planning Gate
+
+Plans for distributable apps MUST name the isolated hosting boundary, regional
+PublicAPI entry, delegated-user and workload paths, exact data/services,
+supply-chain evidence, buyer consent, audit, support and rollback. Initial V1
+supports EAI-hosted or buyer-hosted isolation, not publisher-operated
+multi-tenant SaaS.

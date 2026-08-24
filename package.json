@@ -64,6 +64,7 @@
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
     "gofer:eai-refresh-layout:check": "node scripts/verify-eai-refresh-layout.mjs",
     "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
+    "gofer:validate-application-package": "node .specify/scripts/node/validate-application-package.mjs",
     "prepack": "npm run build",
     "prepare": "husky"
   },

@@ -932,4 +932,12 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - If `spec.md` is missing, continue the stage normally and report that the
   helper was not run.
 - These selectors are optional and do not change stage progress, routing, or
-  pipeline state.
+pipeline state.
+
+## Distributable Application Specification Gate
+
+For a distributable app, specify the canonical `eai.application-package.v1`
+contract and compose capabilities through `eai.app_capabilities.v1`. Reject
+secrets, direct provider routes, impersonation, wildcard permissions and
+undeclared buyer-data movement. Separate package preparation, listing approval
+and buyer installation as three different states.

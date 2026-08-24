@@ -1237,3 +1237,11 @@ helper was not run.
 
 These selectors are optional and do not change stage progress, routing, or
 pipeline state.
+
+## Distributable Application Research Gate
+
+When an application may be used by other tenants, research MUST classify it as
+private, EAI first-party, or distributable and read
+`.specify/references/platform/app-marketplace.md`. Record publisher/buyer value,
+runtime isolation, data purpose, interactive/workload identity, support,
+commercial and rollback evidence. Do not infer marketplace readiness locally.

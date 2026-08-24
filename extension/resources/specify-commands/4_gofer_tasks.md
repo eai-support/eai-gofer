@@ -814,3 +814,10 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - Each user story phase must be independently testable
 - Tests are OPTIONAL - only include if specified in requirements
 - Log stage completion for observability tracking
+
+## Distributable Application Task Gate
+
+Tasks MUST add owned failing/passing tests for package validation, tenant and
+installation binding, denied capabilities, interactive/workload separation,
+audit acceptance, immutable artifacts, update/rollback and uninstall. No task
+may mark an app ready without approved-listing and READY-installation evidence.
