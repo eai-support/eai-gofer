@@ -264,6 +264,17 @@ Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat th
 5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
 }
 
+function buildUserFacingResponseGateSection() {
+  return `## User-Facing Response Gate
+
+Before each user-facing reply, check the draft against these rules:
+
+1. Lead with the business outcome, effect, risk, or decision.
+2. Use concise, simple language.
+3. Include technical detail only when it supports a decision or the user asks for it.
+4. If any check fails, rewrite the reply before sending it.`;
+}
+
 function buildJourneyStateSection() {
   return `## Journey State
 
@@ -343,6 +354,8 @@ Apply these rules before any user-facing output:
 8. Put one topic in each paragraph.
 9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
 10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
+${buildUserFacingResponseGateSection()}
 
 ${buildAlwaysEaiSection()}
 
@@ -856,6 +869,9 @@ certification.
 14. Do not remove technical validation, security checks, EAI preflights, tests,
    or loop evidence. This contract changes presentation, not engineering
    standards.
+15. Before each user-facing reply, check that it leads with the business effect,
+    uses concise simple language, and includes only useful technical detail.
+16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 `.trim();
 }
@@ -1087,7 +1103,7 @@ function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
 
   frontmatter.push('---');
 
-  return `${frontmatter.join('\n')}\n\n# ${id}\n\n${body.trim()}\n`;
+  return `${frontmatter.join('\n')}\n\n# ${id}\n\n${buildUserFacingResponseGateSection()}\n\n${body.trim()}\n`;
 }
 
 function getGithubAgentSpecs() {
@@ -1479,6 +1495,8 @@ Generated: ${timestamp}
 - \`eai\` - Start or continue Gofer from one user-facing command.
 
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under \`.specify/commands/\`.
+
+${buildUserFacingResponseGateSection()}
 
 ${buildVerifiedEaiCliCommandContract()}
 

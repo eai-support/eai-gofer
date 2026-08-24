@@ -2,6 +2,16 @@
 
 **Project**: gofer | **Language**: Unknown | **Package Manager**: Not detected
 
+## User-Facing Response Gate
+
+Before each user-facing reply, check the draft against these rules:
+
+1. Lead with the business outcome, effect, risk, or decision.
+2. Use concise, simple language.
+3. Include technical detail only when it supports a decision or the user asks
+   for it.
+4. If any check fails, rewrite the reply before sending it.
+
 ## Core Pipeline Stages
 
 ### 0_gofer_start

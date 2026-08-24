@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.4] - 2026-08-24
+
+Enforce concise business-language responses across all Gofer surfaces
+
 ## [3.10.3] - 2026-08-23
 
 Require verified EAI CLI commands and parser-safe Gofer entrypoint packaging.
