@@ -22,6 +22,7 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain(
         'Avoid idioms, marketing adjectives, vague praise, and hedging'
       );
+      expect(content, file).toContain('If any check fails, rewrite the reply before sending it');
       expect(content, file).toContain('`Working on`');
       expect(content, file).toContain('`Why it matters`');
       expect(content, file).toContain('`Status`');
@@ -42,6 +43,8 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('Use one action per instruction');
       expect(content, file).toContain('For errors, write: what happened, why it matters');
       expect(content, file).toMatch(/do not claim ASD\s+certification/);
+      expect(content, file).toContain('## User-Facing Response Gate');
+      expect(content, file).toContain('If any check fails, rewrite the reply before sending it');
     }
   });
 
@@ -93,6 +96,12 @@ describe('Gofer public execution-depth guidance', () => {
     expect(frontmatter).toMatch(/^description:\s+.+$/m);
     expect(frontmatter).not.toMatch(/^description:\s+[|>]/m);
     expect(frontmatter).not.toMatch(/\ndescription:\n\s+/);
+  });
+
+  it('keeps generated skill and agent surfaces out of Prettier rewrites', () => {
+    const prettierIgnore = fs.readFileSync(path.join(REPO_ROOT, '.prettierignore'), 'utf8');
+    expect(prettierIgnore).toContain('skills/');
+    expect(prettierIgnore).toContain('.github/agents/');
   });
 
   it('documents generic risk labels across the six primary pipeline commands', () => {

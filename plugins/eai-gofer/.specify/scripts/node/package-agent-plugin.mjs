@@ -394,6 +394,17 @@ Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat th
 5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
 }
 
+function buildUserFacingResponseGateSection() {
+  return `## User-Facing Response Gate
+
+Before each user-facing reply, check the draft against these rules:
+
+1. Lead with the business outcome, effect, risk, or decision.
+2. Use concise, simple language.
+3. Include technical detail only when it supports a decision or the user asks for it.
+4. If any check fails, rewrite the reply before sending it.`;
+}
+
 function buildJourneyStateSection() {
   return `## Journey State
 
@@ -487,6 +498,8 @@ Apply these rules before any user-facing output:
 8. Put one topic in each paragraph.
 9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.
 10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.
+
+${buildUserFacingResponseGateSection()}
 
 ${buildAlwaysEaiSection()}
 
@@ -644,6 +657,7 @@ function buildBusinessProgressContractSection() {
 - Explain what is being connected, changed, checked, or fixed and why it matters.
 - For application delivery, create or update \`.specify/specs/{feature}/build-map.md\` from \`.specify/templates/build-map-template.md\` and refer to that map in progress updates.
 - Keep technical detail, logs, tests, and security evidence in durable artifacts; provide that detail when the user asks.
+- Before each user-facing reply, check the business effect, language, and useful technical detail. If any check fails, rewrite the reply before sending it.
 `.trim();
 }
 

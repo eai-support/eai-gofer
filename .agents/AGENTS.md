@@ -2,13 +2,22 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-08-22T23:57:51.942Z
+Generated: 2026-08-24T01:27:02.366Z
 
 ## Public Entrypoints
 
 - `eai` - Start or continue Gofer from one user-facing command.
 
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under `.specify/commands/`.
+
+## User-Facing Response Gate
+
+Before each user-facing reply, check the draft against these rules:
+
+1. Lead with the business outcome, effect, risk, or decision.
+2. Use concise, simple language.
+3. Include technical detail only when it supports a decision or the user asks for it.
+4. If any check fails, rewrite the reply before sending it.
 
 ## Verified EAI CLI Command Contract
 

@@ -42,6 +42,12 @@ describe('AGENTS.md shape (T168)', () => {
     expect(content).toContain('## Optional Helper Commands');
   });
 
+  it('requires a final business-language response check', (): void => {
+    const content = fs.readFileSync(AGENTS_MD_PATH, 'utf8');
+    expect(content).toContain('## User-Facing Response Gate');
+    expect(content).toContain('If any check fails, rewrite the reply before sending it');
+  });
+
   it(`lists exactly ${FULL_COMMAND_COUNT} Gofer stage/helper subsections (### <name>)`, (): void => {
     const content = fs.readFileSync(AGENTS_MD_PATH, 'utf8');
     const section = extractStageSections(content);

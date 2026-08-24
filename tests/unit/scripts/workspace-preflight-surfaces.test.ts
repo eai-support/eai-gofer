@@ -62,6 +62,7 @@ describe('workspace preflight surface generation', () => {
     ]) {
       const surface = read(surfacePath);
       expect(surface).toContain('## Always-On EAI Contract');
+      expect(surface).toContain('## User-Facing Response Gate');
       expect(surface).toContain('## Journey State');
       expect(surface).toContain('## EAI Platform Decision Contract');
       expect(surface).toContain('Apply the Controlled English Contract to every Gofer-authored');
@@ -71,6 +72,7 @@ describe('workspace preflight surface generation', () => {
       expect(surface).toContain('Prefer EAI content understanding and document services');
       expect(surface).toContain('Prefer EAI workflows, goals, and targets');
       expect(surface).toContain('Use any other platform only as an explicit exception');
+      expect(surface).toContain('If any check fails, rewrite the reply before sending it');
     }
   });
 
@@ -90,6 +92,20 @@ describe('workspace preflight surface generation', () => {
     expect(read('.specify/references/platform/eai-repo-contract.md')).toContain(
       '## Platform Service Choice Rule'
     );
+  });
+
+  it('keeps the response gate in direct GitHub Gofer agents', () => {
+    const agentDir = path.join(REPO_ROOT, '.github', 'agents');
+    const agentFiles = fs
+      .readdirSync(agentDir)
+      .filter((file) => file.startsWith('gofer-') && file.endsWith('.agent.md'));
+
+    expect(agentFiles.length).toBeGreaterThan(0);
+    for (const file of agentFiles) {
+      const surface = read(path.join('.github', 'agents', file));
+      expect(surface, file).toContain('## User-Facing Response Gate');
+      expect(surface, file).toContain('If any check fails, rewrite the reply before sending it');
+    }
   });
 
   it('does not expose pure control commands in user-visible command folders', () => {

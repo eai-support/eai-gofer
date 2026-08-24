@@ -206,6 +206,13 @@ describe('agents-md emitter (T067)', () => {
     expect(content).not.toContain('`gofer` - Start or continue Gofer');
   });
 
+  it('AGENTS.md requires a final business-language response check', async () => {
+    const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
+    const content = await readFile(outPath);
+    expect(content).toContain('## User-Facing Response Gate');
+    expect(content).toContain('If any check fails, rewrite the reply before sending it');
+  });
+
   it('AGENTS.md contains internal contract entries for stages', async () => {
     const outPath = path.join(tmpRoot, '.agents', 'AGENTS.md');
     const content = await readFile(outPath);
