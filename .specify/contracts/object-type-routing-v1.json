@@ -9,7 +9,12 @@
     "role": "v4-transport-and-exact-lookup",
     "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
     "format": "eai-object-type-slug",
-    "reserved": ["operations", "query", "search", "storage"]
+    "reserved": [
+      "operations",
+      "query",
+      "search",
+      "storage"
+    ]
   },
   "derivation": {
     "algorithm": "eai.object-type-routing/v1",
@@ -27,17 +32,17 @@
       "validate-pattern-and-reserved-set"
     ],
     "vectors": [
-      { "input": "FeedItem", "output": "feed-item", "manifestNameValid": true },
-      { "input": "APIKey", "output": "api-key", "manifestNameValid": true },
-      { "input": "HTTPFeedItem", "output": "http-feed-item", "manifestNameValid": true },
-      { "input": "V2FeedItem", "output": "v2-feed-item", "manifestNameValid": true },
-      { "input": "GitHubConnection", "output": "github-connection", "manifestNameValid": true },
-      { "input": "Sent_Post", "output": "sent-post", "manifestNameValid": false },
-      { "input": "  Feed  Item  ", "output": "feed-item", "manifestNameValid": false },
-      { "input": "Draft--Item", "output": "draft-item", "manifestNameValid": false },
-      { "input": "operations", "output": "operations", "manifestNameValid": false },
-      { "input": "", "output": "", "manifestNameValid": false },
-      { "input": "---", "output": "", "manifestNameValid": false }
+      {"input": "FeedItem", "output": "feed-item", "manifestNameValid": true},
+      {"input": "APIKey", "output": "api-key", "manifestNameValid": true},
+      {"input": "HTTPFeedItem", "output": "http-feed-item", "manifestNameValid": true},
+      {"input": "V2FeedItem", "output": "v2-feed-item", "manifestNameValid": true},
+      {"input": "GitHubConnection", "output": "github-connection", "manifestNameValid": true},
+      {"input": "Sent_Post", "output": "sent-post", "manifestNameValid": false},
+      {"input": "  Feed  Item  ", "output": "feed-item", "manifestNameValid": false},
+      {"input": "Draft--Item", "output": "draft-item", "manifestNameValid": false},
+      {"input": "operations", "output": "operations", "manifestNameValid": false},
+      {"input": "", "output": "", "manifestNameValid": false},
+      {"input": "---", "output": "", "manifestNameValid": false}
     ]
   },
   "governedTransportFields": [
@@ -50,7 +55,10 @@
   ],
   "relationshipReferences": {
     "sourceField": "linkTypes[].targetObjectType",
-    "sourceAcceptedIdentifiers": ["same-manifest-name", "slug"],
+    "sourceAcceptedIdentifiers": [
+      "same-manifest-name",
+      "slug"
+    ],
     "adapterMustEmit": "slug",
     "persistedIdentifier": "slug",
     "runtimeField": "target_type",

@@ -117,6 +117,7 @@
           "id": "object-type-routing-audit-tooling",
           "description": "Immutable Object Type raw-route ownership audit, portable schemas, and deterministic Gofer resource generation checks.",
           "owned_paths": [
+            ".prettierignore",
             ".specify/config/object-type-routing.json",
             ".specify/contracts/object-type-routing-v1.json",
             ".specify/schemas/object-type-*.schema.json",

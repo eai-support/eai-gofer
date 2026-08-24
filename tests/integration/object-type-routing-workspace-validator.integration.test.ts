@@ -68,8 +68,17 @@ describe('Object Type routing workspace reducer', () => {
       path.resolve('extension/resources/bash-scripts/verify-object-type-routing-workspace.sh'),
       'utf8'
     );
+    const contract = await readFile(
+      path.resolve('.specify/contracts/object-type-routing-v1.json'),
+      'utf8'
+    );
+    const installedContract = await readFile(
+      path.resolve('extension/resources/contracts/object-type-routing-v1.json'),
+      'utf8'
+    );
 
     expect(mirror).toBe(canonical);
+    expect(installedContract).toBe(contract);
     expect(canonical.match(/diff -U0 origin\/main --/g)).toHaveLength(2);
     expect(canonical).not.toContain('diff -U0 -- src/app/core/telemetry.py');
     expect(canonical).toContain('"mid/AdminAPI/.eai/test-coverage.json"');

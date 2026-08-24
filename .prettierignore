@@ -23,6 +23,7 @@ tests/fixtures/stage-commands/
 # `npm run gofer:generate` owns their exact bytes: mirror-parity tests compare
 # them to generator output, and Gofer's frontmatter parser only reads a
 # single-line `description:`, which Prettier folds once the text is long enough.
+.specify/contracts/object-type-routing-v1.json
 .agents/AGENTS.md
 .claude/skills/
 .github/skills/
