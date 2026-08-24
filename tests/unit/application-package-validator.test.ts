@@ -1,15 +1,73 @@
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   APP_CAPABILITY_SCHEMA_VERSION,
+  canonicalizeApplicationPackage,
+  digestApplicationPackage,
   evaluateMarketplaceReadiness,
   validateApplicationPackage,
 } from '../../.specify/scripts/node/validate-application-package.mjs';
+import { materializeFixture } from '../../.specify/scripts/node/generated/application-package-runtime.mjs';
 
 describe('Gofer application package validator', () => {
   it('composes the existing app capability authority', () => {
     expect(APP_CAPABILITY_SCHEMA_VERSION).toBe('eai.app_capabilities.v1');
     expect(validateApplicationPackage(validPackage())).toEqual([]);
+  });
+
+  it('uses the exact canonical schema and digest implementation', () => {
+    const applicationPackage = validPackage();
+    expect(
+      validateApplicationPackage({
+        ...applicationPackage,
+        displayName: 'x'.repeat(121),
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.stringContaining('displayName') }),
+      ])
+    );
+    expect(canonicalizeApplicationPackage(applicationPackage)).not.toContain('\n');
+    expect(digestApplicationPackage(applicationPackage)).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
+  it('fails closed if generated contract bytes drift from tech-docs', async () => {
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+    for (const [relativePath, expected] of [
+      [
+        '.specify/scripts/node/generated/application-package.schema.json',
+        '1d20803fac09adbf7e5276137082b5c737ad621cdeb383581ab61ef9ae0fbc47',
+      ],
+      [
+        '.specify/scripts/node/generated/application-package-runtime.mjs',
+        '3f0999722404d9dff9dc0545a36ec5071f8a2339de0ad6456d4368a191421972',
+      ],
+    ]) {
+      const bytes = await readFile(path.join(root, relativePath));
+      expect(createHash('sha256').update(bytes).digest('hex'), relativePath).toBe(expected);
+    }
+  });
+
+  it('accepts and rejects the complete authoritative fixture corpus', async () => {
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+    const fixtureRoot = path.join(root, '.specify/scripts/node/generated/fixtures');
+    const base = JSON.parse(
+      await readFile(path.join(fixtureRoot, 'application-package.valid.json'), 'utf8')
+    );
+    const fixtures = JSON.parse(
+      await readFile(path.join(fixtureRoot, 'application-package.fixtures.json'), 'utf8')
+    );
+    for (const fixture of fixtures) {
+      expect(
+        validateApplicationPackage(materializeFixture(base, fixture)).length === 0,
+        fixture.name
+      ).toBe(fixture.valid);
+    }
   });
 
   it.each([
