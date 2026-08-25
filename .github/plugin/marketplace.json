@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.",
-    "version": "3.10.4"
+    "version": "3.10.5"
   },
   "plugins": [
     {
       "name": "eai-gofer",
       "source": "./plugins/eai-gofer",
       "description": "Gofer single-entry delivery command with internal pipeline routing.",
-      "version": "3.10.4",
+      "version": "3.10.5",
       "author": {
         "name": "EAI Tools",
         "url": "https://github.com/eai-support/eai-gofer"
