@@ -274,6 +274,9 @@ describe('Release Verification', () => {
         'run_release_check "VS Code production package build" npm --prefix extension run package'
       );
       expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "EAI app-template Playwright browser install" npm --prefix "$template_dir" exec -- playwright install chromium'
+      );
+      expect(RELEASE_SCRIPT).toContain(
         'run_release_check "EAI app-template verify" npm --prefix "$template_dir" run verify --silent'
       );
       expect(RELEASE_SCRIPT).toContain(
@@ -393,6 +396,9 @@ describe('Release Verification', () => {
       expect(RELEASE_WORKFLOW).toContain('npm run test:unit');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix extension run prepare-language-server');
       expect(RELEASE_WORKFLOW).toContain('xvfb-run -a npm --prefix extension test');
+      expect(RELEASE_WORKFLOW).toContain(
+        'npm --prefix eai-app-template exec -- playwright install --with-deps chromium'
+      );
       expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template run verify --silent');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template run test:smoke');
       expect(RELEASE_WORKFLOW).toContain(

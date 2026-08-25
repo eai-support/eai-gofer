@@ -400,6 +400,7 @@ run_eai_app_template_release_gate() {
 
     print_info "Running EAI app-template release checks from $template_dir..."
     run_release_check "EAI app-template dependency install" npm --prefix "$template_dir" install --ignore-scripts
+    run_release_check "EAI app-template Playwright browser install" npm --prefix "$template_dir" exec -- playwright install chromium
     run_release_check "EAI app-template verify" npm --prefix "$template_dir" run verify --silent
     run_release_check "EAI app-template smoke tests" npm --prefix "$template_dir" run test:smoke
     run_release_check "EAI app-template business-scenario browser tests" npm --prefix "$template_dir" run test:business-scenarios
