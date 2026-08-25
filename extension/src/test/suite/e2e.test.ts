@@ -277,17 +277,19 @@ suite('E2E GitHub API Tests', () => {
       }
     });
 
-    test('should execute template update command', async function () {
+    test('should execute update now command', async function () {
       if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
         this.skip();
         return;
       }
 
+      this.timeout(60000); // Update checks call the public release feed.
+
       try {
-        await vscode.commands.executeCommand('gofer.updateTemplates');
-        assert.ok(true, 'Update templates command should execute');
+        await vscode.commands.executeCommand('gofer.updateNow');
+        assert.ok(true, 'Update now command should execute');
       } catch (error) {
-        console.warn('Update templates command failed in test environment:', error);
+        console.warn('Update now command failed in test environment:', error);
       }
     });
 
@@ -296,6 +298,8 @@ suite('E2E GitHub API Tests', () => {
         this.skip();
         return;
       }
+
+      this.timeout(60000); // Update checks call the public release feed.
 
       try {
         await vscode.commands.executeCommand('gofer.checkForUpdates');
