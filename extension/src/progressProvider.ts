@@ -851,7 +851,8 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
       const missingFiles = readiness.response.missingFiles.join(', ');
       const message =
         `Cannot mark deployment task "${task.id}" complete. ` +
-        `Missing required runtime contract or deploy doctor evidence files: ${missingFiles}.`;
+        `Missing required runtime contract or deploy doctor evidence files: ${missingFiles}. ` +
+        'Next step: create the EAI runtime contract from the app template, run deploy doctor after deployment, save the result to .eai/deploy-doctor.json, then retry.';
       void vscode.window.showWarningMessage(message);
       throw new Error(`IMPL_DEPLOYMENT_VALIDATION_FAILED: ${message}`);
     }

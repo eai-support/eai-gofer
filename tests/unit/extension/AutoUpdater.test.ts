@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AutoUpdater } from '../../../extension/src/autoUpdater';
 import * as path from 'path';
 import * as os from 'os';
+import * as vscode from 'vscode';
 
 /**
  * Tests for AutoUpdater - version checking and update management
@@ -185,6 +186,21 @@ describe('AutoUpdater - Constructor and Initialization', () => {
   it('should initialize with null interval ID', () => {
     const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0');
     expect((updater as any).intervalId).toBeNull();
+  });
+});
+
+describe('AutoUpdater - Manual check command behavior', () => {
+  it('does not block the command while waiting for the user to answer the update prompt', async () => {
+    const updater = new AutoUpdater('eai-support/eai-gofer', '1.0.0', 'eai-gofer');
+    const dispose = vi.fn();
+    (vscode.window as any).setStatusBarMessage = vi.fn(() => ({ dispose }));
+    (updater as any).getLatestVersion = vi.fn().mockResolvedValue('1.0.1');
+    (updater as any).promptUpdate = vi.fn(() => new Promise<void>(() => undefined));
+
+    await updater.manualCheck();
+
+    expect((updater as any).promptUpdate).toHaveBeenCalledWith('1.0.1');
+    expect(dispose).toHaveBeenCalled();
   });
 });
 

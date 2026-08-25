@@ -8,6 +8,8 @@
  *   4. extension/resources/templates/visuals/ contains persona-pack templates
  *   5. extension/resources/claude-commands/ contains the public Claude wrappers
  *   6. extension/resources/specify-commands/ contains canonical source files
+ *   7. extension/.vscodeignore keeps the bundled Language Server runtime
+ *   8. extension/package.json prepares the Language Server before VSIX packaging
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -19,6 +21,7 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const EXTENSION_DIR = path.join(REPO_ROOT, 'extension');
 const VSCODEIGNORE = path.join(EXTENSION_DIR, '.vscodeignore');
+const EXTENSION_PACKAGE_JSON = path.join(EXTENSION_DIR, 'package.json');
 
 describe('vsix packaging includes persona-pack + source-of-truth (T172)', () => {
   it('extension/.vscodeignore exists', (): void => {
@@ -72,5 +75,23 @@ describe('vsix packaging includes persona-pack + source-of-truth (T172)', () => 
     expect(fs.existsSync(specifyCommandsDir)).toBe(true);
     expect(fs.existsSync(path.join(specifyCommandsDir, '6_gofer_validate.md'))).toBe(true);
     expect(fs.existsSync(path.join(specifyCommandsDir, 'gofer_diagnose.md'))).toBe(true);
+  });
+
+  it('does NOT exclude the bundled Language Server runtime', (): void => {
+    const content = fs.readFileSync(VSCODEIGNORE, 'utf8');
+    expect(content).toMatch(/(^|\n)!language-server\/dist\/\*\*/);
+    expect(content).toMatch(/(^|\n)!language-server\/package\.json/);
+    expect(content).toMatch(/(^|\n)!language-server\/node_modules\/\*\*/);
+  });
+
+  it('prepares the Language Server before VSIX packaging', (): void => {
+    const packageJson = JSON.parse(fs.readFileSync(EXTENSION_PACKAGE_JSON, 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
+    expect(packageJson.scripts?.['vscode:prepublish']).toContain('prepare-language-server');
+    expect(packageJson.scripts?.['vscode:prepublish']).toContain('package');
+    expect(packageJson.scripts?.['prepare-language-server']).toBe(
+      'node scripts/prepare-language-server.mjs'
+    );
   });
 });
