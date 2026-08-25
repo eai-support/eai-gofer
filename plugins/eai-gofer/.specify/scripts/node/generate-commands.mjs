@@ -367,6 +367,10 @@ ${buildAlwaysEaiSection()}
 4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${host} --include-mirrors\`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
+${buildLocalSettingsCleanupContractSection()}
+
+${buildAppPreviewRunnerContractSection()}
+
 ${buildJourneyStateSection()}
 
 ## App vs Non-App Routing
@@ -760,6 +764,8 @@ Before doing stage/helper work:
    - \`.specify/scripts/powershell/install-optional-tools.ps1\`
    - \`.specify/templates/gofer-model-policy.yaml\`
    - \`.specify/memory/gofer-model-policy.yaml\`
+   - \`.specify/scripts/node/gofer-local-settings-cleanup.mjs\`
+   - \`.specify/scripts/node/gofer-ui-preview.mjs\`
    - \`.specify/specs/\`
    - \`.specify/memory/\`
 3. Check host-specific repo-owned files when relevant:
@@ -772,7 +778,16 @@ Before doing stage/helper work:
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.${eaiPreflight}
+7. After a Gofer install, update, or bootstrap, remove stale local Gofer command entries with:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+8. If the cleanup helper is only available in the downloaded bundle, run:
+   - macOS/Linux: \`node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+   - Windows: \`node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+9. For EAI app delivery, use the repo runner for local previews:
+   - macOS, Linux, and GitHub Codespaces: \`./run.sh dev 3001\`
+   - Windows: \`run.bat dev 3001\`
+10. Do not start app previews with direct \`npm run dev\` commands when the repo runner exists.
+11. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.${eaiPreflight}
 `.trim();
 }
 
@@ -876,6 +891,83 @@ certification.
 `.trim();
 }
 
+function buildLocalSettingsCleanupContractSection() {
+  return `
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: \`node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+   - Windows: \`node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public \`eai\` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->
+`.trim();
+}
+
+function injectLocalSettingsCleanupContract(content) {
+  if (content.includes('<!-- gofer:local-settings-cleanup:start -->')) {
+    return content;
+  }
+
+  const workspaceHeadingIndex = content.indexOf('## Workspace Preflight');
+  if (workspaceHeadingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', workspaceHeadingIndex + 1);
+    if (nextHeadingIndex !== -1) {
+      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${buildLocalSettingsCleanupContractSection()}\n\n${content
+        .slice(nextHeadingIndex)
+        .replace(/^\n+/, '')}`;
+    }
+  }
+
+  return `${content.trimEnd()}\n\n${buildLocalSettingsCleanupContractSection()}`;
+}
+
+function buildAppPreviewRunnerContractSection() {
+  return `
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
+2. Use \`run.bat dev 3001\` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
+6. After every UI-facing change, run:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
+7. On Windows, use:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+`.trim();
+}
+
+function injectAppPreviewRunnerContract(content) {
+  if (content.includes('<!-- gofer:app-preview-runner:start -->')) {
+    return content;
+  }
+
+  const progressHeadingIndex = content.indexOf('## Business-Friendly Progress Contract');
+  if (progressHeadingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', progressHeadingIndex + 1);
+    if (nextHeadingIndex !== -1) {
+      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${buildAppPreviewRunnerContractSection()}\n\n${content
+        .slice(nextHeadingIndex)
+        .replace(/^\n+/, '')}`;
+    }
+  }
+
+  return `${content.trimEnd()}\n\n${buildAppPreviewRunnerContractSection()}`;
+}
+
 function insertSectionAfterTitle(content, section) {
   const frontmatterMatch = content.match(/^---\n[\s\S]*?\n---\n?/);
   const prefix = frontmatterMatch ? frontmatterMatch[0].trimEnd() : '';
@@ -930,7 +1022,9 @@ function injectBusinessProgressContract(content) {
 }
 
 function injectTokenCostPolicy(content) {
-  return injectBusinessProgressContract(injectTokenCostPolicyOnly(content));
+  return injectAppPreviewRunnerContract(
+    injectLocalSettingsCleanupContract(injectBusinessProgressContract(injectTokenCostPolicyOnly(content)))
+  );
 }
 
 function injectTokenCostPolicyOnly(content) {

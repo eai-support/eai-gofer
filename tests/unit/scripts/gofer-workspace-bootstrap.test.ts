@@ -121,6 +121,7 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.specify/templates/stakeholder-review-index-template.md',
       '.specify/templates/gofer-model-policy.yaml',
       '.specify/memory/gofer-model-policy.yaml',
+      '.specify/scripts/node/gofer-local-settings-cleanup.mjs',
       '.specify/scripts/node/gofer-loop-audit.mjs',
       '.specify/scripts/node/gofer-ui-preview.mjs',
       '.specify/scripts/hooks/post-tool-use.mjs',
