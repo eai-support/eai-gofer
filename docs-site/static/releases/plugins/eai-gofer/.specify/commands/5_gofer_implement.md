@@ -889,6 +889,22 @@ separation from `tasks.md`:
   read-only diagnostics before mutating fixes, ask for approval before tenant
   membership or admin changes, and stop at the guidance retry/escalation
   condition instead of repeatedly rerunning the same command.
+- If Object Type seed reports `app_manifest_validation_failed`, update the CLI,
+  run `eai types validate`, and run one dry run. Retry once through the named
+  CLI command. Do not hand-build a PublicAPI manifest or change source names and
+  slugs to match an HTTP request model.
+- Before the first mutating Object Type seed, require
+  `app-manifest-name-slug-negotiation-v1` in the JSON agent-guide capabilities.
+  Require the dry-run JSON to report `dryRun: true`,
+  `publishingMode: app-manifest`, the `explicit-name-and-slug` preferred shape,
+  and the exact declared pairs. The dry run is source and preferred-shape
+  evidence; it does not prove deployed support. Require the actual mutating
+  result to record the shape used. If proof is missing, block the mutating seed,
+  update the CLI, and repeat the read-only checks.
+- Trace every Object Type from its PascalCase source `name` to its exact declared
+  kebab-case `slug`. Relationships, Curate resource routes, query fields,
+  `useResources`, and `client.resources` must use that slug. Stop implementation
+  if generated code sends a PascalCase transport value or derives another slug.
 - Treat resource provisioning, object-type publish, schema/storage health, and preview readiness as separate gates even when the CLI reports progress in a single run.
 - Track workflow readiness alongside those gates; do not collapse it into
   provisioning, schema/storage health, or preview status.
