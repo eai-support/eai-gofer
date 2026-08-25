@@ -179,6 +179,7 @@ catalog:
     likelyCause: The installed CLI is old, or another manifest field fails after request-shape negotiation.
     recovery:
       - 'eai update --check'
+      - 'If eai update --check reports upgrade_required, obtain approval and run eai update'
       - 'eai types validate --tenant-key <key> --tenant-id <tenant-id>'
       - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
       - 'eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json'

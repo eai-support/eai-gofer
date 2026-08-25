@@ -323,6 +323,13 @@ with an unrelated non-EAI stack.
    - If advertised, run `eai agent guide --format json` before planning EAI
      platform work so the agent uses current CLI contracts and safe recovery
      patterns.
+   - For EAI apps that publish Object Types, require the agent guide
+     `capabilities` array to contain
+     `app-manifest-name-slug-negotiation-v1`. A current version number or a
+     successful `eai update --check` does not prove deployed receiver support.
+     If the capability is missing, record `upgrade_required` and block Object
+     Type seed/publish and deployed-readiness claims until the CLI is updated.
+     Do not hand-build the request.
    - After any `eai` command error, run
      `eai errors explain <code-or-reason> --format json` before proposing a
      fix, and prefer the CLI's public-safe recovery commands over guessed
@@ -421,9 +428,18 @@ with an unrelated non-EAI stack.
    - The CLI sends explicit `name` plus `slug` first. A name-only retry is a
      temporary compatibility path for an older deployed receiver, not the app
      contract and not a pattern for generated code.
-   - If seed returns `app_manifest_validation_failed`, run `eai update --check`
-     and the dry run above. Retry once through `eai types seed`. Do not remove
-     source validation or hand-edit the HTTP request body.
+   - Treat the dry run as source and planning evidence. Its JSON result must
+     report `dryRun: true`, `publishingMode: app-manifest`, the
+     `explicit-name-and-slug` preferred request shape, and the exact requested
+     name/slug pairs. The dry run does not prove deployed receiver support.
+     The safe-negotiation capability is the compatibility gate, and the actual
+     mutating result must record the request shape used. If any proof is absent,
+     stop, update the CLI, and repeat the read-only checks.
+   - If seed returns `app_manifest_validation_failed`, run `eai update --check`.
+     If the result reports `upgrade_required`, ask for approval and run
+     `eai update` before repeating validation and the dry run above. Retry once
+     through `eai types seed`. Do not remove source validation or hand-edit the
+     HTTP request body.
    - Provision storage, Entra app registration, environment sync, object types,
      and deployment only in the later plan/tasks/implement stages after the
      business scenario, UI show-and-tell evidence, and service-fit evidence are
@@ -494,6 +510,7 @@ For EAI app delivery, create or update
 | CLI install | `eai` path, version, install/update action taken |
 | CLI release status | `eai update --check` result and whether upgrade is required |
 | CLI capability source | `eai --describe` timestamp and relevant commands found |
+| Object Type seed adapter | `eai agent guide --format json` includes `app-manifest-name-slug-negotiation-v1`; dry run preserves exact name/slug pairs; mutating result records the shape used |
 | Login status | Logged in / needs login / account required, without tokens or secrets |
 | Tenant readiness | Active tenant status, role category, whether app enrollment is allowed |
 | Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |

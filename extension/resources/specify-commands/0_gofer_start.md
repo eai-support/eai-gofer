@@ -435,9 +435,11 @@ with an unrelated non-EAI stack.
      The safe-negotiation capability is the compatibility gate, and the actual
      mutating result must record the request shape used. If any proof is absent,
      stop, update the CLI, and repeat the read-only checks.
-   - If seed returns `app_manifest_validation_failed`, run `eai update --check`
-     and the dry run above. Retry once through `eai types seed`. Do not remove
-     source validation or hand-edit the HTTP request body.
+   - If seed returns `app_manifest_validation_failed`, run `eai update --check`.
+     If the result reports `upgrade_required`, ask for approval and run
+     `eai update` before repeating validation and the dry run above. Retry once
+     through `eai types seed`. Do not remove source validation or hand-edit the
+     HTTP request body.
    - Provision storage, Entra app registration, environment sync, object types,
      and deployment only in the later plan/tasks/implement stages after the
      business scenario, UI show-and-tell evidence, and service-fit evidence are

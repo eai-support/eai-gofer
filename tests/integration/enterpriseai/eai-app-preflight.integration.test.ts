@@ -49,6 +49,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('preferred request shape');
     expect(scenarioCommand).toMatch(/exact requested\s+name\/slug pairs/);
     expect(scenarioCommand).toMatch(/actual\s+mutating result/);
+    expect(scenarioCommand).toMatch(
+      /app_manifest_validation_failed[\s\S]*eai update --check[\s\S]*upgrade_required[\s\S]*approval[\s\S]*eai update[\s\S]*before repeating validation/
+    );
     expect(scenarioCommand).toContain(
       'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
     );
@@ -193,5 +196,19 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/<oid>/memberships');
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/role-definitions');
     expect(catalog).toContain('Do not start by changing tenant members');
+  });
+
+  it('updates an outdated CLI before retrying app-manifest validation', () => {
+    const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
+    const manifestRecovery = catalog
+      .split('errorId: EAI_APP_MANIFEST_VALIDATION_FAILED')[1]
+      ?.split('  - errorId:')[0];
+
+    expect(manifestRecovery).toContain('eai update --check');
+    expect(manifestRecovery).toContain(
+      'If eai update --check reports upgrade_required, obtain approval and run eai update'
+    );
+    expect(manifestRecovery).toContain('eai types validate');
+    expect(manifestRecovery).toContain('eai types seed');
   });
 });

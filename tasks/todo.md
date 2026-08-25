@@ -22,6 +22,8 @@
 - [x] Require dry-run evidence for the exact declared name/slug pairs without
       treating a local dry run as deployed receiver proof.
 - [x] Require the mutating result to record the request shape actually used.
+- [x] Require an approval-gated CLI update before retrying a manifest failure
+      when the installed CLI reports `upgrade_required`.
 - [x] Regenerate all published Gofer resources and mirrors.
 - [x] Run focused and full validation, then record the review result.
 
@@ -29,5 +31,7 @@
 
 - Source and generated-resource parity passed.
 - Focused Object Type compatibility and routing checks passed: 59 tests.
+- Review recovery guidance now updates an outdated CLI before validation and
+  seed are retried.
 - Full Gofer suite passed: 3,443 tests across 276 files.
 - Typecheck, lint, format, build, and generation checks passed.
