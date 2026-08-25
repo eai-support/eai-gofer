@@ -24,6 +24,7 @@ export const CORE_SENTINELS = [
   path.join('.specify', 'templates', 'brand', 'marp-theme-template.css'),
   path.join('.specify', 'scripts', 'bash', 'create-new-feature.sh'),
   path.join('.specify', 'scripts', 'node', 'parse-stage-command.mjs'),
+  path.join('.specify', 'scripts', 'node', 'gofer-local-settings-cleanup.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-loop-audit.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-ui-preview.mjs'),
   path.join('.specify', 'scripts', 'hooks', 'post-tool-use.mjs'),

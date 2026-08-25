@@ -456,6 +456,39 @@ For app delivery, make EAI Platform choices for the business user.
 15. Ask the user only for material business, security, cost, deployment, destructive, or external-system decisions.`;
 }
 
+function buildLocalSettingsCleanupContract() {
+  return `## Local Settings Cleanup Contract
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: \`node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+   - Windows: \`node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public \`eai\` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.`;
+}
+
+function buildAppPreviewRunnerContract() {
+  return `## App Preview Runner Contract
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
+2. Use \`run.bat dev 3001\` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
+6. After every UI-facing change, run:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
+7. On Windows, use:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.`;
+}
+
 function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
   const stageList = stages
     .map((stage) => `- \`${stage.stem}\` - ${stage.frontmatter.description}`)
@@ -481,6 +514,10 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 ## Workspace First
 
 Before stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.
+
+${buildLocalSettingsCleanupContract()}
+
+${buildAppPreviewRunnerContract()}
 
 ## Controlled English Contract
 
@@ -631,6 +668,8 @@ Before doing stage/helper work:
    - \`.specify/templates/build-map-template.md\`
    - \`.specify/templates/loop-contract-template.json\`
    - \`.specify/templates/working-backwards-prfaq-template.md\`
+   - \`.specify/scripts/node/gofer-local-settings-cleanup.mjs\`
+   - \`.specify/scripts/node/gofer-ui-preview.mjs\`
    - \`.specify/scripts/node/gofer-workspace-check.mjs\`
    - \`.specify/scripts/node/gofer-workspace-bootstrap.mjs\`
    - \`.specify/specs/\`
@@ -640,7 +679,13 @@ Before doing stage/helper work:
 4. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-6. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+6. After a Gofer install, update, or bootstrap, remove stale local Gofer command entries with:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+7. For EAI app delivery, use the repo runner for local previews:
+   - macOS, Linux, and GitHub Codespaces: \`./run.sh dev 3001\`
+   - Windows: \`run.bat dev 3001\`
+8. Do not start app previews with direct \`npm run dev\` commands when the repo runner exists.
+9. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
 `.trim();
 }
 
@@ -769,6 +814,45 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
 
+## Update Cleanup
+
+After each install or update, archive stale Gofer commands and settings:
+
+\`\`\`bash
+node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+\`\`\`
+
+If the repo helper is not present yet, run the helper from the stable plugin bundle:
+
+\`\`\`bash
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+\`\`\`
+
+Windows:
+
+\`\`\`bat
+node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json
+\`\`\`
+
+Then refresh or restart the host command picker.
+
+## Local App Preview Runner
+
+For EAI app delivery, start previews through the repo runner:
+
+\`\`\`bash
+./run.sh dev 3001
+\`\`\`
+
+Windows:
+
+\`\`\`bat
+run.bat dev 3001
+\`\`\`
+
+The runner stops any process on the selected port before it restarts the app.
+Agents should not use direct \`npm run dev\` commands when the runner exists.
+
 ## Core Pipeline
 
 | Stage | Internal contract | Main output |
@@ -809,6 +893,17 @@ curl -fsSL ${buildLatestPublicAgentPluginZipUrl()} -o /tmp/eai-gofer-agent-plugi
 
 rm -rf ~/plugins/eai-gofer
 unzip /tmp/eai-gofer-agent-plugin-latest.zip -d ~/plugins
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+\`\`\`
+
+Windows PowerShell:
+
+\`\`\`powershell
+Invoke-WebRequest ${buildLatestPublicAgentPluginZipUrl()} -OutFile "$env:TEMP\\eai-gofer-agent-plugin-latest.zip"
+
+Remove-Item "$env:USERPROFILE\\plugins\\eai-gofer" -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive "$env:TEMP\\eai-gofer-agent-plugin-latest.zip" "$env:USERPROFILE\\plugins" -Force
+node "$env:USERPROFILE\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs" --workspace . --apply --json
 \`\`\`
 
 ## Claude Code

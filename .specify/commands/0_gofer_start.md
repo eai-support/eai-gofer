@@ -84,6 +84,23 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+
 ## Always-On EAI Contract
 
 Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that
@@ -154,6 +171,22 @@ Before doing stage/helper work:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
 7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
+
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->
 
 ## Application Classification And EAI Preflight
 
@@ -917,11 +950,11 @@ For app delivery, the default early process is:
    interaction behavior, run:
 
    ```bash
-   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --require-scenarios --open auto --screenshot --change "<change summary>"
+   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --require-scenarios --open auto --screenshot --change "<change summary>"
    ```
 
-   If auto-detection is wrong, pass `--command "<preview command>"`; if a server
-   is already running, pass `--url <preview-url>`. Report the preview URL and
+   Use `run.bat dev 3001` on Windows. Use `--url <preview-url>` only when a server
+   is already running. Report the preview URL and
    screenshot path to the user quickly, append the run to `ui-review-log.md`,
    update `ui-show-and-tell.md`, ask for fast feedback, and keep showing the
    user the current UI as often as useful. Pause only when the user asks for

@@ -135,6 +135,8 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
         'eai-gofer/.specify/schemas/object-type-routing-phase-bundle-v1.schema.json',
         'eai-gofer/.specify/templates/gofer-model-policy.yaml',
+        'eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-ui-preview.mjs',
         'eai-gofer/commands/eai.md',
         'eai-gofer/skills/eai/SKILL.md',
       ]) {
@@ -205,6 +207,10 @@ describe('Gofer agent plugin package', () => {
         'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(readme).toContain('App-Native Surfaces And Repo Scripts');
+      expect(readme).toContain('Update Cleanup');
+      expect(readme).toContain('gofer-local-settings-cleanup.mjs --workspace . --apply --json');
+      expect(readme).toContain('./run.sh dev 3001');
+      expect(readme).toContain('run.bat dev 3001');
       expect(readme).toContain('Codex App / Codex IDE');
       expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
       expect(readme).toContain('Claude Code app');
@@ -225,6 +231,13 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('do not claim ASD certification');
       expect(umbrellaSkill).toContain('## User-Facing Response Gate');
       expect(umbrellaSkill).toContain('If any check fails, rewrite the reply before sending it');
+      expect(umbrellaSkill).toContain('## Local Settings Cleanup Contract');
+      expect(umbrellaSkill).toContain(
+        'gofer-local-settings-cleanup.mjs --workspace . --apply --json'
+      );
+      expect(umbrellaSkill).toContain('## App Preview Runner Contract');
+      expect(umbrellaSkill).toContain('./run.sh dev 3001');
+      expect(umbrellaSkill).toContain('run.bat dev 3001');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);

@@ -119,6 +119,23 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+
 ## User Input
 
 ```text
@@ -951,12 +968,12 @@ separation from `tasks.md`:
   component choice, theme, copy, data binding, or interaction behavior, run the
   preview helper before reporting the task complete:
   ```bash
-  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --require-scenarios --open auto --screenshot --change "<change summary>"
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --require-scenarios --open auto --screenshot --change "<change summary>"
   ```
-  Use `--command "<preview command>"` when auto-detection is wrong, or
-  `--url <preview-url>` when a server is already running. Report the opened URL and
-  screenshot path to the user quickly. Append the run, self-review, and any
-  known visual risks to `{FEATURE_DIR}/ui-review-log.md`. Also update
+  Use `run.bat dev 3001` on Windows. Use `--url <preview-url>` only when a
+  server is already running. Report the opened URL and screenshot path to the
+  user quickly. Append the run, self-review, and any known visual risks to
+  `{FEATURE_DIR}/ui-review-log.md`. Also update
   `{FEATURE_DIR}/build-map.md` with the affected map area, plain-language
   status, business impact, and next step.
 - For application delivery, do not mark a UI task complete unless
@@ -1033,3 +1050,19 @@ Logs to: `.specify/logs/pipeline.jsonl`
   that the helper was not run.
 - These selectors are optional and do not change stage progress, routing, or
   pipeline state.
+
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->

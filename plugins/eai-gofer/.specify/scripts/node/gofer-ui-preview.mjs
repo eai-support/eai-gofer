@@ -6,7 +6,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_PREVIEW_PORTS = [3000, 5173, 4173, 6006, 8080, 8000];
+export const DEFAULT_APP_PREVIEW_PORT = 3001;
+export const DEFAULT_PREVIEW_PORTS = [DEFAULT_APP_PREVIEW_PORT, 3000, 5173, 4173, 6006, 8080, 8000];
 export const PREVIEW_SCRIPT_PRIORITY = ['dev', 'start', 'preview', 'serve', 'storybook', 'docs:dev'];
 export const BUSINESS_SCENARIO_SCRIPT_PRIORITY = [
   'test:business-scenarios',
@@ -75,6 +76,61 @@ export function buildPackageScriptCommand(packageManager, scriptName) {
   return `npm run ${scriptName}`;
 }
 
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function discoverRepoRunnerCommand(
+  workspaceRoot,
+  port = DEFAULT_APP_PREVIEW_PORT,
+  platform = process.platform
+) {
+  const normalizedPort = Number(port);
+  if (!Number.isInteger(normalizedPort) || normalizedPort < 1 || normalizedPort > 65535) {
+    throw new Error(`Preview port is invalid: ${port}`);
+  }
+
+  if (platform === 'win32') {
+    if (await fileExists(path.join(workspaceRoot, 'run.bat'))) {
+      return {
+        command: `run.bat dev ${normalizedPort}`,
+        source: 'repo-runner',
+        packageManager: null,
+        scriptName: null,
+      };
+    }
+    if (await fileExists(path.join(workspaceRoot, 'run.ps1'))) {
+      return {
+        command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\run.ps1 dev ${normalizedPort}`,
+        source: 'repo-runner',
+        packageManager: null,
+        scriptName: null,
+      };
+    }
+  }
+
+  if (await fileExists(path.join(workspaceRoot, 'run.sh'))) {
+    return {
+      command: `./run.sh dev ${normalizedPort}`,
+      source: 'repo-runner',
+      packageManager: null,
+      scriptName: null,
+    };
+  }
+
+  return {
+    command: null,
+    source: 'missing-repo-runner',
+    packageManager: null,
+    scriptName: null,
+  };
+}
+
 export async function discoverPreviewCommand(workspaceRoot, explicitCommand = null) {
   if (explicitCommand?.trim()) {
     return {
@@ -83,6 +139,11 @@ export async function discoverPreviewCommand(workspaceRoot, explicitCommand = nu
       packageManager: null,
       scriptName: null,
     };
+  }
+
+  const repoRunner = await discoverRepoRunnerCommand(workspaceRoot);
+  if (repoRunner.command) {
+    return repoRunner;
   }
 
   const packageJsonPath = path.join(workspaceRoot, 'package.json');
@@ -282,6 +343,7 @@ export function extractPortsFromCommand(command = '') {
     /\bPORT=(\d{2,5})\b/g,
     /(?:^|\s)--port(?:=|\s+)(\d{2,5})\b/g,
     /(?:^|\s)-p(?:=|\s+)(\d{2,5})\b/g,
+    /(?:^|\s)(?:\.\/|\.\\)?run\.(?:sh|bat|ps1)(?:\s+\S+)?\s+(\d{2,5})\b/g,
     /\blocalhost:(\d{2,5})\b/g,
     /\b127\.0\.0\.1:(\d{2,5})\b/g,
   ];
@@ -791,7 +853,7 @@ Usage:
 Options:
   --workspace <path>        Workspace root. Defaults to cwd.
   --feature-dir <path>      Feature artifact directory, e.g. .specify/specs/my-feature.
-  --command <cmd>           Explicit preview command, e.g. "npm run dev -- --port 5173".
+  --command <cmd>           Explicit preview command, e.g. "./run.sh dev 3001".
   --url <url>               Existing preview URL. Skips server startup.
   --open <auto|external|none>
                             Open URL in the host/default browser. Defaults to auto.
@@ -892,7 +954,7 @@ export async function runUiPreview(rawOptions) {
       ...baseReport,
       status: 'blocked',
       nextActions: [
-        'Pass --command or --url, or add a package.json dev/start/preview script.',
+        'Pass --command or --url, add run.sh/run.bat, or add a package.json dev/start/preview script.',
         'Record the chosen preview command in ui-preview-brief.md.',
       ],
     };
