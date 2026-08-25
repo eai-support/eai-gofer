@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.8] - 2026-08-25
+
+Support current production Object Type seeding
+
 ## [3.10.7] - 2026-08-25
 
 Clean stale Gofer installs and use port-safe app runners
