@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.7] - 2026-08-25
+
+Clean stale Gofer installs and use port-safe app runners
+
 ## [3.10.6] - 2026-08-25
 
 Install app-template browser runtime for release gates
