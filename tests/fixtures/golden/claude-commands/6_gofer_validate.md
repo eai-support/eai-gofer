@@ -381,6 +381,13 @@ most three fix-and-validate attempts; after the third identical failure, mark
 validation failed with the rule ID, file, line, attempted fixes, and the reason
 the contract cannot be satisfied.
 
+For EAI apps that publish Object Types, validation also requires the
+`app-manifest-name-slug-negotiation-v1` capability, dry-run evidence for the
+preferred shape and exact declared name/slug pairs, a successful mutating result
+that records the shape used, and a converged `eai types diff`. A dry run alone
+is not deployed receiver evidence. Do not report the app ready when any part is
+missing.
+
 Canonical contract:
 https://docs.eai.software/services/publicapi/v4/resource-mutation-contract
 

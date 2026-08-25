@@ -30,6 +30,9 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(command).toContain('eai update --check');
     expect(command).toContain('eai --describe');
     expect(command).toContain('eai agent guide --format json');
+    expect(command).toContain('app-manifest-name-slug-negotiation-v1');
+    expect(command).toMatch(/block Object Type\s+seed\/publish/);
+    expect(command).toContain('does not prove the deployed receiver accepts');
     expect(command).toContain('eai errors explain <code-or-reason> --format json');
     expect(command).toContain('eai whoami');
     expect(command).toContain('eai tenant list --format json');

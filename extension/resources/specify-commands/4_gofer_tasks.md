@@ -717,6 +717,10 @@ evidence:
   object-type seeding or preview readiness.
 - Object-type publish -> `eai types seed` only after provisioning and
   validation are complete.
+- Object-type seed capability -> require
+  `app-manifest-name-slug-negotiation-v1` before the mutating seed. Use the dry
+  run to verify the preferred request shape and exact declared name/slug pairs,
+  not as proof that the deployed receiver accepts that shape.
 - Object-type request compatibility -> run `eai types seed --dry-run` first.
   Let the maintained CLI serialize the app manifest. Do not copy the source
   name/slug schema into a direct PublicAPI request.
