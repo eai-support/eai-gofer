@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [Unreleased]
+
+Add the compact Enterprise AI first-run orientation across supported AI apps
+
 ## [3.10.8] - 2026-08-25
 
 Support current production Object Type seeding

@@ -48,7 +48,7 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
-  it('starts a new app conversation with business outcomes and one specification approval', () => {
+  it('starts a new app conversation with the compact EAI orientation and one specification approval', () => {
     for (const file of [
       '.claude/commands/eai.md',
       '.github/prompts/eai.prompt.md',
@@ -63,7 +63,21 @@ describe('Gofer public execution-depth guidance', () => {
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       expect(content, file).toContain('## First Conversation');
-      expect(content, file).toContain('Start with the business outcome');
+      expect(content, file).toContain('Get started with EAI');
+      expect(content, file).toContain('## Welcome to Enterprise AI 👋');
+      expect(content, file).toContain('1. **Improve**');
+      expect(content, file).toContain('4. **Run and measure**');
+      expect(content, file).toContain('Show me the admin screen.');
+      expect(content, file).toContain(
+        'What process would you like to improve, or what would you like the application to help people do?'
+      );
+      expect(content, file).toContain('Do not repeat it after onboarding starts');
+      expect(content, file).toContain(
+        'send the Required First-Run Response before any preflight, tool call, setup question, or stage routing'
+      );
+      expect(content, file).toContain(
+        'Resume workspace preflight only after the user answers the first process question'
+      );
       expect(content, file).toContain('Keep numbered Gofer stages internal');
       expect(content, file).toContain('Pause once for approval of the business specification');
       expect(content, file).toContain('Do not create a GitHub repository');
@@ -73,6 +87,44 @@ describe('Gofer public execution-depth guidance', () => {
       );
       expect(content, file).toContain('eai <command> --help');
     }
+  });
+
+  it('advertises the plain-language EAI startup trigger in generated skills', () => {
+    for (const file of [
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
+      '.github/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      const frontmatter = content.split('---')[1];
+      expect(frontmatter, file).toContain('Use when the user says Get started with EAI');
+    }
+  });
+
+  it('keeps generated Claude workspace guidance on the public EAI entry point', () => {
+    const guidance = fs.readFileSync(
+      path.join(REPO_ROOT, 'extension/resources/instruction-templates/gofer/gofer-claude.md'),
+      'utf8'
+    );
+
+    expect(guidance).toContain('Run `/eai` to start or continue');
+    expect(guidance).toContain('When the user says `Get started with EAI`');
+    expect(guidance).toContain('before running preflight or asking setup questions');
+    expect(guidance).not.toContain('Run `/0_gofer_start`');
+  });
+
+  it('keeps generated Copilot guidance on the public EAI entry point', () => {
+    const guidance = fs.readFileSync(
+      path.join(REPO_ROOT, 'extension/resources/instruction-templates/gofer/gofer-copilot.md'),
+      'utf8'
+    );
+
+    expect(guidance).toContain('run\n`#eai` to start or continue');
+    expect(guidance).toContain('When the user says `Get started with EAI`');
+    expect(guidance).toContain('before preflight, setup questions, or routing');
+    expect(guidance).not.toContain('/0_gofer_start');
   });
 
   it('keeps the generated Grok skill on the current Gofer version', () => {

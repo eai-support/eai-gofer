@@ -34,7 +34,7 @@ const PUBLIC_ENTRYPOINTS = [
     stem: 'eai',
     name: 'eai',
     title: 'Eai',
-    description: 'Start or continue the EAI delivery pipeline.',
+    description: 'Start or continue the EAI delivery pipeline. Use when the user says Get started with EAI or asks EAI to guide application delivery.',
   },
 ];
 const WINDOWS_FORBIDDEN_SEGMENT_CHARS = new Set(['<', '>', ':', '"', '\\', '|', '?', '*']);
@@ -385,13 +385,15 @@ function buildBundleCodexMarketplace(version) {
 function buildAlwaysEaiSection() {
   return `## Always-On EAI Contract
 
-Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat that prefix as activation for this contract, not as business content.
+Users usually start every request with \`/eai\`, \`$eai\`, \`#eai\`, or \`Get started with EAI\`. Treat that phrase as activation for this contract, not as business content.
 
 1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
 2. Keep the reply short unless the user asks for detail.
 3. Explain the business effect first.
 4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
+5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+6. When the user says Get started with EAI in a new app conversation, send the Required First-Run Response before any preflight, tool call, setup question, or stage routing.
+7. Resume workspace preflight only after the user answers the first process question.`;
 }
 
 function buildUserFacingResponseGateSection() {
@@ -496,14 +498,14 @@ function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
 
   return `---
 name: ${entry.name}
-description: "Run Gofer through one public entrypoint while preserving the full internal pipeline."
+description: "${entry.description}"
 ---
 
 # ${entry.title}
 
 Version: ${version}
 
-Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
+Use this skill when the user says \`Get started with EAI\`, invokes the public EAI entrypoint, or asks EAI to guide application delivery.
 
 ## Clean Surface Contract
 
@@ -644,13 +646,35 @@ function withFirstConversationGuidance(content) {
 
 When this is the first EAI conversation for a new app:
 
-1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
-2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
-3. Use the repository and EAI CLI as sources of truth. Run \`eai --describe\` before assuming command syntax and explain known errors before recovery.
-4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
-5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
-6. Pause once for approval of the business specification. Then continue unless a material business, security, cost, deployment, or destructive decision needs approval.
-7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.`;
+1. Treat \`Get started with EAI\` as the first-run trigger. Ignore capitalization, punctuation, and decorative emoji around the phrase.
+2. Show the following compact orientation once. Do not repeat it after onboarding starts or when existing feature state means the work should resume.
+
+### Required First-Run Response
+
+\`\`\`markdown
+## Welcome to Enterprise AI 👋
+
+I’ll help you improve a process and turn it into a secure enterprise application:
+
+1. **Improve** — understand the opportunity and design the solution.
+2. **Build** — prepare data, add AI, and connect systems.
+3. **Test and deploy** — validate, launch, and share securely.
+4. **Run and measure** — monitor results, costs, activity, and value.
+
+The EAI Platform supports every step with secure data, identity, multi-tenancy, and AI models.
+
+I’ll walk you through the whole process and ask short questions as we go. Tell me what you want me to do, or ask **“What’s next?”**, **“What else can you help with?”**, or **“Show me the admin screen.”**
+
+**First question:** What process would you like to improve, or what would you like the application to help people do?
+\`\`\`
+
+3. After the first answer, ask one short question at a time about the users, current process, desired value, success measures, and material constraints.
+4. Treat \`Show me the admin screen\` as a request for the relevant manual path. Use a verified link from repository or platform context when available. Never invent an admin URL.
+5. Use the repository and EAI CLI as sources of truth. Run \`eai --describe\` before assuming command syntax and explain known errors before recovery.
+6. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+7. Explain why specification-led delivery improves AI quality when relevant: it creates a shared, testable outcome before code changes multiply.
+8. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
+9. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.`;
   return content.replace('## EAI CLI Discovery And Recovery', `${section}\n\n## EAI CLI Discovery And Recovery`);
 }
 

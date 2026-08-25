@@ -238,6 +238,11 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('## App Preview Runner Contract');
       expect(umbrellaSkill).toContain('./run.sh dev 3001');
       expect(umbrellaSkill).toContain('run.bat dev 3001');
+      expect(umbrellaSkill).toContain('Use when the user says Get started with EAI');
+      expect(umbrellaSkill).toContain('## Welcome to Enterprise AI 👋');
+      expect(umbrellaSkill).toContain(
+        'What process would you like to improve, or what would you like the application to help people do?'
+      );
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);
@@ -291,6 +296,40 @@ describe('Gofer agent plugin package', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps the committed repo-local plugin byte-for-byte aligned with a fresh package', (): void => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-parity-'));
+    const currentVersion = readJson<{ version: string }>(
+      path.join(REPO_ROOT, 'package.json')
+    ).version;
+    try {
+      execFileSync('node', [SCRIPT_PATH, '--version', currentVersion, '--out-dir', outDir], {
+        cwd: REPO_ROOT,
+        stdio: 'pipe',
+      });
+      const generatedRoot = path.join(
+        outDir,
+        `eai-gofer-agent-plugin-${currentVersion}`,
+        'eai-gofer'
+      );
+      const committedRoot = path.join(REPO_ROOT, 'plugins', 'eai-gofer');
+      const generatedFiles = walkFiles(generatedRoot)
+        .map((file) => path.relative(generatedRoot, file))
+        .sort();
+      const committedFiles = walkFiles(committedRoot)
+        .map((file) => path.relative(committedRoot, file))
+        .sort();
+
+      expect(committedFiles).toEqual(generatedFiles);
+      for (const relativeFile of generatedFiles) {
+        expect(fs.readFileSync(path.join(committedRoot, relativeFile)), relativeFile).toEqual(
+          fs.readFileSync(path.join(generatedRoot, relativeFile))
+        );
+      }
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
   });
 
   it('repo root exposes marketplace files for repo-based CLI installs', (): void => {
