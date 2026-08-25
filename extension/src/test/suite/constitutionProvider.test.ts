@@ -18,7 +18,7 @@ suite('ConstitutionProvider Test Suite', () => {
 
   teardown(async () => {
     // Clean up temporary directory
-    await fs.rmdir(tempDir, { recursive: true }).catch(() => {});
+    await fs.rm(tempDir, { recursive: true, force: true });
   });
 
   suite('Constitution File Parsing', () => {
