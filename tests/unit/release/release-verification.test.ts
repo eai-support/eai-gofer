@@ -64,6 +64,10 @@ const VALID_RELEASES_JSON: ReleasesJson = {
 };
 
 const RELEASE_SCRIPT = readFileSync(path.resolve(__dirname, '../../../release.sh'), 'utf-8');
+const RELEASE_WORKFLOW = readFileSync(
+  path.resolve(__dirname, '../../../.github/workflows/release.yml'),
+  'utf-8'
+);
 
 describe('Release Verification', () => {
   describe('extractLatestVersion', () => {
@@ -239,19 +243,63 @@ describe('Release Verification', () => {
       expect(gitAddIndex).toBeGreaterThan(goferVersionWriteIndex);
     });
 
-    it('should capture failing test output before aborting the release', () => {
-      expect(RELEASE_SCRIPT).toContain(`print_info "Running tests..."
-set +e
-npm test > /tmp/test-output.log 2>&1
-TEST_EXIT=$?
-set -e`);
+    it('should fail before PR or tag when release validation fails', () => {
+      expect(RELEASE_SCRIPT).toContain('fail_release_validation()');
+      expect(RELEASE_SCRIPT).toContain('No release PR or tag was created.');
+      expect(RELEASE_SCRIPT).toContain(
+        'Fix the failure in a normal PR, get CI green, merge it to main, then rerun release.sh.'
+      );
+    });
+
+    it('should run the full release validation gate before publishing', () => {
+      expect(RELEASE_SCRIPT).toContain('run_release_validation_gate()');
+      expect(RELEASE_SCRIPT).toContain('run_release_check "Gofer typecheck" npm run typecheck');
+      expect(RELEASE_SCRIPT).toContain('run_release_check "Gofer production build" npm run build');
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "Gofer generated surface check" npm run gofer:generate:check'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "Gofer unit test suite" npm run test:unit'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "Language Server production build" npm --prefix language-server run build'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "VS Code extension runtime test suite" npm --prefix extension test'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "VS Code production package build" npm --prefix extension run package'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "EAI app-template verify" npm --prefix "$template_dir" run verify --silent'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "EAI app-template smoke tests" npm --prefix "$template_dir" run test:smoke'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "EAI app-template business-scenario browser tests" npm --prefix "$template_dir" run test:business-scenarios'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "EAI app-template e2e browser tests" npm --prefix "$template_dir" run test:e2e'
+      );
+    });
+
+    it('should make extension command validation fatal for releases', () => {
+      expect(RELEASE_SCRIPT).toContain('fail_release_validation "Extension command validation"');
+      expect(RELEASE_SCRIPT).not.toContain('Continuing with release - manual testing recommended');
     });
 
     it('should not push directly to origin/main from release.sh', () => {
-      const testsPassedIndex = RELEASE_SCRIPT.indexOf('print_success "Tests passed"');
+      const validationGateIndex = RELEASE_SCRIPT.indexOf(
+        'run_release_validation_gate "$NEW_VERSION"'
+      );
       const trackedAssetsIndex = RELEASE_SCRIPT.indexOf(
         'ensure_release_paths_tracked \\\n' +
-          '    "docs-site/static/releases/eai-gofer-$NEW_VERSION.vsix"'
+          '    "docs-site/static/releases/eai-gofer-$NEW_VERSION.vsix"',
+        validationGateIndex
       );
       const releaseCommitIndex = RELEASE_SCRIPT.indexOf(
         'git commit --no-verify -m "release: v$NEW_VERSION'
@@ -261,9 +309,9 @@ set -e`);
       );
       const pushTagIndex = RELEASE_SCRIPT.indexOf('git push --no-verify origin "$TAG_NAME"');
 
-      expect(testsPassedIndex).toBeGreaterThan(-1);
-      expect(trackedAssetsIndex).toBeGreaterThan(testsPassedIndex);
-      expect(releaseCommitIndex).toBeGreaterThan(testsPassedIndex);
+      expect(validationGateIndex).toBeGreaterThan(-1);
+      expect(trackedAssetsIndex).toBeGreaterThan(validationGateIndex);
+      expect(releaseCommitIndex).toBeGreaterThan(validationGateIndex);
       expect(releaseCommitIndex).toBeGreaterThan(trackedAssetsIndex);
       expect(pushBranchIndex).toBeGreaterThan(releaseCommitIndex);
       expect(pushTagIndex).toBeGreaterThan(-1);
@@ -282,7 +330,9 @@ set -e`);
     });
 
     it('should update release feed assets only after repo validation passes', () => {
-      const testsPassedIndex = RELEASE_SCRIPT.indexOf('print_success "Tests passed"');
+      const validationGateIndex = RELEASE_SCRIPT.indexOf(
+        'run_release_validation_gate "$NEW_VERSION"'
+      );
       const updateReleasesIndex = RELEASE_SCRIPT.indexOf(
         'node scripts/update-releases.js "$NEW_VERSION" "$RELEASE_NOTES"'
       );
@@ -290,8 +340,23 @@ set -e`);
         'node scripts/publish-public-release-assets.mjs "$NEW_VERSION"'
       );
 
-      expect(updateReleasesIndex).toBeGreaterThan(testsPassedIndex);
+      expect(updateReleasesIndex).toBeGreaterThan(validationGateIndex);
       expect(publishAssetsIndex).toBeGreaterThan(updateReleasesIndex);
+    });
+
+    it('should validate merged main before pushing the release tag', () => {
+      const publishModeIndex = RELEASE_SCRIPT.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then');
+      const publishGateIndex = RELEASE_SCRIPT.indexOf(
+        'run_release_validation_gate "$CURRENT_VERSION"',
+        publishModeIndex
+      );
+      const pushTagIndex = RELEASE_SCRIPT.indexOf(
+        'git push --no-verify origin "$TAG_NAME"',
+        publishModeIndex
+      );
+
+      expect(publishGateIndex).toBeGreaterThan(publishModeIndex);
+      expect(pushTagIndex).toBeGreaterThan(publishGateIndex);
     });
 
     it('should stage the full release diff before creating the release commit', () => {
@@ -318,6 +383,25 @@ set -e`);
       );
       expect(RELEASE_SCRIPT).toContain('REMOTE_GEMINI_URL=');
       expect(RELEASE_SCRIPT).toContain('Gemini extension URL is correct');
+    });
+
+    it('should keep GitHub release workflow aligned with the local release gate', () => {
+      expect(RELEASE_WORKFLOW).toContain('Checkout EAI App Template');
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template ci');
+      expect(RELEASE_WORKFLOW).toContain('npm run gofer:generate:check');
+      expect(RELEASE_WORKFLOW).toContain('npm run typecheck');
+      expect(RELEASE_WORKFLOW).toContain('npm run test:unit');
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix extension run prepare-language-server');
+      expect(RELEASE_WORKFLOW).toContain('xvfb-run -a npm --prefix extension test');
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template run verify --silent');
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template run test:smoke');
+      expect(RELEASE_WORKFLOW).toContain(
+        'npm --prefix eai-app-template run test:business-scenarios'
+      );
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template run test:e2e');
+      expect(RELEASE_WORKFLOW).toContain('Build Components');
+      expect(RELEASE_WORKFLOW).toContain('npm run build');
+      expect(RELEASE_WORKFLOW).toContain('npm --prefix language-server run build');
     });
   });
 });
