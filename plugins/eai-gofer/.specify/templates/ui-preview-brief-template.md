@@ -23,21 +23,36 @@ status: draft
 
 ## Fast Preview Runtime
 
-- **Preview command**: {{preview-command-or-url}}
+- **Preview command**: {{preview-command-or-url, prefer ./run.sh dev 3001 or run.bat dev 3001}}
 - **Primary preview URL**: {{preview-url}}
 - **Browser target**: integrated browser when the host app supports it;
   otherwise open the system browser.
+- **Runner rule**: use the repo runner when it exists. Do not use direct
+  `npm run dev`, `next dev`, or package-manager preview commands when
+  `run.sh`, `run.bat`, or `run.ps1` exists.
+- **macOS / Linux / Codespaces runner**:
+
+  ```bash
+  ./run.sh dev 3001
+  ```
+
+- **Windows runner**:
+
+  ```bat
+  run.bat dev 3001
+  ```
+
 - **Change trigger**: after every UI-facing change to page layout, component
   choice, theme, copy, data binding, or interaction behavior, run:
 
   ```bash
-  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --open auto --screenshot --change "{{change-summary}}"
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --command "./run.sh dev 3001" --open auto --screenshot --change "{{change-summary}}"
   ```
 
-- **Fallback when auto-detection is wrong**:
+- **Windows change trigger**:
 
-  ```bash
-  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --command "{{preview-command}}" --open auto --screenshot --change "{{change-summary}}"
+  ```bat
+  node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {{feature-dir}} --command "run.bat dev 3001" --open auto --screenshot --change "{{change-summary}}"
   ```
 
 - **Existing server fallback**:

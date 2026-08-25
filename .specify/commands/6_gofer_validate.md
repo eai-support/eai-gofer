@@ -117,6 +117,23 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+
 ## User Input
 
 ```text
@@ -2181,7 +2198,7 @@ For application delivery, validation MUST also check
   trail, and fallback/escalation path.
 - `{FEATURE_DIR}/ui-review-log.md` contains a `gofer-ui-preview.mjs` run or
   equivalent opened-browser evidence for every UI-facing change after the first
-  preview command/URL was established.
+  repo runner command/URL was established.
 - `{FEATURE_DIR}/business-scenarios.json` maps every in-scope user story to its
   business outcome, all screens/states crossed, and executable browser test
   files. Missing stories, unnamed screens, missing test files, or unit-only
@@ -2189,15 +2206,15 @@ For application delivery, validation MUST also check
 - `{FEATURE_DIR}/business-scenario-report.json` comes from the latest UI state,
   reports a recognized Playwright/Cypress/browser runner, and is `passed`.
   Validation reruns
-  `gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --require-scenarios`; a
-  screenshot or component render without a successful click-through does not
-  satisfy the functional UI gate.
+  `gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --require-scenarios`;
+  use `run.bat dev 3001` on Windows. A screenshot or component render without a
+  successful click-through does not satisfy the functional UI gate.
 - When the host supports an integrated browser, validation also clicks through
   the same scenarios visibly and records the URL, screens visited, outcomes,
   console errors, failed requests, responsive viewport, and any mismatch with
   automation in `ui-show-and-tell.md`. Playwright remains the repeatable
   fallback and CI gate.
-- Each preview entry records the changed surface, preview command or URL,
+- Each preview entry records the changed surface, repo runner command or URL,
   opened local URL, browser target, screenshot path or clear capture limitation,
   and pre-presentation self-review notes before stakeholder feedback.
 - `{FEATURE_DIR}/ui-show-and-tell.md` records the latest opened preview URL,
@@ -2371,3 +2388,19 @@ This also logs quality metrics (rubric scores, finding counts) to:
 - **Score the rubric honestly** — the goal is to catch real problems, not to
   pass
 - Log stage completion for observability tracking
+
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->

@@ -53,6 +53,45 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
 
+## Update Cleanup
+
+After each install or update, archive stale Gofer commands and settings:
+
+```bash
+node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+If the repo helper is not present yet, run the helper from the stable plugin bundle:
+
+```bash
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Windows:
+
+```bat
+node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Then refresh or restart the host command picker.
+
+## Local App Preview Runner
+
+For EAI app delivery, start previews through the repo runner:
+
+```bash
+./run.sh dev 3001
+```
+
+Windows:
+
+```bat
+run.bat dev 3001
+```
+
+The runner stops any process on the selected port before it restarts the app.
+Agents should not use direct `npm run dev` commands when the runner exists.
+
 ## Core Pipeline
 
 | Stage | Internal contract | Main output |
@@ -93,6 +132,17 @@ curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plug
 
 rm -rf ~/plugins/eai-gofer
 unzip /tmp/eai-gofer-agent-plugin-latest.zip -d ~/plugins
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip -OutFile "$env:TEMP\eai-gofer-agent-plugin-latest.zip"
+
+Remove-Item "$env:USERPROFILE\plugins\eai-gofer" -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive "$env:TEMP\eai-gofer-agent-plugin-latest.zip" "$env:USERPROFILE\plugins" -Force
+node "$env:USERPROFILE\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs" --workspace . --apply --json
 ```
 
 ## Claude Code

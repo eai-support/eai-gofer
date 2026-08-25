@@ -73,6 +73,11 @@ describe('workspace preflight surface generation', () => {
       expect(surface).toContain('Prefer EAI workflows, goals, and targets');
       expect(surface).toContain('Use any other platform only as an explicit exception');
       expect(surface).toContain('If any check fails, rewrite the reply before sending it');
+      expect(surface).toContain('## Local Settings Cleanup Contract');
+      expect(surface).toContain('gofer-local-settings-cleanup.mjs --workspace . --apply --json');
+      expect(surface).toContain('## App Preview Runner Contract');
+      expect(surface).toContain('./run.sh dev 3001');
+      expect(surface).toContain('run.bat dev 3001');
     }
   });
 
