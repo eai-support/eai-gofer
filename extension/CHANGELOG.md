@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.10.5] - 2026-08-25
+
+Harden Gofer release validation gates and app-template browser checks
+
 ## [3.10.4] - 2026-08-24
 
 Enforce concise business-language responses across all Gofer surfaces
