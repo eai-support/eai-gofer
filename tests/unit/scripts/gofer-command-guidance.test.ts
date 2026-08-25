@@ -141,6 +141,26 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
+  it('keeps installed platform guidance explicit about stored Object Type slugs', () => {
+    for (const root of [
+      '.specify/references/platform',
+      'extension/resources/references/platform',
+      'plugins/eai-gofer/.specify/references/platform',
+    ]) {
+      for (const file of [
+        'eai-app-template.md',
+        'eai-service-patterns.md',
+        'eai-repo-contract.md',
+      ]) {
+        const relativePath = path.join(root, file);
+        const content = fs.readFileSync(path.join(REPO_ROOT, relativePath), 'utf8');
+        expect(content, relativePath).toContain('PascalCase');
+        expect(content, relativePath).toContain('stored `slug`');
+        expect(content, relativePath).toMatch(/historical stored slug/i);
+      }
+    }
+  });
+
   it('keeps the root eai skill frontmatter compatible with line-based parsers', () => {
     const content = fs.readFileSync(path.join(REPO_ROOT, 'skills/eai/SKILL.md'), 'utf8');
     const frontmatter = content.split('---')[1];

@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline. Use when the user say
 
 # Eai
 
-Version: 3.10.8
+Version: 3.10.9
 
 Use this skill when the user says `Get started with EAI`, invokes the public EAI entrypoint, or asks EAI to guide application delivery.
 

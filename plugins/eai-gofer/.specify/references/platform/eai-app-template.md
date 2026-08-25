@@ -27,6 +27,10 @@ app template for EnterpriseAI app-delivery work.
 ## Implementation Contract
 
 - Use Object Types as the data model contract.
+- Keep the PascalCase model `name` distinct from the exact lowercase kebab-case
+  stored `slug`. Emitted `linkTypes[].targetObjectType`, runtime `target_type`,
+  paths, resource commands, and governed v4 fields use exact stored slugs. Never
+  re-derive historical stored slugs.
 - Use the template SDK and hooks for resources, documents, and chat.
 - Use config slots with `{ components: [...] }`, not stale array-only slot
   examples.

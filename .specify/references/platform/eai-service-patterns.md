@@ -36,6 +36,14 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 | Goals and targets     | Goal/target records tied to resources and workflow outcomes                       | `eai workflow readiness --format json`, `eai resources schema --format json`, and advertised goal/target commands                                                     | Use when the app must track business outcomes, service levels, operating targets, or completion evidence.                                                                          |
 | Advanced PublicAPI    | BFF/server helper                                                                 | `eai publicapi <method> /v4/...`                                                                                                                                      | Use only when named SDK/CLI support is missing.                                                                                                                                    |
 
+## Storage Backend Rules
+
+Keep Object Type identifiers in their correct layer. Configuration/model `name`
+is PascalCase; the exact stored `slug` is the lowercase kebab-case identifier
+used by relationship targets, runtime `target_type`, resource commands, paths,
+and governed v4 fields. Resolve same-manifest model name shorthand through the
+declared slug before publication. Never change historical stored slugs.
+
 ## Tenant-Scoped Resource Diagnostics
 
 - For `/v4/data/resources/{tenantId}/...` requests, compare the same call in
