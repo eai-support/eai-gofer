@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { executableTypeScriptDeriver } from '../../.specify/scripts/node/validate-object-type-routing-workspace.mjs';
+
 const tool = path.resolve('.specify/scripts/node/validate-object-type-routing-workspace.mjs');
 const workspace = path.resolve('../..');
 const hasCoordinatedWorkspace = existsSync(
@@ -26,6 +28,72 @@ function runTool(...arguments_: string[]) {
 }
 
 describe('Object Type routing workspace reducer', () => {
+  it('executes TypeScript adapters with their established mapping and ASCII trim helpers', () => {
+    const source = `
+      const ESTABLISHED_NAME_SLUGS = new Map([['GitHubConnection', 'github-connection']]);
+      function isAsciiWhitespace(code: number): boolean {
+        return code === 0x20 || (code >= 0x09 && code <= 0x0d);
+      }
+      function trimAsciiWhitespace(value: string): string {
+        let start = 0;
+        let end = value.length;
+        while (start < end && isAsciiWhitespace(value.charCodeAt(start))) start += 1;
+        while (end > start && isAsciiWhitespace(value.charCodeAt(end - 1))) end -= 1;
+        return value.slice(start, end);
+      }
+      export function deriveObjectTypeSlugV1(value: string): string {
+        const normalizedName = trimAsciiWhitespace(value);
+        const derivationSource = ESTABLISHED_NAME_SLUGS.get(normalizedName) ?? normalizedName;
+        return derivationSource
+          .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
+          .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+          .replace(/[\\t\\n\\v\\f\\r ]+|_+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .toLowerCase();
+      }
+    `;
+    const derive = executableTypeScriptDeriver(source, 'fixture');
+
+    expect(derive('  HTTPFeedItem  ')).toBe('http-feed-item');
+    expect(derive('GitHubConnection')).toBe('github-connection');
+  });
+
+  it('keeps relationship publication vectors pinned to exact declared slugs', async () => {
+    const contract = JSON.parse(
+      await readFile(path.resolve('.specify/contracts/object-type-routing-v1.json'), 'utf8')
+    );
+    expect(contract.relationshipReferences).toMatchObject({
+      sourceField: 'linkTypes[].targetObjectType',
+      adapterMustEmit: 'slug',
+      runtimeField: 'target_type',
+      runtimeIdentifier: 'slug',
+    });
+    const relationshipVectors = [
+      {
+        declaredName: 'GitHubConnection',
+        declaredSlug: 'github-connection',
+        sourceReference: 'GitHubConnection',
+        emittedReference: 'github-connection',
+      },
+      {
+        declaredName: 'OPAMeasure',
+        declaredSlug: 'opameasure',
+        sourceReference: 'OPAMeasure',
+        emittedReference: 'opameasure',
+      },
+    ];
+    expect(
+      relationshipVectors.every((vector) => vector.emittedReference === vector.declaredSlug)
+    ).toBe(true);
+    const auditConfig = JSON.parse(
+      await readFile(path.resolve('.specify/config/object-type-routing.json'), 'utf8')
+    );
+    expect(auditConfig.canonicalGuidance).toContain('linkTypes[].targetObjectType');
+    expect(auditConfig.canonicalGuidance).toContain('target_type');
+    expect(auditConfig.canonicalGuidance).toContain('same-manifest name shorthand');
+  });
+
   it('verifies committed feature changes relative to origin/main and keeps the extension mirror exact', async () => {
     const canonical = await readFile(
       path.resolve('.specify/scripts/bash/verify-object-type-routing-workspace.sh'),
@@ -35,10 +103,25 @@ describe('Object Type routing workspace reducer', () => {
       path.resolve('extension/resources/bash-scripts/verify-object-type-routing-workspace.sh'),
       'utf8'
     );
+    const contract = await readFile(
+      path.resolve('.specify/contracts/object-type-routing-v1.json'),
+      'utf8'
+    );
+    const installedContract = await readFile(
+      path.resolve('extension/resources/contracts/object-type-routing-v1.json'),
+      'utf8'
+    );
 
     expect(mirror).toBe(canonical);
+    expect(installedContract).toBe(contract);
     expect(canonical.match(/diff -U0 origin\/main --/g)).toHaveLength(2);
     expect(canonical).not.toContain('diff -U0 -- src/app/core/telemetry.py');
+    expect(canonical).toContain('"mid/AdminAPI/.eai/test-coverage.json"');
+    expect(canonical).toContain('"AdminAPI|uv run pytest tests/test_object_type_identifiers.py');
+    expect(canonical).toContain('AdminAPI) echo "$WORKSPACE_ROOT/mid/AdminAPI"');
+    expect(canonical).toContain(
+      'VERIFY_OBJECT_TYPE_ROUTING_WORKSPACE_OK repositories=9 coverage_maps=9'
+    );
   });
 
   it('reduces the coordinated workspace deterministically or fails closed in an isolated checkout', async () => {
@@ -76,6 +159,7 @@ describe('Object Type routing workspace reducer', () => {
       'eai-cli',
       'eai-gofer',
       'PublicAPI',
+      'AdminAPI',
       'ResourceAPI',
     ]);
     expect(
@@ -88,6 +172,7 @@ describe('Object Type routing workspace reducer', () => {
         'eai-cli',
         'eai-gofer',
         'PublicAPI',
+        'AdminAPI',
         'ResourceAPI',
         'tech-docs',
       ]
