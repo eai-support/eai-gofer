@@ -104,10 +104,6 @@ async function pathExists(targetPath) {
 
 async function readTextIfFile(targetPath) {
   try {
-    const stat = await fs.stat(targetPath);
-    if (!stat.isFile()) {
-      return null;
-    }
     return await fs.readFile(targetPath, 'utf8');
   } catch {
     return null;
