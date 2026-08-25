@@ -120,6 +120,9 @@ jobs:
         env:
           CI: true
 
+      - name: Install EAI App Template Browser Runtime
+        run: npm --prefix eai-app-template exec -- playwright install --with-deps chromium
+
       - name: Verify EAI App Template Test Contract
         run: |
           npm --prefix eai-app-template run verify --silent
