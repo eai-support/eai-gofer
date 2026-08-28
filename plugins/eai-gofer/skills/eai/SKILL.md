@@ -84,6 +84,21 @@ Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that pre
 4. Put technical evidence in durable artifacts.
 5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 
+## EAI Lab Convergence Route
+
+Handle this route before normal workspace preflight or app readiness when the user names an Issues2025 issue and asks for EAI Lab, full E2E, regression, fix, or retest work.
+
+1. Treat this as a platform delivery control request. Do not ask the non-app confirmation and do not run `eai whoami`, tenant selection, or app initialization.
+2. Extract the Issues2025 issue number. Do not infer or substitute a different issue.
+3. Verify `gh auth status -h github.com`. The active user needs repository, workflow, Codespaces, and package-read access. Report the exact missing permission when preflight fails.
+4. Resolve the EAI Lab controller in this order: a current or parent workspace whose executable `./gas --help` lists `lab-test`; the `EAI_LAB_CONTROLLER_REPO` environment value; then an authenticated GitHub code search for that exact Gas command. Use a clean checkout at current `origin/main`. Never switch, reset, stash, or overwrite a dirty caller workspace. Reuse a current clean checkout only when its origin and exact main SHA are verified; otherwise create a disposable checkout. If discovery fails, report that controller configuration is missing.
+5. From that checkout run exactly `./gas lab-test <issue-number> --robot`. Do not add `--no-wait` unless the user explicitly asks only to dispatch.
+6. Let Gas compose every currently owned linked PR, including approved non-submodule integrations, against latest main. Let the lab run the complete unchanged eai-testing-dev regression suite plus each external repository-owned contract.
+7. Stay attached while the Codespace worker tests, lets Copilot repair linked PR repositories, pushes those PR branches, rebuilds, and reruns the complete suite. The eai-testing-dev checkout is immutable evidence: never edit, commit, push, weaken, or classify it differently in the repair loop. Do not edit unrelated repositories.
+8. Interpret terminal states exactly: Green means every required test passed; Orange means every test ran but the request is not fully passed; Red means product failures remain; Blocked means setup or infrastructure prevented valid completion.
+9. Report the Issues2025 status-comment URL, exact tested PR SHAs, repair cycles, and first blocker. A workflow dispatch, running Codespace, or Orange result is not a completion claim.
+10. Do not merge, deploy, promote, weaken tests, or suppress failures as part of this route.
+
 ## Business-Friendly Progress
 
 - Keep user-facing progress short and business-level by default.

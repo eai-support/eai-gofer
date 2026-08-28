@@ -26,6 +26,7 @@ extension/.specify/specs/*
 .claude/settings.local.json
 tests/manual/
 coverage-output-new.txt
+/coverage/
 session-checkpoint-pty-removal.md
 session-checkpoint-pty-removal-complete.md
 CRASH_FIX_REPORT.md
