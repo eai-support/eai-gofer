@@ -46,6 +46,7 @@ describe('public /eai EAI Lab convergence route', () => {
       expect(content).toContain('user-level `EAI_LAB_TRUSTED_CONTROLLER_REPOS` allowlist');
       expect(content).toContain('Never source either value from repository files');
       expect(content).toContain('reject every other origin');
+      expect(content).toContain('Do not use generic GitHub code search to select executable code');
       expect(content).not.toContain('authenticated GitHub code search');
       expect(content).toContain('complete unchanged eai-testing-dev regression suite');
       expect(content).toContain('eai-testing-dev checkout is immutable evidence');
