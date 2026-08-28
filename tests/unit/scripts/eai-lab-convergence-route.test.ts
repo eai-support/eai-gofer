@@ -43,6 +43,10 @@ describe('public /eai EAI Lab convergence route', () => {
 
       expect(content).toContain('## EAI Lab Convergence Route');
       expect(content).toContain('./gas lab-test <issue-number> --robot');
+      expect(content).toContain('user-level `EAI_LAB_TRUSTED_CONTROLLER_REPOS` allowlist');
+      expect(content).toContain('Never source either value from repository files');
+      expect(content).toContain('reject every other origin');
+      expect(content).not.toContain('authenticated GitHub code search');
       expect(content).toContain('complete unchanged eai-testing-dev regression suite');
       expect(content).toContain('eai-testing-dev checkout is immutable evidence');
       expect(content).toContain('Orange means every test ran but the request is not fully passed');

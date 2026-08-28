@@ -43,14 +43,18 @@
 - [x] Require complete unchanged eai-testing-dev and external contracts.
 - [x] Require Copilot repair, PR push, rebuild, and full retest convergence.
 - [x] Keep Green, Orange, Red, and Blocked semantics explicit.
+- [x] Restrict executable controller resolution to the canonical
+      `enterpriseaigroup/eai-stack` Git origin.
 - [x] Regenerate every public /eai surface.
 - [x] Run focused and full Gofer validation.
 
 ## Review
 
 - Canonical generation and extension-resource parity passed.
-- The focused convergence-route contract passed on all 10 public `/eai`
+- The focused convergence-route contract passed on all 30 public `/eai`
   surfaces.
+- Every route rejects non-canonical controller origins and generic executable
+  code search.
 - Unit, integration, VS Code extension E2E, and performance suites passed.
 - Quality passed with 3,447 tests across 278 files; lint, format, typecheck,
   build, and the V4 resource contract passed.
