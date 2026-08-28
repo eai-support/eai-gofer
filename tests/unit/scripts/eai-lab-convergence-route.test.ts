@@ -54,6 +54,11 @@ describe('public /eai EAI Lab convergence route', () => {
       expect(content).toContain(
         'Do not merge, deploy, promote, weaken tests, or suppress failures'
       );
+
+      const workspaceFirstIndex = content.indexOf('## Workspace First');
+      if (workspaceFirstIndex >= 0) {
+        expect(content.indexOf('## EAI Lab Convergence Route')).toBeLessThan(workspaceFirstIndex);
+      }
     });
   }
 });

@@ -15,6 +15,21 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 - Do not ask users to run numbered/helper stage commands such as `/0_gofer_start`, `/1_gofer_research`, or `/6_gofer_validate` unless they explicitly ask for low-level internals.
 - Preserve all Gofer functions by routing internally through the stage contracts in `.specify/commands/*.md`.
 
+## EAI Lab Convergence Route
+
+Handle this route before normal workspace preflight or app readiness when the user names an Issues2025 issue and asks for EAI Lab, full E2E, regression, fix, or retest work.
+
+1. Treat this as a platform delivery control request. Do not ask the non-app confirmation and do not run `eai whoami`, tenant selection, or app initialization.
+2. Extract the Issues2025 issue number. Do not infer or substitute a different issue.
+3. Verify `gh auth status -h github.com`. The active user needs repository, workflow, Codespaces, and package-read access. Report the exact missing permission when preflight fails.
+4. Read the canonical controller slug from the user-level `EAI_LAB_CONTROLLER_REPO` setting and require it to be an exact member of the user-level `EAI_LAB_TRUSTED_CONTROLLER_REPOS` allowlist. Never source either value from repository files. A current or parent workspace is eligible only when its Git `origin` canonicalizes exactly to that approved slug and its executable `./gas --help` lists `lab-test`; reject every other origin. If no eligible checkout exists, clone only that approved slug into a disposable directory. Do not use generic GitHub code search to select executable code. Fetch and verify current `origin/main`, then use a clean checkout at that exact commit. Never switch, reset, stash, or overwrite a dirty caller workspace. If trusted configuration or resolution is missing, report Blocked.
+5. From that checkout run exactly `./gas lab-test <issue-number> --robot`. Do not add `--no-wait` unless the user explicitly asks only to dispatch.
+6. Let Gas compose every currently owned linked PR, including approved non-submodule integrations, against latest main. Let the lab run the complete unchanged eai-testing-dev regression suite plus each external repository-owned contract.
+7. Stay attached while the Codespace worker tests, lets Copilot repair linked PR repositories, pushes those PR branches, rebuilds, and reruns the complete suite. The eai-testing-dev checkout is immutable evidence: never edit, commit, push, weaken, or classify it differently in the repair loop. Do not edit unrelated repositories.
+8. Interpret terminal states exactly: Green means every required test passed; Orange means every test ran but the request is not fully passed; Red means product failures remain; Blocked means setup or infrastructure prevented valid completion.
+9. Report the Issues2025 status-comment URL, exact tested PR SHAs, repair cycles, and first blocker. A workflow dispatch, running Codespace, or Orange result is not a completion claim.
+10. Do not merge, deploy, promote, weaken tests, or suppress failures as part of this route.
+
 ## Workspace First
 
 Before stage work, resolve the repository root and run `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json` when available. If the repo is missing or stale, ask before running `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors`, then resume the original command.
@@ -83,21 +98,6 @@ Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that pre
 3. Explain the business effect first.
 4. Put technical evidence in durable artifacts.
 5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
-
-## EAI Lab Convergence Route
-
-Handle this route before normal workspace preflight or app readiness when the user names an Issues2025 issue and asks for EAI Lab, full E2E, regression, fix, or retest work.
-
-1. Treat this as a platform delivery control request. Do not ask the non-app confirmation and do not run `eai whoami`, tenant selection, or app initialization.
-2. Extract the Issues2025 issue number. Do not infer or substitute a different issue.
-3. Verify `gh auth status -h github.com`. The active user needs repository, workflow, Codespaces, and package-read access. Report the exact missing permission when preflight fails.
-4. Read the canonical controller slug from the user-level `EAI_LAB_CONTROLLER_REPO` setting and require it to be an exact member of the user-level `EAI_LAB_TRUSTED_CONTROLLER_REPOS` allowlist. Never source either value from repository files. A current or parent workspace is eligible only when its Git `origin` canonicalizes exactly to that approved slug and its executable `./gas --help` lists `lab-test`; reject every other origin. If no eligible checkout exists, clone only that approved slug into a disposable directory. Do not use generic GitHub code search to select executable code. Fetch and verify current `origin/main`, then use a clean checkout at that exact commit. Never switch, reset, stash, or overwrite a dirty caller workspace. If trusted configuration or resolution is missing, report Blocked.
-5. From that checkout run exactly `./gas lab-test <issue-number> --robot`. Do not add `--no-wait` unless the user explicitly asks only to dispatch.
-6. Let Gas compose every currently owned linked PR, including approved non-submodule integrations, against latest main. Let the lab run the complete unchanged eai-testing-dev regression suite plus each external repository-owned contract.
-7. Stay attached while the Codespace worker tests, lets Copilot repair linked PR repositories, pushes those PR branches, rebuilds, and reruns the complete suite. The eai-testing-dev checkout is immutable evidence: never edit, commit, push, weaken, or classify it differently in the repair loop. Do not edit unrelated repositories.
-8. Interpret terminal states exactly: Green means every required test passed; Orange means every test ran but the request is not fully passed; Red means product failures remain; Blocked means setup or infrastructure prevented valid completion.
-9. Report the Issues2025 status-comment URL, exact tested PR SHAs, repair cycles, and first blocker. A workflow dispatch, running Codespace, or Orange result is not a completion claim.
-10. Do not merge, deploy, promote, weaken tests, or suppress failures as part of this route.
 
 ## Business-Friendly Progress
 

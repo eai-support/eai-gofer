@@ -528,6 +528,8 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 - Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly ask for low-level internals.
 - Preserve all Gofer functions by routing internally through the stage contracts in \`.specify/commands/*.md\`.
 
+${buildEaiLabConvergenceSection()}
+
 ## Workspace First
 
 Before stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.
@@ -556,8 +558,6 @@ Apply these rules before any user-facing output:
 ${buildUserFacingResponseGateSection()}
 
 ${buildAlwaysEaiSection()}
-
-${buildEaiLabConvergenceSection()}
 
 ## Business-Friendly Progress
 
