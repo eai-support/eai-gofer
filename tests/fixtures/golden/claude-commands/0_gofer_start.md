@@ -171,46 +171,51 @@ After any Gofer install, update, release refresh, or workspace bootstrap:
 6. Ask the user to refresh or restart the host command picker only after cleanup completes.
 <!-- gofer:local-settings-cleanup:end -->
 
+## MVP Capability-Based Validation
+
+Use `.specify/references/mvp-capability-validation.md` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create `.specify/specs/{feature}/` before app or operator-tool source work.
+2. Keep `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and the validation scope aligned.
+3. Mark each relevant capability as `not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat `run.sh`, `run.bat`, and `run.ps1` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey `unverified`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: `The server runs. Authentication is not in the current MVP scope.`
+10. When the feature claims a release or deployed outcome, create `release-capability-ledger.md` from `.specify/templates/release-capability-ledger-template.md`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.
+
 ## Application Classification And EAI Preflight
 
 Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
-1. Classify the request as **EAI app delivery** or **non-application work** using
-   the signals in Step 2.6.
-2. If the request is EAI app delivery or ambiguous, continue directly into the
-   EAI app delivery path. Do not ask for confirmation just because app delivery
-   is inferred.
-3. If the request is clearly non-application work, confirm once before taking
-   the non-app path:
-   - **"This looks like non-app work, so I will skip EAI tenant/app setup and
-     continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision in the feature discovery or
-   context bundle, do not run `eai whoami`, `eai tenant select`, `eai init`, or
-   `/gofer:eai-first-run`, and continue the appropriate non-app pipeline path.
-5. If the user says it is app work, switch to EAI app delivery and run EAI app
-   preflight.
-6. For EAI app delivery, treat durable delivery as EAI Platform delivery by
-   default, with Azure second and every other stack only by explicit exception.
-7. For EAI app delivery, run `eai whoami` and confirm the EAI CLI is installed,
-   the user is logged in, and an active tenant is visible.
-8. If app-delivery readiness is missing, stop and run `/gofer:eai-first-run` or
-   ask the user to approve login/setup before continuing.
-9. For EAI app delivery, do not continue into research, specification, planning,
-   tasks, implementation, or validation until
-   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
-   app-readiness, and next-action evidence.
-10. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
-   Gofer artifacts; record only product-safe readiness status and evidence.
+1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in `.specify/commands/0_gofer_start.md`.
+2. Create `.specify/specs/{feature}/` and record the active delivery scope before app or operator-tool source work.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai tenant select`, `eai init`, or `/gofer:eai-first-run`.
+5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
+6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
+7. When the feature creates, changes, or validates an EAI Platform app integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`. A missing checker or status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
+8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
+9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
+10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
+11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
+12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
+13. Do not write tokens, secrets, private tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## EAI App Delivery Preflight
 
-Run this after the Gofer workspace preflight and before application-delivery
-discovery whenever the request is an app build, dashboard, portal, workflow,
-form, chatbot, app, tenant-scoped business experience, or any
-durable user-facing product. App delivery in EAI Gofer means EAI Platform
-delivery by default. Do not run this for explicit non-app work. If the user asks
-for a non-EAI app stack, pause and confirm that they are intentionally leaving
-the EAI Gofer app-delivery path before continuing.
+Run this when the active feature requires EAI Platform services, a tenant,
+authentication, an EAI app integration, or deployment. Do not run it for
+explicit non-app work or an early local MVP that does not yet include those
+capabilities. Record deferred EAI capabilities as `planned`, not as failures.
+When an EAI capability enters scope, App delivery in EAI Gofer means EAI Platform delivery by default. If the user asks for a non-EAI app stack, pause
+and confirm that they are intentionally leaving the EAI Gofer app-delivery path
+before continuing.
 
 Use current public EAI documentation as the safe source of truth:
 
@@ -350,7 +355,7 @@ with an unrelated non-EAI stack.
      schema`, `eai workflow readiness`, `eai template check`, `eai gofer
      refresh --check`, `eai provision entra`, `eai blocks`,
      `eai agent guide`, and `eai errors explain`.
-5. **Check account, login, and tenant readiness**
+5. **Check account, login, and tenant readiness when EAI is required**
    - Run `eai whoami` to confirm login, active tenant, profile, token status,
      and PublicAPI context.
    - If not logged in or the token is expired, run `eai login` and then
@@ -361,11 +366,12 @@ with an unrelated non-EAI stack.
    - If no tenant is available, tell the user they need an EAI Platform account
      and tenant access before Gofer can build an EAI app. Do not fabricate
      tenant IDs or continue into implementation.
-6. **Check EAI template/project readiness**
+6. **Check EAI template/project readiness when EAI integration is required**
    - Run `node .specify/scripts/node/eai-app-template-readiness.mjs --root .
      --json` when available.
-   - A missing checker or any status other than `ready` is a hard stop for app
-     delivery. Do not research, specify, plan, create tasks, or edit app source.
+   - A missing checker or any status other than `ready` blocks the EAI
+     integration, tenant, or deployment capability. It does not block unrelated
+     local MVP research, specification, UI, or source work.
    - The check must prove `.eai-manifest.json` eai-init provenance and the
      supported app-template contract, including `eai.runtime.json` and the EAI
      configuration files.
@@ -379,7 +385,7 @@ with an unrelated non-EAI stack.
    - After `eai init`, enter the created app folder. Rerun the readiness checker,
      `eai verify`, `eai template check --format json`, and
      `eai gofer refresh --check --format json` before continuing.
-7. **Check app enrollment capability before build planning**
+7. **Check app enrollment capability before EAI delivery planning**
    - Once app name and tenant are confirmed, run `eai app list --format
      json` to confirm the tenant's current app enrollments.
    - Before creating anything remote, ask the user to confirm the app name,

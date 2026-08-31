@@ -108,6 +108,24 @@ Before routing work, decide where the user is now.
 6. Run that internal stage next, then continue forward.
 7. Keep the user-facing explanation at the business level.
 
+## MVP Capability-Based Validation
+
+Use `.specify/references/mvp-capability-validation.md` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create `.specify/specs/{feature}/` before app or operator-tool source work.
+2. Keep `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and the validation scope aligned.
+3. Mark each relevant capability as `not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat `run.sh`, `run.bat`, and `run.ps1` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey `unverified`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: `The server runs. Authentication is not in the current MVP scope.`
+10. When the feature claims a release or deployed outcome, create `release-capability-ledger.md` from `.specify/templates/release-capability-ledger-template.md`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.
+
 ## App vs Non-App Routing
 
 1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
@@ -118,11 +136,11 @@ Before routing work, decide where the user is now.
 
 ## EAI Platform Readiness
 
-1. Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery.
-2. For app delivery, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json` when the checker exists.
-3. Treat a missing checker or any result other than `ready` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
-4. Run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`. It must run `eai init` in the approved target folder and switch the active workspace to the created app.
-5. Rerun the readiness checker, `eai verify`, and `eai template check --format json`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+1. Run `eai whoami` only when the current feature uses EAI Platform services, the user asks for EAI setup, or EAI CLI recovery is needed.
+2. Require `eai-app-template-readiness`, `eai verify`, and `eai template check --format json` only when the feature creates, changes, or validates an EAI Platform app integration.
+3. Require the authentication journey only when the specification includes sign-in, protected content, user roles, or a deployment target that requires identity.
+4. For a local MVP with no EAI or authentication capability, record those states as `not_applicable` or `planned` and continue with local feature validation.
+5. When an EAI capability becomes required, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that `eai init` completed.
 7. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
 8. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.

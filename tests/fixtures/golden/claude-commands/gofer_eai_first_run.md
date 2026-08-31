@@ -189,6 +189,15 @@ If advertised, also run:
 eai agent guide --format json
 ```
 
+For EAI app delivery that will publish Object Types, inspect the JSON guide and
+require `capabilities` to contain
+`app-manifest-name-slug-negotiation-v1`. `eai update --check` reporting
+`current` does not prove the deployed receiver accepts the new request shape.
+If the capability is absent, record `upgrade_required`, block Object Type
+seed/publish and deployed-readiness claims, and ask before updating the CLI.
+Local discovery and correct source authoring may continue, but do not hand-build
+an app-manifest request.
+
 Prefer commands and options advertised by the installed CLI over remembered
 syntax. Before suggesting or running a specific `eai ...` command, verify its
 command path and flags with command-specific `--help` or the equivalent help
@@ -504,6 +513,7 @@ Each section should include:
 - EAI registry status
 - EAI CLI release status from `eai update --check`
 - EAI CLI capability source (`eai --describe` timestamp)
+- Object Type seed adapter capability from `eai agent guide --format json`
 - EAI capability inventory for init, tenant, app, resources, workflow,
   template, Gofer-refresh, and blocks commands
 - Login status without tokens
