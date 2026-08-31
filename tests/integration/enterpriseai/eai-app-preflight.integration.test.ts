@@ -33,7 +33,8 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
     );
-    expect(scenarioCommand).toContain('any status other than `ready` is a hard stop');
+    expect(scenarioCommand).toContain('blocks the EAI');
+    expect(scenarioCommand).toContain('does not block unrelated local MVP');
     expect(scenarioCommand).toContain('Do not accept copied marker files');
     expect(scenarioCommand).toContain('eai template check --format json');
     expect(scenarioCommand).toMatch(/eai gofer\s+refresh --check\s+--format json/);
@@ -87,7 +88,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(planCommand).toContain('next recovery command');
     expect(planCommand).toContain('EAI Platform/Azure app stack decision');
     expect(tasksCommand).toContain('EAI readiness unblock -> `eai-preflight.md`');
-    expect(tasksCommand).toContain('App-template readiness cannot be deferred');
+    expect(tasksCommand).toContain('Local MVP UI and implementation tasks can continue');
     expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
     expect(tasksCommand).toContain('Object-type seed capability');
@@ -119,7 +120,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(implementCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
     );
-    expect(implementCommand).toContain('blocks every app');
+    expect(implementCommand).toContain('blocks that EAI capability');
     expect(validateCommand).toContain('app-manifest-name-slug-negotiation-v1');
     expect(validateCommand).toContain('A dry run alone');
     expect(validateCommand).toContain('converged `eai types diff`');

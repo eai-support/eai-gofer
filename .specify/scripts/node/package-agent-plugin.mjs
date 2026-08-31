@@ -621,17 +621,37 @@ function withTenantContextErrorGuidance(content) {
 }
 
 function withEaiAppTemplateGate(content) {
-  if (content.includes('## EAI App Template Gate')) return content;
+  const guidance = `## MVP Capability-Based Validation
 
-  const guidance = `## EAI App Template Gate
+- Create \`.specify/specs/{feature}/\` before app or operator-tool source work.
+- Classify EAI template readiness as \`not_applicable\`, \`planned\`, \`implemented\`, \`verified\`, or \`blocked\`.
+- For a local MVP with no EAI or authentication capability, record those states as \`not_applicable\` or \`planned\` and continue with local feature validation.
+- Treat \`run.sh\`, \`run.bat\`, and \`run.ps1\` as launch evidence only. They do not prove authentication, EAI access, or deployment readiness.
+- When the feature creates, changes, or validates an EAI Platform integration, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\`.
+- A missing checker or any status other than \`ready\` blocks that EAI capability. It does not block unrelated local MVP work.
+- When authentication is implemented or required, verify provider, callback, sign-in, session, protected access, and safe denied access.
+- Record screenshots and local HTTP checks in the feature validation report. A blocked browser check leaves the user journey unverified.
+- If the user changes scope, update the feature artifacts before continuing: \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope.
+- For a release or deployed claim, create \`release-capability-ledger.md\` and link each accepted requirement to evidence, PR, commit, release branch, and deployed proof.
+- Do not report a release complete or score 100% if a required capability is on an open PR, absent from the release branch, missing traceability, or lacks deployed evidence.
+- Do not accept copied marker files, partial scaffolds, or custom templates as EAI readiness evidence.
+- Confirmed non-app work is exempt from app-only gates.
 
-- Before app research or source changes, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available.
-- A missing checker or any status other than \`ready\` is a hard stop for app delivery.
-- Complete \`eai init\`, enter the created app folder, then rerun the checker, \`eai verify\`, and \`eai template check --format json\`.
-- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
-- Confirmed non-app work is exempt.
+## EAI App Template Gate
+
+Apply the capability validation rules above before EAI template, tenant, authentication, or deployment work.
 
 `;
+
+  const existingHeading = '## EAI App Template Gate';
+  const existingIndex = content.indexOf(existingHeading);
+  if (existingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', existingIndex + existingHeading.length);
+    const suffix = nextHeadingIndex === -1 ? '' : content.slice(nextHeadingIndex).replace(/^\n+/, '');
+    return suffix
+      ? `${content.slice(0, existingIndex).trimEnd()}\n\n${guidance}\n${suffix}`
+      : `${content.slice(0, existingIndex).trimEnd()}\n\n${guidance}`;
+  }
 
   return content.replace('## EAI CLI Discovery And Recovery', `${guidance}## EAI CLI Discovery And Recovery`);
 }

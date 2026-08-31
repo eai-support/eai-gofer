@@ -141,6 +141,23 @@ _Example of marking unclear requirements:_
 - **App stack policy**: [EAI Platform including app template first, Azure second
   | approved non-EAI exception | not applicable]
 
+## Capability Maturity & Validation Scope
+
+Record only capabilities that matter to this feature. Use one state:
+`not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+
+| Capability               | State   | Why it applies now | Evidence required now                                                | Trigger to re-open |
+| ------------------------ | ------- | ------------------ | -------------------------------------------------------------------- | ------------------ |
+| Local user journey       | [state] | [reason]           | [test or review]                                                     | [change]           |
+| Browser preview          | [state] | [reason]           | [HTTP check and screenshot]                                          | [change]           |
+| Authentication           | [state] | [reason]           | [provider, callback, sign-in, session, protected API, denied access] | [change]           |
+| EAI Platform integration | [state] | [reason]           | [preflight and template evidence]                                    | [change]           |
+| Deployment               | [state] | [reason]           | [deployment and smoke evidence]                                      | [change]           |
+
+Do not mark a planned capability as failed. When a user changes scope, update
+this table, `plan.md`, `tasks.md`, `traceability.md`, and validation scope
+before work continues. Explain the effect in plain language.
+
 ## UI Preview & Show-And-Tell Loop _(application delivery only)_
 
 - **First MVP preview**: [what must be shown first]
