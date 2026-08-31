@@ -14,11 +14,11 @@ local MVP, record EAI capability as `planned` or `not_applicable` in `spec.md`.
 
 ## Capability Scope
 
-| Capability | State | Required now | Evidence or trigger |
-| --- | --- | --- | --- |
-| EAI Platform integration | {{not_applicable|planned|implemented|verified|blocked}} | {{yes|no}} | {{reason}} |
-| Authentication | {{not_applicable|planned|implemented|verified|blocked}} | {{yes|no}} | {{reason}} |
-| Deployment | {{not_applicable|planned|implemented|verified|blocked}} | {{yes|no}} | {{reason}} |
+| Capability               | State            | Required now | Evidence or trigger |
+| ------------------------ | ---------------- | ------------ | ------------------- | -------- | --------- | ----- | ---- | ---------- |
+| EAI Platform integration | {{not_applicable | planned      | implemented         | verified | blocked}} | {{yes | no}} | {{reason}} |
+| Authentication           | {{not_applicable | planned      | implemented         | verified | blocked}} | {{yes | no}} | {{reason}} |
+| Deployment               | {{not_applicable | planned      | implemented         | verified | blocked}} | {{yes | no}} | {{reason}} |
 
 Only run checks that are required now. A blocked EAI capability must not block
 an unrelated local MVP journey.

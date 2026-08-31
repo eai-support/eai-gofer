@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.11.0] - 2026-08-31
+
+Add capability-based validation and release-completeness controls
+
 ## [3.10.9] - 2026-08-27
 
 Require Node 24 runtime
