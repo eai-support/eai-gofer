@@ -53,6 +53,12 @@ const PUBLIC_ENTRYPOINTS = [
     title: 'Eai',
     description: 'Start or continue the EAI delivery pipeline.',
   },
+  {
+    stem: 'eai-update',
+    name: 'eai-update',
+    title: 'Eai Update',
+    description: 'Install or update EAI Gofer for this AI coding app.',
+  },
 ];
 const SURFACE_WORKSPACE_HOSTS = {
   'claude': 'claude',
@@ -356,6 +362,10 @@ For app delivery, make EAI Platform choices for the business user.
 }
 
 function buildPublicEntrypointMarkdown(entry, stages, host) {
+  if (entry.name === 'eai-update') {
+    return buildEaiUpdateEntrypointMarkdown(host);
+  }
+
   return `# ${entry.title}
 
 Use this as the single user-facing Gofer command. Users should run \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
@@ -452,6 +462,58 @@ When this is the first EAI conversation for a new app:
 ## Internal Function Contracts
 
 ${buildInternalStageList(stages)}
+`;
+}
+
+function buildEaiUpdateEntrypointMarkdown(host) {
+  if (host === 'grok') {
+    return `## Update EAI Gofer
+
+Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+
+## What To Do
+
+1. Add EAI Gofer to the repository from a supported host.
+2. Open that repository in Grok Build.
+3. Use the repository \`eai\` skill to continue work.
+
+Do not run \`gofer-surface-update.mjs --host grok\`. That host is not supported by the updater.
+`;
+  }
+
+  return `## Update EAI Gofer
+
+Use this command to install or update EAI Gofer for the current AI coding app. This command works without an EAI project, a Gofer scaffold, or EAI sign-in.
+
+## Update Contract
+
+1. Do not run workspace checks, \`eai init\`, \`eai whoami\`, or pipeline stages.
+2. Check the current host first:
+   \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${host} --json\`
+3. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
+4. State whether EAI Gofer is installed and whether the host command is available.
+5. Explain the planned user-level change and ask for approval before any install or update command.
+6. After approval, run one of these commands from the bundled helper:
+   - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${host} --execute --json\`
+   - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${host} --execute --json\`
+7. After a successful install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries.
+8. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
+9. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
+
+## Supported Hosts
+
+- Claude Code: refresh the marketplace and plugin, then run \`/reload-plugins\`.
+- Codex: refresh the marketplace, apply the plugin, then start a new task or restart Codex.
+- GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
+- Gemini CLI: update the extension, then start a new Gemini CLI session.
+- VS Code: install or update \`EnterpriseAI.gofer\`, then run **Developer: Reload Window**.
+
+## Limits
+
+- This command updates user-level plugins and extensions. It archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
+- For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
+- Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
+- Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
 `;
 }
 

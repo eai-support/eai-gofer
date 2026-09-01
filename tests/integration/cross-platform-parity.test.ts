@@ -1,7 +1,8 @@
 /**
  * Integration tests for cross-platform Gofer parity.
  *
- * Public surfaces intentionally expose only `eai`. The full
+ * Public surfaces intentionally expose `eai` plus the support-only `eai-update`.
+ * The full
  * numbered/helper pipeline remains available as internal `.specify/commands/*`
  * contracts routed by those public entrypoints.
  */
@@ -73,6 +74,10 @@ describe('Cross-Platform Feature Parity', () => {
       expect(router.getCommandSyntax('eai', 'copilot')).toBe('#eai');
       expect(router.getCommandSyntax('eai', 'codex')).toBe('/eai');
       expect(router.getCommandSyntax('eai', 'gemini')).toBe('/eai');
+      expect(router.getCommandSyntax('eai-update', 'claude')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'copilot')).toBe('#eai-update');
+      expect(router.getCommandSyntax('eai-update', 'codex')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'gemini')).toBe('/eai-update');
     });
   });
 
@@ -97,12 +102,28 @@ describe('Cross-Platform Feature Parity', () => {
       });
     });
 
-    it('keeps continuation guidance in the public entrypoint wrappers', () => {
-      for (const command of publicCommands) {
+    it('keeps continuation guidance in the main public entrypoint wrapper', () => {
+      for (const command of ['eai']) {
         const content = fs.readFileSync(router.getCommandPath(command, 'claude'), 'utf8');
         expect(content).toContain('.specify/commands/*.md');
         expect(content.toLowerCase()).toMatch(/route|continue|internal/);
       }
+    });
+
+    it('keeps the update entrypoint independent of a repository scaffold', () => {
+      for (const platform of ['claude', 'copilot', 'codex'] as const) {
+        const content = fs.readFileSync(router.getCommandPath('eai-update', platform), 'utf8');
+        expect(content).toContain('works without an EAI project');
+        expect(content).toContain('Do not run workspace checks');
+        expect(content).toContain('gofer-surface-update.mjs');
+      }
+      const geminiContent = fs.readFileSync(
+        path.join(workspacePath, '.gemini', 'commands', 'gofer', 'eai-update.md'),
+        'utf8'
+      );
+      expect(geminiContent).toContain('works without an EAI project');
+      expect(geminiContent).toContain('Do not run workspace checks');
+      expect(geminiContent).toContain('gofer-surface-update.mjs');
     });
   });
 
