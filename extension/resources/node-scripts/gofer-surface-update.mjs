@@ -213,6 +213,16 @@ export async function runPlan(
         });
         continue;
       }
+      if (marketplace.type !== 'git') {
+        results.push({
+          host: surface.host,
+          label: 'Inspect Codex EAI Gofer marketplace',
+          ok: false,
+          error:
+            'Could not confirm the Codex marketplace source. Update stopped to protect local Gofer work and settings.',
+        });
+        continue;
+      }
     }
     let completedSurface = true;
     for (const step of surface.commands) {

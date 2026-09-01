@@ -129,8 +129,9 @@ The command checks status, shows the planned user-level change, asks for
 approval, and then installs or updates only the current host. After an actual
 update, it archives known stale Gofer commands and skills. It keeps the current
 `eai` and `eai-update` entries. If Codex uses a local marketplace, it reports
-the local source and makes no changes to that checkout or its settings. It can
-update all supported hosts only when you explicitly ask for that.
+the local source and makes no changes to that checkout or its settings. If the
+source cannot be confirmed, it stops without changes. It can update all
+supported hosts only when you explicitly ask for that.
 
 ## First Install Without A Repository
 

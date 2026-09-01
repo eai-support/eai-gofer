@@ -91,6 +91,29 @@ describe('gofer surface update', () => {
     );
   });
 
+  it('stops when it cannot confirm the Codex marketplace source', async () => {
+    const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
+    const cleanup = vi.fn();
+    const execute = vi.fn();
+
+    const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
+      inspect: async () => ({ available: true }),
+      inspectMarketplace: async () => ({ type: 'unknown' }),
+      execute,
+      cleanup,
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        ok: false,
+        error: expect.stringContaining('Update stopped to protect local Gofer work'),
+      })
+    );
+  });
+
   it('keeps the update plan independent of installed repository files', async () => {
     const { buildSurfacePlan } = await import(surfaceUpdateModuleUrl.href);
     const plan = buildSurfacePlan({ action: 'update', host: 'all' });
