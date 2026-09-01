@@ -67,6 +67,30 @@ describe('gofer surface update', () => {
     ]);
   });
 
+  it('leaves a Codex local marketplace unchanged instead of running Git-only commands', async () => {
+    const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
+    const cleanup = vi.fn();
+    const execute = vi.fn();
+
+    const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
+      inspect: async () => ({ available: true }),
+      inspectMarketplace: async () => ({ type: 'local', root: '/Users/example/gofer' }),
+      execute,
+      cleanup,
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        ok: true,
+        label: 'Inspect local EAI Gofer marketplace',
+        note: expect.stringContaining('local work and settings are preserved'),
+      })
+    );
+  });
+
   it('keeps the update plan independent of installed repository files', async () => {
     const { buildSurfacePlan } = await import(surfaceUpdateModuleUrl.href);
     const plan = buildSurfacePlan({ action: 'update', host: 'all' });
