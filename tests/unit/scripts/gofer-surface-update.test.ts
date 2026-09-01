@@ -13,6 +13,14 @@ describe('gofer surface update', () => {
     expect(() => parseArgs(['--host'])).toThrow('Missing value for --host.');
   });
 
+  it('always returns help without validating unrelated flags', async () => {
+    const { parseArgs } = await import(surfaceUpdateModuleUrl.href);
+
+    expect(parseArgs(['--help', '--action', 'unsupported'])).toEqual(
+      expect.objectContaining({ help: true })
+    );
+  });
+
   it('plans a Claude user-level update without a repository path', async () => {
     const { buildSurfacePlan } = await import(surfaceUpdateModuleUrl.href);
     const plan = buildSurfacePlan({ action: 'update', host: 'claude' });

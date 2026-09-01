@@ -123,7 +123,7 @@ Use the public update command in a host that already has Gofer:
 | Codex          | `$eai-update` | Start a new task or restart Codex           |
 | GitHub Copilot | `#eai-update` | Restart the session or start a new app chat |
 | Gemini CLI     | `/eai-update` | Start a new Gemini CLI session              |
-| VS Code        | `/eai-update` | **Developer: Reload Window**                |
+| VS Code        | `#eai-update` | **Developer: Reload Window**                |
 
 The command checks status, shows the planned user-level change, asks for
 approval, and then installs or updates only the current host. After success, it
