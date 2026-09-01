@@ -114,6 +114,25 @@ describe('gofer surface update', () => {
     );
   });
 
+  it('classifies Codex marketplace sources without assuming missing output is Git', async () => {
+    const { inspectCodexMarketplace } = await import(surfaceUpdateModuleUrl.href);
+    const list = async () => ({
+      stdout: 'eai-gofer  /Users/example/gofer\n',
+    });
+    const local = await inspectCodexMarketplace(list);
+    expect(local).toEqual({ type: 'local', root: '/Users/example/gofer' });
+
+    const git = await inspectCodexMarketplace(async () => ({
+      stdout: 'eai-gofer  https://github.com/eai-support/eai-gofer.git\n',
+    }));
+    expect(git).toEqual({ type: 'git', root: 'https://github.com/eai-support/eai-gofer.git' });
+
+    const missing = await inspectCodexMarketplace(async () => ({
+      stdout: 'other-plugin  /tmp/other\n',
+    }));
+    expect(missing).toEqual({ type: 'unknown' });
+  });
+
   it('keeps the update plan independent of installed repository files', async () => {
     const { buildSurfacePlan } = await import(surfaceUpdateModuleUrl.href);
     const plan = buildSurfacePlan({ action: 'update', host: 'all' });

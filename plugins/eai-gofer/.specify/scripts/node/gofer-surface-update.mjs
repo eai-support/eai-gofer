@@ -171,9 +171,13 @@ export async function inspectCodexMarketplace(execute = execFileAsync) {
       .find((line) => line.startsWith('eai-gofer'));
     const root = marketplace?.replace(/^eai-gofer\s+/, '').trim();
 
+    if (!root) {
+      return { type: 'unknown' };
+    }
+
     return {
-      type: root && isLocalMarketplacePath(root) ? 'local' : 'git',
-      root: root || undefined,
+      type: isLocalMarketplacePath(root) ? 'local' : 'git',
+      root,
     };
   } catch {
     return { type: 'unknown' };
