@@ -36,6 +36,12 @@ const PUBLIC_ENTRYPOINTS = [
     title: 'Eai',
     description: 'Start or continue the EAI delivery pipeline.',
   },
+  {
+    stem: 'eai-update',
+    name: 'eai-update',
+    title: 'Eai Update',
+    description: 'Install or update EAI Gofer for this AI coding app.',
+  },
 ];
 const WINDOWS_FORBIDDEN_SEGMENT_CHARS = new Set(['<', '>', ':', '"', '\\', '|', '?', '*']);
 const WINDOWS_RESERVED_BASENAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
@@ -490,6 +496,10 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 }
 
 function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
+  if (entry.name === 'eai-update') {
+    return buildEaiUpdateSkill(version);
+  }
+
   const stageList = stages
     .map((stage) => `- \`${stage.stem}\` - ${stage.frontmatter.description}`)
     .join('\n');
@@ -603,6 +613,33 @@ ${PUBLIC_SITE_URL}/releases.json
 \`\`\`
 
 Gemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.
+`;
+}
+
+function buildEaiUpdateSkill(version) {
+  return `---
+name: eai-update
+description: "Install or update EAI Gofer for this AI coding app."
+---
+
+# Eai Update
+
+Version: ${version}
+
+Use this skill to install or update the user-level EAI Gofer plugin or extension. It works before a repository has Gofer files.
+
+1. Do not run a workspace check, \`eai init\`, \`eai whoami\`, or a delivery stage.
+2. Use \`.specify/scripts/node/gofer-surface-update.mjs\` from this plugin bundle.
+3. Check status first with \`--action inspect --host <current-host> --json\`.
+4. Show the user the planned user-level install or update. Ask for approval before \`--execute\`.
+5. Run \`--action install\` when Gofer is missing. Run \`--action update\` when it is installed.
+6. After a successful install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries.
+7. Update only the current host unless the user explicitly asks for \`--host all\`.
+8. Complete the host reload step from the helper result before saying the update is ready.
+
+Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
+
+This command archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
 `;
 }
 
@@ -1281,35 +1318,19 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
   await writeJson(path.join(root, '.claude-plugin', 'marketplace.json'), buildRepoMarketplace(version));
   await writeJson(path.join(root, '.gemini', 'extension.json'), buildGeminiManifest(version));
   await writeJson(path.join(root, 'gemini-extension.json'), buildGeminiManifest(version));
-  await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, 'eai-gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, 'gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, 'skills', 'eai-gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, 'skills', 'gofer'), {
-    recursive: true,
-    force: true,
-  });
-  const rootUmbrellaSkill = withFirstConversationGuidance(
-    withEaiAppTemplateGate(
-      withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
-    )
-  );
-  await writeText(
-    path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),
-    rootUmbrellaSkill
-  );
-  await writeText(
-    path.join(root, 'skills', 'eai', 'SKILL.md'),
-    rootUmbrellaSkill
-  );
+  for (const staleName of ['eai-gofer', 'gofer']) {
+    await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, staleName), { recursive: true, force: true });
+    await fs.rm(path.join(root, 'skills', staleName), { recursive: true, force: true });
+  }
+  for (const entry of PUBLIC_ENTRYPOINTS) {
+    const rootUmbrellaSkill = entry.name === 'eai'
+      ? withFirstConversationGuidance(
+          withEaiAppTemplateGate(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry)))
+        )
+      : buildUmbrellaSkill(version, stages, entry);
+    await writeText(path.join(root, UMBRELLA_SKILLS_DIR, entry.stem, 'SKILL.md'), rootUmbrellaSkill);
+    await writeText(path.join(root, 'skills', entry.stem, 'SKILL.md'), rootUmbrellaSkill);
+  }
 
   const iconSource = path.join(root, PLUGIN_ICON_SOURCE);
   const iconTarget = path.join(root, PLUGIN_ICON_TARGET);

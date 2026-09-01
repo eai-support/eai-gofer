@@ -21,7 +21,7 @@ After the first run, the repository should contain:
 - `.specify/memory/gofer-model-policy.yaml`
 - `.specify/specs/{feature}/business-scenario.md`
 
-The public Gofer command should also be available on the host you installed:
+The public Gofer commands should also be available on the host you installed:
 
 - Claude Code: `/eai`
 - Codex: `eai` skill or `$eai`
@@ -29,6 +29,10 @@ The public Gofer command should also be available on the host you installed:
 - Gemini CLI: `/eai`
 - Grok Build: ask Grok to use the repository EAI skill
 - VS Code: **Gofer: Initialize Repository** and the Gofer panel
+
+`eai-update` updates the host-level Gofer plugin or extension. It does not need
+an EAI project, a Gofer scaffold, or an EAI login. Use `/eai-update`,
+`#eai-update`, or `$eai-update` when Gofer is already available in the host.
 
 ## 1. Install A Surface
 
@@ -108,6 +112,58 @@ the model policy template.
 If `/eai` is unknown, install or update the Gofer plugin for the host first,
 then refresh or restart the host command picker. The public command is designed
 to work before `.specify/` exists.
+
+## Update A Surface Without A Repository
+
+Use the public update command in a host that already has Gofer:
+
+| Surface        | Command       | Required refresh                            |
+| -------------- | ------------- | ------------------------------------------- |
+| Claude Code    | `/eai-update` | `/reload-plugins`                           |
+| Codex          | `$eai-update` | Start a new task or restart Codex           |
+| GitHub Copilot | `#eai-update` | Restart the session or start a new app chat |
+| Gemini CLI     | `/eai-update` | Start a new Gemini CLI session              |
+| VS Code        | `/eai-update` | **Developer: Reload Window**                |
+
+The command checks status, shows the planned user-level change, asks for
+approval, and then installs or updates only the current host. After success, it
+archives known stale Gofer commands and skills. It keeps the current `eai` and
+`eai-update` entries. It can update all supported hosts only when you explicitly
+ask for that.
+
+## First Install Without A Repository
+
+`/eai-update` is available after the first Gofer install. For a new machine,
+download the small public helper. It needs Node.js, but it does not need a
+repository, EAI login, or EAI project.
+
+macOS and Linux:
+
+```bash
+helper_dir="${TMPDIR:-/tmp}/eai-gofer-update"
+mkdir -p "$helper_dir"
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-surface-update.mjs \
+  -o "$helper_dir/gofer-surface-update.mjs"
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs \
+  -o "$helper_dir/gofer-local-settings-cleanup.mjs"
+node "$helper_dir/gofer-surface-update.mjs" --action install --host codex --execute --json
+```
+
+Windows PowerShell:
+
+```powershell
+$helperDir = Join-Path $env:TEMP 'eai-gofer-update'
+New-Item -ItemType Directory -Path $helperDir -Force | Out-Null
+$helper = Join-Path $helperDir 'gofer-surface-update.mjs'
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-surface-update.mjs -OutFile $helper
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs -OutFile (Join-Path $helperDir 'gofer-local-settings-cleanup.mjs')
+node $helper --action install --host codex --execute --json
+```
+
+Replace `codex` with `claude`, `copilot`, `gemini`, or `vscode`. Use `all` only
+when you want to install Gofer on every supported host found on that machine.
+Grok Build does not provide a supported user-level plugin installer. It still
+needs the repository skill after Gofer is added to that repository.
 
 ## 3. Start The First Feature
 

@@ -1,10 +1,10 @@
 # EAI Gofer
 
 EAI Gofer is a business specification-driven delivery workflow for repositories.
-Users talk to one command, `/eai`, and Gofer manages the pipeline that designs
-with you, builds with you, and validates the result. It keeps working artifacts
-in `.specify/` and ships across VS Code, Claude Code, Codex, GitHub Copilot,
-Gemini, and Grok Build.
+Users talk to `/eai`, and use `/eai-update` when they need to install or update
+Gofer. Gofer manages the pipeline that designs with you, builds with you, and
+validates the result. It keeps working artifacts in `.specify/` and ships across
+VS Code, Claude Code, Codex, GitHub Copilot, Gemini, and Grok Build.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -32,9 +32,13 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
    state, and then routes the internal pipeline for you.
 
-If `/eai` is unknown in a new repo, the host has not loaded the Gofer plugin or
-repo commands yet. Install/update the plugin first, then refresh/restart the
-host command picker.
+If `/eai` is unknown, use `/eai-update` in a host where Gofer is already
+available. It updates the host plugin without requiring a repo or EAI login. For
+a first install, use the matching command in the
+[5-minute first run guide](./.tech-docs/first-run.md).
+
+The guide also includes a public Node.js bootstrap command. It installs Gofer
+without a repository for Claude, Codex, Copilot, Gemini, or VS Code.
 
 ## App-Native Integration Model
 
@@ -44,18 +48,19 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface                         | Clean entry point                                     | Repo integration                                                                                      |
-| ------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | `eai` skill, or `$eai` where the host uses skill tags | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | `#eai`, plus Gofer custom agents where supported      | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | `/eai`                                                | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command                       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
-| Grok Build                      | Ask Grok to use the EAI skill                         | `.grok/skills/`, `.specify/scripts/`                                                                  |
+| Surface                         | Clean entry point             | Repo integration                                                                                      |
+| ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE           | `eai` or `eai-update` skill   | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app    | `#eai` or `#eai-update`       | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app                 | `/eai` or `/eai-update`       | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Gemini CLI / Gemini Code Assist | `/eai` or `/eai-update`       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
+| Grok Build                      | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/`                                                                  |
 
-The UX rule is: users start with `eai`. Gofer keeps numbered stages and helpers
-as internal contracts under `.specify/commands/`, then chooses the right one
-based on the current feature state. The `gofer` entrypoint remains as a
-compatibility alias, but public instructions should teach `/eai`.
+The UX rule is: users start with `eai`; `eai-update` is the only support
+command. Gofer keeps numbered stages and helpers as internal contracts under
+`.specify/commands/`, then chooses the right one based on the current feature
+state. The `gofer` entrypoint remains as a compatibility alias, but public
+instructions should teach `/eai`.
 
 For copy-paste commands across VS Code, Claude Code, Codex, Copilot, Gemini, and
 Grok, see the [5-minute first run guide](./.tech-docs/first-run.md).

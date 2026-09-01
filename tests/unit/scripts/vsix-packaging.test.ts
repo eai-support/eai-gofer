@@ -67,7 +67,7 @@ describe('vsix packaging includes persona-pack + source-of-truth (T172)', () => 
     const claudeDir = path.join(EXTENSION_DIR, 'resources', 'claude-commands');
     expect(fs.existsSync(claudeDir)).toBe(true);
     const files = fs.readdirSync(claudeDir).filter((f) => f.endsWith('.md'));
-    expect(files.sort()).toEqual(['eai.md']);
+    expect(files.sort()).toEqual(['eai-update.md', 'eai.md']);
   });
 
   it('extension/resources/specify-commands/ contains canonical command sources', (): void => {

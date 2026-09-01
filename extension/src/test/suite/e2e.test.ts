@@ -9,11 +9,15 @@ import {
   getLatestTemplateRelease,
 } from '../../utils/githubApi.js';
 
+function liveNetworkTestsEnabled(): boolean {
+  return process.env.RUN_LIVE_NETWORK_TESTS === '1' && !process.env.SKIP_NETWORK_TESTS;
+}
+
 /**
  * End-to-End Tests for GitHub API Integration
  *
  * These tests verify real GitHub API connectivity and template downloading.
- * They can be run with network access or skipped in CI environments.
+ * They run only when RUN_LIVE_NETWORK_TESTS=1 is set. SKIP_NETWORK_TESTS disables them.
  */
 
 suite('E2E GitHub API Tests', () => {
@@ -38,8 +42,8 @@ suite('E2E GitHub API Tests', () => {
     test('should connect to GitHub API', async function () {
       this.timeout(10000);
 
-      // Skip if no network access (CI environment)
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      // Skip unless live network testing is explicitly enabled.
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -52,8 +56,8 @@ suite('E2E GitHub API Tests', () => {
     test('should handle rate limiting gracefully', async function () {
       this.timeout(10000);
 
-      // Skip if no network access
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      // Skip unless live network testing is explicitly enabled.
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -77,7 +81,7 @@ suite('E2E GitHub API Tests', () => {
     test('should fetch latest Gofer release', async function () {
       this.timeout(10000);
 
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -92,7 +96,7 @@ suite('E2E GitHub API Tests', () => {
     test('should fetch Gofer template releases', async function () {
       this.timeout(10000);
 
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -123,7 +127,7 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should download and extract template with progress', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -149,7 +153,10 @@ suite('E2E GitHub API Tests', () => {
     test('should handle download failures gracefully', async function () {
       this.timeout(30000);
 
-      // This test doesn't require network access
+      if (!liveNetworkTestsEnabled()) {
+        this.skip();
+        return;
+      }
 
       // Verify the function exists and returns a promise
       const downloadPromise = downloadLatestTemplates();
@@ -166,7 +173,7 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should validate downloaded templates', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -207,7 +214,7 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should initialize repository with latest templates', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -250,7 +257,7 @@ suite('E2E GitHub API Tests', () => {
 
   suite('Integration with Extension Commands', () => {
     test('should execute initialize command successfully', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -278,7 +285,7 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should execute update now command', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
@@ -294,7 +301,7 @@ suite('E2E GitHub API Tests', () => {
     });
 
     test('should execute update check command', async function () {
-      if (process.env.CI || process.env.SKIP_NETWORK_TESTS) {
+      if (!liveNetworkTestsEnabled()) {
         this.skip();
         return;
       }
