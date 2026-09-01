@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.11.0
+Version: 3.12.0
 Host: Codex
 
 ## Update EAI Gofer

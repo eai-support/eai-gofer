@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.0] - 2026-09-01
+
+Add cross-surface EAI Gofer update and safe cleanup support
+
 ## [3.11.0] - 2026-08-31
 
 Add capability-based validation and release-completeness controls

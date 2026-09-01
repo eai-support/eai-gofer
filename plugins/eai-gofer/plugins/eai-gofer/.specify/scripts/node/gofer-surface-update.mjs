@@ -76,6 +76,7 @@ const SURFACE_ACTIONS = {
 
 export function parseArgs(argv) {
   const result = { action: 'inspect', host: 'auto', execute: false, json: false, help: false };
+  if (argv.includes('--help') || argv.includes('-h')) return { ...result, help: true };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     const nextValue = argv[index + 1];
