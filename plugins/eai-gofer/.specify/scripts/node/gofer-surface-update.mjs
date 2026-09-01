@@ -156,10 +156,39 @@ function executableForHost(host) {
   return host === 'vscode' ? 'code' : host;
 }
 
+function isLocalMarketplacePath(value) {
+  return /^(?:[A-Za-z]:[\\/]|[/~])/.test(value.trim());
+}
+
+export async function inspectCodexMarketplace(execute = execFileAsync) {
+  try {
+    const result = await execute('codex', ['plugin', 'marketplace', 'list'], {
+      windowsHide: true,
+    });
+    const marketplace = result.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('eai-gofer'));
+    const root = marketplace?.replace(/^eai-gofer\s+/, '').trim();
+
+    if (!root) {
+      return { type: 'unknown' };
+    }
+
+    return {
+      type: isLocalMarketplacePath(root) ? 'local' : 'git',
+      root,
+    };
+  } catch {
+    return { type: 'unknown' };
+  }
+}
+
 export async function runPlan(
   plan,
   {
     inspect = inspectHost,
+    inspectMarketplace = inspectCodexMarketplace,
     execute = execFileAsync,
     cleanup = cleanupLocalSettings,
   } = {}
@@ -176,6 +205,28 @@ export async function runPlan(
         reason: `${executableForHost(surface.host)} is not installed or is not on PATH.`,
       });
       continue;
+    }
+    if (surface.host === 'codex' && surface.action === 'update') {
+      const marketplace = await inspectMarketplace(execute);
+      if (marketplace.type === 'local') {
+        results.push({
+          host: surface.host,
+          label: 'Inspect local EAI Gofer marketplace',
+          ok: true,
+          note: `EAI Gofer uses the local marketplace at ${marketplace.root}. It was left unchanged, so local work and settings are preserved.`,
+        });
+        continue;
+      }
+      if (marketplace.type !== 'git') {
+        results.push({
+          host: surface.host,
+          label: 'Inspect Codex EAI Gofer marketplace',
+          ok: false,
+          error:
+            'Could not confirm the Codex marketplace source. Update stopped to protect local Gofer work and settings.',
+        });
+        continue;
+      }
     }
     let completedSurface = true;
     for (const step of surface.commands) {
@@ -241,7 +292,7 @@ export function formatSurfaceUpdateReport(result) {
   }
   for (const entry of result.results) {
     if (entry.skipped) lines.push(`${entry.host}: skipped - ${entry.reason}`);
-    else if (entry.ok) lines.push(`${entry.host}: ${entry.label} completed`);
+    else if (entry.ok) lines.push(`${entry.host}: ${entry.label} completed${entry.note ? ` - ${entry.note}` : ''}`);
     else lines.push(`${entry.host}: ${entry.label} failed - ${entry.error}`);
   }
 
