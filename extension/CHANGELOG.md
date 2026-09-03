@@ -2,6 +2,38 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.1] - 2026-09-02
+
+Fix safe Codex local marketplace updates
+
+## [3.12.0] - 2026-09-01
+
+Add cross-surface EAI Gofer update and safe cleanup support
+
+## [3.11.0] - 2026-08-31
+
+Add capability-based validation and release-completeness controls
+
+## [3.10.9] - 2026-08-27
+
+Require Node 24 runtime
+
+## [3.10.8] - 2026-08-25
+
+Support current production Object Type seeding
+
+## [3.10.7] - 2026-08-25
+
+Clean stale Gofer installs and use port-safe app runners
+
+## [3.10.6] - 2026-08-25
+
+Install app-template browser runtime for release gates
+
+## [3.10.5] - 2026-08-25
+
+Harden Gofer release validation gates and app-template browser checks
+
 ## [3.10.4] - 2026-08-24
 
 Enforce concise business-language responses across all Gofer surfaces

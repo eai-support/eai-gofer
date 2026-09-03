@@ -2,7 +2,7 @@
   "name": "gofer",
   "displayName": "Gofer [PREVIEW]",
   "description": "Guide repository work through one /eai entrypoint to the core Gofer pipeline and unified validation inside VS Code.",
-  "version": "3.10.4",
+  "version": "3.12.1",
   "publisher": "EnterpriseAI",
   "icon": "icon.png",
   "author": {
@@ -725,7 +725,7 @@
     "@types/graphlib": "2.1.12",
     "@types/js-yaml": "4.0.9",
     "@types/mocha": "10.0.10",
-    "@types/node": "20.19.37",
+    "@types/node": "24.13.3",
     "@types/uuid": "10.0.0",
     "@types/vscode": "1.93.0",
     "@typescript-eslint/eslint-plugin": "8.56.1",

@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.10.4",
+  "version": "3.12.1",
   "description": "Spec-driven delivery workflow for VS Code and AI coding CLIs",
   "author": "EAI Tools",
   "license": "Apache-2.0",
@@ -83,7 +83,7 @@
     "@playwright/test": "1.58.2",
     "@types/chokidar": "1.7.5",
     "@types/graphlib": "2.1.12",
-    "@types/node": "22.19.15",
+    "@types/node": "24.13.3",
     "@types/uuid": "10.0.0",
     "@types/ws": "8.18.1",
     "@typescript-eslint/eslint-plugin": "8.56.1",

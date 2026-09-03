@@ -51,6 +51,7 @@ async function filesMatch(sourcePath, targetPath) {
   try {
     const [source, target] = await Promise.all([fs.readFile(sourcePath), fs.readFile(targetPath)]);
     if (source.equals(target)) return true;
+    if (path.basename(sourcePath) === 'object-type-routing-v1.json') return false;
     if (path.extname(sourcePath) !== '.json') return false;
     return JSON.stringify(JSON.parse(source.toString('utf8'))) === JSON.stringify(JSON.parse(target.toString('utf8')));
   } catch (error) {

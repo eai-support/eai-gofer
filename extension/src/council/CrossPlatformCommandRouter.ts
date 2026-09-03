@@ -19,7 +19,7 @@ import {
 import { type WorkflowProfile, getWorkflowProfile } from '../config/workflowProfile';
 import { Logger } from '../utils/logger';
 
-const PUBLIC_ENTRYPOINTS = new Set(['eai']);
+const PUBLIC_ENTRYPOINTS = new Set(['eai', 'eai-update']);
 const RETIRED_PUBLIC_ENTRYPOINTS = new Set(['gofer']);
 
 /**

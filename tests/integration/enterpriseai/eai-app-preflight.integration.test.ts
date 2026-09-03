@@ -14,6 +14,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     const planCommand = readRepoFile('.specify/commands/3_gofer_plan.md');
     const tasksCommand = readRepoFile('.specify/commands/4_gofer_tasks.md');
     const implementCommand = readRepoFile('.specify/commands/5_gofer_implement.md');
+    const validateCommand = readRepoFile('.specify/commands/6_gofer_validate.md');
 
     expect(scenarioCommand).toContain('EAI App Delivery Preflight');
     expect(scenarioCommand).toContain('EAI Platform And Azure App Stack Policy');
@@ -24,13 +25,16 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('/gofer:eai-first-run');
     expect(scenarioCommand).toContain('npm install -g eai-cli');
     expect(scenarioCommand).toContain('eai update --check');
+    expect(scenarioCommand).toContain('app-manifest-name-slug-negotiation-v1');
+    expect(scenarioCommand).toContain('does not prove deployed receiver support');
     expect(scenarioCommand).toContain('eai login');
     expect(scenarioCommand).toContain('eai tenant list --format json');
     expect(scenarioCommand).toContain('eai init <app-name>');
     expect(scenarioCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
     );
-    expect(scenarioCommand).toContain('any status other than `ready` is a hard stop');
+    expect(scenarioCommand).toContain('blocks the EAI');
+    expect(scenarioCommand).toContain('does not block unrelated local MVP');
     expect(scenarioCommand).toContain('Do not accept copied marker files');
     expect(scenarioCommand).toContain('eai template check --format json');
     expect(scenarioCommand).toMatch(/eai gofer\s+refresh --check\s+--format json/);
@@ -38,6 +42,19 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('eai app create <name>');
     expect(scenarioCommand).toContain(
       'eai app provision <key> --tenant-id <tenant-id> --select --format json'
+    );
+    expect(scenarioCommand).toContain('The EAI CLI is the only app-manifest request serializer');
+    expect(scenarioCommand).toContain('Apply one Object Type identifier contract everywhere');
+    expect(scenarioCommand).toContain('Curate resource routes');
+    expect(scenarioCommand).toContain('The CLI sends explicit `name` plus `slug` first');
+    expect(scenarioCommand).toContain('preferred request shape');
+    expect(scenarioCommand).toMatch(/exact requested\s+name\/slug pairs/);
+    expect(scenarioCommand).toMatch(/actual\s+mutating result/);
+    expect(scenarioCommand).toMatch(
+      /app_manifest_validation_failed[\s\S]*eai update --check[\s\S]*upgrade_required[\s\S]*approval[\s\S]*eai update[\s\S]*before repeating validation/
+    );
+    expect(scenarioCommand).toContain(
+      'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
     );
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
@@ -71,9 +88,13 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(planCommand).toContain('next recovery command');
     expect(planCommand).toContain('EAI Platform/Azure app stack decision');
     expect(tasksCommand).toContain('EAI readiness unblock -> `eai-preflight.md`');
-    expect(tasksCommand).toContain('App-template readiness cannot be deferred');
+    expect(tasksCommand).toContain('Local MVP UI and implementation tasks can continue');
     expect(tasksCommand).toContain('App resource provisioning -> `eai app provision`');
     expect(tasksCommand).toContain('Object-type publish -> `eai types seed`');
+    expect(tasksCommand).toContain('Object-type seed capability');
+    expect(tasksCommand).toMatch(
+      /Do not copy the source\s+name\/slug schema into a direct PublicAPI request/
+    );
     expect(tasksCommand).toContain(
       'Schema and storage health -> `eai resources schema` / storage diagnostics / `eai verify`'
     );
@@ -91,10 +112,18 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /Record\s+only\s+a\s+redacted\s+callback\s+route\s+pattern\s+and\s+recovery\s+status/i
     );
     expect(implementCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
+    expect(implementCommand).toContain('app_manifest_validation_failed');
+    expect(implementCommand).toContain('app-manifest-name-slug-negotiation-v1');
+    expect(implementCommand).toMatch(/dry run is source and preferred-shape\s+evidence/);
+    expect(implementCommand).toContain('block the mutating seed');
+    expect(implementCommand).toContain('PascalCase transport value');
     expect(implementCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
     );
-    expect(implementCommand).toContain('blocks every app');
+    expect(implementCommand).toContain('blocks that EAI capability');
+    expect(validateCommand).toContain('app-manifest-name-slug-negotiation-v1');
+    expect(validateCommand).toContain('A dry run alone');
+    expect(validateCommand).toContain('converged `eai types diff`');
   });
 
   it('ships the EAI preflight template to canonical and mirrored resources', () => {
@@ -106,6 +135,9 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(canonicalTemplate).toContain('App Stack Policy');
     expect(canonicalTemplate).toContain('Execution Order And Gate Tracking');
     expect(canonicalTemplate).toContain('CLI release status');
+    expect(canonicalTemplate).toContain('Object Type seed adapter');
+    expect(canonicalTemplate).toContain('app-manifest-name-slug-negotiation-v1');
+    expect(canonicalTemplate).toContain('preferred shape and exact pairs only');
     expect(canonicalTemplate).toContain('Drift readiness');
     expect(canonicalTemplate).toContain('eai-app-template-readiness status');
     expect(canonicalTemplate).toContain('.eai-manifest.json');
@@ -120,6 +152,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(mirroredTemplate).toContain('App Stack Policy');
     expect(mirroredTemplate).toContain('Execution Order And Gate Tracking');
     expect(mirroredTemplate).toContain('CLI release status');
+    expect(mirroredTemplate).toContain('Object Type seed adapter');
     expect(mirroredTemplate).toContain('Drift readiness');
     expect(mirroredTemplate).toContain('Workflow readiness');
     expect(mirroredTemplate).toContain('Object-type publish');
@@ -164,5 +197,19 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/<oid>/memberships');
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/role-definitions');
     expect(catalog).toContain('Do not start by changing tenant members');
+  });
+
+  it('updates an outdated CLI before retrying app-manifest validation', () => {
+    const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
+    const manifestRecovery = catalog
+      .split('errorId: EAI_APP_MANIFEST_VALIDATION_FAILED')[1]
+      ?.split('  - errorId:')[0];
+
+    expect(manifestRecovery).toContain('eai update --check');
+    expect(manifestRecovery).toContain(
+      'If eai update --check reports upgrade_required, obtain approval and run eai update'
+    );
+    expect(manifestRecovery).toContain('eai types validate');
+    expect(manifestRecovery).toContain('eai types seed');
   });
 });

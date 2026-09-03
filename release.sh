@@ -295,6 +295,139 @@ repo_has_changes() {
     [ -n "$(git status --porcelain)" ]
 }
 
+fail_release_validation() {
+    local label="$1"
+    print_error "$label failed."
+    print_error "No release PR or tag was created."
+    print_error "Fix the failure in a normal PR, get CI green, merge it to main, then rerun release.sh."
+    exit 1
+}
+
+run_release_check() {
+    local label="$1"
+    shift
+
+    print_info "$label..."
+    if "$@"; then
+        print_success "$label passed"
+    else
+        fail_release_validation "$label"
+    fi
+}
+
+install_release_dependencies() {
+    print_info "Installing root dependencies..."
+    if npm install 2>&1; then
+        print_success "Root dependencies installed"
+    else
+        fail_release_validation "Root dependency installation"
+    fi
+
+    print_info "Installing extension dependencies..."
+    if npm --prefix extension install 2>&1; then
+        print_success "Extension dependencies installed"
+    else
+        fail_release_validation "Extension dependency installation"
+    fi
+
+    print_info "Installing language-server dependencies..."
+    if npm --prefix language-server install 2>&1; then
+        print_success "Language-server dependencies installed"
+    else
+        fail_release_validation "Language-server dependency installation"
+    fi
+}
+
+ensure_language_server_release_runtime() {
+    if [ ! -f "extension/language-server/dist/server.js" ]; then
+        print_error "The VS Code release runtime is missing extension/language-server/dist/server.js."
+        print_error "Run npm --prefix extension run prepare-language-server and retry."
+        fail_release_validation "Language Server release runtime check"
+    fi
+
+    if [ ! -f "extension/language-server/package.json" ]; then
+        print_error "The VS Code release runtime is missing extension/language-server/package.json."
+        fail_release_validation "Language Server release runtime check"
+    fi
+
+    if [ ! -d "extension/language-server/node_modules/vscode-languageserver" ]; then
+        print_error "The VS Code release runtime is missing language-server dependencies."
+        fail_release_validation "Language Server release runtime check"
+    fi
+
+    print_success "Language Server release runtime is present"
+}
+
+resolve_eai_app_template_dir() {
+    if [ -n "${EAI_APP_TEMPLATE_DIR:-}" ]; then
+        echo "$EAI_APP_TEMPLATE_DIR"
+        return 0
+    fi
+
+    if [ -f "../eai-app-template/package.json" ]; then
+        echo "../eai-app-template"
+        return 0
+    fi
+
+    echo ""
+}
+
+run_eai_app_template_release_gate() {
+    if is_truthy "${SKIP_EAI_APP_TEMPLATE_RELEASE_CHECK:-}"; then
+        print_warning "Skipping EAI app-template release checks because SKIP_EAI_APP_TEMPLATE_RELEASE_CHECK is set."
+        return 0
+    fi
+
+    local template_dir
+    local temp_template_root=""
+    template_dir="$(resolve_eai_app_template_dir)"
+
+    if [ -z "$template_dir" ]; then
+        temp_template_root="$(mktemp -d)"
+        template_dir="$temp_template_root/eai-app-template"
+        print_info "No local EAI app-template checkout found. Cloning eai-support/eai-app-template for release checks..."
+        if git clone --depth 1 https://github.com/eai-support/eai-app-template.git "$template_dir"; then
+            print_success "Cloned EAI app-template for release checks"
+        else
+            fail_release_validation "EAI app-template clone"
+        fi
+    fi
+
+    if [ ! -f "$template_dir/package.json" ]; then
+        print_error "EAI app-template package.json was not found at: $template_dir"
+        fail_release_validation "EAI app-template release checks"
+    fi
+
+    print_info "Running EAI app-template release checks from $template_dir..."
+    run_release_check "EAI app-template dependency install" npm --prefix "$template_dir" install --ignore-scripts
+    run_release_check "EAI app-template Playwright browser install" npm --prefix "$template_dir" exec -- playwright install chromium
+    run_release_check "EAI app-template verify" npm --prefix "$template_dir" run verify --silent
+    run_release_check "EAI app-template smoke tests" npm --prefix "$template_dir" run test:smoke
+    run_release_check "EAI app-template business-scenario browser tests" npm --prefix "$template_dir" run test:business-scenarios
+    run_release_check "EAI app-template e2e browser tests" npm --prefix "$template_dir" run test:e2e
+
+    if [ -n "$temp_template_root" ]; then
+        rm -rf "$temp_template_root"
+    fi
+}
+
+run_release_validation_gate() {
+    local version="$1"
+
+    print_info "Running release validation gate for Gofer v$version..."
+    run_release_check "Gofer typecheck" npm run typecheck
+    run_release_check "Gofer production build" npm run build
+    run_release_check "Gofer generated surface check" npm run gofer:generate:check
+    run_release_check "Gofer unit test suite" npm run test:unit
+    run_release_check "Language Server production build" npm --prefix language-server run build
+    run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server
+    ensure_language_server_release_runtime
+    run_release_check "VS Code extension runtime test suite" npm --prefix extension test
+    run_release_check "VS Code production package build" npm --prefix extension run package
+    run_eai_app_template_release_gate
+    print_success "Release validation gate passed for Gofer v$version"
+}
+
 ensure_release_base() {
     print_info "Fetching origin/main..."
     git fetch origin main
@@ -437,6 +570,9 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
         "docs-site/static/releases/eai-gofer-latest.vsix" \
         "docs-site/static/releases/eai-gofer-agent-plugin-$CURRENT_VERSION.zip" \
         "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip"
+
+    install_release_dependencies
+    run_release_validation_gate "$CURRENT_VERSION"
 
     if remote_tag_exists "$TAG_NAME"; then
         print_error "Remote tag $TAG_NAME already exists"
@@ -730,58 +866,24 @@ print_info "Testing all extension commands for runtime errors..."
 if [ -f "./test-commands.sh" ]; then
     # VSIX is already installed by test-vsix.sh above
 
-    # Run command tests (non-fatal for now)
+    # Command tests are a hard release gate.
     if ./test-commands.sh 2>&1 | tee /tmp/command-test.log; then
         print_success "All extension commands validated successfully"
     else
-        print_warning "Some extension commands had issues (see /tmp/command-test.log)"
-        print_warning "Continuing with release - manual testing recommended"
+        print_error "Some extension commands had issues (see /tmp/command-test.log)"
+        fail_release_validation "Extension command validation"
     fi
 else
-    print_warning "test-commands.sh not found, skipping command validation"
+    print_error "test-commands.sh not found, cannot validate extension commands"
+    fail_release_validation "Extension command validation"
 fi
 
 # Ensure root validation tools are installed before lint/test gates. Fresh
 # release worktrees do not have root node_modules by default.
-print_info "Installing root dependencies for validation..."
-if npm install 2>&1; then
-    print_success "Root dependencies installed"
-else
-    print_error "Failed to install root dependencies"
-    exit 1
-fi
+install_release_dependencies
 
-# Run pre-push validation BEFORE committing and pushing
-print_info "Running pre-push validation (linting and tests)..."
-echo ""
-
-# Run linting
-print_info "Running linters..."
-if npm run lint:fix 2>&1 | head -20; then
-    print_success "Linting passed"
-else
-    print_warning "Linting had some issues, but continuing..."
-fi
-
-# Run tests and capture exit code
-print_info "Running tests..."
-set +e
-npm test > /tmp/test-output.log 2>&1
-TEST_EXIT=$?
-set -e
-
-# Show last 20 lines of test output
-tail -20 /tmp/test-output.log
-
-if [ $TEST_EXIT -eq 0 ]; then
-    print_success "Tests passed"
-else
-    print_error "Tests failed!"
-    echo ""
-    print_error "Cannot release with failing tests. Fix the tests and try again."
-    print_info "Full test output in: /tmp/test-output.log"
-    exit 1
-fi
+# Run release validation BEFORE committing, pushing, or opening a release PR.
+run_release_validation_gate "$NEW_VERSION"
 
 echo ""
 print_success "Pre-push validation complete"

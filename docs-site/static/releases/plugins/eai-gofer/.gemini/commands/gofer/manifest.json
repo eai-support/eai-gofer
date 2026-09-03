@@ -1,7 +1,8 @@
 {
   "version": "1.0",
-  "generated": "2026-08-24T02:21:32.974Z",
+  "generated": "2026-09-01T22:55:52.220Z",
   "commands": [
-    "eai"
+    "eai",
+    "eai-update"
   ]
 }

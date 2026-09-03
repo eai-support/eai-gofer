@@ -53,6 +53,12 @@ const PUBLIC_ENTRYPOINTS = [
     title: 'Eai',
     description: 'Start or continue the EAI delivery pipeline.',
   },
+  {
+    stem: 'eai-update',
+    name: 'eai-update',
+    title: 'Eai Update',
+    description: 'Install or update EAI Gofer for this AI coding app.',
+  },
 ];
 const SURFACE_WORKSPACE_HOSTS = {
   'claude': 'claude',
@@ -74,6 +80,15 @@ const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
   'gofer:check-workspace',
   'gofer:bootstrap-workspace',
   'gofer:eai-first-run',
+]);
+
+const LEGACY_HELPER_COMMAND_FILES = new Set([
+  'gofer_bootstrap_workspace.md',
+  'gofer_check_workspace.md',
+  'gofer_eai_first_run.md',
+  'gofer_personality.md',
+  'gofer_plan.md',
+  'gofer_side.md',
 ]);
 const LEGACY_STAGE_STEMS = new Map([
   ['0_gofer_start', ['0_business_scenario']],
@@ -289,6 +304,26 @@ Before routing work, decide where the user is now.
 7. Keep the user-facing explanation at the business level.`;
 }
 
+function buildMvpCapabilityValidationSection() {
+  return `## MVP Capability-Based Validation
+
+Use \`.specify/references/mvp-capability-validation.md\` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create \`.specify/specs/{feature}/\` before app or operator-tool source work.
+2. Keep \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and the validation scope aligned.
+3. Mark each relevant capability as \`not_applicable\`, \`planned\`, \`implemented\`, \`verified\`, or \`blocked\`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat \`run.sh\`, \`run.bat\`, and \`run.ps1\` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey \`unverified\`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: \`The server runs. Authentication is not in the current MVP scope.\`
+10. When the feature claims a release or deployed outcome, create \`release-capability-ledger.md\` from \`.specify/templates/release-capability-ledger-template.md\`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.`;
+}
+
 function buildVerifiedEaiCliCommandContract() {
   return `## Verified EAI CLI Command Contract
 
@@ -327,6 +362,10 @@ For app delivery, make EAI Platform choices for the business user.
 }
 
 function buildPublicEntrypointMarkdown(entry, stages, host) {
+  if (entry.name === 'eai-update') {
+    return buildEaiUpdateEntrypointMarkdown(host);
+  }
+
   return `# ${entry.title}
 
 Use this as the single user-facing Gofer command. Users should run \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
@@ -367,7 +406,13 @@ ${buildAlwaysEaiSection()}
 4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${host} --include-mirrors\`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
+${buildLocalSettingsCleanupContractSection()}
+
+${buildAppPreviewRunnerContractSection()}
+
 ${buildJourneyStateSection()}
+
+${buildMvpCapabilityValidationSection()}
 
 ## App vs Non-App Routing
 
@@ -379,11 +424,11 @@ ${buildJourneyStateSection()}
 
 ## EAI Platform Readiness
 
-1. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-2. For app delivery, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when the checker exists.
-3. Treat a missing checker or any result other than \`ready\` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
-4. Run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`. It must run \`eai init\` in the approved target folder and switch the active workspace to the created app.
-5. Rerun the readiness checker, \`eai verify\`, and \`eai template check --format json\`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+1. Run \`eai whoami\` only when the current feature uses EAI Platform services, the user asks for EAI setup, or EAI CLI recovery is needed.
+2. Require \`eai-app-template-readiness\`, \`eai verify\`, and \`eai template check --format json\` only when the feature creates, changes, or validates an EAI Platform app integration.
+3. Require the authentication journey only when the specification includes sign-in, protected content, user roles, or a deployment target that requires identity.
+4. For a local MVP with no EAI or authentication capability, record those states as \`not_applicable\` or \`planned\` and continue with local feature validation.
+5. When an EAI capability becomes required, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that \`eai init\` completed.
 7. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
 8. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
@@ -417,6 +462,58 @@ When this is the first EAI conversation for a new app:
 ## Internal Function Contracts
 
 ${buildInternalStageList(stages)}
+`;
+}
+
+function buildEaiUpdateEntrypointMarkdown(host) {
+  if (host === 'grok') {
+    return `## Update EAI Gofer
+
+Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+
+## What To Do
+
+1. Add EAI Gofer to the repository from a supported host.
+2. Open that repository in Grok Build.
+3. Use the repository \`eai\` skill to continue work.
+
+Do not run \`gofer-surface-update.mjs --host grok\`. That host is not supported by the updater.
+`;
+  }
+
+  return `## Update EAI Gofer
+
+Use this command to install or update EAI Gofer for the current AI coding app. This command works without an EAI project, a Gofer scaffold, or EAI sign-in.
+
+## Update Contract
+
+1. Do not run workspace checks, \`eai init\`, \`eai whoami\`, or pipeline stages.
+2. Check the current host first:
+   \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${host} --json\`
+3. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
+4. State whether EAI Gofer is installed and whether the host command is available.
+5. Explain the planned user-level change and ask for approval before any install or update command.
+6. After approval, run one of these commands from the bundled helper:
+   - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${host} --execute --json\`
+   - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${host} --execute --json\`
+7. After an actual install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries. For a Codex local marketplace, it reports the local source and makes no changes to that checkout or its settings. If the Codex marketplace source is unknown, it stops without changes.
+8. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
+9. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
+
+## Supported Hosts
+
+- Claude Code: refresh the marketplace and plugin, then run \`/reload-plugins\`.
+- Codex: refresh a confirmed Git marketplace and apply the plugin, then start a new task or restart Codex. A local marketplace is inspected only, so local work remains unchanged. An unknown source stops the update to protect local work.
+- GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
+- Gemini CLI: update the extension, then start a new Gemini CLI session.
+- VS Code: install or update \`EnterpriseAI.gofer\`, then run **Developer: Reload Window**.
+
+## Limits
+
+- This command updates user-level plugins and extensions. It archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
+- For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
+- Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
+- Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
 `;
 }
 
@@ -694,41 +791,56 @@ function buildEaiPlatformSessionPreflightSection() {
 Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in \`.specify/commands/0_gofer_start.md\`.
-2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path. Do not ask for confirmation just because app delivery is inferred.
+2. Create \`.specify/specs/{feature}/\` and record the active delivery scope before app or operator-tool source work.
 3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision in the feature discovery or context bundle, do not run \`eai whoami\`, \`eai tenant select\`, \`eai init\`, or \`/gofer:eai-first-run\`, and continue the appropriate non-app pipeline path.
-5. If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
-6. For EAI app delivery, treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
-7. For EAI app delivery, run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
-8. Run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available. A missing checker or any status other than \`ready\` blocks all app-delivery stages.
-9. If blocked, run \`/gofer:eai-first-run\`. The first-run path must complete \`eai init\`, enter the created app folder, and rerun the checker.
-10. Do not continue into research, specification, planning, tasks, implementation, or validation until the checker passes and \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, eai-init provenance, template readiness, and next-action evidence.
-11. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
-12. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+4. If the user confirms non-app, record the decision and mark app-only capabilities \`not_applicable\`. Do not run \`eai whoami\`, \`eai tenant select\`, \`eai init\`, or \`/gofer:eai-first-run\`.
+5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
+6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run \`eai whoami\` and record the EAI readiness evidence in \`eai-preflight.md\`.
+7. When the feature creates, changes, or validates an EAI Platform app integration, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\`. A missing checker or status other than \`ready\` blocks that EAI capability. It does not block unrelated local MVP work.
+8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
+9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
+10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
+11. If the user changes scope, update \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope before continuing. Explain the business effect and evidence change.
+12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
+13. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
 `.trim();
 }
 
 function injectEaiPlatformSessionPreflight(content) {
-  if (
-    content.includes('## Application Classification And EAI Preflight') ||
-    content.includes('## EAI Platform Session Preflight')
-  ) {
-    return content;
+  const section = `${buildMvpCapabilityValidationSection()}\n\n${buildEaiPlatformSessionPreflightSection()}`;
+  // Remove previous generated copies before replacing the bounded preflight.
+  // This makes a workspace refresh idempotent.
+  const withoutMvpCapabilitySection = content.replace(
+    /\n?## MVP Capability-Based Validation\n[\s\S]*?(?=\n## |\s*$)/g,
+    ''
+  );
+  const existingHeading = withoutMvpCapabilitySection.includes('## Application Classification And EAI Preflight')
+    ? '## Application Classification And EAI Preflight'
+    : withoutMvpCapabilitySection.includes('## EAI Platform Session Preflight')
+      ? '## EAI Platform Session Preflight'
+      : null;
+
+  if (existingHeading) {
+    const headingIndex = withoutMvpCapabilitySection.indexOf(existingHeading);
+    const nextHeadingIndex = withoutMvpCapabilitySection.indexOf('\n## ', headingIndex + existingHeading.length);
+    const suffix = nextHeadingIndex === -1 ? '' : withoutMvpCapabilitySection.slice(nextHeadingIndex).replace(/^\n+/, '');
+    return suffix
+      ? `${withoutMvpCapabilitySection.slice(0, headingIndex).trimEnd()}\n\n${section}\n\n${suffix}`
+      : `${withoutMvpCapabilitySection.slice(0, headingIndex).trimEnd()}\n\n${section}\n`;
   }
 
-  const section = buildEaiPlatformSessionPreflightSection();
-  const workspaceHeadingIndex = content.indexOf('## Workspace Preflight');
+  const workspaceHeadingIndex = withoutMvpCapabilitySection.indexOf('## Workspace Preflight');
   if (workspaceHeadingIndex !== -1) {
-    const nextHeadingIndex = content.indexOf('\n## ', workspaceHeadingIndex + 1);
+    const nextHeadingIndex = withoutMvpCapabilitySection.indexOf('\n## ', workspaceHeadingIndex + 1);
     if (nextHeadingIndex !== -1) {
-      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${section}\n\n${content
+      return `${withoutMvpCapabilitySection.slice(0, nextHeadingIndex).trimEnd()}\n\n${section}\n\n${withoutMvpCapabilitySection
         .slice(nextHeadingIndex)
         .replace(/^\n+/, '')}`;
     }
-    return `${content.trimEnd()}\n\n${section}\n`;
+    return `${withoutMvpCapabilitySection.trimEnd()}\n\n${section}\n`;
   }
 
-  return `${section}\n\n${content}`;
+  return `${section}\n\n${withoutMvpCapabilitySection}`;
 }
 
 function buildWorkspacePreflightSection(host = 'auto', includeEaiPreflight = true) {
@@ -760,6 +872,8 @@ Before doing stage/helper work:
    - \`.specify/scripts/powershell/install-optional-tools.ps1\`
    - \`.specify/templates/gofer-model-policy.yaml\`
    - \`.specify/memory/gofer-model-policy.yaml\`
+   - \`.specify/scripts/node/gofer-local-settings-cleanup.mjs\`
+   - \`.specify/scripts/node/gofer-ui-preview.mjs\`
    - \`.specify/specs/\`
    - \`.specify/memory/\`
 3. Check host-specific repo-owned files when relevant:
@@ -772,7 +886,16 @@ Before doing stage/helper work:
 5. If the workspace is missing or stale, ask exactly:
    - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.${eaiPreflight}
+7. After a Gofer install, update, or bootstrap, remove stale local Gofer command entries with:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+8. If the cleanup helper is only available in the downloaded bundle, run:
+   - macOS/Linux: \`node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+   - Windows: \`node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+9. For EAI app delivery, use the repo runner for local previews:
+   - macOS, Linux, and GitHub Codespaces: \`./run.sh dev 3001\`
+   - Windows: \`run.bat dev 3001\`
+10. Do not start app previews with direct \`npm run dev\` commands when the repo runner exists.
+11. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.${eaiPreflight}
 `.trim();
 }
 
@@ -876,6 +999,83 @@ certification.
 `.trim();
 }
 
+function buildLocalSettingsCleanupContractSection() {
+  return `
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: \`node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+   - Windows: \`node %USERPROFILE%\\plugins\\eai-gofer\\.specify\\scripts\\node\\gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public \`eai\` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->
+`.trim();
+}
+
+function injectLocalSettingsCleanupContract(content) {
+  if (content.includes('<!-- gofer:local-settings-cleanup:start -->')) {
+    return content;
+  }
+
+  const workspaceHeadingIndex = content.indexOf('## Workspace Preflight');
+  if (workspaceHeadingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', workspaceHeadingIndex + 1);
+    if (nextHeadingIndex !== -1) {
+      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${buildLocalSettingsCleanupContractSection()}\n\n${content
+        .slice(nextHeadingIndex)
+        .replace(/^\n+/, '')}`;
+    }
+  }
+
+  return `${content.trimEnd()}\n\n${buildLocalSettingsCleanupContractSection()}`;
+}
+
+function buildAppPreviewRunnerContractSection() {
+  return `
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
+2. Use \`run.bat dev 3001\` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
+6. After every UI-facing change, run:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
+7. On Windows, use:
+   - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+`.trim();
+}
+
+function injectAppPreviewRunnerContract(content) {
+  if (content.includes('<!-- gofer:app-preview-runner:start -->')) {
+    return content;
+  }
+
+  const progressHeadingIndex = content.indexOf('## Business-Friendly Progress Contract');
+  if (progressHeadingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', progressHeadingIndex + 1);
+    if (nextHeadingIndex !== -1) {
+      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${buildAppPreviewRunnerContractSection()}\n\n${content
+        .slice(nextHeadingIndex)
+        .replace(/^\n+/, '')}`;
+    }
+  }
+
+  return `${content.trimEnd()}\n\n${buildAppPreviewRunnerContractSection()}`;
+}
+
 function insertSectionAfterTitle(content, section) {
   const frontmatterMatch = content.match(/^---\n[\s\S]*?\n---\n?/);
   const prefix = frontmatterMatch ? frontmatterMatch[0].trimEnd() : '';
@@ -930,7 +1130,9 @@ function injectBusinessProgressContract(content) {
 }
 
 function injectTokenCostPolicy(content) {
-  return injectBusinessProgressContract(injectTokenCostPolicyOnly(content));
+  return injectAppPreviewRunnerContract(
+    injectLocalSettingsCleanupContract(injectBusinessProgressContract(injectTokenCostPolicyOnly(content)))
+  );
 }
 
 function injectTokenCostPolicyOnly(content) {
@@ -993,9 +1195,13 @@ async function refreshCanonicalCommandSources(root, dryRun) {
   let changed = 0;
   for (const entry of entries) {
     if (!entry.endsWith('.md') || entry === '.gitkeep') continue;
+    if (LEGACY_HELPER_COMMAND_FILES.has(entry)) continue;
     const filePath = path.join(commandsDir, entry);
     const source = await fs.readFile(filePath, 'utf8');
-    const refreshed = injectTokenCostPolicy(source);
+    // Emitter tests use intentionally partial command fixtures. Only normalize
+    // canonical command files that can be parsed and emitted as real stages.
+    if (!source.startsWith('---')) continue;
+    const refreshed = injectTokenCostPolicy(injectEaiPlatformSessionPreflight(source));
     if (refreshed === source) continue;
 
     changed++;
@@ -1670,11 +1876,32 @@ async function main() {
     process.exit(1);
   }
 
+  // Minimal emitter fixtures do not include the full Gofer reference library.
+  // Only a real Gofer workspace may receive automatic contract normalization.
+  const commandsDir = path.join(root, '.specify', 'commands');
   try {
-    await refreshCanonicalCommandSources(root, dryRun);
+    await fs.access(commandsDir);
   } catch (err) {
-    console.error(`Canonical command normalization failed: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
+    if (err?.code === 'ENOENT') {
+      console.error('Canonical command normalization failed: .specify/commands/ not found');
+      process.exit(1);
+    }
+    throw err;
+  }
+  const capabilityContractPath = path.join(
+    root,
+    '.specify',
+    'references',
+    'mvp-capability-validation.md'
+  );
+  try {
+    await fs.access(capabilityContractPath);
+    await refreshCanonicalCommandSources(root, dryRun || check);
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      console.error(`Canonical command normalization failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   }
 
   // Load all stage command files from .specify/commands/

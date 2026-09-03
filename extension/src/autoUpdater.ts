@@ -83,7 +83,7 @@ export class AutoUpdater {
       const latestVersion = await this.getLatestVersion();
 
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
-        await this.promptUpdate(latestVersion);
+        void this.promptUpdate(latestVersion);
       }
     } catch (_error) {
       console.error('Update check failed');
@@ -551,7 +551,7 @@ Or install VS Code CLI: https://code.visualstudio.com/docs/editor/command-line`,
       const latestVersion = await this.getLatestVersion();
 
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
-        await this.promptUpdate(latestVersion);
+        void this.promptUpdate(latestVersion);
       } else {
         vscode.window.showInformationMessage(
           `✅ You're on the latest version (v${this.currentVersion})`

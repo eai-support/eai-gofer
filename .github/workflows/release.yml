@@ -30,7 +30,7 @@ jobs:
   release:
     name: Build and Publish Release
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     environment: release
 
     steps:
@@ -38,6 +38,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Checkout EAI App Template
+        uses: actions/checkout@v6
+        with:
+          repository: eai-support/eai-app-template
+          path: eai-app-template
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -54,6 +60,11 @@ jobs:
       # Pin a known-good npm so the Marketplace packaging step is deterministic.
       - name: Pin npm
         run: npm install -g npm@10.9.2
+
+      - name: Install VS Code Test Runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
 
       - name: Resolve Release Version
         id: version
@@ -85,12 +96,39 @@ jobs:
           npm ci
           npm --prefix extension ci
           npm --prefix language-server ci
+          npm --prefix eai-app-template ci --ignore-scripts
 
       - name: Regenerate Command Surfaces
         run: npm run gofer:generate
 
-      - name: Run Tests
-        run: npm test
+      - name: Verify Generated Command Surfaces
+        run: npm run gofer:generate:check
+
+      - name: Run Gofer Typecheck
+        run: npm run typecheck
+
+      - name: Run Gofer Unit Tests
+        run: npm run test:unit
+        env:
+          CI: true
+
+      - name: Prepare VS Code Language Server Runtime
+        run: npm --prefix extension run prepare-language-server
+
+      - name: Run VS Code Extension Tests
+        run: xvfb-run -a npm --prefix extension test
+        env:
+          CI: true
+
+      - name: Install EAI App Template Browser Runtime
+        run: npm --prefix eai-app-template exec -- playwright install --with-deps chromium
+
+      - name: Verify EAI App Template Test Contract
+        run: |
+          npm --prefix eai-app-template run verify --silent
+          npm --prefix eai-app-template run test:smoke
+          npm --prefix eai-app-template run test:business-scenarios
+          npm --prefix eai-app-template run test:e2e
         env:
           CI: true
 

@@ -1,6 +1,6 @@
 {
   "name": "EAI-GOFER Development",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-24-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
@@ -8,12 +8,7 @@
   "postCreateCommand": "bash .devcontainer/setup.sh && bash .devcontainer/install-extension.sh",
   "customizations": {
     "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "ms-playwright.playwright",
-        "eamodio.gitlens"
-      ],
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "ms-playwright.playwright", "eamodio.gitlens"],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
       }

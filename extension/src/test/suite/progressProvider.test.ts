@@ -322,7 +322,9 @@ created: "2025-10-22"
           error instanceof Error &&
           error.message.includes('IMPL_DEPLOYMENT_VALIDATION_FAILED') &&
           error.message.includes('eai.runtime.json') &&
-          error.message.includes('.eai/deploy-doctor.json')
+          error.message.includes('.eai/deploy-doctor.json') &&
+          error.message.includes('Next step') &&
+          error.message.includes('run deploy doctor after deployment')
       );
 
       const tasksPath = path.join(tempDir, '.specify', 'specs', specId, 'tasks.md');

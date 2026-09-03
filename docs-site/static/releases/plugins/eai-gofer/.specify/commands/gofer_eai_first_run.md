@@ -88,6 +88,23 @@ workspace, tenant, or EAI app template is ready.
 
 This command is intentionally allowed to run before `.specify/` exists.
 
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+
 ## Non-Negotiables
 
 - Ask before every install, admin action, browser login, destructive file
@@ -189,6 +206,15 @@ If advertised, also run:
 ```bash
 eai agent guide --format json
 ```
+
+For EAI app delivery that will publish Object Types, inspect the JSON guide and
+require `capabilities` to contain
+`app-manifest-name-slug-negotiation-v1`. `eai update --check` reporting
+`current` does not prove the deployed receiver accepts the new request shape.
+If the capability is absent, record `upgrade_required`, block Object Type
+seed/publish and deployed-readiness claims, and ask before updating the CLI.
+Local discovery and correct source authoring may continue, but do not hand-build
+an app-manifest request.
 
 Prefer commands and options advertised by the installed CLI over remembered
 syntax. Before suggesting or running a specific `eai ...` command, verify its
@@ -505,6 +531,7 @@ Each section should include:
 - EAI registry status
 - EAI CLI release status from `eai update --check`
 - EAI CLI capability source (`eai --describe` timestamp)
+- Object Type seed adapter capability from `eai agent guide --format json`
 - EAI capability inventory for init, tenant, app, resources, workflow,
   template, Gofer-refresh, and blocks commands
 - Login status without tokens
@@ -529,3 +556,19 @@ syntax fits the host. If `/gofer` or `/eai` is still unknown after the
 plugin is installed and the repo is bootstrapped, explain that the host has not
 loaded the Gofer plugin or repo commands yet. Give the host-specific
 install/update command from the Gofer README, then retry after the host reloads.
+
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->

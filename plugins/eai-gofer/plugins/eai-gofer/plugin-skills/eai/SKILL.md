@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.10.4
+Version: 3.12.1
 
 Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
 
@@ -18,6 +18,35 @@ Use this skill when the user asks to run, install, update, or understand Gofer w
 ## Workspace First
 
 Before stage work, resolve the repository root and run `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json` when available. If the repo is missing or stale, ask before running `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors`, then resume the original command.
+
+## Local Settings Cleanup Contract
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+
+## App Preview Runner Contract
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
 
 ## Controlled English Contract
 
@@ -86,13 +115,25 @@ Before routing work, decide where the user is now.
 
 If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
 
+## MVP Capability-Based Validation
+
+- Create `.specify/specs/{feature}/` before app or operator-tool source work.
+- Classify EAI template readiness as `not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+- For a local MVP with no EAI or authentication capability, record those states as `not_applicable` or `planned` and continue with local feature validation.
+- Treat `run.sh`, `run.bat`, and `run.ps1` as launch evidence only. They do not prove authentication, EAI access, or deployment readiness.
+- When the feature creates, changes, or validates an EAI Platform integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`.
+- A missing checker or any status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
+- When authentication is implemented or required, verify provider, callback, sign-in, session, protected access, and safe denied access.
+- Record screenshots and local HTTP checks in the feature validation report. A blocked browser check leaves the user journey unverified.
+- If the user changes scope, update the feature artifacts before continuing: `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope.
+- For a release or deployed claim, create `release-capability-ledger.md` and link each accepted requirement to evidence, PR, commit, release branch, and deployed proof.
+- Do not report a release complete or score 100% if a required capability is on an open PR, absent from the release branch, missing traceability, or lacks deployed evidence.
+- Do not accept copied marker files, partial scaffolds, or custom templates as EAI readiness evidence.
+- Confirmed non-app work is exempt from app-only gates.
+
 ## EAI App Template Gate
 
-- Before app research or source changes, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json` when available.
-- A missing checker or any status other than `ready` is a hard stop for app delivery.
-- Complete `eai init`, enter the created app folder, then rerun the checker, `eai verify`, and `eai template check --format json`.
-- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
-- Confirmed non-app work is exempt.
+Apply the capability validation rules above before EAI template, tenant, authentication, or deployment work.
 
 ## First Conversation
 

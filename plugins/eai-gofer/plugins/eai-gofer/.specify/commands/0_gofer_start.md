@@ -84,6 +84,23 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 <!-- gofer:business-progress:end -->
 
+## App Preview Runner Contract
+<!-- gofer:app-preview-runner:start -->
+
+For EAI app delivery, every UI preview must use the repo runner when it exists.
+
+1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
+2. Use `run.bat dev 3001` on Windows.
+3. Use a different port only when the feature notes record the reason.
+4. The runner must stop any process on the selected port before it restarts the app.
+5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
+6. After every UI-facing change, run:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
+7. On Windows, use:
+   - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+<!-- gofer:app-preview-runner:end -->
+
 ## Always-On EAI Contract
 
 Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that
@@ -155,46 +172,67 @@ Before doing stage/helper work:
 6. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
 7. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
 
+## Local Settings Cleanup Contract
+<!-- gofer:local-settings-cleanup:start -->
+
+After any Gofer install, update, release refresh, or workspace bootstrap:
+
+1. Archive stale Gofer command and skill entries before continuing.
+2. Prefer the repo helper:
+   - `node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+3. If the repo helper is missing, use the stable plugin bundle helper:
+   - macOS/Linux: `node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+   - Windows: `node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json`
+4. This cleanup covers old Claude, Codex, Copilot, Gemini, Grok, VS Code, desktop, and CLI command surfaces.
+5. Do not remove the current public `eai` entrypoint.
+6. Ask the user to refresh or restart the host command picker only after cleanup completes.
+<!-- gofer:local-settings-cleanup:end -->
+
+## MVP Capability-Based Validation
+
+Use `.specify/references/mvp-capability-validation.md` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create `.specify/specs/{feature}/` before app or operator-tool source work.
+2. Keep `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and the validation scope aligned.
+3. Mark each relevant capability as `not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat `run.sh`, `run.bat`, and `run.ps1` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey `unverified`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: `The server runs. Authentication is not in the current MVP scope.`
+10. When the feature claims a release or deployed outcome, create `release-capability-ledger.md` from `.specify/templates/release-capability-ledger-template.md`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.
+
 ## Application Classification And EAI Preflight
 
 Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
-1. Classify the request as **EAI app delivery** or **non-application work** using
-   the signals in Step 2.6.
-2. If the request is EAI app delivery or ambiguous, continue directly into the
-   EAI app delivery path. Do not ask for confirmation just because app delivery
-   is inferred.
-3. If the request is clearly non-application work, confirm once before taking
-   the non-app path:
-   - **"This looks like non-app work, so I will skip EAI tenant/app setup and
-     continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision in the feature discovery or
-   context bundle, do not run `eai whoami`, `eai tenant select`, `eai init`, or
-   `/gofer:eai-first-run`, and continue the appropriate non-app pipeline path.
-5. If the user says it is app work, switch to EAI app delivery and run EAI app
-   preflight.
-6. For EAI app delivery, treat durable delivery as EAI Platform delivery by
-   default, with Azure second and every other stack only by explicit exception.
-7. For EAI app delivery, run `eai whoami` and confirm the EAI CLI is installed,
-   the user is logged in, and an active tenant is visible.
-8. If app-delivery readiness is missing, stop and run `/gofer:eai-first-run` or
-   ask the user to approve login/setup before continuing.
-9. For EAI app delivery, do not continue into research, specification, planning,
-   tasks, implementation, or validation until
-   `.specify/specs/{feature}/eai-preflight.md` records login, tenant, template,
-   app-readiness, and next-action evidence.
-10. Do not write tokens, secrets, private tenant IDs, or local `.env` values into
-   Gofer artifacts; record only product-safe readiness status and evidence.
+1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in `.specify/commands/0_gofer_start.md`.
+2. Create `.specify/specs/{feature}/` and record the active delivery scope before app or operator-tool source work.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai tenant select`, `eai init`, or `/gofer:eai-first-run`.
+5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
+6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
+7. When the feature creates, changes, or validates an EAI Platform app integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`. A missing checker or status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
+8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
+9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
+10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
+11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
+12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
+13. Do not write tokens, secrets, private tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 ## EAI App Delivery Preflight
 
-Run this after the Gofer workspace preflight and before application-delivery
-discovery whenever the request is an app build, dashboard, portal, workflow,
-form, chatbot, app, tenant-scoped business experience, or any
-durable user-facing product. App delivery in EAI Gofer means EAI Platform
-delivery by default. Do not run this for explicit non-app work. If the user asks
-for a non-EAI app stack, pause and confirm that they are intentionally leaving
-the EAI Gofer app-delivery path before continuing.
+Run this when the active feature requires EAI Platform services, a tenant,
+authentication, an EAI app integration, or deployment. Do not run it for
+explicit non-app work or an early local MVP that does not yet include those
+capabilities. Record deferred EAI capabilities as `planned`, not as failures.
+When an EAI capability enters scope, App delivery in EAI Gofer means EAI Platform delivery by default. If the user asks for a non-EAI app stack, pause
+and confirm that they are intentionally leaving the EAI Gofer app-delivery path
+before continuing.
 
 Use current public EAI documentation as the safe source of truth:
 
@@ -290,6 +328,13 @@ with an unrelated non-EAI stack.
    - If advertised, run `eai agent guide --format json` before planning EAI
      platform work so the agent uses current CLI contracts and safe recovery
      patterns.
+   - For EAI apps that publish Object Types, require the agent guide
+     `capabilities` array to contain
+     `app-manifest-name-slug-negotiation-v1`. A current version number or a
+     successful `eai update --check` does not prove deployed receiver support.
+     If the capability is missing, record `upgrade_required` and block Object
+     Type seed/publish and deployed-readiness claims until the CLI is updated.
+     Do not hand-build the request.
    - After any `eai` command error, run
      `eai errors explain <code-or-reason> --format json` before proposing a
      fix, and prefer the CLI's public-safe recovery commands over guessed
@@ -327,7 +372,7 @@ with an unrelated non-EAI stack.
      schema`, `eai workflow readiness`, `eai template check`, `eai gofer
      refresh --check`, `eai provision entra`, `eai blocks`,
      `eai agent guide`, and `eai errors explain`.
-5. **Check account, login, and tenant readiness**
+5. **Check account, login, and tenant readiness when EAI is required**
    - Run `eai whoami` to confirm login, active tenant, profile, token status,
      and PublicAPI context.
    - If not logged in or the token is expired, run `eai login` and then
@@ -338,11 +383,12 @@ with an unrelated non-EAI stack.
    - If no tenant is available, tell the user they need an EAI Platform account
      and tenant access before Gofer can build an EAI app. Do not fabricate
      tenant IDs or continue into implementation.
-6. **Check EAI template/project readiness**
+6. **Check EAI template/project readiness when EAI integration is required**
    - Run `node .specify/scripts/node/eai-app-template-readiness.mjs --root .
      --json` when available.
-   - A missing checker or any status other than `ready` is a hard stop for app
-     delivery. Do not research, specify, plan, create tasks, or edit app source.
+   - A missing checker or any status other than `ready` blocks the EAI
+     integration, tenant, or deployment capability. It does not block unrelated
+     local MVP research, specification, UI, or source work.
    - The check must prove `.eai-manifest.json` eai-init provenance and the
      supported app-template contract, including `eai.runtime.json` and the EAI
      configuration files.
@@ -356,7 +402,7 @@ with an unrelated non-EAI stack.
    - After `eai init`, enter the created app folder. Rerun the readiness checker,
      `eai verify`, `eai template check --format json`, and
      `eai gofer refresh --check --format json` before continuing.
-7. **Check app enrollment capability before build planning**
+7. **Check app enrollment capability before EAI delivery planning**
    - Once app name and tenant are confirmed, run `eai app list --format
      json` to confirm the tenant's current app enrollments.
    - Before creating anything remote, ask the user to confirm the app name,
@@ -369,11 +415,37 @@ with an unrelated non-EAI stack.
    - Do not claim platform readiness from app creation alone. Later stages must
      keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate`,
+     `eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json`,
      `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
      `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
      `eai resources storage doctor --tenant-id <tenant-id> --format json`,
      `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
      preview/runtime readiness.
+   - The EAI CLI is the only app-manifest request serializer. Keep the
+     PascalCase source `name` and explicit kebab-case source `slug`, but do not
+     copy that source schema into a direct PublicAPI request. The CLI adapts it
+     to the request shape accepted by the deployed app-manifest endpoint.
+   - Apply one Object Type identifier contract everywhere: source `name` is
+     PascalCase; source and stored `slug` are lowercase kebab-case; relationship
+     targets, Curate resource routes, resource query fields, and runtime calls
+     use the exact declared slug. Generated code passes the declared slug to
+     `useResources` and `client.resources`; it does not recreate a slug from the
+     name.
+   - The CLI sends explicit `name` plus `slug` first. A name-only retry is a
+     temporary compatibility path for an older deployed receiver, not the app
+     contract and not a pattern for generated code.
+   - Treat the dry run as source and planning evidence. Its JSON result must
+     report `dryRun: true`, `publishingMode: app-manifest`, the
+     `explicit-name-and-slug` preferred request shape, and the exact requested
+     name/slug pairs. The dry run does not prove deployed receiver support.
+     The safe-negotiation capability is the compatibility gate, and the actual
+     mutating result must record the request shape used. If any proof is absent,
+     stop, update the CLI, and repeat the read-only checks.
+   - If seed returns `app_manifest_validation_failed`, run `eai update --check`.
+     If the result reports `upgrade_required`, ask for approval and run
+     `eai update` before repeating validation and the dry run above. Retry once
+     through `eai types seed`. Do not remove source validation or hand-edit the
+     HTTP request body.
    - Provision storage, Entra app registration, environment sync, object types,
      and deployment only in the later plan/tasks/implement stages after the
      business scenario, UI show-and-tell evidence, and service-fit evidence are
@@ -444,6 +516,7 @@ For EAI app delivery, create or update
 | CLI install | `eai` path, version, install/update action taken |
 | CLI release status | `eai update --check` result and whether upgrade is required |
 | CLI capability source | `eai --describe` timestamp and relevant commands found |
+| Object Type seed adapter | `eai agent guide --format json` includes `app-manifest-name-slug-negotiation-v1`; dry run preserves exact name/slug pairs; mutating result records the shape used |
 | Login status | Logged in / needs login / account required, without tokens or secrets |
 | Tenant readiness | Active tenant status, role category, whether app enrollment is allowed |
 | Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |
@@ -885,11 +958,11 @@ For app delivery, the default early process is:
    interaction behavior, run:
 
    ```bash
-   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --require-scenarios --open auto --screenshot --change "<change summary>"
+   node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --require-scenarios --open auto --screenshot --change "<change summary>"
    ```
 
-   If auto-detection is wrong, pass `--command "<preview command>"`; if a server
-   is already running, pass `--url <preview-url>`. Report the preview URL and
+   Use `run.bat dev 3001` on Windows. Use `--url <preview-url>` only when a server
+   is already running. Report the preview URL and
    screenshot path to the user quickly, append the run to `ui-review-log.md`,
    update `ui-show-and-tell.md`, ask for fast feedback, and keep showing the
    user the current UI as often as useful. Pause only when the user asks for

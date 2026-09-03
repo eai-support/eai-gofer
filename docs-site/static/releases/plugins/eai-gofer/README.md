@@ -1,6 +1,6 @@
 # Gofer Agent Plugin
 
-Version: 3.10.4
+Version: 3.12.1
 
 This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
@@ -22,8 +22,8 @@ That host publishes:
 
 - Latest VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Latest agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip`
-- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.10.4.vsix`
-- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.10.4.zip`
+- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.12.1.vsix`
+- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.12.1.zip`
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
@@ -52,6 +52,45 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | Grok Build | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/` |
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
+
+## Update Cleanup
+
+After each install or update, archive stale Gofer commands and settings:
+
+```bash
+node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+If the repo helper is not present yet, run the helper from the stable plugin bundle:
+
+```bash
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Windows:
+
+```bat
+node %USERPROFILE%\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Then refresh or restart the host command picker.
+
+## Local App Preview Runner
+
+For EAI app delivery, start previews through the repo runner:
+
+```bash
+./run.sh dev 3001
+```
+
+Windows:
+
+```bat
+run.bat dev 3001
+```
+
+The runner stops any process on the selected port before it restarts the app.
+Agents should not use direct `npm run dev` commands when the runner exists.
 
 ## Core Pipeline
 
@@ -93,6 +132,17 @@ curl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plug
 
 rm -rf ~/plugins/eai-gofer
 unzip /tmp/eai-gofer-agent-plugin-latest.zip -d ~/plugins
+node ~/plugins/eai-gofer/.specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip -OutFile "$env:TEMP\eai-gofer-agent-plugin-latest.zip"
+
+Remove-Item "$env:USERPROFILE\plugins\eai-gofer" -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive "$env:TEMP\eai-gofer-agent-plugin-latest.zip" "$env:USERPROFILE\plugins" -Force
+node "$env:USERPROFILE\plugins\eai-gofer\.specify\scripts\node\gofer-local-settings-cleanup.mjs" --workspace . --apply --json
 ```
 
 ## Claude Code
