@@ -36,12 +36,17 @@
 - Full Gofer suite passed: 3,443 tests across 276 files.
 - Typecheck, lint, format, build, and generation checks passed.
 
-# EAI Lab Repair-To-Green Convergence
+# EAI Lab Read-Only Validation
 
 - [x] Define the Issues2025 EAI Lab route before normal app readiness.
 - [x] Require a clean current eai-stack controller and one Gas command.
 - [x] Require complete unchanged eai-testing-dev and external contracts.
-- [x] Require Copilot repair, PR push, rebuild, and full retest convergence.
+- [x] Require isolated read-only validation with no PR mutation or push
+      authority.
+- [x] Require the trusted Actions controller to publish the request-bound
+      result.
+- [x] Fail Blocked without launching when the robot security gate is not
+      approved.
 - [x] Keep Green, Orange, Red, and Blocked semantics explicit.
 - [x] Restrict executable controller resolution to the canonical
       `enterpriseaigroup/eai-stack` Git origin.
@@ -55,6 +60,9 @@
   surfaces.
 - Every route rejects non-canonical controller origins and generic executable
   code search.
+- Every route keeps the worker read-only and makes the security gate explicit.
+- The read-only boundary revalidation passed 2,974 unit tests across 204 files,
+  plus typecheck, lint, and generated-surface parity.
 - Unit, integration, VS Code extension E2E, and performance suites passed.
 - Quality passed with 3,447 tests across 278 files; lint, format, typecheck,
   build, and the V4 resource contract passed.

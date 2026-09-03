@@ -61,9 +61,16 @@ function expectCompleteControllerContract(content: string): void {
   expect(content).toContain('Do not use generic GitHub code search to select executable code');
   expect(content).not.toContain('authenticated GitHub code search');
   expect(content).toContain('complete unchanged eai-testing-dev regression suite');
-  expect(content).toContain('eai-testing-dev checkout is immutable evidence');
+  expect(content).toContain('edit eai-testing-dev evidence');
+  expect(content).toContain('isolated Codespace worker runs read-only validation');
+  expect(content).toContain('must not receive a credential capable of commenting or pushing');
+  expect(content).toContain('trusted Actions controller alone publishes');
+  expect(content).toContain('robot security gate is not explicitly approved');
+  expect(content).not.toContain('lets Copilot repair linked PR repositories');
   expect(content).toContain('Orange means every test ran but the request is not fully passed');
-  expect(content).toContain('Do not merge, deploy, promote, weaken tests, or suppress failures');
+  expect(content).toContain(
+    'Do not mutate or push PR branches, merge, deploy, promote, weaken tests, or suppress failures'
+  );
 
   const provenanceIndex = content.indexOf(
     'Do not execute repository files before those checks pass'
