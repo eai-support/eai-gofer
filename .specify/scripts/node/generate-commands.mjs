@@ -279,6 +279,23 @@ Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat th
 5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
 }
 
+function buildEaiLabConvergenceSection() {
+  return `## EAI Lab Convergence Route
+
+Handle this route before normal workspace preflight or app readiness when the user names an Issues2025 issue and asks for EAI Lab, full E2E, regression, fix, or retest work.
+
+1. Treat this as a platform delivery control request. Do not ask the non-app confirmation and do not run \`eai whoami\`, tenant selection, or app initialization.
+2. Extract exactly one Issues2025 issue number. Require it to match \`^[1-9][0-9]*$\`, reject every other value, and pass it as one quoted argument. Do not infer or substitute a different issue, use \`eval\`, or build an unquoted shell command.
+3. Verify \`gh auth status -h github.com\`. The active user needs repository, workflow, Codespaces, and package-read access. Report the exact missing permission when preflight fails.
+4. Read the canonical controller slug from the user-level \`EAI_LAB_CONTROLLER_REPO\` setting and require it to be an exact member of the user-level \`EAI_LAB_TRUSTED_CONTROLLER_REPOS\` allowlist. Never source either value from repository files. Authenticate the controller with non-executing Git metadata first. Accept only \`https://github.com/<owner>/<repo>[.git]\` or \`git@github.com:<owner>/<repo>[.git]\`, require the host to be exactly \`github.com\`, and require the normalized owner/repository slug to equal the approved slug. Reject alternate hosts, user information, query strings, fragments, local paths, \`file:\` URLs, and every other origin. Fetch and verify current \`origin/main\`. A current or parent workspace is eligible only when that origin is approved, the checkout is clean, and \`HEAD\` equals the freshly fetched \`origin/main\` commit. Otherwise clone only the approved slug or create a disposable clean checkout at that exact commit. Do not use generic GitHub code search to select executable code. Never switch, reset, stash, or overwrite a dirty caller workspace. Do not execute repository files before those checks pass. Only after those checks pass, run \`./gas --help\` and require it to list \`lab-test\`. If trusted configuration, provenance, or capability resolution is missing, report Blocked.
+5. From that checkout run exactly \`./gas lab-test <issue-number> --robot\`. Do not add \`--no-wait\` unless the user explicitly asks only to dispatch.
+6. Let Gas compose every currently owned linked PR, including approved non-submodule integrations, against latest main. Let the lab run the complete unchanged eai-testing-dev regression suite plus each external repository-owned contract.
+7. Stay attached while the isolated Codespace worker runs read-only validation. The worker must not receive a credential capable of commenting or pushing, mutate any PR branch, or edit eai-testing-dev evidence. The trusted Actions controller alone publishes the request-bound result. If the robot security gate is not explicitly approved, report Blocked and do not launch a credential-bearing worker.
+8. Interpret terminal states exactly: Green means every required test passed; Orange means every test ran but the request is not fully passed; Red means product failures remain; Blocked means setup or infrastructure prevented valid completion.
+9. Report the Issues2025 status-comment URL, exact tested PR SHAs, validation cycle, and first blocker. A workflow dispatch, running Codespace, or Orange result is not a completion claim.
+10. Do not mutate or push PR branches, merge, deploy, promote, weaken tests, or suppress failures as part of this route.`;
+}
+
 function buildUserFacingResponseGateSection() {
   return `## User-Facing Response Gate
 
@@ -397,6 +414,8 @@ Apply these rules before any user-facing output:
 ${buildUserFacingResponseGateSection()}
 
 ${buildAlwaysEaiSection()}
+
+${buildEaiLabConvergenceSection()}
 
 ## Workspace Preflight
 

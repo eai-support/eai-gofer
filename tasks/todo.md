@@ -35,3 +35,47 @@
   seed are retried.
 - Full Gofer suite passed: 3,443 tests across 276 files.
 - Typecheck, lint, format, build, and generation checks passed.
+
+# EAI Lab Read-Only Validation
+
+- [x] Define the Issues2025 EAI Lab route before normal app readiness.
+- [x] Require a clean current eai-stack controller and one Gas command.
+- [x] Require complete unchanged eai-testing-dev and external contracts.
+- [x] Require isolated read-only validation with no PR mutation or push
+      authority.
+- [x] Require the trusted Actions controller to publish the request-bound
+      result.
+- [x] Fail Blocked without launching when the robot security gate is not
+      approved.
+- [x] Keep Green, Orange, Red, and Blocked semantics explicit.
+- [x] Restrict executable controller resolution to the canonical
+      `enterpriseaigroup/eai-stack` Git origin.
+- [x] Regenerate every public /eai surface.
+- [x] Run focused and full Gofer validation.
+
+## Review
+
+- Canonical generation and extension-resource parity passed.
+- The focused convergence-route contract passed on all 30 public `/eai`
+  surfaces.
+- Every route rejects non-canonical controller origins and generic executable
+  code search.
+- Every route keeps the worker read-only and makes the security gate explicit.
+- The read-only boundary revalidation passed 2,974 unit tests across 204 files,
+  plus typecheck, lint, and generated-surface parity.
+- Unit, integration, VS Code extension E2E, and performance suites passed.
+- Quality passed with 3,447 tests across 278 files; lint, format, typecheck,
+  build, and the V4 resource contract passed.
+
+# EAI Lab External Contract Reliability
+
+- [x] Reproduce the cold VS Code extension-host setup timeout from Lab #3416.
+- [x] Avoid redundant global workflow-profile writes during test setup.
+- [x] Run focused and full validation before repeating the issue-owned Lab set.
+
+## Review
+
+- The Lab-worker extension suite passed with 131 tests and 11 intentional
+  pending network tests.
+- The complete external contract passed with 3,601 tests and no failures.
+- The issue-owned Lab set remains the final integrated validation gate.
