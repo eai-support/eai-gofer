@@ -7,3 +7,7 @@
 [[skills.config]]
 path = "/full/path/to/repo/.agents/skills/eai"
 enabled = true
+
+[[skills.config]]
+path = "/full/path/to/repo/.agents/skills/eai-update"
+enabled = true

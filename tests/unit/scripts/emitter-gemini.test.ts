@@ -211,6 +211,7 @@ describe('gemini manifest (T066)', () => {
     const manifest = JSON.parse(await readFile(manifestPath));
     expect(manifest.commands).not.toContain('gofer');
     expect(manifest.commands).toContain('eai');
+    expect(manifest.commands).toContain('eai-update');
   });
 
   it('manifest.commands is sorted alphabetically', async () => {
@@ -229,6 +230,6 @@ describe('gemini manifest (T066)', () => {
   it('manifest.commands contains only the public entrypoints', async () => {
     const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toEqual(['eai']);
+    expect(manifest.commands).toEqual(['eai', 'eai-update']);
   });
 });

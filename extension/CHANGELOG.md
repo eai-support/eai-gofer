@@ -2,6 +2,18 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.1] - 2026-09-02
+
+Fix safe Codex local marketplace updates
+
+## [3.12.0] - 2026-09-01
+
+Add cross-surface EAI Gofer update and safe cleanup support
+
+## [3.11.0] - 2026-08-31
+
+Add capability-based validation and release-completeness controls
+
 ## [3.10.9] - 2026-08-27
 
 Require Node 24 runtime

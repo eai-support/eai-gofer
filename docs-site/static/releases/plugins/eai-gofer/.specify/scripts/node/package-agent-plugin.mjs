@@ -36,6 +36,12 @@ const PUBLIC_ENTRYPOINTS = [
     title: 'Eai',
     description: 'Start or continue the EAI delivery pipeline.',
   },
+  {
+    stem: 'eai-update',
+    name: 'eai-update',
+    title: 'Eai Update',
+    description: 'Install or update EAI Gofer for this AI coding app.',
+  },
 ];
 const WINDOWS_FORBIDDEN_SEGMENT_CHARS = new Set(['<', '>', ':', '"', '\\', '|', '?', '*']);
 const WINDOWS_RESERVED_BASENAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
@@ -490,6 +496,10 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 }
 
 function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
+  if (entry.name === 'eai-update') {
+    return buildEaiUpdateSkill(version);
+  }
+
   const stageList = stages
     .map((stage) => `- \`${stage.stem}\` - ${stage.frontmatter.description}`)
     .join('\n');
@@ -606,6 +616,33 @@ Gemini CLI users can also copy the bundled \`.gemini/\` directory into a reposit
 `;
 }
 
+function buildEaiUpdateSkill(version) {
+  return `---
+name: eai-update
+description: "Install or update EAI Gofer for this AI coding app."
+---
+
+# Eai Update
+
+Version: ${version}
+
+Use this skill to install or update the user-level EAI Gofer plugin or extension. It works before a repository has Gofer files.
+
+1. Do not run a workspace check, \`eai init\`, \`eai whoami\`, or a delivery stage.
+2. Use \`.specify/scripts/node/gofer-surface-update.mjs\` from this plugin bundle.
+3. Check status first with \`--action inspect --host <current-host> --json\`.
+4. Show the user the planned user-level install or update. Ask for approval before \`--execute\`.
+5. Run \`--action install\` when Gofer is missing. Run \`--action update\` when it is installed.
+6. After an actual install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries. A Codex local marketplace is inspected only, so local work remains unchanged. An unknown Codex marketplace source stops the update without changes.
+7. Update only the current host unless the user explicitly asks for \`--host all\`.
+8. Complete the host reload step from the helper result before saying the update is ready.
+
+Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
+
+This command archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
+`;
+}
+
 function withTenantContextErrorGuidance(content) {
   const guidance =
     '- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.';
@@ -621,17 +658,37 @@ function withTenantContextErrorGuidance(content) {
 }
 
 function withEaiAppTemplateGate(content) {
-  if (content.includes('## EAI App Template Gate')) return content;
+  const guidance = `## MVP Capability-Based Validation
 
-  const guidance = `## EAI App Template Gate
+- Create \`.specify/specs/{feature}/\` before app or operator-tool source work.
+- Classify EAI template readiness as \`not_applicable\`, \`planned\`, \`implemented\`, \`verified\`, or \`blocked\`.
+- For a local MVP with no EAI or authentication capability, record those states as \`not_applicable\` or \`planned\` and continue with local feature validation.
+- Treat \`run.sh\`, \`run.bat\`, and \`run.ps1\` as launch evidence only. They do not prove authentication, EAI access, or deployment readiness.
+- When the feature creates, changes, or validates an EAI Platform integration, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\`.
+- A missing checker or any status other than \`ready\` blocks that EAI capability. It does not block unrelated local MVP work.
+- When authentication is implemented or required, verify provider, callback, sign-in, session, protected access, and safe denied access.
+- Record screenshots and local HTTP checks in the feature validation report. A blocked browser check leaves the user journey unverified.
+- If the user changes scope, update the feature artifacts before continuing: \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope.
+- For a release or deployed claim, create \`release-capability-ledger.md\` and link each accepted requirement to evidence, PR, commit, release branch, and deployed proof.
+- Do not report a release complete or score 100% if a required capability is on an open PR, absent from the release branch, missing traceability, or lacks deployed evidence.
+- Do not accept copied marker files, partial scaffolds, or custom templates as EAI readiness evidence.
+- Confirmed non-app work is exempt from app-only gates.
 
-- Before app research or source changes, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available.
-- A missing checker or any status other than \`ready\` is a hard stop for app delivery.
-- Complete \`eai init\`, enter the created app folder, then rerun the checker, \`eai verify\`, and \`eai template check --format json\`.
-- Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
-- Confirmed non-app work is exempt.
+## EAI App Template Gate
+
+Apply the capability validation rules above before EAI template, tenant, authentication, or deployment work.
 
 `;
+
+  const existingHeading = '## EAI App Template Gate';
+  const existingIndex = content.indexOf(existingHeading);
+  if (existingIndex !== -1) {
+    const nextHeadingIndex = content.indexOf('\n## ', existingIndex + existingHeading.length);
+    const suffix = nextHeadingIndex === -1 ? '' : content.slice(nextHeadingIndex).replace(/^\n+/, '');
+    return suffix
+      ? `${content.slice(0, existingIndex).trimEnd()}\n\n${guidance}\n${suffix}`
+      : `${content.slice(0, existingIndex).trimEnd()}\n\n${guidance}`;
+  }
 
   return content.replace('## EAI CLI Discovery And Recovery', `${guidance}## EAI CLI Discovery And Recovery`);
 }
@@ -1261,35 +1318,19 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
   await writeJson(path.join(root, '.claude-plugin', 'marketplace.json'), buildRepoMarketplace(version));
   await writeJson(path.join(root, '.gemini', 'extension.json'), buildGeminiManifest(version));
   await writeJson(path.join(root, 'gemini-extension.json'), buildGeminiManifest(version));
-  await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, 'eai-gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, 'gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, 'skills', 'eai-gofer'), {
-    recursive: true,
-    force: true,
-  });
-  await fs.rm(path.join(root, 'skills', 'gofer'), {
-    recursive: true,
-    force: true,
-  });
-  const rootUmbrellaSkill = withFirstConversationGuidance(
-    withEaiAppTemplateGate(
-      withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, PUBLIC_ENTRYPOINTS[0]))
-    )
-  );
-  await writeText(
-    path.join(root, UMBRELLA_SKILLS_DIR, 'eai', 'SKILL.md'),
-    rootUmbrellaSkill
-  );
-  await writeText(
-    path.join(root, 'skills', 'eai', 'SKILL.md'),
-    rootUmbrellaSkill
-  );
+  for (const staleName of ['eai-gofer', 'gofer']) {
+    await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, staleName), { recursive: true, force: true });
+    await fs.rm(path.join(root, 'skills', staleName), { recursive: true, force: true });
+  }
+  for (const entry of PUBLIC_ENTRYPOINTS) {
+    const rootUmbrellaSkill = entry.name === 'eai'
+      ? withFirstConversationGuidance(
+          withEaiAppTemplateGate(withTenantContextErrorGuidance(buildUmbrellaSkill(version, stages, entry)))
+        )
+      : buildUmbrellaSkill(version, stages, entry);
+    await writeText(path.join(root, UMBRELLA_SKILLS_DIR, entry.stem, 'SKILL.md'), rootUmbrellaSkill);
+    await writeText(path.join(root, 'skills', entry.stem, 'SKILL.md'), rootUmbrellaSkill);
+  }
 
   const iconSource = path.join(root, PLUGIN_ICON_SOURCE);
   const iconTarget = path.join(root, PLUGIN_ICON_TARGET);

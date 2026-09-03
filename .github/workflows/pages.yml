@@ -55,6 +55,8 @@ jobs:
             "docs-site/build/releases/plugins/eai-gofer/codex-plugin.json"
             "docs-site/build/releases/plugins/eai-gofer/gemini-extension.json"
             "docs-site/build/releases/plugins/eai-gofer/gemini-commands-manifest.json"
+            "docs-site/build/releases/plugins/eai-gofer/gofer-surface-update.mjs"
+            "docs-site/build/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs"
           )
 
           for file in "${REQUIRED_FILES[@]}"; do

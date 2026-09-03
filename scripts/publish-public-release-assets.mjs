@@ -65,6 +65,8 @@ async function writePublicPluginAliases(pluginDir) {
     ['.github/plugin/marketplace.json', 'copilot-marketplace.json'],
     ['.gemini/extension.json', 'gemini-extension.json'],
     ['.gemini/commands/gofer/manifest.json', 'gemini-commands-manifest.json'],
+    ['.specify/scripts/node/gofer-surface-update.mjs', 'gofer-surface-update.mjs'],
+    ['.specify/scripts/node/gofer-local-settings-cleanup.mjs', 'gofer-local-settings-cleanup.mjs'],
   ];
 
   for (const [sourceRelativePath, aliasRelativePath] of aliases) {

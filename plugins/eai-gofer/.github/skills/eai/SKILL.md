@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.10.9
+Version: 3.12.1
 Host: VS Code and GitHub Copilot
 
 # Eai
