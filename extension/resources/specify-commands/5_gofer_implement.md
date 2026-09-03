@@ -1052,6 +1052,12 @@ Logs to: `.specify/logs/pipeline.jsonl`
 - These selectors are optional and do not change stage progress, routing, or
   pipeline state.
 
+## Distributable Application Implementation Gate
+
+Run `.specify/scripts/node/validate-application-package.mjs` against every
+generated package. Treat local conformance as `prepared-only`; do not claim
+marketplace readiness until immutable approved-listing and READY-installation
+evidence are both present.
 ## Local Settings Cleanup Contract
 <!-- gofer:local-settings-cleanup:start -->
 

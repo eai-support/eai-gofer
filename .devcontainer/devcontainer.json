@@ -8,12 +8,7 @@
   "postCreateCommand": "bash .devcontainer/setup.sh && bash .devcontainer/install-extension.sh",
   "customizations": {
     "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "ms-playwright.playwright",
-        "eamodio.gitlens"
-      ],
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "ms-playwright.playwright", "eamodio.gitlens"],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
       }

@@ -2401,6 +2401,12 @@ This also logs quality metrics (rubric scores, finding counts) to:
   pass
 - Log stage completion for observability tracking
 
+## Distributable Application Validation Gate
+
+Validation refutes direct provider/peer routes, reusable credentials, user
+impersonation, wildcard capabilities, mutable artifacts, cross-tenant access,
+missing durable audit and readiness without both platform listing approval and
+buyer installation evidence.
 ## Local Settings Cleanup Contract
 <!-- gofer:local-settings-cleanup:start -->
 
