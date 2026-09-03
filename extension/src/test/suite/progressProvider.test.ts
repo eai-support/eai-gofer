@@ -6,10 +6,8 @@ import * as vscode from 'vscode';
 import { ProgressProvider } from '../../progressProvider';
 
 suite('ProgressProvider Test Suite', function () {
-  // A cold VS Code profile can spend several seconds activating the settings
-  // service before the first hook. Keep assertions unchanged while allowing
-  // the extension host to become ready on constrained CI/Lab workers.
-  this.timeout(30000);
+  // Increase timeout for all tests in this suite to handle debounce
+  this.timeout(10000);
 
   let tempDir: string;
   let progressProvider: ProgressProvider;

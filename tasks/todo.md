@@ -63,13 +63,10 @@
 
 - [x] Reproduce the cold VS Code extension-host setup timeout from Lab #3416.
 - [x] Avoid redundant global workflow-profile writes during test setup.
-- [x] Remove the Chokidar startup race without relaxing the 300ms requirement.
 - [x] Run focused and full validation before repeating the issue-owned Lab set.
 
 ## Review
 
-- The 300ms file-change contract passed five local repeats and a Lab-worker
-  repeat after waiting for the watcher-ready event.
 - The Lab-worker extension suite passed with 131 tests and 11 intentional
   pending network tests.
 - The complete external contract passed with 3,601 tests and no failures.
