@@ -41,24 +41,44 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
     let changeDetected = false;
     let detectionTime = 0;
 
-    // Create watcher
+    // Establish the baseline before starting the watcher. Watching a path that
+    // does not exist yet can race Chokidar's initial scan and turn the first
+    // modification into an unobserved `add` event on slower filesystems.
+    await fs.writeFile(testFile, 'initial content');
+
     watcher = chokidar.watch(testFile, {
       persistent: true,
       ignoreInitial: true,
     });
 
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('Watcher did not become ready within 5 seconds')),
+        5000
+      );
+      watcher!.once('ready', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      watcher!.once('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+
     // Setup change handler
-    const changePromise = new Promise<number>((resolve) => {
+    const changePromise = new Promise<number>((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('File change was not detected within 5 seconds')),
+        5000
+      );
       watcher!.on('change', () => {
+        clearTimeout(timeout);
         changeDetected = true;
         detectionTime = Date.now();
         resolve(detectionTime);
       });
     });
-
-    // Create initial file
-    await fs.writeFile(testFile, 'initial content');
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Modify file and measure time
     const writeTime = Date.now();
