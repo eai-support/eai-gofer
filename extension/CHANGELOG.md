@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.2] - 2026-09-04
+
+Auto-release
+
 ## [3.12.1] - 2026-09-02
 
 Fix safe Codex local marketplace updates

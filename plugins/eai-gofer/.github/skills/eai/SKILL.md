@@ -5,12 +5,12 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.12.1
+Version: 3.12.2
 Host: VS Code and GitHub Copilot
 
 # Eai
 
-Use this as the single user-facing Gofer command. Users should run `/eai`, `$eai`, or `#eai` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit `/eai`, `$eai`, or `#eai` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -46,14 +46,20 @@ Before each user-facing reply, check the draft against these rules:
 4. If any check fails, rewrite the reply before sending it.
 
 ## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
 
-Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that prefix as activation for this contract, not as business content.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
 
-1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
-2. Keep the reply short unless the user asks for detail.
-3. Explain the business effect first.
-4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->
 
 ## Workspace Preflight
 
