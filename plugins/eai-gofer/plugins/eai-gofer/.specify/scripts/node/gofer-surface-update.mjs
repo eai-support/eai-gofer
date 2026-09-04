@@ -6,6 +6,8 @@
  */
 
 import { execFile } from 'node:child_process';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -15,9 +17,274 @@ const execFileAsync = promisify(execFile);
 const REPOSITORY_URL = 'https://github.com/eai-support/eai-gofer';
 const VS_CODE_EXTENSION_ID = 'EnterpriseAI.gofer';
 const HOSTS = ['claude', 'codex', 'copilot', 'gemini', 'vscode'];
+const ALWAYS_ON_EAI_START = '<!-- gofer:always-on-eai:start -->';
+const ALWAYS_ON_EAI_END = '<!-- gofer:always-on-eai:end -->';
+const ALWAYS_ON_EAI_SECTION = `## Always-On EAI Contract
+${ALWAYS_ON_EAI_START}
+
+Apply Gofer to every request. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
+
+1. Preserve the user's request. Do not add a visible command prefix.
+2. Use Gofer's internal routing. Do not make the user choose a pipeline stage.
+3. Use concise, business-first ASD-STE100 style.
+4. Check workspace health before meaningful repo work, tool use, or a pipeline stage. Do not repeat setup on every message.
+5. Use Gofer maintenance only when the user explicitly asks to install or update Gofer.
+${ALWAYS_ON_EAI_END}`;
+const ALWAYS_ON_EAI_MARKER = /## Always-On EAI Contract\r?\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
+const VS_CODE_INSTRUCTIONS_KEY = 'github.copilot.chat.codeGeneration.instructions';
 
 function command(command, args, label) {
   return { command, args, label };
+}
+
+export function getAlwaysOnInstructionPath(host, {
+  home = os.homedir(),
+  platform = process.platform,
+  env = process.env,
+} = {}) {
+  if (host === 'claude') return path.join(home, '.claude', 'CLAUDE.md');
+  if (host === 'codex') return path.join(home, '.codex', 'AGENTS.md');
+  if (host === 'copilot') return path.join(home, '.copilot', 'copilot-instructions.md');
+  if (host === 'gemini') return path.join(home, '.gemini', 'GEMINI.md');
+  if (host === 'vscode') {
+    if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'Code', 'User', 'settings.json');
+    if (platform === 'win32') return path.join(env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Code', 'User', 'settings.json');
+    return path.join(env.XDG_CONFIG_HOME || path.join(home, '.config'), 'Code', 'User', 'settings.json');
+  }
+  throw new Error(`Unsupported host: ${host}`);
+}
+
+export function upsertAlwaysOnEaiSection(content) {
+  if (ALWAYS_ON_EAI_MARKER.test(content)) {
+    return content.replace(ALWAYS_ON_EAI_MARKER, ALWAYS_ON_EAI_SECTION);
+  }
+  const separator = content.length === 0 ? '' : content.endsWith('\n') ? '\n' : '\n\n';
+  return `${content}${separator}${ALWAYS_ON_EAI_SECTION}\n`;
+}
+
+function skipJsoncWhitespaceAndComments(content, start) {
+  let index = start;
+  while (index < content.length) {
+    if (/\s/.test(content[index])) {
+      index += 1;
+      continue;
+    }
+    if (content[index] === '/' && content[index + 1] === '/') {
+      index += 2;
+      while (index < content.length && content[index] !== '\n' && content[index] !== '\r') index += 1;
+      continue;
+    }
+    if (content[index] === '/' && content[index + 1] === '*') {
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) index += 1;
+      index += 2;
+      continue;
+    }
+    break;
+  }
+  return index;
+}
+
+function parseJsoncObject(content) {
+  const output = [];
+  let index = 0;
+  let quote = '';
+  let escaped = false;
+
+  while (index < content.length) {
+    const character = content[index];
+    const next = content[index + 1];
+
+    if (quote) {
+      output.push(character);
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      index += 1;
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      output.push(character);
+      index += 1;
+      continue;
+    }
+
+    if (character === '/' && next === '/') {
+      index += 2;
+      while (index < content.length && content[index] !== '\n' && content[index] !== '\r') index += 1;
+      continue;
+    }
+
+    if (character === '/' && next === '*') {
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) {
+        if (content[index] === '\n' || content[index] === '\r') output.push(content[index]);
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    if (character === ',') {
+      const lookahead = skipJsoncWhitespaceAndComments(content, index + 1);
+      if (content[lookahead] === '}' || content[lookahead] === ']') {
+        index += 1;
+        continue;
+      }
+    }
+
+    output.push(character);
+    index += 1;
+  }
+
+  const parsed = JSON.parse(output.join(''));
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('VS Code settings.json must contain a JSON object.');
+  }
+  return parsed;
+}
+
+function findJsonStringEnd(content, start) {
+  let escaped = false;
+  for (let index = start + 1; index < content.length; index += 1) {
+    if (escaped) escaped = false;
+    else if (content[index] === '\\') escaped = true;
+    else if (content[index] === '"') return index + 1;
+  }
+  throw new Error('VS Code settings.json contains an unterminated string.');
+}
+
+function findJsoncValueEnd(content, start) {
+  const opening = content[start];
+  if (opening === '"') return findJsonStringEnd(content, start);
+  if (opening !== '[' && opening !== '{') {
+    let index = start;
+    while (index < content.length && !',}]'.includes(content[index])) index += 1;
+    return index;
+  }
+
+  const closing = opening === '[' ? ']' : '}';
+  let depth = 0;
+  let index = start;
+  while (index < content.length) {
+    if (content[index] === '"') {
+      index = findJsonStringEnd(content, index);
+      continue;
+    }
+    if (content[index] === '/' && (content[index + 1] === '/' || content[index + 1] === '*')) {
+      index = skipJsoncWhitespaceAndComments(content, index);
+      continue;
+    }
+    if (content[index] === opening) depth += 1;
+    if (content[index] === closing) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+    index += 1;
+  }
+  throw new Error('VS Code settings.json contains an unterminated value.');
+}
+
+function findJsoncPropertyRange(content, key) {
+  let depth = 0;
+  for (let index = 0; index < content.length;) {
+    if (content[index] === '"') {
+      const stringStart = index;
+      const stringEnd = findJsonStringEnd(content, index);
+      const next = skipJsoncWhitespaceAndComments(content, stringEnd);
+      if (depth === 1 && content[next] === ':' && JSON.parse(content.slice(stringStart, stringEnd)) === key) {
+        const valueStart = skipJsoncWhitespaceAndComments(content, next + 1);
+        const valueEnd = findJsoncValueEnd(content, valueStart);
+        const afterValue = skipJsoncWhitespaceAndComments(content, valueEnd);
+        if (content[afterValue] === ',') return { start: stringStart, end: afterValue + 1 };
+
+        let beforeKey = stringStart - 1;
+        while (beforeKey >= 0 && /\s/.test(content[beforeKey])) beforeKey -= 1;
+        if (content[beforeKey] === ',') return { start: beforeKey, end: valueEnd };
+        return { start: stringStart, end: valueEnd };
+      }
+      index = stringEnd;
+      continue;
+    }
+    if (content[index] === '/' && (content[index + 1] === '/' || content[index + 1] === '*')) {
+      index = skipJsoncWhitespaceAndComments(content, index);
+      continue;
+    }
+    if (content[index] === '{' || content[index] === '[') depth += 1;
+    if (content[index] === '}' || content[index] === ']') depth -= 1;
+    index += 1;
+  }
+  return undefined;
+}
+
+function upsertVsCodeInstructions(content, instructions) {
+  const range = findJsoncPropertyRange(content, VS_CODE_INSTRUCTIONS_KEY);
+  const withoutGofer = range
+    ? `${content.slice(0, range.start)}${content.slice(range.end)}`
+    : content;
+  const settings = parseJsoncObject(withoutGofer);
+  const value = JSON.stringify(instructions, null, 2).replace(/\n/g, '\n  ');
+  const property = `  ${JSON.stringify(VS_CODE_INSTRUCTIONS_KEY)}: ${value}`;
+  const hasOtherSettings = Object.keys(settings).length > 0;
+  const opening = withoutGofer.indexOf('{');
+  return `${withoutGofer.slice(0, opening + 1)}\n${property}${hasOtherSettings ? ',' : ''}${withoutGofer.slice(opening + 1)}`;
+}
+
+async function readText(targetPath, fileSystem) {
+  try {
+    return await fileSystem.readFile(targetPath, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return '';
+    throw error;
+  }
+}
+
+async function writeText(targetPath, content, fileSystem) {
+  await fileSystem.mkdir(path.dirname(targetPath), { recursive: true });
+  await fileSystem.writeFile(targetPath, content, 'utf8');
+}
+
+export async function configureAlwaysOnInstructions(hosts, {
+  home = os.homedir(),
+  platform = process.platform,
+  env = process.env,
+  fileSystem = fs,
+} = {}) {
+  const results = [];
+  for (const host of [...new Set(hosts)]) {
+    const targetPath = getAlwaysOnInstructionPath(host, { home, platform, env });
+    try {
+      const existing = await readText(targetPath, fileSystem);
+      if (host === 'vscode') {
+        const settings = existing.trim() ? parseJsoncObject(existing) : {};
+        const instructions = settings[VS_CODE_INSTRUCTIONS_KEY];
+        if (instructions !== undefined && !Array.isArray(instructions)) {
+          throw new Error(`${VS_CODE_INSTRUCTIONS_KEY} is not an array.`);
+        }
+        const retained = (instructions || []).filter(
+          (entry) => typeof entry?.text !== 'string' || !entry.text.includes(ALWAYS_ON_EAI_START)
+        );
+        const updated = existing.trim()
+          ? upsertVsCodeInstructions(existing, [...retained, { text: ALWAYS_ON_EAI_SECTION }])
+          : `{\n  ${JSON.stringify(VS_CODE_INSTRUCTIONS_KEY)}: ${JSON.stringify([{ text: ALWAYS_ON_EAI_SECTION }], null, 2).replace(/\n/g, '\n  ')}\n}\n`;
+        if (updated !== existing) await writeText(targetPath, updated, fileSystem);
+      } else {
+        const updated = upsertAlwaysOnEaiSection(existing);
+        if (updated !== existing) await writeText(targetPath, updated, fileSystem);
+      }
+      results.push({ host, targetPath, ok: true });
+    } catch (error) {
+      results.push({
+        host,
+        targetPath,
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return results;
 }
 
 const SURFACE_ACTIONS = {
@@ -191,10 +458,12 @@ export async function runPlan(
     inspectMarketplace = inspectCodexMarketplace,
     execute = execFileAsync,
     cleanup = cleanupLocalSettings,
+    configureInstructions = configureAlwaysOnInstructions,
   } = {}
 ) {
   const results = [];
   let completedUpdate = false;
+  const configuredHosts = [];
 
   for (const surface of plan) {
     const availability = await inspect(surface.host);
@@ -215,6 +484,7 @@ export async function runPlan(
           ok: true,
           note: `EAI Gofer uses the local marketplace at ${marketplace.root}. It was left unchanged, so local work and settings are preserved.`,
         });
+        configuredHosts.push(surface.host);
         continue;
       }
       if (marketplace.type !== 'git') {
@@ -245,6 +515,22 @@ export async function runPlan(
       }
     }
     completedUpdate ||= completedSurface && surface.commands.length > 0;
+    if (completedSurface && surface.commands.length > 0) {
+      configuredHosts.push(surface.host);
+    }
+  }
+
+  if (configuredHosts.length > 0) {
+    const instructionResults = await configureInstructions(configuredHosts);
+    for (const entry of instructionResults) {
+      results.push({
+        host: entry.host,
+        label: 'Enable always-on Gofer instructions',
+        ok: entry.ok,
+        targetPath: entry.targetPath,
+        error: entry.error,
+      });
+    }
   }
 
   if (completedUpdate) {

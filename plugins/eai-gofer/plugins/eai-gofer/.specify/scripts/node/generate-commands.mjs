@@ -269,14 +269,20 @@ function buildInternalStageList(stages) {
 
 function buildAlwaysEaiSection() {
   return `## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
 
-Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat that prefix as activation for this contract, not as business content.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
 
-1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
-2. Keep the reply short unless the user asks for detail.
-3. Explain the business effect first.
-4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit \`/eai\`, \`$eai\`, or \`#eai\` prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->`;
 }
 
 function buildUserFacingResponseGateSection() {
@@ -368,7 +374,7 @@ function buildPublicEntrypointMarkdown(entry, stages, host) {
 
   return `# ${entry.title}
 
-Use this as the single user-facing Gofer command. Users should run \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -496,7 +502,7 @@ Use this command to install or update EAI Gofer for the current AI coding app. T
 6. After approval, run one of these commands from the bundled helper:
    - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${host} --execute --json\`
    - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${host} --execute --json\`
-7. After an actual install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries. For a Codex local marketplace, it reports the local source and makes no changes to that checkout or its settings. If the Codex marketplace source is unknown, it stops without changes.
+7. After an actual install or update, the helper archives stale Gofer command and skill entries. It also adds a small managed always-on instruction to the selected host. It keeps the current \`eai\` and \`eai-update\` entries. For a Codex local marketplace, it reports the local source and leaves that checkout unchanged. If the Codex marketplace source is unknown, it stops without changes.
 8. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
 9. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
 
@@ -510,7 +516,7 @@ Use this command to install or update EAI Gofer for the current AI coding app. T
 
 ## Limits
 
-- This command updates user-level plugins and extensions. It archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
+- This command updates user-level plugins and extensions. It archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
 - For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
 - Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
 - Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
@@ -1703,6 +1709,8 @@ Generated: ${timestamp}
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under \`.specify/commands/\`.
 
 ${buildUserFacingResponseGateSection()}
+
+${buildAlwaysEaiSection()}
 
 ${buildVerifiedEaiCliCommandContract()}
 
