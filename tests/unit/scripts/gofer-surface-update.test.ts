@@ -353,7 +353,10 @@ describe('gofer surface update', () => {
     fs.mkdirSync(path.dirname(codexPath), { recursive: true });
     fs.mkdirSync(path.dirname(vscodePath), { recursive: true });
     fs.writeFileSync(codexPath, '# Personal rules\n\nKeep this instruction.\n');
-    fs.writeFileSync(vscodePath, JSON.stringify({ 'editor.fontSize': 16 }, null, 2));
+    fs.writeFileSync(
+      vscodePath,
+      '{\n  // User settings can include comments and trailing commas.\n  "editor.fontSize": 16,\n}\n'
+    );
 
     try {
       const results = await configureAlwaysOnInstructions(['codex', 'copilot', 'vscode'], {

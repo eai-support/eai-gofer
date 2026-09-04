@@ -62,6 +62,68 @@ export function upsertAlwaysOnEaiSection(content) {
   return `${content}${separator}${ALWAYS_ON_EAI_SECTION}\n`;
 }
 
+function parseJsoncObject(content) {
+  const output = [];
+  let index = 0;
+  let quote = '';
+  let escaped = false;
+
+  while (index < content.length) {
+    const character = content[index];
+    const next = content[index + 1];
+
+    if (quote) {
+      output.push(character);
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      index += 1;
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      output.push(character);
+      index += 1;
+      continue;
+    }
+
+    if (character === '/' && next === '/') {
+      index += 2;
+      while (index < content.length && content[index] !== '\n' && content[index] !== '\r') index += 1;
+      continue;
+    }
+
+    if (character === '/' && next === '*') {
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) {
+        if (content[index] === '\n' || content[index] === '\r') output.push(content[index]);
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    if (character === ',') {
+      let lookahead = index + 1;
+      while (/\s/.test(content[lookahead] || '')) lookahead += 1;
+      if (content[lookahead] === '}' || content[lookahead] === ']') {
+        index += 1;
+        continue;
+      }
+    }
+
+    output.push(character);
+    index += 1;
+  }
+
+  const parsed = JSON.parse(output.join(''));
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('VS Code settings.json must contain a JSON object.');
+  }
+  return parsed;
+}
+
 async function readText(targetPath, fileSystem) {
   try {
     return await fileSystem.readFile(targetPath, 'utf8');
@@ -88,7 +150,7 @@ export async function configureAlwaysOnInstructions(hosts, {
     try {
       const existing = await readText(targetPath, fileSystem);
       if (host === 'vscode') {
-        const settings = existing.trim() ? JSON.parse(existing) : {};
+        const settings = existing.trim() ? parseJsoncObject(existing) : {};
         const instructions = settings[VS_CODE_INSTRUCTIONS_KEY];
         if (instructions !== undefined && !Array.isArray(instructions)) {
           throw new Error(`${VS_CODE_INSTRUCTIONS_KEY} is not an array.`);
