@@ -360,7 +360,8 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Allow a cold dependency restore to finish before the audit begins.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
