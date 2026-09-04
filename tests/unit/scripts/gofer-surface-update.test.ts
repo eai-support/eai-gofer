@@ -70,6 +70,31 @@ describe('gofer surface update', () => {
     ]);
   });
 
+  it('uses the supported user instruction locations on macOS, Windows, and Linux', async () => {
+    const { getAlwaysOnInstructionPath } = await import(surfaceUpdateModuleUrl.href);
+    const home = '/Users/example';
+
+    expect(getAlwaysOnInstructionPath('codex', { home })).toBe('/Users/example/.codex/AGENTS.md');
+    expect(getAlwaysOnInstructionPath('claude', { home })).toBe('/Users/example/.claude/CLAUDE.md');
+    expect(getAlwaysOnInstructionPath('copilot', { home })).toBe(
+      '/Users/example/.copilot/copilot-instructions.md'
+    );
+    expect(getAlwaysOnInstructionPath('gemini', { home })).toBe('/Users/example/.gemini/GEMINI.md');
+    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'darwin' })).toBe(
+      '/Users/example/Library/Application Support/Code/User/settings.json'
+    );
+    expect(
+      getAlwaysOnInstructionPath('vscode', {
+        home: 'C:\\Users\\example',
+        platform: 'win32',
+        env: { APPDATA: 'C:\\Users\\example\\AppData\\Roaming' },
+      })
+    ).toBe('C:\\Users\\example\\AppData\\Roaming/Code/User/settings.json');
+    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'linux' })).toBe(
+      '/Users/example/.config/Code/User/settings.json'
+    );
+  });
+
   it('leaves a Codex local marketplace unchanged instead of running Git-only commands', async () => {
     const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
     const cleanup = vi.fn();
