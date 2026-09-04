@@ -90,7 +90,7 @@ describe('gofer surface update', () => {
         env: { APPDATA: 'C:\\Users\\example\\AppData\\Roaming' },
       })
     ).toBe('C:\\Users\\example\\AppData\\Roaming/Code/User/settings.json');
-    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'linux' })).toBe(
+    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'linux', env: {} })).toBe(
       '/Users/example/.config/Code/User/settings.json'
     );
   });
@@ -359,6 +359,7 @@ describe('gofer surface update', () => {
       const results = await configureAlwaysOnInstructions(['codex', 'copilot', 'vscode'], {
         home,
         platform: 'linux',
+        env: {},
       });
 
       expect(results.every((entry: { ok: boolean }) => entry.ok)).toBe(true);
