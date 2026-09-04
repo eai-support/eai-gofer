@@ -62,6 +62,29 @@ export function upsertAlwaysOnEaiSection(content) {
   return `${content}${separator}${ALWAYS_ON_EAI_SECTION}\n`;
 }
 
+function skipJsoncWhitespaceAndComments(content, start) {
+  let index = start;
+  while (index < content.length) {
+    if (/\s/.test(content[index])) {
+      index += 1;
+      continue;
+    }
+    if (content[index] === '/' && content[index + 1] === '/') {
+      index += 2;
+      while (index < content.length && content[index] !== '\n' && content[index] !== '\r') index += 1;
+      continue;
+    }
+    if (content[index] === '/' && content[index + 1] === '*') {
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) index += 1;
+      index += 2;
+      continue;
+    }
+    break;
+  }
+  return index;
+}
+
 function parseJsoncObject(content) {
   const output = [];
   let index = 0;
@@ -105,8 +128,7 @@ function parseJsoncObject(content) {
     }
 
     if (character === ',') {
-      let lookahead = index + 1;
-      while (/\s/.test(content[lookahead] || '')) lookahead += 1;
+      const lookahead = skipJsoncWhitespaceAndComments(content, index + 1);
       if (content[lookahead] === '}' || content[lookahead] === ']') {
         index += 1;
         continue;
@@ -122,6 +144,92 @@ function parseJsoncObject(content) {
     throw new Error('VS Code settings.json must contain a JSON object.');
   }
   return parsed;
+}
+
+function findJsonStringEnd(content, start) {
+  let escaped = false;
+  for (let index = start + 1; index < content.length; index += 1) {
+    if (escaped) escaped = false;
+    else if (content[index] === '\\') escaped = true;
+    else if (content[index] === '"') return index + 1;
+  }
+  throw new Error('VS Code settings.json contains an unterminated string.');
+}
+
+function findJsoncValueEnd(content, start) {
+  const opening = content[start];
+  if (opening === '"') return findJsonStringEnd(content, start);
+  if (opening !== '[' && opening !== '{') {
+    let index = start;
+    while (index < content.length && !',}]'.includes(content[index])) index += 1;
+    return index;
+  }
+
+  const closing = opening === '[' ? ']' : '}';
+  let depth = 0;
+  let index = start;
+  while (index < content.length) {
+    if (content[index] === '"') {
+      index = findJsonStringEnd(content, index);
+      continue;
+    }
+    if (content[index] === '/' && (content[index + 1] === '/' || content[index + 1] === '*')) {
+      index = skipJsoncWhitespaceAndComments(content, index);
+      continue;
+    }
+    if (content[index] === opening) depth += 1;
+    if (content[index] === closing) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+    index += 1;
+  }
+  throw new Error('VS Code settings.json contains an unterminated value.');
+}
+
+function findJsoncPropertyRange(content, key) {
+  let depth = 0;
+  for (let index = 0; index < content.length;) {
+    if (content[index] === '"') {
+      const stringStart = index;
+      const stringEnd = findJsonStringEnd(content, index);
+      const next = skipJsoncWhitespaceAndComments(content, stringEnd);
+      if (depth === 1 && content[next] === ':' && JSON.parse(content.slice(stringStart, stringEnd)) === key) {
+        const valueStart = skipJsoncWhitespaceAndComments(content, next + 1);
+        const valueEnd = findJsoncValueEnd(content, valueStart);
+        const afterValue = skipJsoncWhitespaceAndComments(content, valueEnd);
+        if (content[afterValue] === ',') return { start: stringStart, end: afterValue + 1 };
+
+        let beforeKey = stringStart - 1;
+        while (beforeKey >= 0 && /\s/.test(content[beforeKey])) beforeKey -= 1;
+        if (content[beforeKey] === ',') return { start: beforeKey, end: valueEnd };
+        return { start: stringStart, end: valueEnd };
+      }
+      index = stringEnd;
+      continue;
+    }
+    if (content[index] === '/' && (content[index + 1] === '/' || content[index + 1] === '*')) {
+      index = skipJsoncWhitespaceAndComments(content, index);
+      continue;
+    }
+    if (content[index] === '{' || content[index] === '[') depth += 1;
+    if (content[index] === '}' || content[index] === ']') depth -= 1;
+    index += 1;
+  }
+  return undefined;
+}
+
+function upsertVsCodeInstructions(content, instructions) {
+  const range = findJsoncPropertyRange(content, VS_CODE_INSTRUCTIONS_KEY);
+  const withoutGofer = range
+    ? `${content.slice(0, range.start)}${content.slice(range.end)}`
+    : content;
+  const settings = parseJsoncObject(withoutGofer);
+  const value = JSON.stringify(instructions, null, 2).replace(/\n/g, '\n  ');
+  const property = `  ${JSON.stringify(VS_CODE_INSTRUCTIONS_KEY)}: ${value}`;
+  const hasOtherSettings = Object.keys(settings).length > 0;
+  const opening = withoutGofer.indexOf('{');
+  return `${withoutGofer.slice(0, opening + 1)}\n${property}${hasOtherSettings ? ',' : ''}${withoutGofer.slice(opening + 1)}`;
 }
 
 async function readText(targetPath, fileSystem) {
@@ -158,8 +266,9 @@ export async function configureAlwaysOnInstructions(hosts, {
         const retained = (instructions || []).filter(
           (entry) => typeof entry?.text !== 'string' || !entry.text.includes(ALWAYS_ON_EAI_START)
         );
-        settings[VS_CODE_INSTRUCTIONS_KEY] = [...retained, { text: ALWAYS_ON_EAI_SECTION }];
-        const updated = `${JSON.stringify(settings, null, 2)}\n`;
+        const updated = existing.trim()
+          ? upsertVsCodeInstructions(existing, [...retained, { text: ALWAYS_ON_EAI_SECTION }])
+          : `{\n  ${JSON.stringify(VS_CODE_INSTRUCTIONS_KEY)}: ${JSON.stringify([{ text: ALWAYS_ON_EAI_SECTION }], null, 2).replace(/\n/g, '\n  ')}\n}\n`;
         if (updated !== existing) await writeText(targetPath, updated, fileSystem);
       } else {
         const updated = upsertAlwaysOnEaiSection(existing);

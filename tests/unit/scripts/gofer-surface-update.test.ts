@@ -371,11 +371,29 @@ describe('gofer surface update', () => {
       expect(codex).toContain('gofer:always-on-eai:start');
       expect(fs.readFileSync(copilotPath, 'utf8')).toContain('gofer:always-on-eai:start');
 
-      const vscode = JSON.parse(fs.readFileSync(vscodePath, 'utf8'));
-      expect(vscode['editor.fontSize']).toBe(16);
-      expect(vscode['github.copilot.chat.codeGeneration.instructions'][0].text).toContain(
-        'gofer:always-on-eai:start'
+      const vscode = fs.readFileSync(vscodePath, 'utf8');
+      expect(vscode).toContain('// User settings can include comments and trailing commas.');
+      expect(vscode).toContain('"editor.fontSize": 16,');
+      expect(vscode).toContain('gofer:always-on-eai:start');
+
+      fs.writeFileSync(
+        vscodePath,
+        `{
+  "editor.fontSize": 16, // retain this comment
+  "github.copilot.chat.codeGeneration.instructions": [{ "text": "<!-- gofer:always-on-eai:start --> old <!-- gofer:always-on-eai:end -->" }],
+}
+`
       );
+      const refreshed = await configureAlwaysOnInstructions(['vscode'], {
+        home,
+        platform: 'linux',
+        env: {},
+      });
+      expect(refreshed[0].ok).toBe(true);
+      const refreshedVscode = fs.readFileSync(vscodePath, 'utf8');
+      expect(refreshedVscode).toContain('// retain this comment');
+      expect(refreshedVscode).toContain('Always-On EAI Contract');
+      expect(refreshedVscode).not.toContain('<!-- gofer:always-on-eai:start --> old');
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }
