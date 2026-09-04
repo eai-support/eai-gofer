@@ -324,7 +324,9 @@ jobs:
   lint:
     name: Lint & Format Check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # This job installs three Node workspaces before it can run any checks.
+    # Five minutes can expire during a cold dependency restore.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
@@ -358,7 +360,8 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Allow a cold dependency restore to finish before the audit begins.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
