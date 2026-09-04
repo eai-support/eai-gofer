@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-09-01T22:55:52.221Z
+Generated: 2026-09-04T07:36:39.055Z
 
 ## Public Entrypoints
 
@@ -18,6 +18,22 @@ Before each user-facing reply, check the draft against these rules:
 2. Use concise, simple language.
 3. Include technical detail only when it supports a decision or the user asks for it.
 4. If any check fails, rewrite the reply before sending it.
+
+## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
+
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
+
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->
 
 ## Verified EAI CLI Command Contract
 

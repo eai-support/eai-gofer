@@ -62,7 +62,7 @@ export const HOST_POLICIES = {
     required: [path.join('.github', 'copilot-instructions.md')],
   },
   gemini: {
-    required: [],
+    required: ['GEMINI.md'],
   },
 };
 
@@ -618,6 +618,21 @@ Before each user-facing reply, check the draft against these rules:
 4. If any check fails, rewrite the reply before sending it.`;
 }
 
+function buildAlwaysOnEaiSection() {
+  return `## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
+
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
+
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit \`/eai\`, \`$eai\`, or \`#eai\` prefix as an idempotent request for the same contract.
+3. Apply Gofer's Controlled English and business-first response rules.
+4. Select the internal pipeline stage. Do not make the user select a stage.
+5. Check workspace health before meaningful repo work, tool use, or a pipeline stage. Do not repeat setup on every message.
+6. When the user explicitly asks to update Gofer, use its maintenance contract only.
+<!-- gofer:always-on-eai:end -->`;
+}
+
 export function buildAgentsMd(projectInfo, stages) {
   const corePipelineOrder = [
     '0_gofer_start',
@@ -666,6 +681,8 @@ export function buildAgentsMd(projectInfo, stages) {
 **Project**: ${projectInfo.name} | **Language**: ${formatLanguage(projectInfo.language)}${frameworkLine} | **Package Manager**: ${projectInfo.packageManager || 'Not detected'}
 
 ${buildUserFacingResponseGateSection()}
+
+${buildAlwaysOnEaiSection()}
 
 ## Core Pipeline Stages
 
@@ -728,6 +745,8 @@ export function buildClaudeMd(projectInfo) {
 
 See @AGENTS.md for project conventions, commands, and code style.
 
+${buildAlwaysOnEaiSection()}
+
 ## Workflow Orchestration
 
 ### 1. Plan Node Default
@@ -779,6 +798,8 @@ export function buildCopilotInstructions(projectInfo) {
 ## Project Overview
 
 **${projectInfo.name}** is a ${formatLanguage(projectInfo.language)} project${frameworkBit}.
+
+${buildAlwaysOnEaiSection()}
 
 ## Gofer Pipeline
 
@@ -904,6 +925,43 @@ async function writeFileIfMissing(filePath, content, dryRun) {
     await fs.writeFile(filePath, content, 'utf8');
   }
   return true;
+}
+
+async function ensureAlwaysOnEaiSection(filePath, fallbackContent, dryRun) {
+  let existing = '';
+  try {
+    existing = await fs.readFile(filePath, 'utf8');
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  const section = buildAlwaysOnEaiSection();
+  const markerPattern = /## Always-On EAI Contract\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
+  const updated = existing
+    ? markerPattern.test(existing)
+      ? existing.replace(markerPattern, section)
+      : `${existing.trimEnd()}\n\n${section}\n`
+    : fallbackContent;
+
+  if (updated === existing) {
+    return false;
+  }
+
+  await writeTextFile(filePath, updated, dryRun);
+  return true;
+}
+
+function buildGeminiMd(projectInfo) {
+  return `# GEMINI.md
+
+See @AGENTS.md for project conventions, commands, and code style.
+
+${buildAlwaysOnEaiSection()}
+
+Use the internal Gofer pipeline to select the next stage. Keep the user-facing
+conversation in business language.\n`;
 }
 
 async function writeTextFile(filePath, content, dryRun) {
@@ -1131,34 +1189,31 @@ export async function bootstrapWorkspace({
     changed.push(path.join('.specify', 'README.md'));
   }
 
-  if (await writeFileIfMissing(path.join(workspaceRoot, 'AGENTS.md'), buildAgentsMd(projectInfo, stages), dryRun)) {
+  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'AGENTS.md'), buildAgentsMd(projectInfo, stages), dryRun)) {
     changed.push('AGENTS.md');
   }
 
-  if (normalizedHost === 'claude') {
-    if (
-      await writeFileIfMissing(
-        path.join(workspaceRoot, 'CLAUDE.md'),
-        buildClaudeMd(projectInfo),
-        dryRun
-      )
-    ) {
-      changed.push('CLAUDE.md');
-    }
-    await installClaudeHooksSettings(workspaceRoot, dryRun);
-    changed.push(path.join('.claude', 'settings.json'));
+  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'CLAUDE.md'), buildClaudeMd(projectInfo), dryRun)) {
+    changed.push('CLAUDE.md');
   }
 
-  if (normalizedHost === 'copilot') {
-    if (
-      await writeFileIfMissing(
-        path.join(workspaceRoot, '.github', 'copilot-instructions.md'),
-        buildCopilotInstructions(projectInfo),
-        dryRun
-      )
-    ) {
-      changed.push(path.join('.github', 'copilot-instructions.md'));
-    }
+  if (
+    await ensureAlwaysOnEaiSection(
+      path.join(workspaceRoot, '.github', 'copilot-instructions.md'),
+      buildCopilotInstructions(projectInfo),
+      dryRun
+    )
+  ) {
+    changed.push(path.join('.github', 'copilot-instructions.md'));
+  }
+
+  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'GEMINI.md'), buildGeminiMd(projectInfo), dryRun)) {
+    changed.push('GEMINI.md');
+  }
+
+  if (normalizedHost === 'claude') {
+    await installClaudeHooksSettings(workspaceRoot, dryRun);
+    changed.push(path.join('.claude', 'settings.json'));
   }
 
   if (includeMirrors) {

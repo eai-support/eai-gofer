@@ -116,6 +116,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/plugin.json',
         'eai-gofer/.codex-plugin/plugin.json',
         'eai-gofer/.claude-plugin/plugin.json',
+        'eai-gofer/.claude-plugin/hooks/hooks.json',
         'eai-gofer/.agents/plugins/marketplace.json',
         'eai-gofer/.github/plugin/marketplace.json',
         'eai-gofer/gemini-extension.json',
@@ -226,6 +227,9 @@ describe('Gofer agent plugin package', () => {
       );
       expect(umbrellaSkill).toContain('eai publicapi');
       expect(umbrellaSkill).toContain('## Controlled English Contract');
+      expect(umbrellaSkill).toContain(
+        'Apply this skill to every request when the plugin is enabled'
+      );
       expect(umbrellaSkill).toContain('ASD-STE100 Simplified Technical English');
       expect(umbrellaSkill).toContain('Use one action per instruction');
       expect(umbrellaSkill).toContain('do not claim ASD certification');
@@ -238,6 +242,9 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('## App Preview Runner Contract');
       expect(umbrellaSkill).toContain('./run.sh dev 3001');
       expect(umbrellaSkill).toContain('run.bat dev 3001');
+      expect(
+        fs.readFileSync(path.join(pluginRoot, '.claude-plugin', 'hooks', 'hooks.json'), 'utf8')
+      ).toContain('UserPromptSubmit');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);

@@ -1,14 +1,21 @@
 # Copilot Instructions
 
+## Always-On EAI Contract
+
+Apply Gofer to every request. Preserve the user prompt and do not add a visible
+command prefix. Route internally and select the next stage. Check workspace
+health only before meaningful repo work. Use the update path only for explicit
+Gofer maintenance requests.
+
 ## Project Overview
 
 **gofer** is a Unknown project.
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. In GitHub Copilot Chat, use
-`#eai` to start or continue the core pipeline: Gofer Start -> research ->
-specify -> plan -> tasks -> implement -> validate.
+This project uses Gofer for spec-driven development. `#eai` is optional. Use the
+same core pipeline for every request: Gofer Start -> research -> specify -> plan
+-> tasks -> implement -> validate.
 
 Gofer routes internally through `.specify/commands/*.md` contracts, so numbered
 stage prompts stay hidden unless explicitly needed for internals. Before EAI
