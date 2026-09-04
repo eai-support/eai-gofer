@@ -192,7 +192,16 @@ describe('Gofer workspace bootstrap scripts', () => {
 
   it('preserves existing instruction files and adds only the managed always-on section', () => {
     const customAgents = '# custom agents\n';
-    const customClaude = '# custom claude\n';
+    const customClaude = `# custom claude
+
+## Always-On EAI Contract
+
+Legacy Gofer instructions.
+
+## Personal Rules
+
+Keep this instruction.
+`;
     const customModelPolicy = 'version: 1\nprofile: custom\n';
     fs.writeFileSync(path.join(workspaceRoot, 'AGENTS.md'), customAgents);
     fs.writeFileSync(path.join(workspaceRoot, 'CLAUDE.md'), customClaude);
@@ -208,9 +217,12 @@ describe('Gofer workspace bootstrap scripts', () => {
     const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
     const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
     expect(agents).toContain(customAgents.trim());
-    expect(claude).toContain(customClaude.trim());
+    expect(claude).toContain('# custom claude');
     expect(agents).toContain('gofer:always-on-eai:start');
     expect(claude).toContain('gofer:always-on-eai:start');
+    expect(claude.match(/## Always-On EAI Contract/g) || []).toHaveLength(1);
+    expect(claude).not.toContain('Legacy Gofer instructions.');
+    expect(claude).toContain('## Personal Rules');
     expect(
       fs.readFileSync(
         path.join(workspaceRoot, '.specify', 'memory', 'gofer-model-policy.yaml'),

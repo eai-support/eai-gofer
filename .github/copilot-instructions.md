@@ -2,10 +2,14 @@
 
 ## Always-On EAI Contract
 
+<!-- gofer:always-on-eai:start -->
+
 Apply Gofer to every request. Preserve the user prompt and do not add a visible
 command prefix. Route internally and select the next stage. Check workspace
 health only before meaningful repo work. Use the update path only for explicit
 Gofer maintenance requests.
+
+<!-- gofer:always-on-eai:end -->
 
 ## Project Overview
 

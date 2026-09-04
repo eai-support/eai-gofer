@@ -30,7 +30,7 @@ Apply Gofer to every request. The user does not need to type \`/eai\`, \`$eai\`,
 4. Check workspace health before meaningful repo work, tool use, or a pipeline stage. Do not repeat setup on every message.
 5. Use Gofer maintenance only when the user explicitly asks to install or update Gofer.
 ${ALWAYS_ON_EAI_END}`;
-const ALWAYS_ON_EAI_MARKER = /## Always-On EAI Contract\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
+const ALWAYS_ON_EAI_MARKER = /## Always-On EAI Contract\r?\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
 const VS_CODE_INSTRUCTIONS_KEY = 'github.copilot.chat.codeGeneration.instructions';
 
 function command(command, args, label) {
@@ -58,7 +58,7 @@ export function upsertAlwaysOnEaiSection(content) {
   if (ALWAYS_ON_EAI_MARKER.test(content)) {
     return content.replace(ALWAYS_ON_EAI_MARKER, ALWAYS_ON_EAI_SECTION);
   }
-  const separator = content.length === 0 || content.endsWith('\n') ? '\n' : '\n\n';
+  const separator = content.length === 0 ? '' : content.endsWith('\n') ? '\n' : '\n\n';
   return `${content}${separator}${ALWAYS_ON_EAI_SECTION}\n`;
 }
 

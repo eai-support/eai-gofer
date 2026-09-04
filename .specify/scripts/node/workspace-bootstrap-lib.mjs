@@ -938,11 +938,14 @@ async function ensureAlwaysOnEaiSection(filePath, fallbackContent, dryRun) {
   }
 
   const section = buildAlwaysOnEaiSection();
-  const markerPattern = /## Always-On EAI Contract\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
+  const markerPattern = /## Always-On EAI Contract\r?\n<!-- gofer:always-on-eai:start -->[\s\S]*?<!-- gofer:always-on-eai:end -->/;
+  const legacySectionPattern = /## Always-On EAI Contract\r?\n[\s\S]*?(?=^##\s|(?![\s\S]))/m;
   const updated = existing
     ? markerPattern.test(existing)
       ? existing.replace(markerPattern, section)
-      : `${existing.trimEnd()}\n\n${section}\n`
+      : legacySectionPattern.test(existing)
+        ? existing.replace(legacySectionPattern, `${section}\n`)
+        : `${existing.trimEnd()}\n\n${section}\n`
     : fallbackContent;
 
   if (updated === existing) {

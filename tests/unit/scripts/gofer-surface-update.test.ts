@@ -95,6 +95,24 @@ describe('gofer surface update', () => {
     );
   });
 
+  it('replaces a managed CRLF section and does not add a leading blank line', async () => {
+    const { upsertAlwaysOnEaiSection } = await import(surfaceUpdateModuleUrl.href);
+    const windowsContent = [
+      '## Always-On EAI Contract',
+      '<!-- gofer:always-on-eai:start -->',
+      'Old Gofer contract.',
+      '<!-- gofer:always-on-eai:end -->',
+      '',
+      '## Personal Rules',
+      'Keep this.',
+    ].join('\r\n');
+
+    const updated = upsertAlwaysOnEaiSection(windowsContent);
+    expect(updated.match(/## Always-On EAI Contract/g) || []).toHaveLength(1);
+    expect(updated).toContain('## Personal Rules');
+    expect(upsertAlwaysOnEaiSection('').startsWith('## Always-On EAI Contract')).toBe(true);
+  });
+
   it('leaves a Codex local marketplace unchanged instead of running Git-only commands', async () => {
     const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
     const cleanup = vi.fn();
