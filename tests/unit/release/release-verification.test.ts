@@ -259,6 +259,9 @@ describe('Release Verification', () => {
         'run_release_check "Gofer generated surface check" npm run gofer:generate:check'
       );
       expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"'
+      );
+      expect(RELEASE_SCRIPT).toContain(
         'run_release_check "Gofer unit test suite" npm run test:unit'
       );
       expect(RELEASE_SCRIPT).toContain(
@@ -392,6 +395,9 @@ describe('Release Verification', () => {
       expect(RELEASE_WORKFLOW).toContain('Checkout EAI App Template');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template ci');
       expect(RELEASE_WORKFLOW).toContain('npm run gofer:generate:check');
+      expect(RELEASE_WORKFLOW).toContain(
+        'npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"'
+      );
       expect(RELEASE_WORKFLOW).toContain('npm run typecheck');
       expect(RELEASE_WORKFLOW).toContain('npm run test:unit');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix extension run prepare-language-server');

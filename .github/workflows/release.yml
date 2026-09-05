@@ -145,6 +145,9 @@ jobs:
       - name: Package Agent Plugin
         run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
 
+      - name: Verify All-Surface Release Contract
+        run: npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"
+
       - name: Create Release Archive
         run: |
           mkdir -p release-assets/orchestrator release-assets/extension release-assets/language-server

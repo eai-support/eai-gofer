@@ -427,6 +427,39 @@ function isLocalMarketplacePath(value) {
   return /^(?:[A-Za-z]:[\\/]|[/~])/.test(value.trim());
 }
 
+function isOfficialRepositoryUrl(value) {
+  const normalized = value.trim().replace(/\.git$/, '').replace(/\/$/, '');
+  return [
+    'https://github.com/eai-support/eai-gofer',
+    'git@github.com:eai-support/eai-gofer',
+    'ssh://git@github.com/eai-support/eai-gofer',
+  ].includes(normalized);
+}
+
+export async function inspectLocalCodexMarketplace(root, execute = execFileAsync) {
+  try {
+    const [status, remote, branch] = await Promise.all([
+      execute('git', ['-C', root, 'status', '--porcelain'], { windowsHide: true }),
+      execute('git', ['-C', root, 'remote', 'get-url', 'origin'], { windowsHide: true }),
+      execute('git', ['-C', root, 'branch', '--show-current'], { windowsHide: true }),
+    ]);
+    return {
+      root,
+      clean: status.stdout.trim().length === 0,
+      official: isOfficialRepositoryUrl(remote.stdout),
+      branch: branch.stdout.trim(),
+    };
+  } catch (error) {
+    return {
+      root,
+      clean: false,
+      official: false,
+      branch: '',
+      error: error?.stderr?.trim() ?? error?.message ?? String(error),
+    };
+  }
+}
+
 export async function inspectCodexMarketplace(execute = execFileAsync) {
   try {
     const result = await execute('codex', ['plugin', 'marketplace', 'list'], {
@@ -456,6 +489,7 @@ export async function runPlan(
   {
     inspect = inspectHost,
     inspectMarketplace = inspectCodexMarketplace,
+    inspectLocalMarketplace = inspectLocalCodexMarketplace,
     execute = execFileAsync,
     cleanup = cleanupLocalSettings,
     configureInstructions = configureAlwaysOnInstructions,
@@ -478,16 +512,31 @@ export async function runPlan(
     if (surface.host === 'codex' && surface.action === 'update') {
       const marketplace = await inspectMarketplace(execute);
       if (marketplace.type === 'local') {
-        results.push({
-          host: surface.host,
-          label: 'Inspect local EAI Gofer marketplace',
-          ok: true,
-          note: `EAI Gofer uses the local marketplace at ${marketplace.root}. It was left unchanged, so local work and settings are preserved.`,
-        });
-        configuredHosts.push(surface.host);
-        continue;
+        const local = await inspectLocalMarketplace(marketplace.root, execute);
+        if (!local.clean || !local.official || local.branch !== 'main') {
+          const reasons = [
+            !local.clean ? 'it has uncommitted changes' : '',
+            !local.official ? 'its origin is not the official EAI Gofer repository' : '',
+            local.branch !== 'main' ? `it is on ${local.branch || 'a detached branch'}, not main` : '',
+          ].filter(Boolean).join('; ');
+          results.push({
+            host: surface.host,
+            label: 'Update local EAI Gofer marketplace',
+            ok: false,
+            error:
+              `EAI Gofer uses the local marketplace at ${marketplace.root}, but it was not updated because ${reasons}. ` +
+              'The always-on EAI instruction was refreshed. Commit, stash, or switch the local checkout to a clean official main branch, or replace it with the public Git marketplace, then restart Codex.',
+          });
+          configuredHosts.push(surface.host);
+          continue;
+        }
+        surface.commands = [
+          command('git', ['-C', marketplace.root, 'fetch', 'origin', 'main'], 'Fetch the local EAI Gofer marketplace'),
+          command('git', ['-C', marketplace.root, 'merge', '--ff-only', 'origin/main'], 'Fast-forward the local EAI Gofer marketplace'),
+          command('codex', ['plugin', 'add', 'eai-gofer@eai-gofer'], 'Apply the refreshed EAI Gofer plugin'),
+        ];
       }
-      if (marketplace.type !== 'git') {
+      if (marketplace.type !== 'git' && marketplace.type !== 'local') {
         results.push({
           host: surface.host,
           label: 'Inspect Codex EAI Gofer marketplace',

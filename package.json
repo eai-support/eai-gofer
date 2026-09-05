@@ -63,6 +63,7 @@
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
     "gofer:eai-refresh-layout:check": "node scripts/verify-eai-refresh-layout.mjs",
+    "gofer:surface-release:check": "node scripts/verify-surface-release-contract.mjs",
     "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
     "prepack": "npm run build",
     "prepare": "husky"
