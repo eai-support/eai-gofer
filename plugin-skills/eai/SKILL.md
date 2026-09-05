@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.12.2
+Version: 3.12.3
 
 Apply this skill to every request when the plugin is enabled. The user does not need to type a Gofer command. Keep the user's request unchanged and route it through Gofer internally. Use the separate update skill only when the user explicitly asks to install or update Gofer.
 
