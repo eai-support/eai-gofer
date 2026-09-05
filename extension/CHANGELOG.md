@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.4] - 2026-09-05
+
+Allow normal Visual Studio Marketplace indexing before release verification fails
+
 ## [3.12.3] - 2026-09-05
 
 Ensure reliable all-surface Gofer updates and release verification
