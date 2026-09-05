@@ -247,7 +247,7 @@ jobs:
 
       - name: Azure Login for VS Code Marketplace Publish
         if: steps.version.outputs.prerelease != 'true' && vars.VSCE_AZURE_CLIENT_ID != '' && vars.VSCE_AZURE_TENANT_ID != '' && vars.VSCE_AZURE_SUBSCRIPTION_ID != ''
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.VSCE_AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.VSCE_AZURE_TENANT_ID }}
