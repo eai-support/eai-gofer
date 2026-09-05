@@ -418,6 +418,7 @@ run_release_validation_gate() {
     run_release_check "Gofer typecheck" npm run typecheck
     run_release_check "Gofer production build" npm run build
     run_release_check "Gofer generated surface check" npm run gofer:generate:check
+    run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"
     run_release_check "Gofer unit test suite" npm run test:unit
     run_release_check "Language Server production build" npm --prefix language-server run build
     run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server

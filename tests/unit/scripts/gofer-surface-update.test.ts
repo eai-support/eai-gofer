@@ -113,27 +113,80 @@ describe('gofer surface update', () => {
     expect(upsertAlwaysOnEaiSection('').startsWith('## Always-On EAI Contract')).toBe(true);
   });
 
-  it('leaves a Codex local marketplace unchanged instead of running Git-only commands', async () => {
+  it('fast-forwards a clean official Codex local marketplace and enables always-on routing', async () => {
     const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
     const cleanup = vi.fn();
-    const execute = vi.fn();
+    const execute = vi.fn(async () => ({ stdout: 'updated' }));
+    const configureInstructions = vi.fn(async () => [
+      { host: 'codex', targetPath: '/Users/example/.codex/AGENTS.md', ok: true },
+    ]);
 
     const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
       inspect: async () => ({ available: true }),
       inspectMarketplace: async () => ({ type: 'local', root: '/Users/example/gofer' }),
+      inspectLocalMarketplace: async () => ({ clean: true, official: true, branch: 'main' }),
       execute,
       cleanup,
-      configureInstructions: vi.fn(async () => []),
+      configureInstructions,
     });
 
-    expect(execute).not.toHaveBeenCalled();
-    expect(cleanup).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledWith(
+      'git',
+      ['-C', '/Users/example/gofer', 'fetch', 'origin', 'main'],
+      { windowsHide: true }
+    );
+    expect(execute).toHaveBeenCalledWith(
+      'git',
+      ['-C', '/Users/example/gofer', 'merge', '--ff-only', 'origin/main'],
+      { windowsHide: true }
+    );
+    expect(cleanup).toHaveBeenCalledWith({ apply: true });
+    expect(configureInstructions).toHaveBeenCalledWith(['codex']);
     expect(result).toContainEqual(
       expect.objectContaining({
         host: 'codex',
         ok: true,
-        label: 'Inspect local EAI Gofer marketplace',
-        note: expect.stringContaining('local work and settings are preserved'),
+        label: 'Fast-forward the local EAI Gofer marketplace',
+        stdout: 'updated',
+      })
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        label: 'Enable always-on Gofer instructions',
+        ok: true,
+      })
+    );
+  });
+
+  it('preserves a dirty or non-main Codex local marketplace while still enabling always-on routing', async () => {
+    const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
+    const execute = vi.fn();
+    const configureInstructions = vi.fn(async () => [
+      { host: 'codex', targetPath: '/Users/example/.codex/AGENTS.md', ok: true },
+    ]);
+
+    const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
+      inspect: async () => ({ available: true }),
+      inspectMarketplace: async () => ({ type: 'local', root: '/Users/example/gofer' }),
+      inspectLocalMarketplace: async () => ({
+        clean: false,
+        official: true,
+        branch: 'feature/local-work',
+      }),
+      execute,
+      cleanup: vi.fn(),
+      configureInstructions,
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(configureInstructions).toHaveBeenCalledWith(['codex']);
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        label: 'Update local EAI Gofer marketplace',
+        ok: false,
+        error: expect.stringContaining('uncommitted changes'),
       })
     );
   });
@@ -163,7 +216,9 @@ describe('gofer surface update', () => {
   });
 
   it('classifies Codex marketplace sources without assuming missing output is Git', async () => {
-    const { inspectCodexMarketplace } = await import(surfaceUpdateModuleUrl.href);
+    const { inspectCodexMarketplace, inspectLocalCodexMarketplace } = await import(
+      surfaceUpdateModuleUrl.href
+    );
     const list = async () => ({
       stdout: 'eai-gofer  /Users/example/gofer\n',
     });
@@ -179,6 +234,22 @@ describe('gofer surface update', () => {
       stdout: 'other-plugin  /tmp/other\n',
     }));
     expect(missing).toEqual({ type: 'unknown' });
+
+    const localInspection = await inspectLocalCodexMarketplace(
+      '/Users/example/gofer',
+      async (_command, args) => {
+        if (args.includes('status')) return { stdout: '' };
+        if (args.includes('remote'))
+          return { stdout: 'git@github.com:eai-support/eai-gofer.git\n' };
+        return { stdout: 'main\n' };
+      }
+    );
+    expect(localInspection).toEqual({
+      root: '/Users/example/gofer',
+      clean: true,
+      official: true,
+      branch: 'main',
+    });
   });
 
   it('keeps the update plan independent of installed repository files', async () => {
