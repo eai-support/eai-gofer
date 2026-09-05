@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.12.3
+Version: 3.12.4
 
 Use this skill to install or update the user-level EAI Gofer plugin or extension. It works before a repository has Gofer files.
 
