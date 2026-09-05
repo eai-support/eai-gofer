@@ -240,6 +240,9 @@ get_vscode_marketplace_version() {
 verify_vscode_marketplace_version() {
     local expected_version="$1"
     local deployed_version=""
+    # Marketplace indexing is asynchronous. Allow twenty minutes by default so
+    # a confirmed publish is not reported as a failed release too early.
+    local max_attempts="${VSCODE_MARKETPLACE_PROPAGATION_ATTEMPTS:-60}"
 
     if is_truthy "${SKIP_VSCODE_MARKETPLACE_PUBLISH:-}"; then
         print_warning "Skipping VS Code Marketplace version verification because SKIP_VSCODE_MARKETPLACE_PUBLISH is set."
@@ -247,7 +250,7 @@ verify_vscode_marketplace_version() {
     fi
 
     print_info "Verifying Visual Studio Marketplace EnterpriseAI.gofer is at v$expected_version..."
-    for i in {1..30}; do
+    for ((i = 1; i <= max_attempts; i++)); do
         deployed_version=$(get_vscode_marketplace_version || echo "")
 
         if [ "$deployed_version" = "$expected_version" ]; then
@@ -255,7 +258,7 @@ verify_vscode_marketplace_version() {
             return 0
         fi
 
-        print_info "Waiting for Marketplace propagation... (attempt $i/30, deployed: ${deployed_version:-MISSING}, expected: $expected_version)"
+        print_info "Waiting for Marketplace propagation... (attempt $i/$max_attempts, deployed: ${deployed_version:-MISSING}, expected: $expected_version)"
         sleep 20
     done
 

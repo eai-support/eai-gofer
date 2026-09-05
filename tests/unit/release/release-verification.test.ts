@@ -298,6 +298,12 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).not.toContain('Continuing with release - manual testing recommended');
     });
 
+    it('should allow enough time for Visual Studio Marketplace indexing', () => {
+      expect(RELEASE_SCRIPT).toContain('VSCODE_MARKETPLACE_PROPAGATION_ATTEMPTS:-60');
+      expect(RELEASE_SCRIPT).toContain('for ((i = 1; i <= max_attempts; i++)); do');
+      expect(RELEASE_SCRIPT).toContain('sleep 20');
+    });
+
     it('should not push directly to origin/main from release.sh', () => {
       const validationGateIndex = RELEASE_SCRIPT.indexOf(
         'run_release_validation_gate "$NEW_VERSION"'
