@@ -10,12 +10,15 @@ Host: Grok Build
 
 ## Update EAI Gofer
 
-Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+Grok Build now supports native plugins and marketplaces. Gofer has not verified its own native install/update integration here. This command must not claim an update succeeded.
 
 ## What To Do
 
-1. Add EAI Gofer to the repository from a supported host.
-2. Open that repository in Grok Build.
-3. Use the repository `eai` skill to continue work.
+1. Confirm this is Grok Build CLI, not Grok Bot desktop or a third-party wrapper.
+2. Resolve the Gofer repository or installed bundle root. Use `node <resolved-gofer-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host grok --json` for status. Replace the placeholder with that verified root; the helper is not a command on PATH. Install/update actions remain blocked before writes.
+3. Keep the existing repository `.grok/skills/eai/SKILL.md` and full Gofer scaffold. Read current `grok inspect --help` before using `grok inspect --json` to verify discovery. Treat its output as private; do not paste raw config or MCP details into chat.
+4. Check the `/eai` picker and a harmless task in the actual client before claiming the skill works. Existing generated files are not native evidence.
 
-Do not run `gofer-surface-update.mjs --host grok`. That host is not supported by the updater.
+Grok reads some Claude and AGENTS files too. Verify the selected skill source instead of deleting other hosts' files. Keep all internal stages. Skill model/effort metadata does not select a model; allowed-tools does not enforce read-only review. Use host-enforced permissions.
+
+Grok Bot desktop is a separate target (`grok-bot`). Its Plugins settings and skills do not prove that this CLI bundle loads there. Read `.specify/references/portable-orchestration.md` for limits. Do not invent a plugin update command or change user settings.

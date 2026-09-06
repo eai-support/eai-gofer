@@ -1,7 +1,6 @@
 /**
- * T170 — Verifies the published plugin/extension/agent bundle works fully
- * offline. The four shipped manifests + scripts must contain no runtime fetch
- * or network calls. URLs in comments / documentation are tolerated.
+ * T170 — Static offline-resource contract, not a native runtime or install test.
+ * Shipped manifests and scaffold scripts must not require runtime network calls.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -11,14 +10,19 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const ANTIGRAVITY_MANIFEST = path.join(
+  REPO_ROOT,
+  'plugins/eai-gofer/plugins/antigravity/eai-gofer/plugin.json'
+);
 
 const MANIFEST_FILES = [
   path.join(REPO_ROOT, '.claude-plugin', 'plugin.json'),
   path.join(REPO_ROOT, '.codex-plugin', 'plugin.json'),
   path.join(REPO_ROOT, '.github', 'plugin', 'marketplace.json'),
-  path.join(REPO_ROOT, '.gemini', 'extension.json'),
+  ANTIGRAVITY_MANIFEST,
   path.join(REPO_ROOT, 'plugin.json'),
   path.join(REPO_ROOT, 'AGENTS.md'),
+  path.join(REPO_ROOT, 'GEMINI.md'),
   path.join(REPO_ROOT, 'codex-config.toml'),
 ];
 
@@ -135,20 +139,17 @@ describe('runtime offline after publish (T170)', () => {
     }
   });
 
-  it('plugin/extension can be installed without network — no install hooks reference network', (): void => {
-    // The Claude plugin and Gemini extension are pure declarative manifests,
-    // so this is mostly an extension of the URL check. We assert that neither
-    // manifest declares an `install` or `postInstall` script.
+  it('declarative Claude and Antigravity manifests have no install hooks', (): void => {
     const claudeManifest = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'plugin.json'), 'utf8')
     );
     expect(claudeManifest.install).toBeUndefined();
     expect(claudeManifest.postInstall).toBeUndefined();
 
-    const geminiManifest = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, '.gemini', 'extension.json'), 'utf8')
-    );
-    expect(geminiManifest.install).toBeUndefined();
-    expect(geminiManifest.postInstall).toBeUndefined();
+    const antigravityManifest = JSON.parse(fs.readFileSync(ANTIGRAVITY_MANIFEST, 'utf8'));
+    expect(antigravityManifest.name).toBe('eai-gofer');
+    expect(antigravityManifest.install).toBeUndefined();
+    expect(antigravityManifest.postInstall).toBeUndefined();
+    expect(fs.existsSync(path.join(REPO_ROOT, '.gemini/extension.json'))).toBe(false);
   });
 });

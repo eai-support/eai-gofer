@@ -218,7 +218,39 @@ export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   ].sort()
 );
 
-const PORTABLE_PATHS = new Set(GOFER_PORTABLE_SCAFFOLD_PATHS);
+/** Additive inventory. Historical release descriptors retain the original paths. */
+export const GOFER_ORCHESTRATION_SCAFFOLD_PATHS: readonly string[] = Object.freeze([
+  '.specify/references/portable-orchestration.md',
+  '.specify/scripts/node/gofer-orchestration.mjs',
+  '.specify/scripts/node/lib/orchestration-contract.mjs',
+  '.specify/scripts/node/lib/portable-orchestration.mjs',
+]);
+
+export const GOFER_ORCHESTRATION_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [...GOFER_PORTABLE_SCAFFOLD_PATHS, ...GOFER_ORCHESTRATION_SCAFFOLD_PATHS].sort()
+);
+
+export const GOFER_MODEL_DISCOVERY_SCAFFOLD_PATHS: readonly string[] = Object.freeze([
+  '.specify/scripts/node/gofer-model-discovery.mjs',
+  '.specify/scripts/node/lib/model-discovery.mjs',
+]);
+
+export const GOFER_MODEL_DISCOVERY_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [...GOFER_ORCHESTRATION_PORTABLE_SCAFFOLD_PATHS, ...GOFER_MODEL_DISCOVERY_SCAFFOLD_PATHS].sort()
+);
+
+export const GOFER_STAGE_EXECUTION_SCAFFOLD_PATHS: readonly string[] = Object.freeze([
+  '.specify/scripts/node/gofer-stage-execute.mjs',
+  '.specify/scripts/node/lib/stage-execution.mjs',
+  '.specify/scripts/node/lib/stage-cli-adapters.mjs',
+  '.specify/scripts/node/lib/antigravity-agent.mjs',
+]);
+
+export const GOFER_STAGE_EXECUTION_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [...GOFER_MODEL_DISCOVERY_PORTABLE_SCAFFOLD_PATHS, ...GOFER_STAGE_EXECUTION_SCAFFOLD_PATHS].sort()
+);
+
+const PORTABLE_PATHS = new Set(GOFER_STAGE_EXECUTION_PORTABLE_SCAFFOLD_PATHS);
 
 /** Hash the sorted newline-delimited path inventory used by scaffold consumers. */
 export function createGoferScaffoldInventoryDigest(paths: readonly string[]): string {
@@ -252,15 +284,61 @@ export function assertPortableGoferScaffold(
   assertGoferReleaseDescriptor(goferRelease);
 
   const filesByPath = new Map(files.map((file) => [file.path, file]));
-  for (const path of GOFER_PORTABLE_SCAFFOLD_PATHS) {
+  const hasStageExecutionInventory =
+    goferRelease.inventoryDigest ===
+    createGoferScaffoldInventoryDigest(GOFER_STAGE_EXECUTION_PORTABLE_SCAFFOLD_PATHS);
+  const hasDiscoveryInventory =
+    goferRelease.inventoryDigest ===
+    createGoferScaffoldInventoryDigest(GOFER_MODEL_DISCOVERY_PORTABLE_SCAFFOLD_PATHS);
+  const hasOrchestrationInventory =
+    goferRelease.inventoryDigest ===
+    createGoferScaffoldInventoryDigest(GOFER_ORCHESTRATION_PORTABLE_SCAFFOLD_PATHS);
+  const requiredPaths = hasStageExecutionInventory
+    ? GOFER_STAGE_EXECUTION_PORTABLE_SCAFFOLD_PATHS
+    : hasDiscoveryInventory
+      ? GOFER_MODEL_DISCOVERY_PORTABLE_SCAFFOLD_PATHS
+      : hasOrchestrationInventory
+        ? GOFER_ORCHESTRATION_PORTABLE_SCAFFOLD_PATHS
+        : GOFER_PORTABLE_SCAFFOLD_PATHS;
+  for (const path of requiredPaths) {
     if (!filesByPath.has(path)) {
       throw new Error(`Gofer ${goferRelease.ref} scaffold is missing ${path}`);
     }
   }
 
-  const inventoryDigest = createGoferScaffoldInventoryDigest(GOFER_PORTABLE_SCAFFOLD_PATHS);
+  const inventoryDigest = createGoferScaffoldInventoryDigest(requiredPaths);
   if (inventoryDigest !== goferRelease.inventoryDigest) {
     throw new Error(`Gofer ${goferRelease.ref} inventory digest does not match its descriptor.`);
+  }
+
+  if (
+    !hasStageExecutionInventory &&
+    !hasOrchestrationInventory &&
+    !hasDiscoveryInventory &&
+    GOFER_ORCHESTRATION_SCAFFOLD_PATHS.some((path) => filesByPath.has(path))
+  ) {
+    throw new Error(
+      'Orchestration scaffold files require a matching release inventory descriptor.'
+    );
+  }
+
+  if (
+    !hasStageExecutionInventory &&
+    !hasDiscoveryInventory &&
+    GOFER_MODEL_DISCOVERY_SCAFFOLD_PATHS.some((path) => filesByPath.has(path))
+  ) {
+    throw new Error(
+      'Model discovery scaffold files require a matching release inventory descriptor.'
+    );
+  }
+
+  if (
+    !hasStageExecutionInventory &&
+    GOFER_STAGE_EXECUTION_SCAFFOLD_PATHS.some((path) => filesByPath.has(path))
+  ) {
+    throw new Error(
+      'Stage execution scaffold files require a matching release inventory descriptor.'
+    );
   }
 
   const marker = filesByPath.get('.specify/.gofer-version');

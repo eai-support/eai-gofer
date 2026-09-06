@@ -12,7 +12,39 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..');
-const hosts = ['claude', 'codex', 'copilot', 'gemini', 'vscode'];
+const hosts = ['claude', 'codex', 'copilot', 'vscode'];
+const nativeWorkspaceHosts = ['antigravity', 'antigravity-desktop'];
+
+export function verifyWorkspaceHostPolicies({ HOST_POLICIES, normalizeHost }) {
+  for (const host of nativeWorkspaceHosts) {
+    if (normalizeHost(host) !== host) throw new Error(`${host} must not fall back to auto.`);
+    for (const required of [
+      'AGENTS.md', 'GEMINI.md',
+      path.join('.agents', 'skills', 'eai', 'SKILL.md'),
+      path.join('.agents', 'skills', 'eai-update', 'SKILL.md'),
+    ]) {
+      if (!HOST_POLICIES[host]?.required.includes(required)) {
+        throw new Error(`${host} workspace policy is missing ${required}.`);
+      }
+    }
+  }
+  try {
+    normalizeHost('gemini');
+  } catch (error) {
+    if (/retired/i.test(error.message) && /antigravity/i.test(error.message)) return;
+    throw new Error('Retired Gemini CLI needs explicit Antigravity migration guidance.');
+  }
+  throw new Error('Retired Gemini CLI must not pass workspace checks.');
+}
+
+export function verifyUpdatePlans(plans) {
+  const allowed = [...hosts, ...nativeWorkspaceHosts];
+  if (new Set(plans.map((plan) => plan.host)).size !== plans.length ||
+      plans.some((plan) => !allowed.includes(plan.host)) ||
+      hosts.some((host) => !plans.some((plan) => plan.host === host && plan.commands?.length > 0))) {
+    throw new Error('Release bundle must retain every supported update plan and exclude retired Gemini CLI.');
+  }
+}
 
 function parseArgs(argv) {
   const versionIndex = argv.indexOf('--version');
@@ -27,6 +59,18 @@ async function readJson(relativePath) {
 }
 
 async function assertBundleVersion(expectedVersion) {
+  for (const nativeRoot of ['plugins/antigravity/eai-gofer', 'plugins/eai-gofer/plugins/antigravity/eai-gofer']) {
+    const manifest = await readJson(`${nativeRoot}/plugin.json`);
+    const marker = await fs.readFile(path.join(repoRoot, nativeRoot, '.eai-gofer-plugin-version'), 'utf8');
+    if (manifest.name !== 'eai-gofer' ||
+        JSON.stringify(Object.keys(manifest).sort()) !== JSON.stringify(['description', 'name']) ||
+        marker.split('\n')[0] !== expectedVersion) {
+      throw new Error(`Native Antigravity manifest or version mismatch: ${nativeRoot}`);
+    }
+    for (const required of ['skills/eai/SKILL.md', 'skills/eai-update/SKILL.md', 'rules/gofer.md', '.specify/scripts/node/gofer-surface-update.mjs', '.specify/scripts/node/gofer-workspace-check.mjs']) {
+      await fs.access(path.join(repoRoot, nativeRoot, required));
+    }
+  }
   const manifests = [
     'package.json',
     'extension/package.json',
@@ -58,9 +102,7 @@ async function verifyInstructions() {
 
   try {
     const plans = updater.buildSurfacePlan({ action: 'update', host: 'all' });
-    if (plans.length !== hosts.length || plans.some((plan) => plan.commands.length === 0)) {
-      throw new Error('Release bundle does not provide an update plan for every supported host.');
-    }
+    verifyUpdatePlans(plans);
 
     const results = await updater.configureAlwaysOnInstructions(hosts, {
       home,
@@ -88,8 +130,23 @@ async function verifyInstructions() {
   }
 }
 
-const { version } = parseArgs(process.argv.slice(2));
-const expectedVersion = version || (await readJson('package.json')).version;
-await assertBundleVersion(expectedVersion);
-await verifyInstructions();
-console.log(`Gofer release surface contract passed for v${expectedVersion}.`);
+async function main() {
+  const { version } = parseArgs(process.argv.slice(2));
+  const expectedVersion = version || (await readJson('package.json')).version;
+  await assertBundleVersion(expectedVersion);
+  await verifyInstructions();
+  const bundleRoot = path.join(repoRoot, 'plugins/eai-gofer');
+  const bootstrap = await import(pathToFileURL(path.join(bundleRoot, '.specify/scripts/node/workspace-bootstrap-lib.mjs')).href);
+  verifyWorkspaceHostPolicies(bootstrap);
+  for (const relative of ['GEMINI.md', 'AGENTS.md', 'skills/eai/SKILL.md', 'skills/eai-update/SKILL.md']) {
+    await fs.access(path.join(bundleRoot, relative));
+  }
+  console.log(`Gofer release surface contract passed for v${expectedVersion}; native app loading is not tested.`);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

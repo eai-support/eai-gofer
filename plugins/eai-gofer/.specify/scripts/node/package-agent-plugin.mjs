@@ -12,6 +12,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
+import { buildPortableOrchestrationContract } from './lib/orchestration-contract.mjs';
+import { convertAntigravityAgent } from './lib/antigravity-agent.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -28,7 +30,7 @@ const PUBLIC_PLUGIN_URL = `${PUBLIC_RELEASES_URL}/plugins/${PLUGIN_NAME}`;
 const CLAUDE_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/claude-marketplace.json`;
 const CODEX_PLUGIN_MANIFEST_URL = `${PUBLIC_PLUGIN_URL}/codex-plugin.json`;
 const COPILOT_MARKETPLACE_URL = `${PUBLIC_PLUGIN_URL}/copilot-marketplace.json`;
-const GEMINI_EXTENSION_URL = `${PUBLIC_PLUGIN_URL}/gemini-extension.json`;
+const ANTIGRAVITY_PLUGIN_URL = `${PUBLIC_PLUGIN_URL}/plugins/antigravity/eai-gofer`;
 const PUBLIC_ENTRYPOINTS = [
   {
     stem: 'eai',
@@ -155,7 +157,7 @@ function buildCodexManifest(version, stages, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Antigravity, and VS Code.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -169,7 +171,7 @@ function buildCodexManifest(version, stages, paths = {}) {
       'codex',
       'claude',
       'copilot',
-      'gemini',
+      'antigravity',
       'spec-driven-development',
     ],
     skills: paths.skills ?? './skills/',
@@ -194,22 +196,10 @@ function buildCodexManifest(version, stages, paths = {}) {
   };
 }
 
-function buildGeminiManifest(version, paths = {}) {
+function buildAntigravityManifest() {
   return {
     name: PLUGIN_NAME,
-    version,
     description: 'Gofer single-entry delivery command with internal pipeline routing',
-    license: 'Apache-2.0',
-    commands: paths.commands ?? '.gemini/commands/gofer/',
-    gofer: {
-      bundle_url: PUBLIC_PLUGIN_URL,
-      manifest_url: `${PUBLIC_PLUGIN_URL}/gemini-extension.json`,
-      commands_manifest_url: `${PUBLIC_PLUGIN_URL}/gemini-commands-manifest.json`,
-      download_url: buildPublicAgentPluginZipUrl(version),
-      latest_download_url: buildLatestPublicAgentPluginZipUrl(),
-      vsix_url: buildPublicVsixUrl(version),
-      latest_vsix_url: buildLatestPublicVsixUrl(),
-    },
   };
 }
 
@@ -218,7 +208,7 @@ function buildPluginManifest(version, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Gemini, Codex, Copilot, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Antigravity, Codex, Copilot, and VS Code.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -232,7 +222,7 @@ function buildPluginManifest(version, paths = {}) {
       'claude-code',
       'codex',
       'copilot',
-      'gemini',
+      'antigravity',
       'spec-driven-development',
     ],
     skills: paths.skills ?? `./${UMBRELLA_SKILLS_DIR}/`,
@@ -268,7 +258,7 @@ function buildBundleMarketplace(version) {
     },
     metadata: {
       description:
-        'Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.',
+        'Public Gofer bundle for Claude Code, Antigravity, Codex, and Copilot workflows.',
       version,
     },
     plugins: [
@@ -291,7 +281,7 @@ function buildBundleMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
           'spec-driven-development',
         ],
       },
@@ -308,7 +298,7 @@ function buildRepoMarketplace(version) {
     },
     metadata: {
       description:
-        'Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.',
+        'Install the Gofer repo marketplace for Claude Code, Codex, or Copilot CLI; use the native sub-bundle for Antigravity.',
       version,
     },
     plugins: [
@@ -332,7 +322,7 @@ function buildRepoMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
           'spec-driven-development',
         ],
       },
@@ -403,6 +393,10 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. For an accepted scope change, update all five feature records before implementation continues: \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and \`validation-report.md\` (including the active validation scope). Explain the business effect and mark affected old evidence pending. Loop records supplement these five records; they never replace them. Name all five when explaining this process, even without an \`/eai\` prefix. A question alone does not authorize artifact edits.
+11. Validate only the current implemented or required capabilities. A local MVP with no implemented or required authentication needs no login before local preview. Record future authentication as planned, not passed. Keep confirmed non-app work exempt from EAI login, tenant setup and provisioning.
+12. Link every new requirement to a specific existing test or named planned check. Read the test before claiming it covers that requirement. File existence alone is not coverage. Keep missing or unexecuted checks pending. Never point new criteria to an unchanged test that does not assert them.
+13. Apply the user's word limit to the whole visible answer, including headings and lists. Count the draft before sending and shorten it to fit. Do not repeat the user's questions. Keep required facts; remove repeated explanations.
 <!-- gofer:always-on-eai:end -->`;
 }
 
@@ -594,7 +588,9 @@ ${buildEaiPlatformDecisionSection()}
 
 ## Token And Cost Policy
 
-- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.
+${buildPortableOrchestrationContract()}
+
+- Treat \`.specify/memory/gofer-model-policy.yaml\` as repo-owned tier preferences, not proof of model access. Use current host/client/account/profile evidence before overrides. Never copy API or other-surface IDs. Preserve user files; reject unadvertised preferences. Run the bootstrap contract if the policy is missing.
 - Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.
 - Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.
 - Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -618,7 +614,7 @@ The public release feed is available at:
 ${PUBLIC_SITE_URL}/releases.json
 \`\`\`
 
-Gemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.
+Antigravity CLI and desktop use the native bundle in \`plugins/antigravity/eai-gofer\`. Keep \`GEMINI.md\`: Antigravity still reads it. Legacy Gemini CLI extensions are no longer generated.
 `;
 }
 
@@ -643,7 +639,11 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 7. Update only the current host unless the user explicitly asks for \`--host all\`.
 8. Complete the host reload step from the helper result before saying the update is ready.
 
-Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
+Supported host targets are \`claude\`, \`codex\`, \`copilot\`, \`antigravity\` (CLI), \`antigravity-desktop\`, and \`vscode\`. Check the helper result for native validation limits.
+
+Grok Build supports native plugins and repo skills, but Gofer automatic install/update is unverified. Diagnostic targets \`grok\` (CLI), \`grok-bot\` (official desktop), and \`grok-desktop\` (product not yet identified) remain blocked for install/update before writes. Do not treat CLI access as desktop support. Keep the existing Grok repository skill and full scaffold. Check the actual client and skill source before claiming \`/eai\` works; cross-loading Claude files does not change the active host.
+
+Gemini CLI is retired as a Gofer surface. Use the Antigravity target for the actual client. Do not run Gemini extension commands, invent \`agy plugin update\`, or import all legacy settings. \`agy update\` updates the CLI, not Gofer. Retain \`GEMINI.md\` and preserve unrelated settings. Verify installed CLI help before plugin changes. Read \`.specify/references/portable-orchestration.md\` for model and account boundaries.
 
 This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
 `;
@@ -826,11 +826,11 @@ function buildPluginReadmeBase(version) {
 
 Version: ${version}
 
-This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
+This package is the portable Claude, Antigravity, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
 ## Public Sources
 
-Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, and Gemini CLI:
+Use the public GitHub repository as the install source for Claude Code, Codex and Copilot CLI. Antigravity uses the native sub-bundle:
 
 \`\`\`text
 ${REPOSITORY_URL}
@@ -851,7 +851,7 @@ That host publishes:
 - Claude marketplace manifest: \`${CLAUDE_MARKETPLACE_URL}\`
 - Codex manifest: \`${CODEX_PLUGIN_MANIFEST_URL}\`
 - Copilot marketplace manifest: \`${COPILOT_MARKETPLACE_URL}\`
-- Gemini extension manifest: \`${GEMINI_EXTENSION_URL}\`
+- Antigravity native plugin: \`${ANTIGRAVITY_PLUGIN_URL}\`
 
 ## First EAI Platform App
 
@@ -872,7 +872,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
 | GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
 | Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
-| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| Antigravity CLI / desktop | \`/eai\` native skill | \`.agents/skills/\`, \`GEMINI.md\`, \`.specify/scripts/\` |
 | Grok Build | Ask Grok to use the EAI skill | \`.grok/skills/\`, \`.specify/scripts/\` |
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
@@ -939,7 +939,7 @@ Optional helpers like problem validation, save, branding, tests, stakeholder com
 | Claude Code | \`claude plugin marketplace add ${REPOSITORY_URL} --scope user --sparse .claude-plugin --sparse plugins/eai-gofer\` then \`claude plugin install eai-gofer@eai-gofer --scope user\` | Unzip to \`~/plugins/eai-gofer\`, then \`claude plugin marketplace add ~/plugins/eai-gofer --scope user\` |
 | Codex | \`codex plugin marketplace add ${REPOSITORY_URL} --sparse .agents/plugins --sparse plugins/eai-gofer\` then \`codex plugin add eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`codex plugin marketplace add ~/plugins/eai-gofer\` |
 | GitHub Copilot CLI | \`copilot plugin marketplace add ${REPOSITORY_URL}\` then \`copilot plugin install eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`copilot plugin marketplace add ~/plugins/eai-gofer\` |
-| Gemini CLI | \`gemini extensions install ${REPOSITORY_URL} --auto-update\` | Unzip to \`~/plugins/eai-gofer\`, then \`gemini extensions install ~/plugins/eai-gofer\` |
+| Antigravity CLI / desktop | Use \`eai-update\` with the matching host target | Native bundle: \`plugins/antigravity/eai-gofer\`; do not install the generic root as an Antigravity plugin. |
 
 ## Download And Replace The Local Bundle Folder
 
@@ -1019,19 +1019,15 @@ copilot plugin marketplace add ~/plugins/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 \`\`\`
 
-## Gemini CLI
+## Antigravity CLI and Desktop
 
-Recommended public install:
-
-\`\`\`bash
-gemini extensions install ${REPOSITORY_URL} --auto-update
-\`\`\`
-
-Downloaded bundle install:
-
-\`\`\`bash
-gemini extensions install ~/plugins/eai-gofer
-\`\`\`
+Use the native bundle at \`plugins/antigravity/eai-gofer\` inside this download.
+CLI: check \`agy plugin --help\`, validate the native package, then install that local directory.
+Desktop: the native plugin directory belongs under \`~/.gemini/config/plugins/\`.
+Use \`eai-update\` with the exact host for managed updates. Restart the client
+after a successful update. Do not copy the generic plugin manifest into the
+native directory. Do not migrate credentials or other plugins automatically.
+See [Google's migration guide](https://antigravity.google/docs/cli/gcli-migration).
 `;
 }
 
@@ -1205,7 +1201,6 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   const pluginManifest = buildPluginManifest(version);
   const claudeManifest = buildClaudeManifest(version);
   const codexManifest = buildCodexManifest(version, stages);
-  const geminiManifest = buildGeminiManifest(version);
   const bundleMarketplace = buildBundleMarketplace(version);
 
   await writeJson(path.join(pluginRoot, 'plugin.json'), pluginManifest);
@@ -1217,8 +1212,6 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   await writeJson(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), codexManifest);
   await writeJson(path.join(pluginRoot, '.claude-plugin', 'plugin.json'), claudeManifest);
   await writeJson(path.join(pluginRoot, '.claude-plugin', 'marketplace.json'), bundleMarketplace);
-  await writeJson(path.join(pluginRoot, '.gemini', 'extension.json'), geminiManifest);
-  await writeJson(path.join(pluginRoot, 'gemini-extension.json'), geminiManifest);
   await writeJson(
     path.join(pluginRoot, '.agents', 'plugins', 'marketplace.json'),
     buildBundleCodexMarketplace(version)
@@ -1257,7 +1250,8 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     '.github/skills',
     '.claude/skills',
     '.claude-plugin/hooks',
-    '.gemini',
+    'GEMINI.md',
+    '.grok/skills',
     '.vscode/mcp.json',
     'AGENTS.md',
     'LICENSE',
@@ -1268,7 +1262,6 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   for (const relativePath of copiedResources) {
     await copyIfExists(root, relativePath, pluginRoot);
   }
-  await writeJson(path.join(pluginRoot, '.gemini', 'extension.json'), geminiManifest);
   await copyIfExistsAs(root, '.claude/commands', 'commands', pluginRoot);
   await copyIfExistsAs(root, '.claude/agents', 'agents', pluginRoot);
   await copyPluginAssets(root, pluginRoot);
@@ -1285,6 +1278,24 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     const target = path.join(nestedPluginRoot, entry);
     await fs.cp(source, target, { recursive: true, force: true, dereference: false });
   }
+  await writeAntigravityPlugin(pluginRoot, version);
+}
+
+async function writeAntigravityPlugin(pluginRoot, version) {
+  const nativeRoot = path.join(pluginRoot, 'plugins', 'antigravity', PLUGIN_NAME);
+  await fs.mkdir(nativeRoot, { recursive: true });
+  await writeJson(path.join(nativeRoot, 'plugin.json'), buildAntigravityManifest());
+  for (const resource of ['skills', '.specify', 'LICENSE', 'NOTICE', 'TRADEMARKS.md']) {
+    await copyIfExists(pluginRoot, resource, nativeRoot);
+  }
+  const agentsRoot = path.join(pluginRoot, 'agents');
+  for (const entry of await fs.readdir(agentsRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) throw new Error('Unexpected native agent source entry.');
+    const original = await fs.readFile(path.join(agentsRoot, entry.name), 'utf8');
+    await writeText(path.join(nativeRoot, 'agents', entry.name), convertAntigravityAgent(original));
+  }
+  await writeText(path.join(nativeRoot, '.eai-gofer-plugin-version'), `${version}\n${GENERATED_MARKER}\n`);
+  await writeText(path.join(nativeRoot, 'rules', 'gofer.md'), `# Gofer Delivery\n\nApply the eai skill to each request. Keep replies short and business-first.\nResolve the current workspace separately from this plugin directory. Read\nworkspace Gofer state first. If its scaffold is missing, ask before bootstrap.\nUse the plugin's .specify/scripts/node helpers only when workspace helpers are\nmissing. Never treat this installed plugin as the user's application repo.\nUse Antigravity's current model and permissions. Do not reuse another app's\nmodel IDs or guess CLI flags. Apply the maintenance skill only on an explicit\ninstall or update request. Do not import credentials or unrelated plugins.\n`);
 }
 
 async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
@@ -1323,8 +1334,14 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
     })
   );
   await writeJson(path.join(root, '.claude-plugin', 'marketplace.json'), buildRepoMarketplace(version));
-  await writeJson(path.join(root, '.gemini', 'extension.json'), buildGeminiManifest(version));
-  await writeJson(path.join(root, 'gemini-extension.json'), buildGeminiManifest(version));
+  // Retire only known generated manifests; preserve unrelated Gemini settings.
+  for (const relative of ['.gemini/extension.json', 'gemini-extension.json']) {
+    const file = path.join(root, relative);
+    try {
+      const previous = await readJson(file);
+      if (previous.name === PLUGIN_NAME && previous.gofer) await fs.rm(file);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   for (const staleName of ['eai-gofer', 'gofer']) {
     await fs.rm(path.join(root, UMBRELLA_SKILLS_DIR, staleName), { recursive: true, force: true });
     await fs.rm(path.join(root, 'skills', staleName), { recursive: true, force: true });
@@ -1348,6 +1365,10 @@ async function syncRepoManifests(root, version, stages, stagedPluginRoot) {
   await fs.rm(repoPluginDir, { recursive: true, force: true });
   await fs.mkdir(path.dirname(repoPluginDir), { recursive: true });
   await fs.cp(stagedPluginRoot, repoPluginDir, { recursive: true, force: true, dereference: false });
+  const nativeRepoDir = path.join(root, 'plugins', 'antigravity', PLUGIN_NAME);
+  await fs.rm(nativeRepoDir, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(nativeRepoDir), { recursive: true });
+  await fs.cp(path.join(stagedPluginRoot, 'plugins', 'antigravity', PLUGIN_NAME), nativeRepoDir, { recursive: true, dereference: false });
 }
 
 async function main() {

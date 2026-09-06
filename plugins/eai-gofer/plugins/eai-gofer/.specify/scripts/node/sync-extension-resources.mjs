@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const IS_DIRECT_RUN = process.argv[1] ? path.resolve(process.argv[1]) === __filename : false;
 
-const SYNC_PAIRS = [
+export const SYNC_PAIRS = [
   ['.claude/commands', 'extension/resources/claude-commands'],
   ['.claude/agents', 'extension/resources/claude-agents'],
   ['.claude/skills', 'extension/resources/claude-skills'],
@@ -17,7 +17,7 @@ const SYNC_PAIRS = [
   ['.github/prompts', 'extension/resources/copilot-prompts'],
   ['.github/instructions', 'extension/resources/copilot-instructions'],
   ['.github/skills', 'extension/resources/github-skills'],
-  ['.gemini', 'extension/resources/gemini'],
+  ['.agents/skills', 'extension/resources/agents-skills'],
   ['.grok/skills', 'extension/resources/grok-skills'],
   ['.specify/commands', 'extension/resources/specify-commands'],
   ['.specify/config', 'extension/resources/specify-config'],
@@ -134,6 +134,9 @@ async function syncDirectory(sourcePath, targetPath) {
 
 export async function check() {
   const drift = [];
+  if (await pathExists(path.join(REPO_ROOT, 'extension/resources/gemini'))) {
+    drift.push('extension/resources/gemini (retired Gemini CLI resources)');
+  }
   const codexFragmentPath = path.join(REPO_ROOT, '.specify', 'outputs', 'codex-config-fragment.toml');
   const codexConfigPath = path.join(REPO_ROOT, 'codex-config.toml');
   if (!(await filesMatch(codexFragmentPath, codexConfigPath))) drift.push('codex-config.toml');
@@ -163,6 +166,7 @@ export async function main({ checkOnly = false } = {}) {
   await copyFileWithMode(codexFragmentPath, codexConfigPath);
 
   console.log('i Syncing canonical sources into extension/resources/ ...');
+  await fs.rm(path.join(REPO_ROOT, 'extension/resources/gemini'), { recursive: true, force: true });
   for (const [sourceRelativePath, targetRelativePath] of SYNC_PAIRS) {
     await syncDirectory(
       path.join(REPO_ROOT, sourceRelativePath),

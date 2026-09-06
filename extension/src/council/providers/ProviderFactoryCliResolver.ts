@@ -1,10 +1,13 @@
+import {
+  assertAutonomousSurfaceSupported,
+  parseRuntimeSurfacePreference,
+} from '../../config/runtimeSurface';
 import * as vscode from 'vscode';
 import { type WorkflowProfile } from '../../config/workflowProfile';
 import { type LLMProvider } from './LLMProvider';
 import { type CLIHealthResult } from './cli/CLIHealthChecker';
 
 export type CLIType = 'claude' | 'codex';
-type CLIPreference = CLIType | 'copilot' | 'gemini' | 'auto';
 
 interface CLIResolverLogger {
   info(message: string, metadata?: Record<string, unknown>): void;
@@ -85,13 +88,11 @@ export class ProviderFactoryCliResolver {
     const config = vscode.workspace.getConfiguration('gofer');
     const profileContext = this.dependencies.resolveWorkflowProfileContext(workflowProfile, config);
 
-    const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
+    const defaultCLI = parseRuntimeSurfacePreference(config.get('defaultCLI', 'auto'));
+    assertAutonomousSurfaceSupported(defaultCLI);
 
     if (defaultCLI !== 'auto') {
-      if (defaultCLI === 'copilot' || defaultCLI === 'gemini') {
+      if (defaultCLI === 'copilot') {
         this.dependencies.logger.info(
           `gofer.defaultCLI is set to ${defaultCLI}; evaluating CLI-capable fallbacks for autonomous mode`,
           {
@@ -176,17 +177,21 @@ export class ProviderFactoryCliResolver {
   public async getCLIProvider(workflowProfile?: WorkflowProfile): Promise<LLMProvider> {
     const { CLIHealthChecker } = await import('./cli/CLIHealthChecker');
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get<CLIPreference>('cliProvider', 'auto');
+    const preference = parseRuntimeSurfacePreference(config.get('cliProvider', 'auto'));
+    assertAutonomousSurfaceSupported(preference);
+    // Validate a retired default even when a second setting overrides execution.
+    const defaultCLI = parseRuntimeSurfacePreference(config.get('defaultCLI', 'auto'));
+    if (preference === 'auto') assertAutonomousSurfaceSupported(defaultCLI);
     const profileContext = this.dependencies.resolveWorkflowProfileContext(workflowProfile, config);
 
-    if (preference === 'copilot' || preference === 'gemini') {
+    if (preference === 'copilot') {
       this.dependencies.logger.info(
         `gofer.cliProvider is set to ${preference}; autonomous mode will use CLI-capable auto-detection (Claude/Codex)`,
         {
           workflowProfile: profileContext,
         }
       );
-    } else if (preference !== 'auto') {
+    } else if (preference === 'claude' || preference === 'codex') {
       try {
         const provider = await this.dependencies.createCLIProvider(
           preference,

@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CrossPlatformCommandRouter } from '../../../extension/src/council/CrossPlatformCommandRouter';
+import { ConfigManager } from '../../../extension/src/config';
 import { normalizeWorkflowProfile } from '../../../extension/src/config/workflowProfile';
 import { generateEnterpriseAiPlanAndTasks } from '../../../extension/src/services/enterpriseai/internalApi/GenerateEnterpriseAiPlanAndTasks';
 import { generateStakeholderArtifacts } from '../../../extension/src/services/enterpriseai/internalApi/GenerateStakeholderArtifacts';
@@ -119,6 +121,15 @@ function seedStakeholderInputs(workspaceRoot: string): void {
 }
 
 describe('enterpriseai non-eai output regression (root integration)', () => {
+  beforeEach(() => {
+    vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
+      // Match VS Code's default-value behavior without bypassing surface validation.
+      get: vi.fn((...args: unknown[]) => args[1]),
+      update: vi.fn(),
+    } as unknown as vscode.WorkspaceConfiguration);
+    ConfigManager.getInstance().refresh();
+  });
+
   it('preserves standard profile activation defaults and non-EAI planning metadata outputs', () => {
     const baselineProvenance = readStandardBaselineProvenance();
     expect(baselineProvenance.baselineId).toBe('pre-enterpriseai-standard-profile-v1');

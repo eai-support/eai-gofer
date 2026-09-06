@@ -38,6 +38,9 @@ sync_dir() {
 
 log "Syncing canonical sources into extension/resources/ ..."
 
+# This directory is generated bundle output, not a user's Gemini configuration.
+rm -rf extension/resources/gemini
+
 sync_dir ".claude/commands"        "extension/resources/claude-commands"
 sync_dir ".claude/agents"          "extension/resources/claude-agents"
 sync_dir ".claude/skills"          "extension/resources/claude-skills"
@@ -45,7 +48,7 @@ sync_dir ".github/agents"          "extension/resources/github-agents"
 sync_dir ".github/prompts"         "extension/resources/copilot-prompts"
 sync_dir ".github/instructions"    "extension/resources/copilot-instructions"
 sync_dir ".github/skills"          "extension/resources/github-skills"
-sync_dir ".gemini"                 "extension/resources/gemini"
+sync_dir ".agents/skills"          "extension/resources/agents-skills"
 sync_dir ".specify/commands"       "extension/resources/specify-commands"
 sync_dir ".specify/contracts"      "extension/resources/contracts"
 sync_dir ".specify/references"     "extension/resources/references"

@@ -1055,12 +1055,17 @@ export async function reduceObjectTypeRoutingWorkspace(workspaceInput) {
     auditSchema: 'ops/gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
     auditConfig: 'ops/gofer/.specify/config/object-type-routing.json',
   };
-  const authorityEntries = await Promise.all(
+  const authorityReads = await Promise.allSettled(
     Object.entries(authorityPaths).map(async ([key, relativePath]) => {
       const bytes = await readRequired(workspace, relativePath);
       return [key, { path: relativePath, bytes, digest: digestBytes(bytes) }];
     })
   );
+  // Preserve parallel reads, but select missing-authority errors in contract order.
+  const authorityEntries = authorityReads.map((result) => {
+    if (result.status === 'rejected') throw result.reason;
+    return result.value;
+  });
   const authority = Object.fromEntries(authorityEntries);
   const contractDocument = parseJson(authority.contract.bytes, authority.contract.path);
   const manifestSchema = parseJson(authority.manifestSchema.bytes, authority.manifestSchema.path);

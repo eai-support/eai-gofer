@@ -8,7 +8,8 @@
  *
  * Surfaces: claude, claude-mirror, copilot, github-prompts, github-agents,
  *           github-skills, claude-skills, agents-skills, system-skills,
- *           grok-skills, gemini, agents-md, codex-config
+ *           grok-skills, agents-md, codex-config
+ * Antigravity CLI/desktop share agents-skills with Codex; Gemini CLI is retired.
  */
 
 import { promises as fs } from 'fs';
@@ -16,6 +17,7 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { validateDescriptions } from './canonical-descriptions.mjs';
 import { parseStageCommand } from './parse-stage-command.mjs';
+import { buildPortableOrchestrationContract } from './lib/orchestration-contract.mjs';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -27,7 +29,7 @@ import { parseStageCommand } from './parse-stage-command.mjs';
  */
 export const CLAUDE_ONLY_STAGES = [];
 
-const ALL_SURFACES = [
+export const ALL_SURFACES = [
   'claude',
   'claude-mirror',
   'claude-skills',
@@ -38,14 +40,10 @@ const ALL_SURFACES = [
   'agents-skills',
   'system-skills',
   'grok-skills',
-  'gemini',
   'agents-md',
   'codex-config',
 ];
 
-const PUBLIC_SITE_URL = 'https://eai-support.github.io/eai-gofer';
-const PUBLIC_RELEASES_URL = `${PUBLIC_SITE_URL}/releases`;
-const PUBLIC_PLUGIN_URL = `${PUBLIC_RELEASES_URL}/plugins/eai-gofer`;
 const PUBLIC_ENTRYPOINTS = [
   {
     stem: 'eai',
@@ -68,10 +66,9 @@ const SURFACE_WORKSPACE_HOSTS = {
   'github-prompts': 'copilot',
   'github-agents': 'copilot',
   'github-skills': 'copilot',
-  'agents-skills': 'codex',
+  'agents-skills': 'portable',
   'system-skills': 'codex',
   'grok-skills': 'grok',
-  'gemini': 'gemini',
 };
 const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
   'gofer:plan',
@@ -102,7 +99,7 @@ const LEGACY_STAGE_STEMS = new Map([
  * Returns true if the given stage should be excluded from the given surface.
  * Gofer keeps this function for older tests/imports, but no stages are
  * excluded by name anymore. Surface availability is controlled by stage
- * frontmatter so Claude, Copilot, Codex, and Gemini stay in parity.
+ * frontmatter so Claude, Copilot, Codex, and Antigravity stay in parity.
  *
  * @param {string} stageName
  * @param {string} surface
@@ -146,25 +143,6 @@ async function detectPackageVersion(root) {
   }
 
   return '1.0.0';
-}
-
-function buildGeminiExtensionManifest(version) {
-  return {
-    name: 'eai-gofer',
-    version,
-    description: 'Gofer single-entry delivery command with internal pipeline routing',
-    license: 'Apache-2.0',
-    commands: '.gemini/commands/gofer/',
-    gofer: {
-      bundle_url: PUBLIC_PLUGIN_URL,
-      manifest_url: `${PUBLIC_PLUGIN_URL}/gemini-extension.json`,
-      commands_manifest_url: `${PUBLIC_PLUGIN_URL}/gemini-commands-manifest.json`,
-      download_url: `${PUBLIC_RELEASES_URL}/eai-gofer-agent-plugin-${version}.zip`,
-      latest_download_url: `${PUBLIC_RELEASES_URL}/eai-gofer-agent-plugin-latest.zip`,
-      vsix_url: `${PUBLIC_RELEASES_URL}/eai-gofer-${version}.vsix`,
-      latest_vsix_url: `${PUBLIC_RELEASES_URL}/eai-gofer-latest.vsix`,
-    },
-  };
 }
 
 /**
@@ -253,6 +231,106 @@ async function clearDirectoryEntries(dirPath, predicate, dryRun, label) {
   }
 }
 
+async function plainDirectoryChain(root, relative, create = false) {
+  let current = root;
+  for (const component of relative.split('/')) {
+    current = path.join(current, component);
+    try {
+      const stat = await fs.lstat(current);
+      if (!stat.isDirectory() || stat.isSymbolicLink()) {
+        throw new Error(`Preserved non-directory or symlink at ${current}; review Gemini retirement manually.`);
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      if (!create) return false;
+      await fs.mkdir(current);
+    }
+  }
+  return true;
+}
+
+function isLegacyGeminiOutput(name, content) {
+  const text = content.replace(/\r\n/g, '\n').trim();
+  if (name === 'manifest.json') {
+    try {
+      const manifest = JSON.parse(text);
+      return manifest?.version === '1.0' && typeof manifest.generated === 'string' &&
+        Number.isFinite(Date.parse(manifest.generated)) &&
+        JSON.stringify(Object.keys(manifest).sort()) === '["commands","generated","version"]' &&
+        JSON.stringify(manifest.commands) === '["eai","eai-update"]';
+    } catch { return false; }
+  }
+  const entry = PUBLIC_ENTRYPOINTS.find((entry) => name === `${entry.stem}.toml`);
+  if (entry) {
+    return text === `description = "${entry.description}"\nprompt = "{{include: ./${entry.stem}.md}}"`;
+  }
+  if (name === 'eai.md') {
+    return text.startsWith('# Eai\n') && text.includes('## User-Facing Contract') &&
+      text.includes('<!-- gofer:always-on-eai:start -->') &&
+      text.includes('gofer-workspace-check.mjs --host gemini --json');
+  }
+  return name === 'eai-update.md' && text.startsWith('## Update EAI Gofer\n') &&
+    text.includes('## Update Contract') &&
+    text.includes('gofer-surface-update.mjs --action inspect --host gemini --json');
+}
+
+// Archive recognised output, rather than delete it: old wrappers may contain local edits.
+export async function retireLegacyGeminiCommands(root, { dryRun = false } = {}) {
+  const relativeDir = '.gemini/commands/gofer';
+  const report = { found: [], preserved: [], archived: [], archiveRoot: null };
+  const candidates = [];
+  const commandNames = await plainDirectoryChain(root, relativeDir)
+    ? [...PUBLIC_ENTRYPOINTS.flatMap(entry => [`${entry.stem}.md`, `${entry.stem}.toml`]), 'manifest.json']
+    : [];
+  for (const name of commandNames) {
+    const relative = `${relativeDir}/${name}`;
+    const file = path.join(root, relative);
+    let stat;
+    try { stat = await fs.lstat(file); } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
+    report.found.push(relative);
+    if (!stat.isFile() || stat.isSymbolicLink() || !isLegacyGeminiOutput(name, await fs.readFile(file, 'utf8'))) {
+      report.preserved.push(relative);
+      continue;
+    }
+    candidates.push({ name, relative, file });
+  }
+  const agentsDir = '.gemini/agents';
+  if (await plainDirectoryChain(root, agentsDir) && await plainDirectoryChain(root, '.claude/agents')) {
+    const entries = await fs.readdir(path.join(root, agentsDir), { withFileTypes: true });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const canonical = path.join(root, '.claude/agents', entry.name);
+      let canonicalStat;
+      try { canonicalStat = await fs.lstat(canonical); } catch (error) {
+        if (error?.code === 'ENOENT') continue; // Unknown files remain outside managed retirement.
+        throw error;
+      }
+      const relative = `${agentsDir}/${entry.name}`;
+      const file = path.join(root, relative);
+      report.found.push(relative);
+      if (!entry.isFile() || !canonicalStat.isFile() || canonicalStat.isSymbolicLink() ||
+          !(await fs.readFile(file)).equals(await fs.readFile(canonical))) {
+        report.preserved.push(relative);
+        continue;
+      }
+      candidates.push({ name: path.join('agents', entry.name), relative, file });
+    }
+  }
+  if (dryRun || candidates.length === 0) return report;
+  const archiveParent = '.specify/logs/legacy-command-backups';
+  await plainDirectoryChain(root, archiveParent, true);
+  report.archiveRoot = await fs.mkdtemp(path.join(root, archiveParent, 'gemini-'));
+  for (const { name, relative, file } of candidates) {
+    const backup = path.join(report.archiveRoot, name);
+    await fs.mkdir(path.dirname(backup), { recursive: true });
+    await fs.rename(file, backup);
+    report.archived.push(relative);
+  }
+  return report;
+}
+
 function getCodexLegacySkillDirs(root, surfaceRoot, stageStem, stageName) {
   return [
     path.join(root, surfaceRoot, stageName),
@@ -282,6 +360,10 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. For an accepted scope change, update all five feature records before implementation continues: \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and \`validation-report.md\` (including the active validation scope). Explain the business effect and mark affected old evidence pending. Loop records supplement these five records; they never replace them. Name all five when explaining this process, even without an \`/eai\` prefix. A question alone does not authorize artifact edits.
+11. Validate only the current implemented or required capabilities. A local MVP with no implemented or required authentication needs no login before local preview. Record future authentication as planned, not passed. Keep confirmed non-app work exempt from EAI login, tenant setup and provisioning.
+12. Link every new requirement to a specific existing test or named planned check. Read the test before claiming it covers that requirement. File existence alone is not coverage. Keep missing or unexecuted checks pending. Never point new criteria to an unchanged test that does not assert them.
+13. Apply the user's word limit to the whole visible answer, including headings and lists. Count the draft before sending and shorten it to fit. Do not repeat the user's questions. Keep required facts; remove repeated explanations.
 <!-- gofer:always-on-eai:end -->`;
 }
 
@@ -372,6 +454,8 @@ function buildPublicEntrypointMarkdown(entry, stages, host) {
     return buildEaiUpdateEntrypointMarkdown(host);
   }
 
+  const hostGuidance = buildSharedHostGuidance(host);
+  if (host === 'portable') host = '<host>';
   return `# ${entry.title}
 
 Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
@@ -406,6 +490,8 @@ ${buildAlwaysEaiSection()}
 
 ## Workspace Preflight
 
+${hostGuidance}
+
 1. Resolve the repository root.
 2. Run \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\` when available.
 3. If the repo is missing or stale, ask exactly: **"This repo is missing or stale for Gofer. Initialize/update it now?"**
@@ -417,6 +503,9 @@ ${buildLocalSettingsCleanupContractSection()}
 ${buildAppPreviewRunnerContractSection()}
 
 ${buildJourneyStateSection()}
+
+${buildPortableOrchestrationContract()}
+${host === 'copilot' ? '\nFor approved extra-model work in VS Code, call `gofer_discover_models` (`#goferDiscoverModels`) with `{}` before `gofer_execute_stage` (`#goferExecuteStage`). Discovery does not infer. If either native tool is missing, report that once. Do not search old logs or substitute CLI discovery. Check that this chat exposes extension tools; agent-host and remote sessions need separate support.\n' : ''}
 
 ${buildMvpCapabilityValidationSection()}
 
@@ -471,30 +560,43 @@ ${buildInternalStageList(stages)}
 `;
 }
 
+function buildSharedHostGuidance(host) {
+  return host === 'portable'
+    ? 'This skill is shared by Codex, Antigravity CLI, and Antigravity desktop. Replace `<host>` in every command below with `codex`, `antigravity`, or `antigravity-desktop` for the actual app. Never execute an unresolved placeholder or infer the host from this shared folder. Keep `GEMINI.md` and `AGENTS.md`. Gemini CLI is retired; migrate to Antigravity. Workspace files do not prove native skill discovery or model execution.'
+    : '';
+}
+
 function buildEaiUpdateEntrypointMarkdown(host) {
   if (host === 'grok') {
     return `## Update EAI Gofer
 
-Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+Grok Build now supports native plugins and marketplaces. Gofer has not verified its own native install/update integration here. This command must not claim an update succeeded.
 
 ## What To Do
 
-1. Add EAI Gofer to the repository from a supported host.
-2. Open that repository in Grok Build.
-3. Use the repository \`eai\` skill to continue work.
+1. Confirm this is Grok Build CLI, not Grok Bot desktop or a third-party wrapper.
+2. Resolve the Gofer repository or installed bundle root. Use \`node <resolved-gofer-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host grok --json\` for status. Replace the placeholder with that verified root; the helper is not a command on PATH. Install/update actions remain blocked before writes.
+3. Keep the existing repository \`.grok/skills/eai/SKILL.md\` and full Gofer scaffold. Read current \`grok inspect --help\` before using \`grok inspect --json\` to verify discovery. Treat its output as private; do not paste raw config or MCP details into chat.
+4. Check the \`/eai\` picker and a harmless task in the actual client before claiming the skill works. Existing generated files are not native evidence.
 
-Do not run \`gofer-surface-update.mjs --host grok\`. That host is not supported by the updater.
+Grok reads some Claude and AGENTS files too. Verify the selected skill source instead of deleting other hosts' files. Keep all internal stages. Skill model/effort metadata does not select a model; allowed-tools does not enforce read-only review. Use host-enforced permissions.
+
+Grok Bot desktop is a separate target (\`grok-bot\`). Its Plugins settings and skills do not prove that this CLI bundle loads there. Read \`.specify/references/portable-orchestration.md\` for limits. Do not invent a plugin update command or change user settings.
 `;
   }
 
+  const hostGuidance = buildSharedHostGuidance(host);
+  if (host === 'portable') host = '<host>';
   return `## Update EAI Gofer
 
 Use this command to install or update EAI Gofer for the current AI coding app. This command works without an EAI project, a Gofer scaffold, or EAI sign-in.
 
 ## Update Contract
 
+${hostGuidance}
+
 1. Do not run workspace checks, \`eai init\`, \`eai whoami\`, or pipeline stages.
-2. Check the current host first:
+2. Verify the actual product and client before using the host-specific command below. Antigravity is not Gemini CLI. For Antigravity CLI, desktop, IDE, or Gemini desktop, use the explicit diagnostic targets listed below instead. Check the current host first:
    \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${host} --json\`
 3. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
 4. State whether EAI Gofer is installed and whether the host command is available.
@@ -511,14 +613,18 @@ Use this command to install or update EAI Gofer for the current AI coding app. T
 - Claude Code: refresh the marketplace and plugin, then run \`/reload-plugins\`.
 - Codex: refresh a confirmed Git marketplace and apply the plugin, then start a new task or restart Codex. A clean official local \`main\` checkout fast-forwards and applies the plugin. Other local checkouts keep their work unchanged, refresh the always-on instruction, and report what needs attention. An unknown source stops the update to protect local work.
 - GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
-- Gemini CLI: update the extension, then start a new Gemini CLI session.
+- Gemini CLI is retired. Migrate to Antigravity CLI or desktop; do not install or update the old Gemini extension.
 - VS Code: install or update \`EnterpriseAI.gofer\`, then run **Developer: Reload Window**.
+
+## Other Google Apps
+
+Use \`antigravity\` for CLI and \`antigravity-desktop\` for desktop. Both use the shared workspace \`.agents/skills/eai/\` and \`.agents/skills/eai-update/\`; keep \`GEMINI.md\`. Follow the helper's explicit plan and stop if it reports blocked. Do not infer native loading from generated files, run Gemini extension commands, invent \`agy plugin update\`, or change global instructions. \`agy update\` updates the CLI, not Gofer. IDE extensions and Gemini desktop are separate targets. Read \`.specify/references/portable-orchestration.md\` for product and account boundaries.
 
 ## Limits
 
 - This command updates user-level plugins and extensions. It archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
 - For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
-- Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
+- Grok Build supports native plugins, but Gofer's automatic install/update integration is not verified. Keep its existing repository skill path. Grok Bot desktop is a separate, unverified integration; do not infer support from the CLI.
 - Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
 `;
 }
@@ -529,12 +635,8 @@ function buildPublicEntrypointPrompt(entry, stages, host) {
     `name: ${entry.name}`,
     `description: ${entry.description}`,
     'agent: agent',
-    'tools:',
-    '  - Read',
-    '  - Grep',
-    '  - Glob',
-    '  - Bash',
-    '  - WebSearch',
+    // Inherit the current host's enabled tools. Foreign aliases here silently
+    // exclude native Gofer tools and can remove terminal/edit capabilities.
     'argument-hint: goal-or-feature-description',
     'gofer:',
     '  workflowProfile: standard',
@@ -547,7 +649,7 @@ function buildPublicEntrypointPrompt(entry, stages, host) {
   ].join('\n');
 }
 
-function buildPublicEntrypointSkill(entry, version, stages, hostLabel, host) {
+export function buildPublicEntrypointSkill(entry, version, stages, hostLabel, host) {
   return `---\nname: ${entry.name}\ndescription: "${entry.description}"\n---\n\n# ${entry.title}\n\nVersion: ${version}\nHost: ${hostLabel}\n\n${buildPublicEntrypointMarkdown(entry, stages, host)}`;
 }
 
@@ -886,7 +988,8 @@ Before doing stage/helper work:
    - Claude: \`AGENTS.md\`, \`CLAUDE.md\`, \`.claude/settings.json\`
    - Codex: \`AGENTS.md\`
    - Copilot: \`.github/copilot-instructions.md\`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - Antigravity CLI/desktop: \`AGENTS.md\`, \`GEMINI.md\`, \`.agents/skills/eai/SKILL.md\`, \`.agents/skills/eai-update/SKILL.md\`. Use \`--host antigravity\` or \`--host antigravity-desktop\`, not the retired \`gemini\` host.
+   - VS Code extension mirrors supported resources itself and should still keep the core scaffold healthy
 4. If the repo already has the workspace checker script, prefer running:
    - \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\`
 5. If the workspace is missing or stale, ask exactly:
@@ -941,16 +1044,16 @@ function buildTokenCostPolicySection() {
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run \`/gofer:bootstrap-workspace\` before continuing.
+1. Treat \`.specify/memory/gofer-model-policy.yaml\` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in \`.specify/references/portable-orchestration.md\`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to \`.specify/specs/{feature}/context-bundle.md\`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in \`.specify/references/portable-orchestration.md\`: \`/eai\` calls \`gofer-stage-execute.mjs\` on CLI or native \`gofer_execute_stage\` with \`{request}\` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. \`GOFER_STAGE_DELEGATE=1\` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 `.trim();
 }
@@ -1189,6 +1292,10 @@ function injectTokenCostPolicyOnly(content) {
   return insertSectionAfterTitle(content, section);
 }
 
+export function normalizeCanonicalCommandSource(source) {
+  return injectTokenCostPolicy(injectEaiPlatformSessionPreflight(source));
+}
+
 async function refreshCanonicalCommandSources(root, dryRun) {
   const commandsDir = path.join(root, '.specify', 'commands');
   let entries;
@@ -1207,7 +1314,7 @@ async function refreshCanonicalCommandSources(root, dryRun) {
     // Emitter tests use intentionally partial command fixtures. Only normalize
     // canonical command files that can be parsed and emitted as real stages.
     if (!source.startsWith('---')) continue;
-    const refreshed = injectTokenCostPolicy(injectEaiPlatformSessionPreflight(source));
+    const refreshed = normalizeCanonicalCommandSource(source);
     if (refreshed === source) continue;
 
     changed++;
@@ -1320,6 +1427,8 @@ function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
 
 function getGithubAgentSpecs() {
   const goferTools = [
+    'goferDiscoverModels',
+    'goferExecuteStage',
     'search/codebase',
     'vscode/askQuestion',
     'gofer_check_workspace',
@@ -1433,7 +1542,7 @@ function escapeTomlString(value) {
 
 /**
  * T041 — agents-skills emitter
- * Emits Codex SKILL.md to .agents/skills/<name>/SKILL.md.
+ * Emits shared Codex and Antigravity SKILL.md to .agents/skills/<name>/SKILL.md.
  * Emits every stage whose frontmatter includes the agents-skills surface.
  *
  * @param {Array} stages
@@ -1452,7 +1561,7 @@ async function emitAgentsSkills(stages, root, dryRun) {
       entry,
       version,
       stages,
-      'Codex',
+      'Codex / Antigravity CLI / Antigravity desktop',
       SURFACE_WORKSPACE_HOSTS['agents-skills']
     );
 
@@ -1608,83 +1717,8 @@ async function emitGrokSkills(stages, root, dryRun) {
 }
 
 /**
- * T065 — gemini emitter
- * Emits plain markdown body and TOML command wrappers to
- * .gemini/commands/gofer/<name>.md and <name>.toml.
- * T066 — also creates .gemini/commands/gofer/manifest.json listing all emitted stage names.
- *
- * @param {Array} stages
- * @param {string} root
- * @param {boolean} dryRun
- */
-async function emitGemini(stages, root, dryRun) {
-  const outDir = path.join(root, '.gemini', 'commands', 'gofer');
-  const extensionPath = path.join(root, '.gemini', 'extension.json');
-  const version = await detectPackageVersion(root);
-  const emittedNames = [];
-  let count = 0;
-
-  await clearDirectoryEntries(
-    outDir,
-    (entry) => entry.name.endsWith('.md') || entry.name.endsWith('.toml'),
-    dryRun,
-    'gemini'
-  );
-
-  for (const entry of PUBLIC_ENTRYPOINTS) {
-    const markdownPath = path.join(outDir, `${entry.stem}.md`);
-    const tomlPath = path.join(outDir, `${entry.stem}.toml`);
-    const tomlContent = [
-      `description = "${escapeTomlString(entry.description)}"`,
-      `prompt = "{{include: ./${entry.stem}.md}}"`,
-      '',
-    ].join('\n');
-
-    if (dryRun) {
-      console.log(`[dry-run] gemini: would write ${markdownPath}`);
-      console.log(`[dry-run] gemini: would write ${tomlPath}`);
-    } else {
-      await ensureDir(outDir);
-      await fs.writeFile(markdownPath, buildPublicEntrypointMarkdown(entry, stages, 'gemini'), 'utf8');
-      await fs.writeFile(tomlPath, tomlContent, 'utf8');
-      console.log(`gemini: wrote ${markdownPath}`);
-      console.log(`gemini: wrote ${tomlPath}`);
-    }
-    emittedNames.push(entry.name);
-    count++;
-  }
-
-  // T066 — write manifest.json
-  const manifestPath = path.join(outDir, 'manifest.json');
-  const sortedNames = [...emittedNames].sort();
-  const manifest = {
-    version: '1.0',
-    generated: new Date().toISOString(),
-    commands: sortedNames,
-  };
-
-  if (dryRun) {
-    console.log(`[dry-run] gemini: would write manifest ${manifestPath}`);
-    console.log(`[dry-run] gemini: would write extension manifest ${extensionPath}`);
-  } else {
-    await ensureDir(outDir);
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-    await fs.writeFile(
-      extensionPath,
-      JSON.stringify(buildGeminiExtensionManifest(version), null, 2) + '\n',
-      'utf8'
-    );
-    console.log(`gemini: wrote manifest ${manifestPath}`);
-    console.log(`gemini: wrote extension manifest ${extensionPath}`);
-  }
-
-  console.log(`gemini: ${count} file(s) emitted`);
-  return true;
-}
-
-/**
  * T067 — agents-md emitter
- * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Gemini/Codex.
+ * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Antigravity/Codex.
  * Includes all stages emitted to portable agent surfaces.
  *
  * @param {Array} stages
@@ -1801,7 +1835,6 @@ const EMITTERS = {
   'agents-skills': emitAgentsSkills,
   'system-skills': emitSystemSkills,
   'grok-skills': emitGrokSkills,
-  'gemini': emitGemini,
   'agents-md': emitAgentsMd,
   'codex-config': emitCodexConfig,
 };
@@ -1809,6 +1842,17 @@ const EMITTERS = {
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
+
+export function resolveGenerationSurfaces(surfaces = ALL_SURFACES) {
+  return [...new Set(surfaces.map((surface) => {
+    if (surface === 'gemini') {
+      throw new Error('Gemini CLI is retired. Migrate to Antigravity CLI or desktop using --surfaces agents-skills. Keep GEMINI.md. See https://antigravity.google/docs/cli/gcli-migration');
+    }
+    if (surface === 'antigravity' || surface === 'antigravity-desktop') return 'agents-skills';
+    if (!ALL_SURFACES.includes(surface)) throw new Error(`Unsupported generation surface: ${surface}`);
+    return surface;
+  }))];
+}
 
 function parseArgs(argv) {
   const args = {
@@ -1833,6 +1877,7 @@ function parseArgs(argv) {
     }
   }
 
+  args.surfaces = resolveGenerationSurfaces(args.surfaces);
   return args;
 }
 
@@ -1930,6 +1975,17 @@ async function main() {
   // T043: validate exclusions
   validateExclusions(stages, surfaces);
 
+  const retirement = await retireLegacyGeminiCommands(root, { dryRun: dryRun || check });
+  for (const relative of retirement.found) {
+    const action = retirement.preserved.includes(relative) ? 'preserved for manual review' :
+      dryRun || check ? 'would archive' : 'archived';
+    console.log(`${dryRun || check ? '[dry-run] ' : ''}Gemini retirement: ${action} ${relative}`);
+  }
+  if (retirement.archiveRoot) console.log(`Gemini retirement backup: ${retirement.archiveRoot}`);
+  if (check && retirement.found.length > 0) {
+    throw new Error('Retired Gemini CLI files remain. Run generation to archive recognised output; review preserved files manually. No files were written.');
+  }
+
   if (dryRun || check) {
     if (check) console.log('[check] Generation inputs are valid; no files were written.');
     console.log('[dry-run] Would emit to surfaces:', surfaces.join(', '));
@@ -1937,7 +1993,7 @@ async function main() {
     process.exit(0);
   }
 
-  let allOk = true;
+  let allOk = retirement.preserved.length === 0;
   for (const surface of surfaces) {
     const emitter = EMITTERS[surface];
     if (!emitter) {
@@ -1967,5 +2023,8 @@ const isMain = process.argv[1] && (
 );
 
 if (isMain) {
-  main();
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 }

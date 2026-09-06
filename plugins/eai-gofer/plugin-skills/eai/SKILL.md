@@ -88,6 +88,10 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. For an accepted scope change, update all five feature records before implementation continues: `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and `validation-report.md` (including the active validation scope). Explain the business effect and mark affected old evidence pending. Loop records supplement these five records; they never replace them. Name all five when explaining this process, even without an `/eai` prefix. A question alone does not authorize artifact edits.
+11. Validate only the current implemented or required capabilities. A local MVP with no implemented or required authentication needs no login before local preview. Record future authentication as planned, not passed. Keep confirmed non-app work exempt from EAI login, tenant setup and provisioning.
+12. Link every new requirement to a specific existing test or named planned check. Read the test before claiming it covers that requirement. File existence alone is not coverage. Keep missing or unexecuted checks pending. Never point new criteria to an unchanged test that does not assert them.
+13. Apply the user's word limit to the whole visible answer, including headings and lists. Count the draft before sending and shorten it to fit. Do not repeat the user's questions. Keep required facts; remove repeated explanations.
 <!-- gofer:always-on-eai:end -->
 
 ## Business-Friendly Progress
@@ -200,7 +204,20 @@ For app delivery, make EAI Platform choices for the business user.
 
 ## Token And Cost Policy
 
-- Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.
+## Portable Delegation
+
+For `/eai`, inspect each meaningful stage (all 26; app/non-app).
+Read and follow `.specify/references/portable-orchestration.md`.
+Approved delegation runs automatically.
+Ordinary chat/no useful delegation: stay native, no discovery/inference.
+Preserve explicit disable, task model/budget and approvals.
+CLI: `node .specify/scripts/node/gofer-stage-execute.mjs --input REQUEST --execute --output NEW`.
+VS Code: native `gofer_execute_stage` with `{request}`; never substitute CLI.
+Discover models for this host, client, account and profile before execution.
+`GOFER_STAGE_DELEGATE=1`: no recursive dispatch. Read-only proposals;
+controller applies authorized changes and runs all original checks. Planner is planning-only, off by default.
+
+- Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. Use current host/client/account/profile evidence before overrides. Never copy API or other-surface IDs. Preserve user files; reject unadvertised preferences. Run the bootstrap contract if the policy is missing.
 - Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.
 - Keep raw search, build, and test output out of the main chat context. Write stable findings to `.specify/specs/{feature}/context-bundle.md` and continue from summaries.
 - Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -249,4 +266,4 @@ The public release feed is available at:
 https://eai-support.github.io/eai-gofer/releases.json
 ```
 
-Gemini CLI users can also copy the bundled `.gemini/` directory into a repository root to activate the same public command set there.
+Antigravity CLI and desktop use the native bundle in `plugins/antigravity/eai-gofer`. Keep `GEMINI.md`: Antigravity still reads it. Legacy Gemini CLI extensions are no longer generated.

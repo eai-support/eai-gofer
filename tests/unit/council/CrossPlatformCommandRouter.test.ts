@@ -164,11 +164,11 @@ Body`);
     );
   });
 
-  it('formats Gemini helper syntax without double-prefixing gofer names', () => {
+  it('formats Antigravity skill syntax without legacy Gemini command prefixes', () => {
     const router = new CrossPlatformCommandRouter(workspacePath);
 
-    expect(router.getCommandSyntax('1_gofer_research', 'gemini')).toBe('/gofer:1_gofer_research');
-    expect(router.getCommandSyntax('gofer:diagnose', 'gemini')).toBe('/gofer:diagnose');
+    expect(router.getCommandSyntax('eai', 'antigravity')).toBe('/eai');
+    expect(router.getCommandSyntax('eai', 'antigravity-desktop')).toBe('/eai');
   });
 
   it('rejects path traversal command names (T046)', async () => {
@@ -183,5 +183,38 @@ Body`);
     await expect(router.routeCommand('/absolute/path')).rejects.toThrow(
       'Invalid command name: "/absolute/path" (path traversal not allowed)'
     );
+  });
+  it.each(['antigravity', 'antigravity-desktop'] as const)(
+    'routes explicit %s to shared skills with its own identity and no native capability claim',
+    async (surface) => {
+      mockConfig.defaultCLI = surface;
+      ConfigManager.getInstance().refresh();
+      vi.mocked(fs.promises.access).mockImplementation((p) =>
+        String(p).endsWith('.agents/skills/eai/SKILL.md')
+          ? Promise.resolve()
+          : Promise.reject(createFsError('ENOENT'))
+      );
+      vi.mocked(fs.promises.readFile).mockResolvedValue(
+        '---\\nname: eai\\ndescription: Shared Gofer\\n---\\nBody'
+      );
+      const router = new CrossPlatformCommandRouter(workspacePath);
+      const result = await router.routeCommand('eai');
+      expect(result).toMatchObject({
+        platform: surface,
+        syntax: '/eai',
+        metadata: { platform: surface, supportsAutoChain: false, supportsParallelAgents: false },
+      });
+      expect(result.filePath).toBe(workspacePath + '/.agents/skills/eai/SKILL.md');
+      vi.mocked(fs.promises.access).mockRejectedValue(createFsError('ENOENT'));
+      router.clearCache();
+      await expect(router.routeCommand('eai')).rejects.toThrow('not found');
+    }
+  );
+
+  it('rejects a supplied retired target before filesystem access', async () => {
+    const router = new CrossPlatformCommandRouter(workspacePath);
+    vi.mocked(fs.promises.access).mockClear();
+    await expect(router.routeCommand('eai', 'gemini' as never)).rejects.toThrow('retired');
+    expect(fs.promises.access).not.toHaveBeenCalled();
   });
 });

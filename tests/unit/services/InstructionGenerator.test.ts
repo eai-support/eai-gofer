@@ -58,6 +58,28 @@ describe('InstructionGenerator', () => {
   });
 
   describe('generateAgentsMd()', () => {
+    it.each(['generateAgentsMd', 'generateClaudeMd', 'generateCopilotMd'] as const)(
+      '%s includes the complete always-on scope and MVP rules without EAI setup',
+      async (method) => {
+        const content = await generator[method](makeProjectInfo());
+        for (const file of [
+          'spec.md',
+          'plan.md',
+          'tasks.md',
+          'traceability.md',
+          'validation-report.md',
+        ]) {
+          expect(content).toContain(file);
+        }
+        expect(content).toContain('before implementation continues');
+        expect(content).toContain('mark affected old evidence pending');
+        expect(content).toContain('A question alone does not authorize artifact edits');
+        expect(content).toContain('no implemented or required authentication needs no login');
+        expect(content).toContain('confirmed non-app work exempt');
+        expect(content.match(/<!-- gofer:always-on-eai:start -->/g)).toHaveLength(1);
+      }
+    );
+
     it('generates AGENTS.md for TypeScript project', async () => {
       const info = makeProjectInfo({
         name: 'my-app',

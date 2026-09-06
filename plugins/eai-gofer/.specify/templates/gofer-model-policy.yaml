@@ -1,21 +1,29 @@
 # Gofer model policy
 #
-# This file is copied to .specify/memory/gofer-model-policy.yaml on bootstrap.
-# Edit the memory copy in each repo to tune cost, quality, and account-specific
-# model availability. Generated Gofer commands reference the memory copy; do not
-# hand-edit generated command files for model routing.
-#
-# Last verified against public provider docs: 2026-05-30.
+# Bootstrap copies this template only when .specify/memory/gofer-model-policy.yaml
+# is missing. The memory copy is user-owned: never overwrite it on an update.
+# Existing model IDs and aliases are preferences, not forced or verified routes.
+# No model catalog has been verified by shipping this file.
 version: 1
-lastVerified: "2026-05-30"
+lastVerified: ''
 profile: balanced
 
 principles:
-  - Use the cheapest capable model first for repetitive scouting, extraction, and summarization.
-  - Use the default workhorse model for normal implementation, synthesis, and validation.
-  - Use the best available model for security, architecture, release-critical review, or repeated failure.
-  - Use provider prompt/context caching only for stable, non-secret prefixes.
-  - Compact or checkpoint after large research, planning, implementation, and validation bursts.
+  - Preserve the current native host selection for standard work; omit model and reasoning overrides.
+  - When a delegated tier choice is needed, prefer the lowest-cost verified-capable advertised option, including for repetitive work, using current supported cost evidence; never rank by name or guess prices.
+  - Discover the exact models advertised by the current host, surface and authenticated account before an explicit model choice.
+  - Bind host identity to the concrete CLI or desktop client instance and launch profile, not just the provider name.
+  - Require verified discovery evidence no older than five minutes and before its expiry.
+  - Reject catalogs or approvals from another host, surface, authentication, permission or cost context.
+  - Treat legacy model IDs and aliases as exact preferences; reject them when not advertised or unavailable.
+  - Do not infer capability, freshness, price or permission from model names, aliases, version numbers or lexical sorting.
+  - Hard and arbiter tiers require verified tier-specific qualification, not a claim that the native model is strongest.
+  - If an arbiter route is missing, use the hard route as the preference, never the medium route; arbiter qualification is still required.
+  - Require approval for the exact model and reasoning selection in the same permission and cost context.
+  - Validate reasoning effort as an exact advertised native string; do not use a fixed enum or infer strength from that string.
+  - Never change authentication, permissions, budgets or paid access to make a model route available.
+  - Preserve all tiers without requiring a model switch; high throughput is a workload intent, not a speed or cost guarantee.
+  - Keep provider caching limited to stable non-secret prefixes and retain checkpoint and context controls.
 
 contextPolicy:
   healthyBelowPercent: 40
@@ -24,74 +32,135 @@ contextPolicy:
   checkpointAtPercent: 85
   durableArtifact: .specify/specs/{feature}/context-bundle.md
 
+# model: "" means no launch override, not an ID to send to a provider.
+# A non-empty user preference requires the verified-catalog resolver before launch.
+# The provider launch defaults are a separate integration boundary.
 surfaces:
   claude:
-    simple:
-      model: claude-haiku-4-5
-      claudeCodeAlias: haiku
-      contextWindowTokens: 200000
-      useFor: scouting, extraction, summarization, low-risk helpers
-    medium:
-      model: claude-sonnet-4-6
-      claudeCodeAlias: sonnet
-      contextWindowTokens: 1000000
-      useFor: default implementation, synthesis, validation, everyday coding
-    hard:
-      model: claude-opus-4-8
-      claudeCodeAlias: opus
-      contextWindowTokens: 1000000
-      useFor: hardest bugs, security review, architecture arbitration, release-critical validation
-  codex:
-    simple:
-      model: gpt-5.4-mini
-      reasoningEffort: low
-      contextWindowTokens: 400000
-      useFor: simple coding, focused edits, routine test fixes
     mechanical:
-      model: gpt-5.4-nano
-      reasoningEffort: low
-      contextWindowTokens: 400000
-      useFor: locate, classify, summarize, transform text
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: locate, classify, extract, summarize, and transform text
+    simple:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: focused low-risk coding, routine edits, and test fixes
     medium:
-      model: gpt-5.4
-      reasoningEffort: medium
-      contextWindowTokens: 1000000
-      useFor: default planning, implementation, research synthesis
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: normal planning, implementation, research synthesis, and validation
     hard:
-      model: gpt-5.3-codex
-      reasoningEffort: high
-      contextWindowTokens: 400000
-      useFor: agentic terminal coding, tool-heavy debugging, code review
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: hard debugging, security, architecture, and release-critical review
     arbiter:
-      model: gpt-5.5
-      reasoningEffort: high
-      contextWindowTokens: 1050000
-      useFor: broad frontier reasoning, complex architecture, final arbitration
-  gemini:
-    simple:
-      model: gemini-3.1-flash-lite
-      contextWindowTokens: 1000000
-      useFor: cheap large-context scans, summarization, extraction
-    medium:
-      model: gemini-3-flash-preview
-      contextWindowTokens: 1000000
-      useFor: default research and broad synthesis when cost matters
-    hard:
-      model: gemini-3.1-pro-preview
-      contextWindowTokens: 1000000
-      useFor: large-context architecture, cross-repo reasoning, high-risk research
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: independent arbitration of contradictory or release-critical findings
     highThroughputCoding:
-      model: gemini-3.5-flash
-      contextWindowTokens: 1000000
-      useFor: fast tool/coding workflows when account pricing makes it worthwhile
-  copilot:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: high-throughput coding only after capability and cost checks
+    note: Discover the exact current host, surface and authenticated account catalog before any explicit model choice.
+  codex:
+    mechanical:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: locate, classify, extract, summarize, and transform text
     simple:
-      model: Auto
-      useFor: default Copilot Chat, routine coding, completion, and quick fixes
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: focused low-risk coding, routine edits, and test fixes
     medium:
-      model: Auto
-      useFor: normal Gofer stage prompts and workspace questions
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: normal planning, implementation, research synthesis, and validation
     hard:
-      model: "Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro"
-      useFor: explicit hard review, security, architecture, or release gates
-    note: Copilot model availability depends on plan, organization policy, client, and feature surface.
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: hard debugging, security, architecture, and release-critical review
+    arbiter:
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: independent arbitration of contradictory or release-critical findings
+    highThroughputCoding:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: high-throughput coding only after capability and cost checks
+    note: Discover the exact current host, surface and authenticated account catalog before any explicit model choice.
+  antigravity:
+    mechanical:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: locate, classify, extract, summarize, and transform text
+    simple:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: focused low-risk coding, routine edits, and test fixes
+    medium:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: normal planning, implementation, research synthesis, and validation
+    hard:
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: hard debugging, security, architecture, and release-critical review
+    arbiter:
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: independent arbitration of contradictory or release-critical findings
+    highThroughputCoding:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: high-throughput coding only after capability and cost checks
+    note: Discover the exact current host, surface and authenticated account catalog before any explicit model choice.
+  copilot:
+    mechanical:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: locate, classify, extract, summarize, and transform text
+    simple:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: focused low-risk coding, routine edits, and test fixes
+    medium:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: normal planning, implementation, research synthesis, and validation
+    hard:
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: hard debugging, security, architecture, and release-critical review
+    arbiter:
+      model: ''
+      selection: host-current
+      requiresQualification: true
+      useFor: independent arbitration of contradictory or release-critical findings
+    highThroughputCoding:
+      model: ''
+      selection: host-current
+      requiresQualification: false
+      useFor: high-throughput coding only after capability and cost checks
+    note: Discover the exact current host, surface and authenticated account catalog before any explicit model choice.

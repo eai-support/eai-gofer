@@ -7,6 +7,7 @@ on:
       - '.tech-docs/**'
       - 'docs-site/**'
       - 'scripts/update-releases.js'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
   workflow_call:
 
@@ -44,27 +45,77 @@ jobs:
 
       - name: Verify generated site
         run: |
-          REQUIRED_FILES=(
-            "docs-site/build/index.html"
-            "docs-site/build/docs/overview.html"
-            "docs-site/build/releases.html"
-            "docs-site/build/releases.json"
-            "docs-site/build/releases/eai-gofer-latest.vsix"
-            "docs-site/build/releases/eai-gofer-agent-plugin-latest.zip"
-            "docs-site/build/releases/plugins/eai-gofer/claude-marketplace.json"
-            "docs-site/build/releases/plugins/eai-gofer/codex-plugin.json"
-            "docs-site/build/releases/plugins/eai-gofer/gemini-extension.json"
-            "docs-site/build/releases/plugins/eai-gofer/gemini-commands-manifest.json"
-            "docs-site/build/releases/plugins/eai-gofer/gofer-surface-update.mjs"
-            "docs-site/build/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs"
-          )
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = 'docs-site/build';
+          const baseUrl = 'https://eai-support.github.io/eai-gofer/releases/';
+          const plugin = 'releases/plugins/eai-gofer';
+          const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+          function requireFile(relative) {
+            const file = path.join(root, relative);
+            if (!fs.existsSync(file) || !fs.statSync(file).isFile() || fs.statSync(file).size === 0) {
+              throw new Error(`Missing or empty published release file: ${relative}`);
+            }
+            return file;
+          }
+          function releasePath(url) {
+            if (typeof url !== 'string' || !url.startsWith(baseUrl)) {
+              throw new Error('Missing or unsupported published asset URL');
+            }
+            const relative = url.slice(baseUrl.length);
+            if (!relative || /[%?#\\]/.test(relative) || relative.split('/').some(part => !part || part === '.' || part === '..')) {
+              throw new Error('Unsafe published asset URL');
+            }
+            return `releases/${relative}`;
+          }
+          for (const file of ['index.html', 'docs/overview.html', 'releases.html', 'releases.json',
+            'releases/eai-gofer-latest.vsix', 'releases/eai-gofer-agent-plugin-latest.zip',
+            `${plugin}/gofer-surface-update.mjs`, `${plugin}/gofer-local-settings-cleanup.mjs`]) requireFile(file);
 
-          for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "ERROR: Required file $file is missing!"
-              exit 1
-            fi
-          done
+          // A feature merge must not rewrite immutable published versioned assets.
+          // release.sh advances the feed and packages together; only then require the new surface.
+          const feed = JSON.parse(fs.readFileSync(path.join(root, 'releases.json'), 'utf8'));
+          if (!object(feed) || typeof feed.latest_version !== 'string' ||
+              !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(feed.latest_version) || !Array.isArray(feed.releases)) {
+            throw new Error('Invalid published release feed');
+          }
+          const latest = feed.releases.filter(entry => object(entry) && entry.version === feed.latest_version);
+          if (latest.length !== 1 || !object(latest[0].assets)) {
+            throw new Error('Expected exactly one latest published release with assets');
+          }
+          const assets = latest[0].assets;
+          const common = ['vscode', 'claude', 'codex', 'copilot'];
+          const generations = ['gemini', 'antigravity'].filter(host => Object.hasOwn(assets, host));
+          if (!generations.length || Object.keys(assets).some(host => ![...common, ...generations].includes(host))) {
+            throw new Error('Unrecognized published release assets');
+          }
+          for (const host of [...common, ...generations]) {
+            const asset = assets[host];
+            if (!object(asset)) throw new Error(`Missing published asset: ${host}`);
+            const fields = ['download_url', 'latest_download_url'];
+            if (host !== 'vscode') fields.push('manifest_url');
+            if (['claude', 'codex', 'copilot'].includes(host)) fields.push('marketplace_url');
+            if (host === 'gemini') fields.push('commands_manifest_url');
+            for (const field of fields) requireFile(releasePath(asset[field]));
+          }
+          if (Object.hasOwn(assets, 'antigravity')) {
+            const nativeRoot = releasePath(assets.antigravity.bundle_url);
+            if (releasePath(assets.antigravity.manifest_url) !== `${nativeRoot}/plugin.json`) {
+              throw new Error('Antigravity manifest must belong to its native bundle');
+            }
+            const manifest = JSON.parse(fs.readFileSync(requireFile(`${nativeRoot}/plugin.json`), 'utf8'));
+            if (manifest.name !== 'eai-gofer') throw new Error('Unrecognized Antigravity plugin manifest');
+            requireFile(`${plugin}/lib/grok-surface.mjs`);
+            for (const file of ['skills/eai/SKILL.md', 'skills/eai-update/SKILL.md', 'rules/gofer.md',
+              ...['gofer-surface-update.mjs', 'gofer-local-settings-cleanup.mjs', 'gofer-stage-execute.mjs',
+                'gofer-model-discovery.mjs', 'gofer-orchestration.mjs', 'lib/grok-surface.mjs',
+                'lib/model-discovery.mjs', 'lib/stage-cli-adapters.mjs', 'lib/stage-execution.mjs',
+                'lib/portable-orchestration.mjs', 'lib/orchestration-contract.mjs']
+                .map(file => `.specify/scripts/node/${file}`)]) requireFile(`${nativeRoot}/${file}`);
+          }
+          console.log(`Verified published ${feed.latest_version}: ${generations.join(', ')}`);
+          NODE
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

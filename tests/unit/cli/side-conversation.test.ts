@@ -15,7 +15,7 @@ const EXPECTED_SURFACES = [
   'claude-mirror',
   'codex',
   'copilot',
-  'gemini',
+  'antigravity',
   'github-prompts',
   'system-skills',
   'vscode',

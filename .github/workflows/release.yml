@@ -142,11 +142,21 @@ jobs:
         working-directory: ./extension
         run: npx @vscode/vsce package --out "eai-gofer-${{ steps.version.outputs.version }}.vsix"
 
+      - name: Verify Packaged VS Code Stage Tools
+        working-directory: .
+        run: node scripts/verify-vscode-stage-package.mjs --vsix "extension/eai-gofer-${{ steps.version.outputs.version }}.vsix"
+
       - name: Package Agent Plugin
         run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
 
       - name: Verify All-Surface Release Contract
         run: npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"
+
+      - name: Verify Orchestration Preservation
+        run: npm run gofer:orchestration:check
+
+      - name: Test Orchestration Decisions And Overhead
+        run: npm run gofer:orchestration:test
 
       - name: Create Release Archive
         run: |
@@ -185,7 +195,7 @@ jobs:
             echo "## Assets"
             echo
             echo "- VS Code extension package"
-            echo "- Claude/Codex/Copilot/Gemini public bundle package"
+            echo "- Claude/Codex/Copilot/Antigravity public bundle package"
             echo "- Gofer release archive"
             echo
             echo "## Public Release Host"
@@ -216,11 +226,11 @@ jobs:
             echo "codex plugin add eai-gofer@eai-gofer"
             echo '```'
             echo
-            echo "Gemini CLI:"
+            echo "Antigravity CLI and desktop:"
             echo
-            echo '```bash'
-            echo "gemini extensions install https://github.com/eai-support/eai-gofer"
-            echo '```'
+            echo 'Use the native plugins/antigravity/eai-gofer directory in the download.'
+            echo 'Run eai-update with antigravity or antigravity-desktop for the installed client.'
+            echo 'Gemini CLI extensions are retired. Keep shared GEMINI.md rules.'
             echo
             echo "Copilot CLI:"
             echo

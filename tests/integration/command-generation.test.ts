@@ -27,13 +27,12 @@ const MIRROR_SURFACE_ROOTS = [
   '.claude/commands',
   '.claude/agents',
   '.github/prompts',
-  '.gemini',
   '.system/skills',
   '.agents/skills',
   'extension/resources/claude-commands',
   'extension/resources/claude-agents',
   'extension/resources/copilot-prompts',
-  'extension/resources/gemini',
+  'extension/resources/agents-skills',
 ];
 
 const REMOVED_SURFACE_PATTERNS: RemovedSurfacePattern[] = [
@@ -362,7 +361,7 @@ describe('Command Generation Integration (US-3)', () => {
         ['.claude/agents', 'extension/resources/claude-agents'],
         ['.claude/commands', 'extension/resources/claude-commands'],
         ['.github/prompts', 'extension/resources/copilot-prompts'],
-        ['.gemini', 'extension/resources/gemini'],
+        ['.agents/skills', 'extension/resources/agents-skills'],
       ];
 
       for (const [repoRelativeDir, extensionRelativeDir] of mirrorPairs) {

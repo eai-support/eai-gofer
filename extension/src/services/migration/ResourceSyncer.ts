@@ -7,6 +7,7 @@
  * Engineering Remediation Phase 4 - T028
  */
 
+import { GEMINI_CLI_MIGRATION_MESSAGE } from '../../config/runtimeSurface';
 import { injectable } from 'tsyringe';
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
@@ -16,7 +17,6 @@ import { createHash } from 'crypto';
 import { Logger } from '../Logger';
 import { FileUtils } from '../../utils/fileUtils';
 import { IResourceOperations } from './UpgradeService';
-import { getWorkflowProfile } from '../../config/workflowProfile';
 import * as yaml from 'yaml';
 
 interface LegacyJsonTask {
@@ -63,8 +63,6 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.github', 'prompts', '0_business_scenario.prompt.md'),
   path.join('.agents', 'skills', '0_business_scenario'),
   path.join('.system', 'skills', '0_business_scenario'),
-  path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
-  path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
 ];
 const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['eai']);
@@ -218,9 +216,7 @@ export class ResourceSyncer implements IResourceOperations {
         path.join('.claude', 'commands', `${stem}.md`),
         path.join('.github', 'prompts', `${stem}.prompt.md`),
         path.join('.agents', 'skills', stem),
-        path.join('.system', 'skills', stem),
-        path.join('.gemini', 'commands', 'gofer', `${stem}.md`),
-        path.join('.gemini', 'commands', 'gofer', `${stem}.toml`)
+        path.join('.system', 'skills', stem)
       );
     }
 
@@ -616,63 +612,29 @@ export class ResourceSyncer implements IResourceOperations {
     );
   }
 
+  /** Retired API: do not copy, clean up, or convert any legacy Google files. */
   public async setupGeminiCommands(): Promise<void> {
-    this.logger.info('ResourceSyncer', 'Copying Gemini CLI extension commands');
-    await this.cleanupLegacyGoferCommandFiles();
-    await this.syncCanonicalCommands();
-    await this.syncBundledDirectory(
-      'Gemini CLI commands',
-      'gemini',
-      path.join(this.workspacePath, '.gemini')
-    );
+    throw new Error(GEMINI_CLI_MIGRATION_MESSAGE);
   }
 
   public async setupCodexSkills(): Promise<void> {
-    this.logger.info(
-      'ResourceSyncer',
-      'Generating Codex skills into the canonical .agents/skills workspace path'
-    );
-
-    try {
-      await this.cleanupLegacyGoferCommandFiles();
-      const { CommandGenerator } = await import('../../council/CommandGenerator');
-      const generator = new CommandGenerator(this.workspacePath);
-      const workflowProfile = this.resolveWorkflowProfileForGeneration();
-
-      // Generate all Codex skills into the canonical repo-local .agents/skills tree.
-      const generatedPaths = await generator.generateCommands('codex', false, {
-        workflowProfileOverride: workflowProfile,
-        metadataSource: 'extension/src/services/migration/ResourceSyncer.ts',
-      });
-
-      this.logger.info('ResourceSyncer', `Generated ${generatedPaths.length} Codex skills`, {
-        paths: generatedPaths,
-        workflowProfile,
-      });
-      await this.syncBundledDirectory(
-        'Gofer documentation skill for Codex',
-        path.join('claude-skills', 'gofer-documentation'),
-        path.join(this.workspacePath, '.agents', 'skills', 'gofer-documentation')
-      );
-    } catch (error) {
-      this.logger.error('ResourceSyncer', error as Error, {
-        operation: 'setupCodexSkills',
-      });
-      throw error;
+    // Shared files must not be regenerated as Codex-only instructions for Google hosts.
+    const bundledSkills = path.join(this.getExtensionPath(), 'resources', 'agents-skills');
+    for (const entrypoint of ['eai', 'eai-update']) {
+      if (!(await FileUtils.exists(path.join(bundledSkills, entrypoint, 'SKILL.md')))) {
+        throw new Error(
+          'Shared Codex/Antigravity skills are missing from this Gofer release. Update the extension bundle; no host fallback was generated.'
+        );
+      }
     }
-  }
-
-  private resolveWorkflowProfileForGeneration(): 'standard' | 'enterpriseai' {
-    try {
-      return getWorkflowProfile();
-    } catch (error: unknown) {
-      this.logger.warn(
-        'ResourceSyncer',
-        `Unable to read workflow profile from configuration, defaulting to standard: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+    await this.cleanupLegacyGoferCommandFiles();
+    await this.syncCanonicalCommands();
+    for (const root of ['.agents', '.system']) {
+      await this.syncBundledDirectory(
+        'Shared Codex/Antigravity workspace skills',
+        'agents-skills',
+        path.join(this.workspacePath, root, 'skills')
       );
-      return 'standard';
     }
   }
 
@@ -1658,7 +1620,7 @@ Gofer creates a user-owned model policy at
 \`.specify/memory/gofer-model-policy.yaml\` from the shipped
 \`.specify/templates/gofer-model-policy.yaml\` template. Edit the memory copy to
 tune simple, medium, hard, and arbiter model routes for Claude, Codex/OpenAI,
-Gemini, and Copilot. Bootstrap should not overwrite local edits.
+Antigravity CLI/desktop, and Copilot. Bootstrap should not overwrite local edits.
 
 ## Constitution
 

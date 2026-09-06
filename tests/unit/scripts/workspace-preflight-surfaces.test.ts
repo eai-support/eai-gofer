@@ -25,14 +25,17 @@ describe('workspace preflight surface generation', () => {
       'node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json'
     );
     expect(read('.agents/skills/eai/SKILL.md')).toContain(
-      'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
+      'node .specify/scripts/node/gofer-workspace-check.mjs --host <host> --json'
+    );
+    expect(read('.agents/skills/eai/SKILL.md')).toContain(
+      '`codex`, `antigravity`, or `antigravity-desktop`'
     );
     expect(read('.system/skills/eai/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
-    expect(read('.gemini/commands/gofer/eai.md')).toContain(
-      'node .specify/scripts/node/gofer-workspace-check.mjs --host gemini --json'
-    );
+    expect(fs.existsSync(path.join(REPO_ROOT, '.gemini/commands/gofer/eai.md'))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, '.gemini/commands/gofer/eai.toml'))).toBe(false);
+    expect(read('GEMINI.md')).toContain('AGENTS.md');
 
     expect(fs.existsSync(path.join(REPO_ROOT, '.claude/commands/gofer.md'))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, '.github/prompts/gofer.prompt.md'))).toBe(false);
@@ -57,7 +60,7 @@ describe('workspace preflight surface generation', () => {
       '.github/prompts/eai.prompt.md',
       '.agents/skills/eai/SKILL.md',
       '.system/skills/eai/SKILL.md',
-      '.gemini/commands/gofer/eai.md',
+      '.grok/skills/eai/SKILL.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
     ]) {
       const surface = read(surfacePath);
@@ -155,16 +158,19 @@ describe('workspace preflight surface generation', () => {
 
     const publicCodexManifestText = readPublicPlugin(path.join('.codex-plugin', 'plugin.json'));
     const publicCodexManifest = JSON.parse(publicCodexManifestText);
-    const publicGeminiManifest = readPublicPlugin(
-      path.join('.gemini', 'commands', 'gofer', 'manifest.json')
-    );
     expect(publicCodexManifest.skills).toBe('./skills/');
     expect(publicCodexManifest.gofer).toBeUndefined();
     expect(publicCodexManifestText).not.toContain('0_business_scenario');
-    expect(publicGeminiManifest).toContain('"eai"');
-    expect(publicGeminiManifest).not.toContain('"gofer"');
-    expect(publicGeminiManifest).not.toContain('0_gofer_start');
-    expect(publicGeminiManifest).not.toContain('0_business_scenario');
+    expect(fs.existsSync(path.join(publicPluginRoot, '.gemini/commands/gofer/manifest.json'))).toBe(
+      false
+    );
+    expect(fs.existsSync(path.join(publicPluginRoot, '.gemini/extension.json'))).toBe(false);
+    expect(readPublicPlugin('GEMINI.md')).toContain('AGENTS.md');
+    for (const entry of ['eai', 'eai-update']) {
+      expect(readPublicPlugin(`plugins/antigravity/eai-gofer/skills/${entry}/SKILL.md`)).toContain(
+        `name: ${entry}`
+      );
+    }
 
     const latestZip = path.join(
       REPO_ROOT,
@@ -180,5 +186,7 @@ describe('workspace preflight surface generation', () => {
     expect(zipListing).not.toContain('eai-gofer/plugin-skills/gofer/SKILL.md');
     expect(zipListing).not.toContain('eai-gofer/commands/0_gofer_start.md');
     expect(zipListing).not.toContain('0_business_scenario');
+    expect(zipListing).not.toContain('eai-gofer/.gemini/commands/');
+    expect(zipListing).not.toContain('gemini-extension.json');
   });
 });

@@ -45,16 +45,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -329,7 +329,7 @@ should only orchestrate and review agent outputs.
 ### Agent 1: Specification Writer
 
 ```
-Task: subagent_type="general-purpose", model="sonnet"
+Task: subagent_type="general-purpose", model_tier="medium"
 Prompt: "Generate a complete feature specification for [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -462,7 +462,7 @@ Return a structured summary:
 ### Agent 2: Quality Checklist & Research Validator
 
 ```
-Task: subagent_type="general-purpose", model="haiku"
+Task: subagent_type="general-purpose", model_tier="simple"
 Prompt: "Validate the specification at {FEATURE_DIR}/spec.md against research
 findings and generate a quality checklist.
 
@@ -540,7 +540,7 @@ Spawn 3 agents that independently interpret the spec and write pseudocode.
 Compare their interpretations to find ambiguities:
 
 ```
-Task: subagent_type="specify-ambiguity-detector", model="sonnet"
+Task: subagent_type="specify-ambiguity-detector", model_tier="medium"
 Prompt: "You are Agent [1/2/3]. Read spec.md at [FEATURE_DIR]/spec.md.
 For each acceptance criterion, write pseudocode showing how you would implement it.
 Document every assumption you make. Focus on literal interpretation."
@@ -549,7 +549,7 @@ Document every assumption you make. Focus on literal interpretation."
 Run all 3 agents in parallel, then synthesize with judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: ambiguity detection.
 Compare these 3 independent spec interpretations. Identify criteria where agents
 diverged — these are specification ambiguities that need clarification.
@@ -564,7 +564,7 @@ clarifications to the spec before proceeding.
 Spawn 4 persona agents to walk through user journeys and find gaps:
 
 ```
-Task: subagent_type="specify-journey-stress-tester", model="haiku"
+Task: subagent_type="specify-journey-stress-tester", model_tier="simple"
 Prompt: "You are Persona [1/2/3/4]. Walk through the user journeys in spec.md at [FEATURE_DIR]/spec.md.
 Persona 1: Power user — fast, keyboard-driven, expects batch operations
 Persona 2: First-timer — needs onboarding, clear errors, discoverable features
@@ -575,7 +575,7 @@ Persona 4: Adversarial — tries to break things, unexpected inputs"
 Run all 4 personas in parallel, then synthesize with judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: journey gap analysis.
 Synthesize 4 persona journey reports. Flag gaps found by 2+ personas as HIGH priority.
 [paste all 4 agent outputs]"

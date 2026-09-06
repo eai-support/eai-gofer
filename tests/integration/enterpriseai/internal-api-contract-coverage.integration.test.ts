@@ -99,7 +99,7 @@ function createInternalApiPayloadFixtures(): Record<
     'IAP-008': {
       changeSetId: 'chg_001',
       canonicalSources: ['.specify/commands/0_gofer_start.md'],
-      targetMirrors: ['copilot', 'codex', 'gemini'],
+      targetMirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
       runParityValidation: true,
     },
     'IAP-009': {
@@ -295,7 +295,7 @@ describe('enterpriseai internal API + external posture contract coverage (root i
         {
           changeSetId: 'chg_coverage_001',
           canonicalSources: ['.specify/commands/0_gofer_start.md'],
-          targetMirrors: ['copilot', 'codex', 'gemini'],
+          targetMirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
           runParityValidation: true,
         },
         {

@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import matter from 'gray-matter';
 import {
   FULL_COMMAND_FILES,
   PUBLIC_ENTRYPOINT_COUNT,
@@ -87,7 +88,7 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
-  it('packages a zip with Claude, Codex, Copilot, and Gemini install metadata', (): void => {
+  it('packages a zip with Claude, Codex, Copilot, and Antigravity install metadata', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
       execFileSync('node', [SCRIPT_PATH, '--version', VERSION, '--out-dir', outDir], {
@@ -119,7 +120,11 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.claude-plugin/hooks/hooks.json',
         'eai-gofer/.agents/plugins/marketplace.json',
         'eai-gofer/.github/plugin/marketplace.json',
-        'eai-gofer/gemini-extension.json',
+        'eai-gofer/plugins/antigravity/eai-gofer/plugin.json',
+        'eai-gofer/plugins/antigravity/eai-gofer/skills/eai/SKILL.md',
+        'eai-gofer/plugins/antigravity/eai-gofer/skills/eai-update/SKILL.md',
+        'eai-gofer/plugins/antigravity/eai-gofer/rules/gofer.md',
+        'eai-gofer/plugins/antigravity/eai-gofer/.specify/scripts/node/gofer-workspace-check.mjs',
         'eai-gofer/plugins/eai-gofer/plugin.json',
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
@@ -198,9 +203,44 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain(
         'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain(
-        'gemini extensions install https://github.com/eai-support/eai-gofer'
-      );
+      expect(readme).toContain('agy plugin --help');
+      expect(readme).not.toContain('gemini extensions install');
+      expect(
+        zipEntries.some((entry) => /gemini-extension.json|\.gemini\/commands\//.test(entry))
+      ).toBe(false);
+      const nativeRoot = path.join(pluginRoot, 'plugins/antigravity/eai-gofer');
+      expect(readJson(path.join(nativeRoot, 'plugin.json'))).toEqual({
+        name: 'eai-gofer',
+        description: 'Gofer single-entry delivery command with internal pipeline routing',
+      });
+      expect(fs.readdirSync(path.join(nativeRoot, 'skills')).sort()).toEqual(['eai', 'eai-update']);
+      const agentNames = fs.readdirSync(path.join(REPO_ROOT, '.claude/agents')).sort();
+      expect(fs.readdirSync(path.join(nativeRoot, 'agents')).sort()).toEqual(agentNames);
+      for (const name of agentNames) {
+        const original = fs.readFileSync(path.join(REPO_ROOT, '.claude/agents', name), 'utf8');
+        const native = matter(fs.readFileSync(path.join(nativeRoot, 'agents', name), 'utf8'));
+        expect(fs.readFileSync(path.join(pluginRoot, 'agents', name), 'utf8')).toBe(original);
+        expect(native.data.model).toBe('inherit');
+        expect(native.data.mainAgent).toBe(false);
+        expect(native.data.subagent).toBe(true);
+        expect(native.data.commandExecutionPolicy).toBe('off');
+        expect(Array.isArray(native.data.tools)).toBe(true);
+        expect(native.data.tools).not.toContain('run_command');
+        if (
+          !matter(original)
+            .data.tools.split(',')
+            .map((tool: string) => tool.trim())
+            .includes('Write')
+        ) {
+          expect(native.data.tools).not.toContain('write_to_file');
+        }
+        expect(native.content).toContain(matter(original).content.trim());
+      }
+      for (const entry of fs.readdirSync(path.join(pluginRoot, '.specify/commands'))) {
+        expect(fs.readFileSync(path.join(nativeRoot, '.specify/commands', entry), 'utf8')).toBe(
+          fs.readFileSync(path.join(pluginRoot, '.specify/commands', entry), 'utf8')
+        );
+      }
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain('does not invent EAI CLI commands');
@@ -317,7 +357,10 @@ describe('Gofer agent plugin package', () => {
       source: 'local',
       path: './plugins/eai-gofer',
     });
-    expect(fs.existsSync(path.join(REPO_ROOT, 'gemini-extension.json'))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, 'gemini-extension.json'))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, 'plugins/antigravity/eai-gofer/plugin.json'))).toBe(
+      true
+    );
     expect(fs.existsSync(path.join(REPO_ROOT, 'plugin-skills', 'eai', 'SKILL.md'))).toBe(true);
   });
 

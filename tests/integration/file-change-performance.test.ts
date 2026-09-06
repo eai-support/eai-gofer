@@ -41,10 +41,15 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
     let changeDetected = false;
     let detectionTime = 0;
 
+    await fs.writeFile(testFile, 'initial content');
     // Create watcher
     watcher = chokidar.watch(testFile, {
       persistent: true,
       ignoreInitial: true,
+    });
+    await new Promise<void>((resolve, reject) => {
+      watcher!.once('ready', resolve);
+      watcher!.once('error', reject);
     });
 
     // Setup change handler
@@ -55,10 +60,6 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
         resolve(detectionTime);
       });
     });
-
-    // Create initial file
-    await fs.writeFile(testFile, 'initial content');
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Modify file and measure time
     const writeTime = Date.now();
@@ -77,6 +78,7 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
     const testFile = path.join(testDir, 'test.txt');
     let changeCount = 0;
 
+    await fs.writeFile(testFile, 'initial');
     // Create watcher with 300ms debounce
     watcher = chokidar.watch(testFile, {
       persistent: true,
@@ -86,14 +88,14 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
         pollInterval: 100,
       },
     });
+    await new Promise<void>((resolve, reject) => {
+      watcher!.once('ready', resolve);
+      watcher!.once('error', reject);
+    });
 
     watcher.on('change', () => {
       changeCount++;
     });
-
-    // Create initial file
-    await fs.writeFile(testFile, 'initial');
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Make rapid changes
     await fs.writeFile(testFile, 'change1');
@@ -104,6 +106,7 @@ describe.skipIf(isCI)('File Change Performance (SC-006)', () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Should have debounced to 1 or 2 events, not 3
+    expect(changeCount).toBeGreaterThan(0);
     expect(changeCount).toBeLessThan(3);
   });
 });

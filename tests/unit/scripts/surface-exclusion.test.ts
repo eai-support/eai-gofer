@@ -11,7 +11,7 @@ const ALL_SURFACES = [
   'claude-mirror',
   'copilot',
   'codex',
-  'gemini',
+  'antigravity',
   'github-prompts',
   'agents-skills',
   'system-skills',

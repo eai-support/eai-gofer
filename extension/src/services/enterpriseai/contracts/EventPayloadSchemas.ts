@@ -1,3 +1,5 @@
+import { validateActiveMirrorTargets } from '../models/Propagation';
+
 export type EventContractId =
   | 'EVT-001'
   | 'EVT-002'
@@ -253,6 +255,8 @@ export function validateEventPayload(
       errors: ['Payload must be an object.'],
     };
   }
+
+  if (contractId === 'EVT-008') errors.push(...validateActiveMirrorTargets(payload.mirrors));
 
   for (const [fieldName, rule] of Object.entries(schema.required)) {
     if (!(fieldName in payload)) {

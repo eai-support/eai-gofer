@@ -35,10 +35,10 @@ interface ReleaseEntry {
       latest_download_url: string;
       size_mb: number;
     };
-    gemini?: {
+    antigravity?: {
       bundle_url: string;
       manifest_url: string;
-      commands_manifest_url: string;
+      surfaces: string[];
       download_url: string;
       latest_download_url: string;
       size_mb: number;
@@ -118,6 +118,9 @@ describe('update-releases.js', () => {
               notes: 'Previous release',
               prerelease: false,
               size_mb: 8.5,
+              assets: {
+                gemini: { manifest_url: 'https://example.invalid/historical-gemini.json' },
+              },
             },
           ],
         },
@@ -152,13 +155,15 @@ describe('update-releases.js', () => {
     expect(updated.releases[0].assets?.codex?.manifest_url).toBe(
       'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json'
     );
-    expect(updated.releases[0].assets?.gemini?.manifest_url).toBe(
-      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
+    expect(updated.releases[0].assets?.antigravity?.manifest_url).toBe(
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugins/antigravity/eai-gofer/plugin.json'
     );
-    expect(updated.releases[0].assets?.gemini?.commands_manifest_url).toBe(
-      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json'
-    );
+    expect(updated.releases[0].assets?.antigravity?.surfaces).toEqual(['cli', 'desktop']);
+    expect(updated.releases[0].assets).not.toHaveProperty('gemini');
     expect(updated.releases[1].version).toBe('3.1.9');
+    expect(updated.releases[1].assets).toEqual({
+      gemini: { manifest_url: 'https://example.invalid/historical-gemini.json' },
+    });
   });
 
   it('honors a custom download URL when one is provided', async () => {

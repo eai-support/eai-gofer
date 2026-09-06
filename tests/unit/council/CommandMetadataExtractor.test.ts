@@ -185,7 +185,7 @@ description: [unterminated
       expect(extractor.validateInvocationSyntax('$ $ 1_gofer_research', 'codex')).toBe(false);
     });
 
-    it('formats Gemini helper syntax without double-prefixing gofer names', async () => {
+    it('rejects retired Gemini metadata before reading legacy files', async () => {
       const content = `---
 name: gofer:diagnose
 description: Diagnose helper
@@ -194,11 +194,11 @@ description: Diagnose helper
 Body`;
       vi.mocked(fs.readFileSync).mockReturnValue(content);
 
-      const metadata = extractor.extractFromGeminiCommandSync(
-        '/repo/.gemini/commands/gofer/gofer_diagnose.toml'
-      );
-
-      expect(metadata.invocationSyntax.example).toBe('/gofer:diagnose');
+      vi.mocked(fs.readFileSync).mockClear();
+      expect(() =>
+        extractor.extractFromGeminiCommandSync('/repo/.gemini/commands/gofer/gofer_diagnose.toml')
+      ).toThrow('Gemini CLI is retired');
+      expect(fs.readFileSync).not.toHaveBeenCalled();
     });
   });
 });

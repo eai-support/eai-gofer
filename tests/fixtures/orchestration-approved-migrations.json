@@ -1,0 +1,38 @@
+{
+  ".specify/scripts/node/gofer-surface-update.mjs": {
+    "previousHash": "3a985446e80e36b1e7427c84acd6239a86bf31d364c7511e3b7dfe1421a0cf7b",
+    "approvedHash": "b53a1115b0730b30e58c88907da3cc8f3053aa81b97d276966d0ae2618afab20",
+    "releaseReview": "Standalone installer validation found that symlinked macOS temporary paths did not invoke main. Resolve only the invoked helper path before comparing its module identity. Preserve import safety, update plans and permission checks. The original baseline hash remains unchanged.",
+    "reason": "User approved retiring Gemini CLI in favor of distinct Antigravity CLI and desktop surfaces, then requested native Grok checks. The Grok change adds only read-only, bounded discovery and leaves install/update blocked. Preserve all other update plans and safety boundaries. Native Antigravity packages require verified contents, explicit targets and installed help; desktop changes use ownership receipts and recoverable backups. Changed existing CLI packages remain blocked. No credential imports or broad deletion. Supersedes the preceding legacy-Gemini preservation requirement, retaining its frozen original hash. The six-surface follow-up adds the complete five-record scope-change rule and MVP/non-app exceptions to managed always-on instructions; it does not alter updater execution or permissions.",
+    "tests": [
+      "tests/unit/scripts/gofer-surface-update.test.ts",
+      "tests/unit/release/publish-public-release-assets.test.ts",
+      "tests/unit/scripts/always-on-scope-contract.test.ts",
+      "tests/unit/scripts/grok-surface.test.ts",
+      "tests/unit/scripts/orchestration-preservation.test.ts",
+      "tests/unit/scripts/model-discovery.test.ts"
+    ]
+  },
+  ".specify/templates/gofer-model-policy.yaml": {
+    "previousHash": "10bbaf7517e2a13ec4eb5c1998d4ac4a861000f1353bf6551b5ab400624dbac1",
+    "approvedHash": "6402e635dd76bd9fa94b2c1828252acb680e0a38ebb6920d9ebc12be5a8d7537",
+    "reason": "User requested surface/account model discovery after Codex rejected a pinned model, then retirement of the Gemini CLI surface. Rename only the generated Gemini profile to Antigravity. Preserve tiers, context thresholds and user-owned policy; defaults omit model overrides and stale user profiles require explicit migration.",
+    "tests": [
+      "tests/unit/config/modelPolicy.test.ts",
+      "tests/unit/scripts/gofer-workspace-bootstrap.test.ts",
+      "tests/unit/council/providers/cli/CLIModelSelection.test.ts"
+    ]
+  },
+  "extension/src/extension.ts": {
+    "previousHash": "cbaa72d6b8a4fa366a8ccb3373f2459ccaea87c02beace39488c0cc113d06372",
+    "approvedHash": "a54ba50dc0610c1b0d63b93ade043c3bf5b04adcc11de33dadbd3bc299c9f070",
+    "reason": "Reviewed runtime change for the approved Gemini retirement: parse explicit Antigravity CLI/desktop choices, warn on stale Gemini preferences, and report unverified native status without silently using Claude or Codex. The subsequent user-approved stage execution bridge adds only a StageExecutionTool import and one activation registration. Removing those two lines reproduces the previous approved hash 20d6251548377dd3b73d80acd9b93c6a180c29b9ead5135a5740a5755975cd15 exactly. Existing activation, commands, initialization and unrelated behavior remain intact. Native tool consent, workspace trust, cancellation and tool-less proposals are tested separately; no arbitrary workspace JavaScript is loaded.",
+    "tests": [
+      "tests/unit/services/StageExecutionTool.test.ts",
+      "tests/unit/config/runtimeSurface.test.ts",
+      "tests/unit/council/PlatformDetector.test.ts",
+      "tests/integration/CrossPlatformCommandRouting.integration.test.ts",
+      "tests/unit/scripts/orchestration-preservation.test.ts"
+    ]
+  }
+}

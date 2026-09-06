@@ -46,9 +46,17 @@ const LEGACY_MANAGED_PATHS = [
   path.join('.system', 'skills', '0_business_scenario'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
+  ...['eai.md', 'eai.toml', 'eai-update.md', 'eai-update.toml', 'manifest.json']
+    .map((file) => path.join('.gemini', 'commands', 'gofer', file)),
 ];
 const RETIRED_PUBLIC_ENTRYPOINT_STEMS = ['gofer'];
 const LEGACY_MANAGED_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
+
+const ANTIGRAVITY_REQUIRED_PATHS = [
+  'AGENTS.md', 'GEMINI.md',
+  path.join('.agents', 'skills', 'eai', 'SKILL.md'),
+  path.join('.agents', 'skills', 'eai-update', 'SKILL.md'),
+];
 
 export const HOST_POLICIES = {
   auto: { required: [] },
@@ -61,9 +69,10 @@ export const HOST_POLICIES = {
   copilot: {
     required: [path.join('.github', 'copilot-instructions.md')],
   },
-  gemini: {
-    required: ['GEMINI.md'],
-  },
+  antigravity: { required: ANTIGRAVITY_REQUIRED_PATHS },
+  'antigravity-desktop': { required: ANTIGRAVITY_REQUIRED_PATHS },
+  grok: { required: ['AGENTS.md'] },
+  vscode: { required: [] },
 };
 
 const WORKSPACE_MARKERS = [
@@ -101,9 +110,8 @@ const EXTENSION_RESOURCE_PATHS = new Map([
   [path.join('.github', 'prompts'), path.join('resources', 'copilot-prompts')],
   [path.join('.github', 'instructions'), path.join('resources', 'copilot-instructions')],
   [path.join('.github', 'skills'), path.join('resources', 'github-skills')],
-  [path.join('.gemini'), path.join('resources', 'gemini')],
   [path.join('.grok', 'skills'), path.join('resources', 'grok-skills')],
-  [path.join('.agents', 'skills'), 'skills'],
+  [path.join('.agents', 'skills'), path.join('resources', 'agents-skills')],
   [path.join('.system', 'skills'), 'skills'],
 ]);
 
@@ -170,7 +178,13 @@ function createEmptyProjectInfo(workspaceRoot) {
 
 export function normalizeHost(host = 'auto') {
   const normalized = String(host || 'auto').trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(HOST_POLICIES, normalized) ? normalized : 'auto';
+  if (normalized === 'gemini') {
+    throw new Error('Gemini CLI is retired. Migrate to Antigravity CLI (--host antigravity) or desktop (--host antigravity-desktop). Keep GEMINI.md and use .agents/skills. See https://antigravity.google/docs/cli/gcli-migration');
+  }
+  if (!Object.prototype.hasOwnProperty.call(HOST_POLICIES, normalized)) {
+    throw new Error(`Unsupported workspace host: ${normalized}. Use ${Object.keys(HOST_POLICIES).join(', ')}.`);
+  }
+  return normalized;
 }
 
 export function scriptRootFromUrl(scriptUrl) {
@@ -254,6 +268,12 @@ async function removeLegacyManagedPaths(workspaceRoot, dryRun, stages = []) {
   const legacyPaths = Array.from(
     new Set([...LEGACY_MANAGED_PATHS, ...buildStaleVisibleManagedPaths(stages)])
   );
+  const extensionPath = path.join('.gemini', 'extension.json');
+  const extension = await readJsonIfExists(path.join(workspaceRoot, extensionPath)).catch((error) => {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  });
+  if (extension?.name === 'eai-gofer' && extension?.gofer) legacyPaths.push(extensionPath);
 
   for (const relativePath of legacyPaths) {
     const targetPath = path.join(workspaceRoot, relativePath);
@@ -273,6 +293,11 @@ async function resolveSourcePath(sourceRoot, relativePath) {
   const directPath = path.join(sourceRoot, relativePath);
   if (await pathExists(directPath)) {
     return directPath;
+  }
+  // Native plugin bundles put the same portable skills at the bundle root.
+  if (relativePath === path.join('.agents', 'skills')) {
+    const pluginSkills = path.join(sourceRoot, 'skills');
+    if (await pathExists(pluginSkills)) return pluginSkills;
   }
 
   const resourceRelativePath = EXTENSION_RESOURCE_PATHS.get(path.normalize(relativePath));
@@ -630,6 +655,10 @@ Apply this contract to every request after Gofer is installed for this repo or A
 4. Select the internal pipeline stage. Do not make the user select a stage.
 5. Check workspace health before meaningful repo work, tool use, or a pipeline stage. Do not repeat setup on every message.
 6. When the user explicitly asks to update Gofer, use its maintenance contract only.
+7. For an accepted scope change, update all five feature records before implementation continues: \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and \`validation-report.md\` (including the active validation scope). Explain the business effect and mark affected old evidence pending. Loop records supplement these five records; they never replace them. Name all five when explaining this process, even without an \`/eai\` prefix. A question alone does not authorize artifact edits.
+8. Validate only the current implemented or required capabilities. A local MVP with no implemented or required authentication needs no login before local preview. Record future authentication as planned, not passed. Keep confirmed non-app work exempt from EAI login, tenant setup and provisioning.
+9. Link every new requirement to a specific existing test or named planned check. Read the test before claiming it covers that requirement. File existence alone is not coverage. Keep missing or unexecuted checks pending. Never point new criteria to an unchanged test that does not assert them.
+10. Apply the user's word limit to the whole visible answer, including headings and lists. Count the draft before sending and shorten it to fit. Do not repeat the user's questions. Keep required facts; remove repeated explanations.
 <!-- gofer:always-on-eai:end -->`;
 }
 
@@ -1076,7 +1105,7 @@ Each feature should also keep a running stakeholder review pack:
 ## Model Policy
 
 Edit \`.specify/memory/gofer-model-policy.yaml\` to tune simple, medium, hard,
-and arbiter model routes for Claude, Codex/OpenAI, Gemini, and Copilot. The
+and arbiter model routes for Claude, Codex/OpenAI, Antigravity, and Copilot. The
 file is copied from \`.specify/templates/gofer-model-policy.yaml\` when missing
 and is not overwritten by bootstrap.
 `;
@@ -1106,7 +1135,6 @@ function getMirrorCopyCandidates() {
       sourceRelativePath: path.join('.github', 'skills'),
       target: path.join('.github', 'skills'),
     },
-    { sourceRelativePath: '.gemini', target: '.gemini' },
     { sourceRelativePath: path.join('.grok', 'skills'), target: path.join('.grok', 'skills') },
     { sourceRelativePath: path.join('.agents', 'skills'), target: path.join('.agents', 'skills') },
     { sourceRelativePath: path.join('.system', 'skills'), target: path.join('.system', 'skills') },
@@ -1219,8 +1247,10 @@ export async function bootstrapWorkspace({
     changed.push(path.join('.claude', 'settings.json'));
   }
 
-  if (includeMirrors) {
-    for (const candidate of getMirrorCopyCandidates(sourceRoot)) {
+  const needsNativeSkills = normalizedHost === 'antigravity' || normalizedHost === 'antigravity-desktop';
+  if (includeMirrors || needsNativeSkills) {
+    for (const candidate of getMirrorCopyCandidates()) {
+      if (!includeMirrors && candidate.target !== path.join('.agents', 'skills')) continue;
       const copied = await copyDirectory(
         await resolveSourcePath(sourceRoot, candidate.sourceRelativePath),
         path.join(workspaceRoot, candidate.target),

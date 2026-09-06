@@ -1,3 +1,4 @@
+import { CrossPlatformCommandRouter } from '../../../extension/src/council/CrossPlatformCommandRouter';
 import { describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -86,6 +87,12 @@ describe('enterpriseai first-run bootstrap command', () => {
     expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/gofer/SKILL.md'))).toBe(false);
     expect(fs.existsSync(path.join(process.cwd(), '.claude/commands/eai.md'))).toBe(true);
     expect(fs.existsSync(path.join(process.cwd(), '.agents/skills/eai/SKILL.md'))).toBe(true);
+    const router = new CrossPlatformCommandRouter(process.cwd());
+    for (const surface of ['antigravity', 'antigravity-desktop'] as const) {
+      expect(router.getCommandPath('eai', surface)).toBe(
+        path.join(process.cwd(), '.agents/skills/eai/SKILL.md')
+      );
+    }
   });
 
   it('does not inject normal workspace preflight into the first-run contract', () => {

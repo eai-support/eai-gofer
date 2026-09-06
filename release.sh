@@ -422,6 +422,8 @@ run_release_validation_gate() {
     run_release_check "Gofer production build" npm run build
     run_release_check "Gofer generated surface check" npm run gofer:generate:check
     run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"
+    run_release_check "Gofer orchestration preservation contract" npm run gofer:orchestration:check
+    run_release_check "Gofer orchestration decision and overhead tests" npm run gofer:orchestration:test
     run_release_check "Gofer unit test suite" npm run test:unit
     run_release_check "Language Server production build" npm --prefix language-server run build
     run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server
@@ -809,6 +811,13 @@ else
 fi
 
 # Build the portable Claude/Codex/Copilot plugin bundle that will be mirrored
+print_info "Checking packaged native Gofer tools and runtime against the candidate..."
+if ! node scripts/verify-vscode-stage-package.mjs --vsix "./eai-gofer-$NEW_VERSION.vsix"; then
+    print_error "VSIX native Gofer tools or runtime are missing/stale. Release stopped."
+    exit 1
+fi
+
+# Build the portable Claude/Codex/Copilot plugin bundle that will be mirrored
 # to the same public GitHub Pages release host as the VSIX.
 print_info "Packaging Claude/Codex/Copilot agent plugin..."
 if npm run gofer:package-plugin -- --version "$NEW_VERSION" --sync-repo 2>&1; then
@@ -951,7 +960,7 @@ VSIX_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-$NEW_VERSIO
 AGENT_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip"
 CLAUDE_MARKETPLACE_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json"
 CODEX_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json"
-GEMINI_EXTENSION_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
+ANTIGRAVITY_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugins/antigravity/eai-gofer/plugin.json"
 print_info "Verifying VSIX is downloadable at: $VSIX_URL"
 HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$VSIX_URL?cachebust=$(date +%s)")
 if [ "$HTTP_STATUS" = "200" ]; then
@@ -985,12 +994,12 @@ else
     print_warning "Codex plugin manifest returned HTTP $HTTP_STATUS"
 fi
 
-print_info "Verifying Gemini extension manifest is reachable at: $GEMINI_EXTENSION_URL"
-HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$GEMINI_EXTENSION_URL?cachebust=$(date +%s)")
+print_info "Verifying Antigravity plugin manifest is reachable at: $ANTIGRAVITY_PLUGIN_URL"
+HTTP_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$ANTIGRAVITY_PLUGIN_URL?cachebust=$(date +%s)")
 if [ "$HTTP_STATUS" = "200" ]; then
-    print_success "Gemini extension manifest is accessible (HTTP $HTTP_STATUS)"
+    print_success "Antigravity plugin manifest is accessible (HTTP $HTTP_STATUS)"
 else
-    print_warning "Gemini extension manifest returned HTTP $HTTP_STATUS"
+    print_warning "Antigravity plugin manifest returned HTTP $HTTP_STATUS"
 fi
 
 # Simulate auto-updater flow (what other VSCode instances will do)
@@ -1003,7 +1012,7 @@ REMOTE_VERSION=$(echo "$RELEASES_JSON" | node -e "try { const d=require('fs').re
 REMOTE_URL=$(echo "$RELEASES_JSON" | NEW_VERSION="$NEW_VERSION" node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); const v=process.env.NEW_VERSION; const r=j.releases?.find(r=>r.version===v); console.log(r?.download_url || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
 REMOTE_CLAUDE_URL=$(echo "$RELEASES_JSON" | NEW_VERSION="$NEW_VERSION" node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); const v=process.env.NEW_VERSION; const r=j.releases?.find(r=>r.version===v); console.log(r?.assets?.claude?.marketplace_url || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
 REMOTE_CODEX_URL=$(echo "$RELEASES_JSON" | NEW_VERSION="$NEW_VERSION" node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); const v=process.env.NEW_VERSION; const r=j.releases?.find(r=>r.version===v); console.log(r?.assets?.codex?.manifest_url || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
-REMOTE_GEMINI_URL=$(echo "$RELEASES_JSON" | NEW_VERSION="$NEW_VERSION" node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); const v=process.env.NEW_VERSION; const r=j.releases?.find(r=>r.version===v); console.log(r?.assets?.gemini?.manifest_url || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
+REMOTE_ANTIGRAVITY_URL=$(echo "$RELEASES_JSON" | NEW_VERSION="$NEW_VERSION" node -e "try { const d=require('fs').readFileSync('/dev/stdin','utf8'); const j=JSON.parse(d); const v=process.env.NEW_VERSION; const r=j.releases?.find(r=>r.version===v); console.log(r?.assets?.antigravity?.manifest_url || 'MISSING'); } catch(e) { console.log('MISSING'); }" 2>/dev/null || echo "MISSING")
 
 SIMULATION_PASS=true
 if [ "$REMOTE_VERSION" = "$NEW_VERSION" ]; then
@@ -1034,10 +1043,10 @@ else
     SIMULATION_PASS=false
 fi
 
-if [ "$REMOTE_GEMINI_URL" = "$GEMINI_EXTENSION_URL" ]; then
-    print_success "Gemini extension URL is correct"
+if [ "$REMOTE_ANTIGRAVITY_URL" = "$ANTIGRAVITY_PLUGIN_URL" ]; then
+    print_success "Antigravity plugin URL is correct"
 else
-    print_warning "Gemini extension URL mismatch: expected $GEMINI_EXTENSION_URL, got $REMOTE_GEMINI_URL"
+    print_warning "Antigravity plugin URL mismatch: expected $ANTIGRAVITY_PLUGIN_URL, got $REMOTE_ANTIGRAVITY_URL"
     SIMULATION_PASS=false
 fi
 
@@ -1062,7 +1071,7 @@ echo "  • Public repo install source: https://github.com/eai-support/eai-gofer
 echo "  • Claude repo marketplace path: .claude-plugin + plugins/eai-gofer"
 echo "  • Codex repo marketplace path: .agents/plugins + plugins/eai-gofer"
 echo "  • Copilot repo marketplace path: .github/plugin + plugins/eai-gofer"
-echo "  • Gemini manifest: https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"
+echo "  • Antigravity manifest: https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugins/antigravity/eai-gofer/plugin.json"
 echo ""
 print_info "GitHub Resources:"
 echo "  • Releases: https://github.com/eai-support/eai-gofer/releases"

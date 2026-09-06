@@ -1,4 +1,10 @@
 import * as vscode from 'vscode';
+import {
+  parseRuntimeSurfacePreference,
+  assertNotRetiredSurface,
+  type RuntimeSurface,
+  type RuntimeSurfacePreference,
+} from './config/runtimeSurface';
 import packageJson from '../package.json';
 
 /**
@@ -188,20 +194,18 @@ export class ConfigManager {
   /**
    * Get preferred CLI provider setting (T009)
    */
-  public getPreferredCLIProvider(): 'claude' | 'codex' | 'copilot' | 'gemini' | 'auto' {
-    return this.config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      CONFIG_KEYS.cliProvider.replace('gofer.', ''),
-      DEFAULTS.cliProvider
+  public getPreferredCLIProvider(): RuntimeSurfacePreference {
+    return parseRuntimeSurfacePreference(
+      this.config.get<string>(CONFIG_KEYS.cliProvider.replace('gofer.', ''), DEFAULTS.cliProvider)
     );
   }
 
   /**
    * Get default CLI for Gofer command routing (T004)
    */
-  public getDefaultCLI(): 'claude' | 'copilot' | 'codex' | 'gemini' | 'auto' {
-    return this.config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      DEFAULTS.defaultCLI
+  public getDefaultCLI(): RuntimeSurfacePreference {
+    return parseRuntimeSurfacePreference(
+      this.config.get<string>('defaultCLI', DEFAULTS.defaultCLI)
     );
   }
 
@@ -221,15 +225,17 @@ export class ConfigManager {
    * @param platform Platform identifier
    * @returns Display name (e.g., "Claude Code", "GitHub Copilot Chat")
    */
-  public getCLIDisplayName(platform: 'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'): string {
-    const displayNames: Record<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto', string> = {
+  public getCLIDisplayName(platform: RuntimeSurfacePreference): string {
+    const displayNames: Record<RuntimeSurfacePreference, string> = {
       claude: 'Claude Code',
       copilot: 'GitHub Copilot Chat',
       codex: 'OpenAI Codex CLI',
-      gemini: 'Google Gemini CLI',
+      antigravity: 'Google Antigravity CLI',
+      'antigravity-desktop': 'Google Antigravity Desktop',
       auto: 'Auto-Detect',
     };
 
+    assertNotRetiredSurface(platform);
     return displayNames[platform];
   }
 
@@ -240,18 +246,17 @@ export class ConfigManager {
    * @param workspacePath Workspace root path
    * @returns True if platform directory exists
    */
-  public isPlatformEnabled(
-    platform: 'claude' | 'copilot' | 'codex' | 'gemini',
-    workspacePath: string
-  ): boolean {
+  public isPlatformEnabled(platform: RuntimeSurface, workspacePath: string): boolean {
+    assertNotRetiredSurface(platform);
     const fs = require('fs');
     const path = require('path');
 
-    const platformPaths: Record<'claude' | 'copilot' | 'codex' | 'gemini', string> = {
+    const platformPaths: Record<RuntimeSurface, string> = {
       claude: path.join(workspacePath, '.claude', 'commands'),
       copilot: path.join(workspacePath, '.github', 'prompts'),
       codex: path.join(workspacePath, '.system', 'skills'),
-      gemini: path.join(workspacePath, '.gemini', 'commands', 'gofer'),
+      antigravity: path.join(workspacePath, '.agents', 'skills'),
+      'antigravity-desktop': path.join(workspacePath, '.agents', 'skills'),
     };
 
     try {

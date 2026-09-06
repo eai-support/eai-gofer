@@ -1,0 +1,4 @@
+{
+  "name": "eai-gofer",
+  "description": "Gofer single-entry delivery command with internal pipeline routing"
+}

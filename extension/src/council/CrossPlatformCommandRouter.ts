@@ -1,9 +1,10 @@
 /**
  * Cross-Platform Command Router
- * Routes commands across Claude CLI, Codex CLI, GitHub Copilot Chat, and Gemini CLI
+ * Routes commands across Claude CLI, Codex CLI, GitHub Copilot Chat, and Antigravity CLI/desktop
  * Feature 028: Cross-platform command parity
  */
 
+import { assertNotRetiredSurface, isAntigravitySurface } from '../config/runtimeSurface';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathExistsSafe, readDirectorySafe } from './CommandFileAccess';
@@ -46,7 +47,7 @@ interface CommandSelectionResult {
  * Routes commands across different AI platforms with priority fallback
  *
  * Priority: .claude/commands/ > .agents/skills/ (with legacy .system fallback)
- * > .gemini/commands/gofer/ > .github/prompts/
+ * > .github/prompts/. Antigravity uses shared .agents skills only when explicitly selected.
  *
  * Security: Validates all paths to prevent directory traversal attacks
  */
@@ -91,6 +92,9 @@ export class CrossPlatformCommandRouter {
     targetPlatform?: PlatformType,
     workflowProfile?: WorkflowProfile
   ): Promise<CommandRoutingResult> {
+    assertNotRetiredSurface(targetPlatform);
+    // Check settings before cache lookup so retired configurations cannot keep running.
+    const preferredPlatform = this.platformDetector.getDefaultPlatform();
     validateCommandName(commandName);
     if (RETIRED_PUBLIC_ENTRYPOINTS.has(commandName)) {
       throw new Error(`Command "${commandName}" has been retired. Use "eai" instead.`);
@@ -104,7 +108,7 @@ export class CrossPlatformCommandRouter {
 
     const searchOrder = targetPlatform
       ? [targetPlatform]
-      : this.getPlatformSearchOrder(this.platformDetector.getDefaultPlatform());
+      : this.getPlatformSearchOrder(preferredPlatform);
 
     this.logger.debug('Routing command', {
       commandName,
@@ -220,24 +224,6 @@ export class CrossPlatformCommandRouter {
     );
     copilotMetadata.filter(Boolean).forEach((metadata) => commands.add(metadata!.name));
 
-    // Scan Gemini command TOML files
-    const geminiDir = path.join(this.workspacePath, '.gemini', 'commands', 'gofer');
-    const geminiFiles = await readDirectorySafe(geminiDir, 'listCommands.gemini', this.logWarning);
-    const geminiMetadata = await Promise.all(
-      geminiFiles
-        .filter((file) => file.endsWith('.toml'))
-        .map(async (file) => {
-          try {
-            return await this.metadataExtractor.extractFromGeminiCommand(
-              path.join(geminiDir, file)
-            );
-          } catch {
-            return null;
-          }
-        })
-    );
-    geminiMetadata.filter(Boolean).forEach((metadata) => commands.add(metadata!.name));
-
     return Array.from(commands)
       .filter((commandName) => PUBLIC_ENTRYPOINTS.has(commandName))
       .sort();
@@ -282,15 +268,13 @@ export class CrossPlatformCommandRouter {
    * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const geminiCommand =
-      PUBLIC_ENTRYPOINTS.has(commandName) || commandName.startsWith('gofer:')
-        ? commandName
-        : `gofer:${commandName}`;
+    assertNotRetiredSurface(platform);
     const syntaxMap: Record<PlatformType, string> = {
       claude: `/${commandName}`,
       codex: `/${commandName}`,
       copilot: `#${commandName}`,
-      gemini: `/${geminiCommand}`,
+      antigravity: `/${commandName}`,
+      'antigravity-desktop': `/${commandName}`,
     };
 
     return syntaxMap[platform];
@@ -314,7 +298,9 @@ export class CrossPlatformCommandRouter {
   }
 
   private getPlatformSearchOrder(preferred: PlatformType | 'auto'): PlatformType[] {
-    const defaultPriority: PlatformType[] = ['claude', 'codex', 'gemini', 'copilot'];
+    const defaultPriority: PlatformType[] = ['claude', 'codex', 'copilot'];
+    assertNotRetiredSurface(preferred);
+    if (isAntigravitySurface(preferred)) return [preferred];
     if (preferred === 'auto') {
       return defaultPriority;
     }
@@ -419,8 +405,8 @@ export class CrossPlatformCommandRouter {
       if (platform === 'codex') {
         return await this.metadataExtractor.extractFromCodexSkill(commandPath);
       }
-      if (platform === 'gemini') {
-        return await this.metadataExtractor.extractFromGeminiCommand(commandPath);
+      if (isAntigravitySurface(platform)) {
+        return await this.metadataExtractor.extractFromAntigravitySkill(commandPath, platform);
       }
       return await this.metadataExtractor.extractFromCopilotPrompt(commandPath);
     } catch (error) {
@@ -453,15 +439,20 @@ export class CrossPlatformCommandRouter {
   }
 
   private getCommandPathCandidates(commandName: string, platform: PlatformType): string[] {
+    assertNotRetiredSurface(platform);
+    if (isAntigravitySurface(platform)) {
+      return this.getCommandFileStemCandidates(commandName).map((fileStem) =>
+        path.join(this.workspacePath, '.agents', 'skills', fileStem, 'SKILL.md')
+      );
+    }
     if (platform === 'codex') {
       return this.getCodexCommandPathCandidates(commandName);
     }
 
     return this.getCommandFileStemCandidates(commandName).map((fileStem) => {
-      const platformPaths: Record<Exclude<PlatformType, 'codex'>, string> = {
+      const platformPaths: Record<'claude' | 'copilot', string> = {
         claude: path.join(this.workspacePath, '.claude', 'commands', `${fileStem}.md`),
         copilot: path.join(this.workspacePath, '.github', 'prompts', `${fileStem}.prompt.md`),
-        gemini: path.join(this.workspacePath, '.gemini', 'commands', 'gofer', `${fileStem}.toml`),
       };
 
       return platformPaths[platform];

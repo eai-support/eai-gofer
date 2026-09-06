@@ -45,16 +45,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -522,29 +522,29 @@ explore different approaches, then a judge synthesizes the best result.
 
 | Strategy                 | Agent                            | When to Trigger                                                            | Converge Model |
 | ------------------------ | -------------------------------- | -------------------------------------------------------------------------- | -------------- |
-| #1 Variant Generator     | `implement-variant-generator`    | Multiple valid coding paradigms exist for a task (e.g., functional vs OOP) | sonnet         |
-| #3 Bug Triangulator      | `implement-bug-triangulator`     | Debugging a defect with unclear root cause                                 | sonnet         |
-| #4 Test Diversifier      | `implement-test-diversifier`     | Writing tests for critical or complex logic                                | sonnet         |
-| #8 Error Hardener        | `implement-error-hardener`       | Implementing error-prone code (I/O, external APIs, resource mgmt)          | sonnet         |
-| #11 Performance Explorer | `implement-performance-explorer` | Optimizing a hot path or resource-intensive operation                      | sonnet         |
-| #15 Code Review Council  | `implement-code-review-council`  | After completing a complex task, before marking done                       | sonnet         |
-| #17 Doc Writer           | `implement-doc-writer`           | Writing documentation for a user-facing feature                            | sonnet         |
+| #1 Variant Generator     | `implement-variant-generator`    | Multiple valid coding paradigms exist for a task (e.g., functional vs OOP) | medium         |
+| #3 Bug Triangulator      | `implement-bug-triangulator`     | Debugging a defect with unclear root cause                                 | medium         |
+| #4 Test Diversifier      | `implement-test-diversifier`     | Writing tests for critical or complex logic                                | medium         |
+| #8 Error Hardener        | `implement-error-hardener`       | Implementing error-prone code (I/O, external APIs, resource mgmt)          | medium         |
+| #11 Performance Explorer | `implement-performance-explorer` | Optimizing a hot path or resource-intensive operation                      | medium         |
+| #15 Code Review Council  | `implement-code-review-council`  | After completing a complex task, before marking done                       | medium         |
+| #17 Doc Writer           | `implement-doc-writer`           | Writing documentation for a user-facing feature                            | medium         |
 
 **Invocation pattern** (example for #1 Variant Generator):
 
 ```
 # Diverge: Launch 3-5 agents with different approaches
-Task: subagent_type="implement-variant-generator", model="sonnet"
+Task: subagent_type="implement-variant-generator", model_tier="medium"
   prompt="Perspective 1: Implement [task] using functional approach. Files: [list]"
 
-Task: subagent_type="implement-variant-generator", model="sonnet"
+Task: subagent_type="implement-variant-generator", model_tier="medium"
   prompt="Perspective 2: Implement [task] using OOP approach. Files: [list]"
 
-Task: subagent_type="implement-variant-generator", model="sonnet"
+Task: subagent_type="implement-variant-generator", model_tier="medium"
   prompt="Perspective 3: Implement [task] using event-driven approach. Files: [list]"
 
 # Converge: Judge synthesizes best approach
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
   prompt="Synthesize 3 implementation variants for [task]. Select best approach.
   Variant 1: [result]. Variant 2: [result]. Variant 3: [result]."
 ```
@@ -657,7 +657,7 @@ tool. Do NOT perform this review work inline in the main context.
 alignment
 
 ```
-Task: subagent_type="engineer-review", model="sonnet"
+Task: subagent_type="engineer-review", model_tier="medium"
 Prompt: "Review alignment between spec.md, plan.md, tasks.md, and the
 implemented code in {FEATURE_DIR}. Check that all acceptance criteria are
 implemented. Report Red/Yellow/Gray findings."
@@ -666,7 +666,7 @@ implemented. Report Red/Yellow/Gray findings."
 **Agent 2**: codebase-analyzer (sonnet) — verify implementation patterns
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Verify that the implemented code follows existing codebase patterns
 from {FEATURE_DIR}/research.md and matches the architecture in
 {FEATURE_DIR}/plan.md. Report Red/Yellow/Gray findings."
@@ -676,7 +676,7 @@ from {FEATURE_DIR}/research.md and matches the architecture in
 coverage
 
 ```
-Task: subagent_type="validation-correctness", model="sonnet"
+Task: subagent_type="validation-correctness", model_tier="medium"
 Prompt: "Verify that every acceptance criterion in {FEATURE_DIR}/spec.md
 has been implemented and has corresponding test coverage.
 Report Red/Yellow/Gray findings with coverage gaps."

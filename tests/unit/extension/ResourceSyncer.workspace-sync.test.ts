@@ -13,15 +13,6 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const EXTENSION_PATH = path.join(REPO_ROOT, 'extension');
 
-function extractGeminiInclude(content: string): string {
-  const match = content.match(/^prompt = "\{\{include: ([^"]+)\}\}"/m);
-  if (!match) {
-    throw new Error('Missing Gemini include');
-  }
-
-  return match[1];
-}
-
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.access(targetPath);
@@ -119,23 +110,24 @@ describe('ResourceSyncer workspace sync', () => {
     expect(await pathExists(auditSchemaPath)).toBe(true);
   });
 
-  it('setupGeminiCommands keeps include targets resolvable', async (): Promise<void> => {
-    await syncer.setupGeminiCommands();
+  it('rejects the retired Gemini setup API without any writes', async () => {
+    const before = await findFiles(workspace);
+    await expect(syncer.setupGeminiCommands()).rejects.toThrow('Gemini CLI is retired');
+    expect(await findFiles(workspace)).toEqual(before);
+  });
 
-    const geminiCommandPath = path.join(workspace, '.gemini', 'commands', 'gofer', 'eai.toml');
-    const canonicalCommandPath = path.join(
-      workspace,
-      '.specify',
-      'commands',
-      '6_gofer_validate.md'
+  it('creates shared Antigravity/Codex skills without Gemini TOML or context changes', async () => {
+    const context = '# Existing GEMINI.md rules\\n';
+    await fs.writeFile(path.join(workspace, 'GEMINI.md'), context);
+    await syncer.setupClaudeCommands();
+    await syncer.setupCodexSkills();
+    expect(await pathExists(path.join(workspace, '.agents/skills/eai/SKILL.md'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.agents/skills/eai-update/SKILL.md'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.specify/commands/6_gofer_validate.md'))).toBe(
+      true
     );
-    const geminiContent = await fs.readFile(geminiCommandPath, 'utf8');
-    const includeTarget = extractGeminiInclude(geminiContent);
-
-    expect(path.resolve(path.dirname(geminiCommandPath), includeTarget)).toBe(
-      path.join(workspace, '.gemini', 'commands', 'gofer', 'eai.md')
-    );
-    expect(await pathExists(canonicalCommandPath)).toBe(true);
+    expect(await pathExists(path.join(workspace, '.gemini/commands/gofer/eai.toml'))).toBe(false);
+    expect(await fs.readFile(path.join(workspace, 'GEMINI.md'), 'utf8')).toBe(context);
   });
 
   it('archives legacy command entrypoints instead of deleting custom files', async (): Promise<void> => {
@@ -181,18 +173,31 @@ describe('ResourceSyncer workspace sync', () => {
 
     await syncer.setupClaudeCommands();
     await syncer.setupCopilotPrompts();
-    await syncer.setupGeminiCommands();
+    await syncer.setupCodexSkills();
 
     for (const relativePath of staleFiles.keys()) {
+      if (relativePath.startsWith('.gemini/')) {
+        expect(await fs.readFile(path.join(workspace, relativePath), 'utf8')).toBe(
+          staleFiles.get(relativePath)
+        );
+        continue;
+      }
       expect(await pathExists(path.join(workspace, relativePath)), relativePath).toBe(false);
     }
     expect(await pathExists(path.join(workspace, '.claude/commands/eai.md'))).toBe(true);
     expect(await pathExists(path.join(workspace, '.github/prompts/eai.prompt.md'))).toBe(true);
-    expect(await pathExists(path.join(workspace, '.gemini/commands/gofer/eai.toml'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.agents/skills/eai/SKILL.md'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.gemini/commands/gofer/eai.toml'))).toBe(false);
 
     const archiveRoot = path.join(workspace, '.specify', 'logs', 'legacy-command-backups');
     const archivedFiles = await findFiles(archiveRoot);
     for (const relativePath of staleFiles.keys()) {
+      if (relativePath.startsWith('.gemini/')) {
+        expect(await fs.readFile(path.join(workspace, relativePath), 'utf8')).toBe(
+          staleFiles.get(relativePath)
+        );
+        continue;
+      }
       const archived = archivedFiles.find((filePath) => filePath.endsWith(relativePath));
       expect(archived, `${relativePath} should be archived`).toBeTruthy();
     }

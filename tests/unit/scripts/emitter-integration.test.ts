@@ -64,7 +64,7 @@ surfaces:
   - github-prompts
   - agents-skills
   - system-skills
-  - gemini
+  - antigravity
 ---
 
 # Gofer Research
@@ -92,7 +92,7 @@ surfaces:
   - github-prompts
   - agents-skills
   - system-skills
-  - gemini
+  - antigravity
 ---
 
 # Business Scenario
@@ -202,7 +202,7 @@ describe('generate-commands emitters (integration)', () => {
       '--root',
       tmpRoot,
       '--surfaces',
-      'claude,claude-mirror,copilot,github-prompts,agents-skills,system-skills,gemini,agents-md,codex-config',
+      'claude,claude-mirror,copilot,github-prompts,agents-skills,system-skills,antigravity,agents-md,codex-config',
     ]);
 
     // Assign dummy emitters for the describe blocks below — actual verification
@@ -264,7 +264,7 @@ describe('generate-commands emitters (integration)', () => {
         'github-prompts',
         'agents-skills',
         'system-skills',
-        'gemini',
+        'antigravity',
         'codex',
       ];
       for (const surface of surfaces) {
@@ -278,9 +278,9 @@ describe('generate-commands emitters (integration)', () => {
       }
     });
 
-    it('does not exclude legacy stages from gemini', () => {
+    it('does not exclude legacy stages from antigravity', () => {
       for (const stage of CLAUDE_ONLY_STAGES) {
-        expect(shouldExclude(stage, 'gemini')).toBe(false);
+        expect(shouldExclude(stage, 'antigravity')).toBe(false);
       }
     });
   });
@@ -359,7 +359,6 @@ describe('generate-commands emitters (integration)', () => {
         path.join(tmpRoot, '.github', 'prompts', 'eai.prompt.md'),
         path.join(tmpRoot, '.agents', 'skills', 'eai', 'SKILL.md'),
         path.join(tmpRoot, '.system', 'skills', 'eai', 'SKILL.md'),
-        path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.toml'),
       ];
 
       for (const outPath of expectedPaths) {

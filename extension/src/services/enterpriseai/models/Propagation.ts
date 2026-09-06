@@ -1,4 +1,19 @@
-export const TARGET_PLATFORMS = ['claude', 'copilot', 'codex', 'gemini'] as const;
+import { RUNTIME_SURFACES, GEMINI_CLI_MIGRATION_MESSAGE } from '../../../config/runtimeSurface';
+
+export const TARGET_PLATFORMS = RUNTIME_SURFACES;
+
+/** Legacy mirror paths are not active targets; do not fall back to Claude. */
+export function validateActiveMirrorTargets(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return values.some(
+    (value) =>
+      typeof value === 'string' &&
+      (/^gemini(?:-cli)?$/i.test(value.trim()) ||
+        /(?:^|\/)\.gemini\/commands\/gofer(?:\/|$)/i.test(value.replace(/\\/g, '/')))
+  )
+    ? [GEMINI_CLI_MIGRATION_MESSAGE]
+    : [];
+}
 
 export type TargetPlatform = (typeof TARGET_PLATFORMS)[number];
 

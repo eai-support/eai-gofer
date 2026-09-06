@@ -46,16 +46,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -285,7 +285,7 @@ independently and writes its output artifact.
 ### Agent 1: Implementation Plan Writer
 
 ```
-Task: subagent_type="general-purpose", model="sonnet"
+Task: subagent_type="general-purpose", model_tier="medium"
 Prompt: "Generate a complete technical implementation plan for [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -376,7 +376,7 @@ Return a structured summary:
 ### Agent 2: Data Model Designer
 
 ```
-Task: subagent_type="general-purpose", model="sonnet"
+Task: subagent_type="general-purpose", model_tier="medium"
 Prompt: "Design the data model for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -404,7 +404,7 @@ Return: entity count, relationship count, entities with state machines"
 ### Agent 3: API Contract Designer
 
 ```
-Task: subagent_type="general-purpose", model="sonnet"
+Task: subagent_type="general-purpose", model_tier="medium"
 Prompt: "Design API contracts for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -437,7 +437,7 @@ Return: endpoint count, contract files created, user stories served"
 ### Agent 4: Quickstart Guide Writer
 
 ```
-Task: subagent_type="general-purpose", model="haiku"
+Task: subagent_type="general-purpose", model_tier="simple"
 Prompt: "Generate a quickstart testing guide for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -467,17 +467,17 @@ contracts, dispatch three visual-writer sub-agents in parallel to produce the
 developer-persona-pack visuals:
 
 ```
-Task: subagent_type="visual-c4-writer", model="haiku"
+Task: subagent_type="visual-c4-writer", model_tier="simple"
 Prompt: "Generate C4 Context and Container diagrams for {FEATURE_NAME}.
 Feature dir: {FEATURE_DIR}. Read spec.md, research.md, plan.md.
 Output to {FEATURE_DIR}/visuals/c4-context.md and c4-container.md."
 
-Task: subagent_type="visual-bounded-context-writer", model="haiku"
+Task: subagent_type="visual-bounded-context-writer", model_tier="simple"
 Prompt: "Generate bounded-context map for {FEATURE_NAME}.
 Feature dir: {FEATURE_DIR}. Read plan.md, data-model.md, contracts/.
 Output to {FEATURE_DIR}/visuals/bounded-context.md."
 
-Task: subagent_type="visual-erd-writer", model="haiku"
+Task: subagent_type="visual-erd-writer", model_tier="simple"
 Prompt: "Generate data-model ERD for {FEATURE_NAME}.
 Feature dir: {FEATURE_DIR}. Read data-model.md.
 Output to {FEATURE_DIR}/visuals/data-model-erd.md."
@@ -556,7 +556,7 @@ After all agents complete:
 Dispatch a validator agent to cross-check plan against spec:
 
 ```
-Task: subagent_type="general-purpose", model="haiku"
+Task: subagent_type="general-purpose", model_tier="simple"
 Prompt: "Validate plan coverage of specification for feature at {FEATURE_DIR}.
 
 Read:
@@ -603,7 +603,7 @@ For features with significant architectural decisions, spawn 5 agents each using
 a different pattern:
 
 ```
-Task: subagent_type="plan-architecture-diverger", model="sonnet"
+Task: subagent_type="plan-architecture-diverger", model_tier="medium"
 Prompt: "Design architecture for [FEATURE] using Pattern [1-5].
 Pattern 1: Microservices/modular  2: Monolithic/cohesive  3: Event-sourced
 4: CQRS  5: Plugin-based
@@ -613,7 +613,7 @@ Spec: [FEATURE_DIR]/spec.md  Plan context: [summary of current plan]"
 Run all 5 in parallel, then judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: architecture selection.
 Select the best architecture for this feature considering codebase fit, complexity, and testability.
 [paste all 5 agent outputs]"
@@ -624,7 +624,7 @@ Select the best architecture for this feature considering codebase fit, complexi
 For features with API surfaces, compare paradigms:
 
 ```
-Task: subagent_type="plan-api-comparator", model="sonnet"
+Task: subagent_type="plan-api-comparator", model_tier="medium"
 Prompt: "Design API for [FEATURE] using Paradigm [1-4].
 Paradigm 1: REST  2: GraphQL  3: RPC  4: Event-based
 Requirements: [API requirements from spec]"
@@ -633,7 +633,7 @@ Requirements: [API requirements from spec]"
 Run 3-4 in parallel, then judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: API paradigm selection.
 [paste all agent outputs]"
 ```
@@ -643,7 +643,7 @@ Prompt: "Judge verdict type: API paradigm selection.
 For features that modify existing code significantly:
 
 ```
-Task: subagent_type="plan-refactor-rewrite-advisor", model="sonnet"
+Task: subagent_type="plan-refactor-rewrite-advisor", model_tier="medium"
 Prompt: "Perspective [1/2] for changing [CODE AREA].
 Perspective 1: Plan minimal incremental refactor
 Perspective 2: Plan clean rewrite
@@ -653,7 +653,7 @@ Current code: [file paths and summary]"
 Run both in parallel, then judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: refactor vs rewrite decision.
 [paste both agent outputs]"
 ```
@@ -663,7 +663,7 @@ Prompt: "Judge verdict type: refactor vs rewrite decision.
 When the feature requires migrating existing code or data:
 
 ```
-Task: subagent_type="plan-migration-path-finder", model="sonnet"
+Task: subagent_type="plan-migration-path-finder", model_tier="medium"
 Prompt: "Design migration for [CHANGE] using Strategy [1-4].
 Strategy 1: Big bang  2: Strangler fig  3: Feature-flagged  4: Adapter/facade
 Migration scope: [what needs changing]"
@@ -672,7 +672,7 @@ Migration scope: [what needs changing]"
 Run all 4 in parallel, then judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: migration strategy selection.
 [paste all 4 agent outputs]"
 ```
@@ -682,7 +682,7 @@ Prompt: "Judge verdict type: migration strategy selection.
 For features with data models, stress-test before finalizing:
 
 ```
-Task: subagent_type="plan-data-model-stress-tester", model="haiku"
+Task: subagent_type="plan-data-model-stress-tester", model_tier="simple"
 Prompt: "Stress-test data model from Perspective [1-4].
 Perspective 1: 10x scale  2: Concurrent access  3: Schema evolution  4: Edge-case shapes
 Data model: [entities and relationships from plan]"
@@ -691,7 +691,7 @@ Data model: [entities and relationships from plan]"
 Run all 4 in parallel, then judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: data model robustness assessment.
 [paste all 4 agent outputs]"
 ```
@@ -724,7 +724,7 @@ catch misalignment early.
 **Agent 1**: engineer-review (sonnet) — cross-check spec↔plan alignment
 
 ```
-Task: subagent_type="engineer-review", model="sonnet"
+Task: subagent_type="engineer-review", model_tier="medium"
 Prompt: "Review alignment between spec.md and plan.md in {FEATURE_DIR}.
 Find every gap, inconsistency, and misalignment between the specification
 and the implementation plan. Report Red/Yellow/Gray findings."
@@ -733,7 +733,7 @@ and the implementation plan. Report Red/Yellow/Gray findings."
 **Agent 2**: codebase-analyzer (sonnet) — verify file paths and code patterns
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Verify that the plan at {FEATURE_DIR}/plan.md references correct
 file paths and follows existing codebase patterns from {FEATURE_DIR}/research.md.
 Report Red/Yellow/Gray findings."
@@ -743,7 +743,7 @@ Report Red/Yellow/Gray findings."
 coverage
 
 ```
-Task: subagent_type="validation-correctness", model="sonnet"
+Task: subagent_type="validation-correctness", model_tier="medium"
 Prompt: "Verify that every acceptance criterion in {FEATURE_DIR}/spec.md
 is addressed by the plan at {FEATURE_DIR}/plan.md.
 Report Red/Yellow/Gray findings with coverage gaps."

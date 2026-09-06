@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -7,6 +7,8 @@ const FIXTURE_PATH = path.resolve(
   __dirname,
   '../../../tests/fixtures/stage-commands/1_gofer_research.md'
 );
+let currentFixturePath: string;
+let fixtureRoot: string;
 
 const moduleUrl = new URL(
   '../../../.specify/scripts/node/parse-stage-command.mjs',
@@ -21,47 +23,62 @@ describe('parseStageCommand', () => {
   beforeAll(async () => {
     const mod = await import(moduleUrl.href);
     parseStageCommand = mod.parseStageCommand;
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'gofer-current-stage-'));
+    currentFixturePath = path.join(fixtureRoot, '1_gofer_research.md');
+    const legacy = await fs.readFile(FIXTURE_PATH, 'utf8');
+    await fs.writeFile(currentFixturePath, legacy.replace(/^ {2}- gemini$/m, '  - antigravity'));
+  });
+
+  afterAll(async () => {
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('rejects the unchanged legacy Gemini fixture with migration guidance', async () => {
+    await expect(parseStageCommand(FIXTURE_PATH)).rejects.toThrow(
+      /Gemini CLI is retired.*antigravity/
+    );
   });
 
   it('parses valid YAML frontmatter without throwing', async () => {
-    const result = await parseStageCommand(FIXTURE_PATH);
+    const result = await parseStageCommand(currentFixturePath);
     expect(result).toBeDefined();
     expect(result.frontmatter).toBeDefined();
     expect(result.body).toBeDefined();
   });
 
   it('returns the correct name field from frontmatter', async () => {
-    const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
+    const { frontmatter } = await parseStageCommand(currentFixturePath);
     expect(frontmatter.name).toBe('1_gofer_research');
   });
 
   it('returns the correct description field from frontmatter', async () => {
-    const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
+    const { frontmatter } = await parseStageCommand(currentFixturePath);
     expect(frontmatter.description).toBe(
       'Research codebase, CLI integrations, and technology landscape for the target feature.'
     );
   });
 
   it('returns the correct title field from frontmatter', async () => {
-    const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
+    const { frontmatter } = await parseStageCommand(currentFixturePath);
     expect(frontmatter.title).toBe('Gofer Research');
   });
 
   it('returns surfaces as an array', async () => {
-    const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
+    const { frontmatter } = await parseStageCommand(currentFixturePath);
     expect(Array.isArray(frontmatter.surfaces)).toBe(true);
     expect(frontmatter.surfaces).toContain('claude');
     expect(frontmatter.surfaces).toContain('codex');
-    expect(frontmatter.surfaces).toContain('gemini');
+    expect(frontmatter.surfaces).toContain('antigravity');
+    expect(frontmatter.surfaces).not.toContain('gemini');
   });
 
   it('returns the correct category', async () => {
-    const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
+    const { frontmatter } = await parseStageCommand(currentFixturePath);
     expect(frontmatter.category).toBe('pipeline');
   });
 
   it('extracts markdown body after the second --- fence', async () => {
-    const { body } = await parseStageCommand(FIXTURE_PATH);
+    const { body } = await parseStageCommand(currentFixturePath);
     // Body should contain the heading and content, not the frontmatter
     expect(body).toContain('# Gofer Research');
     expect(body).toContain('Analyse the existing codebase structure');

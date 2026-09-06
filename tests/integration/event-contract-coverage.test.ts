@@ -257,7 +257,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
         {
           changeSetId: 'chg_evt_008',
           canonicalSources: ['.specify/commands/0_gofer_start.md'],
-          targetMirrors: ['copilot', 'codex', 'gemini'],
+          targetMirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
           runParityValidation: true,
         },
         {

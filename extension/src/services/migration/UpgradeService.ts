@@ -68,7 +68,7 @@ export interface IResourceOperations {
   setupCopilotSkills(): Promise<void>;
 
   /**
-   * Setup Gemini CLI extension commands
+   * Retired Gemini CLI API, retained only for explicit migration diagnostics.
    */
   setupGeminiCommands(): Promise<void>;
 
@@ -264,11 +264,7 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
         await resourceOps.setupCopilotSkills();
 
-        progress.report({ message: 'Updating Gemini commands...' });
-        this.logger.info('UpgradeService', 'Setting up Gemini commands');
-        await resourceOps.setupGeminiCommands();
-
-        progress.report({ message: 'Generating Codex CLI skills...' });
+        progress.report({ message: 'Generating shared Codex/Antigravity workspace skills...' });
         this.logger.info('UpgradeService', 'Generating Codex CLI skills from Claude commands');
         await resourceOps.setupCodexSkills();
 
@@ -407,11 +403,7 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
         await resourceOps.setupCopilotSkills();
 
-        progress.report({ message: 'Updating Gemini commands...' });
-        this.logger.info('UpgradeService', 'Setting up Gemini commands');
-        await resourceOps.setupGeminiCommands();
-
-        progress.report({ message: 'Generating Codex CLI skills...' });
+        progress.report({ message: 'Generating shared Codex/Antigravity workspace skills...' });
         this.logger.info('UpgradeService', 'Generating Codex CLI skills from Claude commands');
         await resourceOps.setupCodexSkills();
 

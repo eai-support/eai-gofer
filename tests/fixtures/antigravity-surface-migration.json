@@ -1,0 +1,14 @@
+{
+  "from": "gemini",
+  "to": "antigravity",
+  "settingReplacement": ["antigravity", "antigravity-desktop"],
+  "reason": "User approved retirement of Gemini CLI on 2026-09-06 and replacement with Antigravity CLI and desktop using Google's migration guide. Preserve the frozen baseline; only named Google surface identities and generated paths migrate.",
+  "source": "https://antigravity.google/docs/cli/gcli-migration",
+  "settings": ["gofer.cliProvider", "gofer.defaultCLI"],
+  "tests": [
+    "tests/unit/scripts/agent-plugin-package.test.ts",
+    "tests/unit/scripts/model-discovery.test.ts",
+    "tests/unit/scripts/gofer-workspace-bootstrap.test.ts",
+    "tests/unit/scripts/gofer-surface-update.test.ts"
+  ]
+}

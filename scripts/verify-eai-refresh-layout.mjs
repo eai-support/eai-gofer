@@ -39,7 +39,6 @@ export const EAI_REQUIRED_RESOURCE_DIRECTORIES = [
   'copilot-instructions',
   'system-skills',
   'agents-skills',
-  'gemini',
 ];
 
 async function isDirectory(targetPath) {
@@ -78,6 +77,8 @@ export async function buildEaiRefreshLayout(repoRoot, targetRoot) {
   await fs.rm(targetRoot, { recursive: true, force: true });
   await fs.mkdir(targetRoot, { recursive: true });
   await fs.cp(baseResources, targetRoot, { recursive: true, force: true });
+  // The normalized output must not revive retired CLI resources from an older bundle.
+  await fs.rm(path.join(targetRoot, 'gemini'), { recursive: true, force: true });
   for (const [sourceRelative, targetRelative] of EAI_REFRESH_OVERLAY_MAPPINGS) {
     await copyDirectoryIfPresent(
       path.join(repoRoot, sourceRelative),

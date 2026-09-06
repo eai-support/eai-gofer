@@ -9,6 +9,11 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_RELEASES_DIR = path.join(REPO_ROOT, 'docs-site', 'static', 'releases');
 const PUBLIC_PLUGIN_DIR = path.join(PUBLIC_RELEASES_DIR, 'plugins', 'eai-gofer');
+const STANDALONE_UPDATER_FILES = [
+  'gofer-surface-update.mjs',
+  'gofer-local-settings-cleanup.mjs',
+  'lib/grok-surface.mjs',
+];
 
 function parseArgs(argv) {
   const args = {
@@ -63,10 +68,10 @@ async function writePublicPluginAliases(pluginDir) {
     ['.agents/plugins/marketplace.json', 'codex-marketplace.json'],
     ['.github/plugin/plugin.json', 'copilot-plugin.json'],
     ['.github/plugin/marketplace.json', 'copilot-marketplace.json'],
-    ['.gemini/extension.json', 'gemini-extension.json'],
-    ['.gemini/commands/gofer/manifest.json', 'gemini-commands-manifest.json'],
-    ['.specify/scripts/node/gofer-surface-update.mjs', 'gofer-surface-update.mjs'],
-    ['.specify/scripts/node/gofer-local-settings-cleanup.mjs', 'gofer-local-settings-cleanup.mjs'],
+    ['plugins/antigravity/eai-gofer/plugin.json', 'antigravity-plugin.json'],
+    ...STANDALONE_UPDATER_FILES.map((relativePath) => [
+      `.specify/scripts/node/${relativePath}`, relativePath,
+    ]),
   ];
 
   for (const [sourceRelativePath, aliasRelativePath] of aliases) {
@@ -151,6 +156,14 @@ async function main() {
     [path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}`, 'eai-gofer')],
     'staged public plugin bundle'
   );
+
+  // Reject incomplete downloads before replacing any public assets.
+  for (const relativePath of STANDALONE_UPDATER_FILES) {
+    const source = path.join(stagedPluginRoot, '.specify', 'scripts', 'node', relativePath);
+    if (!(await fs.stat(source).catch(() => null))?.isFile()) {
+      throw new Error(`Standalone updater dependency is missing: ${relativePath}`);
+    }
+  }
 
   await fs.mkdir(PUBLIC_RELEASES_DIR, { recursive: true });
 

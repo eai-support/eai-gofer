@@ -29,7 +29,8 @@
     "claude",
     "copilot",
     "codex",
-    "gemini",
+    "antigravity",
+    "antigravity-desktop",
     "ai",
     "testing",
     "playwright"
@@ -42,6 +43,44 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "languageModelTools": [
+      {
+        "name": "gofer_discover_models",
+        "displayName": "Gofer Available Models",
+        "toolReferenceName": "goferDiscoverModels",
+        "canBeReferencedInPrompt": true,
+        "when": "isWorkspaceTrusted && workspaceFolderCount == 1",
+        "userDescription": "List the models available through native Copilot. Does not send prompts or read your files.",
+        "modelDescription": "Before approved extra-model Gofer work, discover current native Copilot model IDs with {}. No inference, files, shell, or CLI fallback. Use these IDs with gofer_execute_stage. Availability is not execution consent or proof of quality. An empty catalogue means unavailable; never invent IDs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "gofer_execute_stage",
+        "displayName": "Gofer Read-Only Stage Execution",
+        "toolReferenceName": "goferExecuteStage",
+        "canBeReferencedInPrompt": true,
+        "when": "isWorkspaceTrusted && workspaceFolderCount == 1",
+        "userDescription": "Run an approved Gofer stage using additional native models. May consume paid quota; returns proposals only.",
+        "modelDescription": "Execute a Gofer stage through the bundled engine and current VS Code native model account. Use only for read-only proposals under an explicit route and limits. Requires native confirmation and exactly one trusted workspace folder. Never grants file edits, command execution, CLI fallback, or permission to claim delivery complete. Request policy approval is not user consent. Do not invent model IDs or claim verified cost when usage is unavailable.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "request"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "request": {
+              "type": "object",
+              "description": "Shared executeStage request, validated by the bundled engine: host=vscode, surface=vscode-extension, stage, workType (app or non-app), trigger (ordinary, delegate, review or failure), task, context (spec, acceptance, platform, language and permissions arrays of workspace-relative text-file paths), and policy (existing planner enabled, approved, route and limits). Paths are data, never executable modules."
+            }
+          }
+        }
+      }
+    ],
     "chatPromptFiles": [
       {
         "path": "./resources/copilot-prompts/eai.prompt.md"
@@ -592,14 +631,16 @@
             "claude",
             "codex",
             "copilot",
-            "gemini",
+            "antigravity",
+            "antigravity-desktop",
             "auto"
           ],
           "enumDescriptions": [
             "Use Claude Code CLI",
             "Use Codex CLI",
             "Use GitHub Copilot CLI (autonomous tasks use Claude/Codex fallback)",
-            "Use Gemini CLI (autonomous tasks use Claude/Codex fallback)",
+            "Antigravity CLI (agy); autonomous execution blocked pending verified Gofer adapter",
+            "Antigravity desktop; autonomous execution blocked, no CLI fallback",
             "Auto-detect installed CLI"
           ],
           "default": "auto",
@@ -611,19 +652,21 @@
             "claude",
             "copilot",
             "codex",
-            "gemini",
+            "antigravity",
+            "antigravity-desktop",
             "auto"
           ],
           "enumDescriptions": [
             "Use Claude Code CLI for all Gofer commands",
             "Use GitHub Copilot Chat for all Gofer commands",
             "Use OpenAI Codex CLI for all Gofer commands",
-            "Use Gemini CLI command files for all Gofer commands",
+            "Use Antigravity CLI workspace skills; native operation requires verification",
+            "Use Antigravity desktop workspace skills; separate native verification required",
             "Auto-detect which CLI is installed and active"
           ],
           "default": "auto",
           "description": "Default AI CLI for Gofer command routing",
-          "markdownDescription": "Choose which AI platform to use for Gofer's single public entrypoint (`eai`).\n\n- **Claude**: Use `.claude/commands/eai.md`\n- **Copilot**: Use `.github/prompts/eai.prompt.md`\n- **Codex**: Use `.agents/skills/eai/`\n- **Gemini**: Use `.gemini/commands/gofer/eai.toml`\n- **Auto**: Automatically detect which CLI is active\n\nGofer preserves feature parity by routing internally through `.specify/commands/*.md` stage contracts.",
+          "markdownDescription": "Choose which AI platform to use for Gofer's single public entrypoint (`eai`).\n\n- **Claude**: Use `.claude/commands/eai.md`\n- **Copilot**: Use `.github/prompts/eai.prompt.md`\n- **Codex**: Use `.agents/skills/eai/`\n- **Antigravity CLI**: Use `.agents/skills/eai/` with `agy`\n- **Antigravity Desktop**: Use `.agents/skills/eai/`; do not infer availability from the CLI\n- **Auto**: Automatically detect which CLI is active\n\nGemini CLI is retired; choose an Antigravity surface explicitly. Gofer keeps the internal pipeline by routing through `.specify/commands/*.md` stage contracts.",
           "order": 27
         },
         "gofer.workflowProfile": {
@@ -735,7 +778,7 @@
     "eslint": "9.39.4",
     "glob": "11.1.0",
     "mocha": "11.3.0",
-    "sharp": "0.34.5",
+    "sharp": "0.35.4",
     "ts-loader": "9.5.4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.56.1",
@@ -748,7 +791,7 @@
     "@types/express": "5.0.6",
     "@types/jszip": "3.4.0",
     "ajv": "8.18.0",
-    "body-parser": "2.2.2",
+    "body-parser": "2.3.0",
     "chokidar": "3.6.0",
     "express": "5.2.1",
     "fast-glob": "3.3.3",

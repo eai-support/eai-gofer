@@ -62,7 +62,7 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
         pathStr.includes('.claude/commands') ||
         pathStr.includes('.github/prompts') ||
         pathStr.includes('.system/skills') ||
-        pathStr.includes('.gemini/commands/gofer')
+        pathStr.includes('.agents/skills')
       );
     });
 
@@ -113,15 +113,18 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
       expect(platform).toBe('codex');
     });
 
-    it('should use Gemini when defaultCLI is set to "gemini"', () => {
-      mockConfig['defaultCLI'] = 'gemini';
-      ConfigManager.getInstance().refresh();
+    it.each(['antigravity', 'antigravity-desktop'] as const)(
+      'honors explicit %s without inferring the client',
+      (surface) => {
+        mockConfig['defaultCLI'] = surface;
+        ConfigManager.getInstance().refresh();
 
-      const detector = PlatformDetector.getInstance(testWorkspacePath);
-      const platform = detector.getDefaultPlatform();
+        const detector = PlatformDetector.getInstance(testWorkspacePath);
+        const platform = detector.getDefaultPlatform();
 
-      expect(platform).toBe('gemini');
-    });
+        expect(platform).toBe(surface);
+      }
+    );
 
     it('should auto-detect when defaultCLI is set to "auto"', () => {
       mockConfig['defaultCLI'] = 'auto';
@@ -198,7 +201,7 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
       expect(context.hasClaudeDirectory).toBe(true);
       expect(context.hasCopilotDirectory).toBe(true);
       expect(context.hasCodexDirectory).toBe(true);
-      expect(context.hasGeminiDirectory).toBe(true);
+      expect(context.hasAntigravityDirectory).toBe(true);
     });
   });
 
@@ -236,7 +239,7 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
       expect(platform).toBe('codex');
     });
 
-    it('should use Gemini when only Gemini and Copilot exist', () => {
+    it('ignores retired Gemini files when only Gemini and Copilot directories exist', () => {
       mockConfig['defaultCLI'] = 'auto';
       ConfigManager.getInstance().refresh();
 
@@ -249,7 +252,7 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
       detector.clearCache();
       const platform = detector.getDefaultPlatform();
 
-      expect(platform).toBe('gemini');
+      expect(platform).toBe('copilot');
     });
 
     it('should use Copilot when only Copilot exists', () => {
@@ -389,23 +392,24 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
 
       expect(platform).toBe('codex');
       // Verify path resolution matches Codex
-      expect(router.getCommandPath('1_gofer_research', 'codex')).toContain('.system/skills');
+      expect(router.getCommandPath('1_gofer_research', 'codex')).toContain('.agents/skills');
     });
 
-    it('should route commands to Gemini when defaultCLI is "gemini"', () => {
-      mockConfig['defaultCLI'] = 'gemini';
-      ConfigManager.getInstance().refresh();
+    it.each(['antigravity', 'antigravity-desktop'] as const)(
+      'routes %s to shared skills, not Gemini TOML',
+      (surface) => {
+        mockConfig['defaultCLI'] = surface;
+        ConfigManager.getInstance().refresh();
 
-      const detector = PlatformDetector.getInstance(testWorkspacePath);
-      detector.clearCache();
+        const detector = PlatformDetector.getInstance(testWorkspacePath);
+        detector.clearCache();
 
-      const platform = detector.getDefaultPlatform();
+        const platform = detector.getDefaultPlatform();
 
-      expect(platform).toBe('gemini');
-      expect(router.getCommandPath('1_gofer_research', 'gemini')).toContain(
-        '.gemini/commands/gofer'
-      );
-    });
+        expect(platform).toBe(surface);
+        expect(router.getCommandPath('1_gofer_research', surface)).toContain('.agents/skills');
+      }
+    );
 
     it('should auto-detect and route to highest priority platform when defaultCLI is "auto"', () => {
       mockConfig['defaultCLI'] = 'auto';
@@ -429,7 +433,16 @@ describe('Cross-Platform Command Routing with Default CLI (T072)', () => {
       expect(router.getCommandSyntax(commandName, 'claude')).toBe('/1_gofer_research');
       expect(router.getCommandSyntax(commandName, 'copilot')).toBe('#1_gofer_research');
       expect(router.getCommandSyntax(commandName, 'codex')).toBe('/1_gofer_research');
-      expect(router.getCommandSyntax(commandName, 'gemini')).toBe('/gofer:1_gofer_research');
+      expect(router.getCommandSyntax('eai', 'antigravity')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'antigravity-desktop')).toBe('/eai');
     });
+  });
+  it('rejects a retired Gemini preference before fallback or cached routing', async () => {
+    const detector = PlatformDetector.getInstance(testWorkspacePath);
+    expect(detector.detectPlatform()).toBe('claude');
+    mockConfig.defaultCLI = 'gemini';
+    ConfigManager.getInstance().refresh();
+    expect(() => detector.detectPlatform()).toThrow('Gemini CLI is retired');
+    await expect(router.routeCommand('eai')).rejects.toThrow('Gemini CLI is retired');
   });
 });
