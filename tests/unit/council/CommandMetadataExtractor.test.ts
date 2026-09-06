@@ -21,6 +21,16 @@ describe('CommandMetadataExtractor', () => {
     extractor = new CommandMetadataExtractor();
   });
 
+  it.each(['/repo/.agents/skills/eai/SKILL.md', 'C:\\repo\\.agents\\skills\\eai\\SKILL.md'])(
+    'derives Antigravity skill names from %s',
+    async (filePath) => {
+      vi.mocked(fs.promises.readFile).mockResolvedValue('# EAI\n\nContinue the current task.');
+      const metadata = await extractor.extractFromAntigravitySkill(filePath, 'antigravity');
+      expect(metadata.name).toBe('eai');
+      expect(metadata.platform).toBe('antigravity');
+    }
+  );
+
   describe('extractFromClaudeCommand', () => {
     it('extracts metadata from valid Claude command (async)', async () => {
       const content = `---

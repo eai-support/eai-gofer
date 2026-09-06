@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import {
   loadBundledStageRuntime,
   registerStageExecutionTool,
@@ -1342,7 +1343,7 @@ describe('native stage tool boundary', () => {
       .mockResolvedValueOnce('/untrusted/workspace/stage-execution.mjs');
     await expect(loadBundledStageRuntime(extensionUri)).rejects.toThrow('trusted extension');
     expect(fs.realpath).toHaveBeenLastCalledWith(
-      '/trusted/extension/resources/node-scripts/lib/stage-execution.mjs'
+      path.join('/trusted/extension', 'resources', 'node-scripts', 'lib', 'stage-execution.mjs')
     );
     vi.mocked(fs.realpath)
       .mockResolvedValueOnce('/trusted/extension')

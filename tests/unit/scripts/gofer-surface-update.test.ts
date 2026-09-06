@@ -90,16 +90,20 @@ describe('gofer surface update', () => {
     const { getAlwaysOnInstructionPath } = await import(surfaceUpdateModuleUrl.href);
     const home = '/Users/example';
 
-    expect(getAlwaysOnInstructionPath('codex', { home })).toBe('/Users/example/.codex/AGENTS.md');
-    expect(getAlwaysOnInstructionPath('claude', { home })).toBe('/Users/example/.claude/CLAUDE.md');
+    expect(getAlwaysOnInstructionPath('codex', { home })).toBe(
+      path.join(home, '.codex', 'AGENTS.md')
+    );
+    expect(getAlwaysOnInstructionPath('claude', { home })).toBe(
+      path.join(home, '.claude', 'CLAUDE.md')
+    );
     expect(getAlwaysOnInstructionPath('copilot', { home })).toBe(
-      '/Users/example/.copilot/copilot-instructions.md'
+      path.join(home, '.copilot', 'copilot-instructions.md')
     );
     expect(() => getAlwaysOnInstructionPath('gemini', { home })).toThrow(
       'Unsupported host: gemini'
     );
     expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'darwin' })).toBe(
-      '/Users/example/Library/Application Support/Code/User/settings.json'
+      path.join(home, 'Library', 'Application Support', 'Code', 'User', 'settings.json')
     );
     expect(
       getAlwaysOnInstructionPath('vscode', {
@@ -107,9 +111,9 @@ describe('gofer surface update', () => {
         platform: 'win32',
         env: { APPDATA: 'C:\\Users\\example\\AppData\\Roaming' },
       })
-    ).toBe('C:\\Users\\example\\AppData\\Roaming/Code/User/settings.json');
+    ).toBe(path.join('C:\\Users\\example\\AppData\\Roaming', 'Code', 'User', 'settings.json'));
     expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'linux', env: {} })).toBe(
-      '/Users/example/.config/Code/User/settings.json'
+      path.join(home, '.config', 'Code', 'User', 'settings.json')
     );
   });
 
@@ -1186,6 +1190,68 @@ describe('bounded native Antigravity deployment', () => {
         if (problem === 'unowned')
           expect(fs.existsSync(path.join(f.desktop, '.gofer-install.json'))).toBe(false);
         expect(deps.execute).not.toHaveBeenCalled();
+      } finally {
+        f.dispose();
+      }
+    }
+  );
+
+  it.each(['replaced', 'linked', 'oversized', 'special', 'growing'])(
+    'blocks a %s source descriptor before installation',
+    async (problem) => {
+      const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
+      const f = nativeFixture();
+      const target = path.join(f.plugin, 'skills/eai/SKILL.md');
+      const reads = vi.fn();
+      const closes = vi.fn();
+      const execute = vi.fn();
+      const fileSystem = {
+        ...fs.promises,
+        open: vi.fn(async (...args: Parameters<typeof fs.promises.open>) => {
+          const handle = await fs.promises.open(...args);
+          if (args[0] === target) {
+            const stat = await handle.stat();
+            vi.spyOn(handle, 'stat').mockResolvedValue(
+              Object.assign(
+                stat,
+                problem === 'linked'
+                  ? { nlink: 2 }
+                  : problem === 'oversized'
+                    ? { size: 16 * 1024 * 1024 + 1 }
+                    : problem === 'special'
+                      ? { isFile: () => false }
+                      : {}
+              )
+            );
+            const read = handle.read.bind(handle);
+            const close = handle.close.bind(handle);
+            vi.spyOn(handle, 'read').mockImplementation((...readArgs) => {
+              reads();
+              return read(...readArgs);
+            });
+            vi.spyOn(handle, 'close').mockImplementation(() => {
+              closes();
+              return close();
+            });
+            if (problem === 'replaced') {
+              await fs.promises.rename(target, `${target}.original`);
+              await fs.promises.writeFile(target, 'Private replacement must not be read');
+            }
+            if (problem === 'growing') await fs.promises.appendFile(target, 'appended');
+          }
+          return handle;
+        }),
+      };
+      try {
+        const plan = buildSurfacePlan({ host: 'antigravity-desktop', action: 'install' });
+        expect(
+          (await runPlan(plan, { sourceRoot: f.sourceRoot, home: f.home, fileSystem, execute }))[0]
+        ).toMatchObject({ status: 'blocked', ok: false });
+        if (problem === 'growing') expect(reads).toHaveBeenCalledOnce();
+        else expect(reads).not.toHaveBeenCalled();
+        expect(closes).toHaveBeenCalledOnce();
+        expect(execute).not.toHaveBeenCalled();
+        expect(fs.readdirSync(f.home)).toEqual([]);
       } finally {
         f.dispose();
       }

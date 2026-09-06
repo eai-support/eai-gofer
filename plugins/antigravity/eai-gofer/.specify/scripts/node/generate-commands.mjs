@@ -12,7 +12,7 @@
  * Antigravity CLI/desktop share agents-skills with Codex; Gemini CLI is retired.
  */
 
-import { promises as fs } from 'fs';
+import { constants, promises as fs } from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { validateDescriptions } from './canonical-descriptions.mjs';
@@ -274,6 +274,35 @@ function isLegacyGeminiOutput(name, content) {
     text.includes('gofer-surface-update.mjs --action inspect --host gemini --json');
 }
 
+// Read only the validated descriptor; a pathname check must not authorize a later reopen.
+async function readLegacyFile(file) {
+  let handle;
+  try {
+    handle = await fs.open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+  } catch (error) {
+    if (error.code === 'ENOENT') return undefined;
+    if (['ELOOP', 'EMLINK', 'EISDIR', 'EACCES', 'EPERM'].includes(error.code)) return null;
+    throw error;
+  }
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.nlink !== 1 || opened.size > 16 * 1024 * 1024) return null;
+    const named = await fs.lstat(file);
+    if (named.isSymbolicLink() || named.ino !== opened.ino || named.dev !== opened.dev) return null;
+    const buffer = Buffer.alloc(opened.size + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
+      if (bytesRead === 0) break;
+      length += bytesRead;
+    }
+    const after = await handle.stat();
+    if (length !== opened.size || after.size !== opened.size || after.nlink !== 1 ||
+        after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs) return null;
+    return buffer.subarray(0, length);
+  } finally { await handle.close(); }
+}
+
 // Archive recognised output, rather than delete it: old wrappers may contain local edits.
 export async function retireLegacyGeminiCommands(root, { dryRun = false } = {}) {
   const relativeDir = '.gemini/commands/gofer';
@@ -285,13 +314,10 @@ export async function retireLegacyGeminiCommands(root, { dryRun = false } = {}) 
   for (const name of commandNames) {
     const relative = `${relativeDir}/${name}`;
     const file = path.join(root, relative);
-    let stat;
-    try { stat = await fs.lstat(file); } catch (error) {
-      if (error?.code === 'ENOENT') continue;
-      throw error;
-    }
+    const content = await readLegacyFile(file);
+    if (content === undefined) continue;
     report.found.push(relative);
-    if (!stat.isFile() || stat.isSymbolicLink() || !isLegacyGeminiOutput(name, await fs.readFile(file, 'utf8'))) {
+    if (content === null || !isLegacyGeminiOutput(name, content.toString('utf8'))) {
       report.preserved.push(relative);
       continue;
     }
@@ -302,16 +328,13 @@ export async function retireLegacyGeminiCommands(root, { dryRun = false } = {}) 
     const entries = await fs.readdir(path.join(root, agentsDir), { withFileTypes: true });
     for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
       const canonical = path.join(root, '.claude/agents', entry.name);
-      let canonicalStat;
-      try { canonicalStat = await fs.lstat(canonical); } catch (error) {
-        if (error?.code === 'ENOENT') continue; // Unknown files remain outside managed retirement.
-        throw error;
-      }
+      const canonicalContent = await readLegacyFile(canonical);
+      if (canonicalContent === undefined) continue; // Unknown files remain outside managed retirement.
       const relative = `${agentsDir}/${entry.name}`;
       const file = path.join(root, relative);
       report.found.push(relative);
-      if (!entry.isFile() || !canonicalStat.isFile() || canonicalStat.isSymbolicLink() ||
-          !(await fs.readFile(file)).equals(await fs.readFile(canonical))) {
+      const content = entry.isFile() && canonicalContent !== null ? await readLegacyFile(file) : null;
+      if (!content || !canonicalContent || !content.equals(canonicalContent)) {
         report.preserved.push(relative);
         continue;
       }

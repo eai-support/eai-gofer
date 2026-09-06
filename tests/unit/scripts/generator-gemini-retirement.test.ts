@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -90,8 +90,94 @@ describe('safe retirement of generated Gemini commands', () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), 'gofer-retire-gemini-'));
   });
   afterEach(async () => {
+    vi.restoreAllMocks();
     await fs.rm(root, { recursive: true, force: true });
   });
+
+  it.each([`${directory}/eai.md`, '.gemini/agents/reviewer.md', '.claude/agents/reviewer.md'])(
+    'does not read or archive a file replaced after opening: %s',
+    async (relative) => {
+      await write(`${directory}/eai.md`, generated.get('eai.md')!);
+      await write('.gemini/agents/reviewer.md', '# Reviewer\n');
+      await write('.claude/agents/reviewer.md', '# Reviewer\n');
+      const target = path.join(root, relative);
+      const open = fs.open.bind(fs);
+      const reads = vi.fn();
+      const closes = vi.fn();
+      vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+        const handle = await open(...args);
+        if (args[0] === target) {
+          const read = handle.read.bind(handle);
+          const close = handle.close.bind(handle);
+          vi.spyOn(handle, 'read').mockImplementation((...readArgs) => {
+            reads();
+            return read(...readArgs);
+          });
+          vi.spyOn(handle, 'close').mockImplementation(() => {
+            closes();
+            return close();
+          });
+          await fs.rename(target, `${target}.original`);
+          await fs.writeFile(target, 'Private replacement must not be read');
+        }
+        return handle;
+      });
+      const report = await retire(root);
+      const candidate = relative.startsWith('.claude/') ? '.gemini/agents/reviewer.md' : relative;
+      expect(report.preserved).toContain(candidate);
+      expect(report.archived).not.toContain(candidate);
+      expect(reads).not.toHaveBeenCalled();
+      expect(closes).toHaveBeenCalledOnce();
+      expect(await fs.readFile(target, 'utf8')).toBe('Private replacement must not be read');
+    }
+  );
+
+  it.each(['linked', 'oversized', 'special', 'growing'])(
+    'preserves a %s descriptor without an unbounded read',
+    async (problem) => {
+      const relative = `${directory}/eai.md`;
+      await write(relative, generated.get('eai.md')!);
+      const target = path.join(root, relative);
+      const open = fs.open.bind(fs);
+      const reads = vi.fn();
+      const closes = vi.fn();
+      vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+        const handle = await open(...args);
+        if (args[0] === target) {
+          const stat = await handle.stat();
+          vi.spyOn(handle, 'stat').mockResolvedValue(
+            Object.assign(
+              stat,
+              problem === 'linked'
+                ? { nlink: 2 }
+                : problem === 'oversized'
+                  ? { size: 16 * 1024 * 1024 + 1 }
+                  : problem === 'special'
+                    ? { isFile: () => false }
+                    : {}
+            )
+          );
+          const read = handle.read.bind(handle);
+          const close = handle.close.bind(handle);
+          vi.spyOn(handle, 'read').mockImplementation((...readArgs) => {
+            reads();
+            return read(...readArgs);
+          });
+          vi.spyOn(handle, 'close').mockImplementation(() => {
+            closes();
+            return close();
+          });
+          if (problem === 'growing') await fs.appendFile(target, 'appended after descriptor check');
+        }
+        return handle;
+      });
+      expect((await retire(root)).preserved).toEqual([relative]);
+      if (problem === 'growing') expect(reads).toHaveBeenCalledOnce();
+      else expect(reads).not.toHaveBeenCalled();
+      expect(closes).toHaveBeenCalledOnce();
+      expect(await fs.readFile(target, 'utf8')).toContain(generated.get('eai.md'));
+    }
+  );
 
   it('archives only known generated files and preserves local edits in the backup', async () => {
     await seed();

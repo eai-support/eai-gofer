@@ -282,6 +282,56 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('## App Preview Runner Contract');
       expect(umbrellaSkill).toContain('./run.sh dev 3001');
       expect(umbrellaSkill).toContain('run.bat dev 3001');
+      for (const skillPath of [
+        'skills/eai/SKILL.md',
+        'plugin-skills/eai/SKILL.md',
+        'plugins/eai-gofer/skills/eai/SKILL.md',
+        'plugins/antigravity/eai-gofer/skills/eai/SKILL.md',
+      ]) {
+        const skill = fs.readFileSync(path.join(pluginRoot, skillPath), 'utf8');
+        expect(skill, skillPath).toBe(umbrellaSkill);
+        expect(skill, skillPath).toContain('## Workspace First');
+        expect(skill, skillPath).toContain(
+          'node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json'
+        );
+        expect(skill, skillPath).toContain('If the repo is missing or stale, ask before running');
+        expect(skill, skillPath).toContain('then resume the original command');
+        expect(skill, skillPath).toContain('## Business-Friendly Progress');
+        expect(skill, skillPath).toContain('## Controlled English Contract');
+        expect(skill, skillPath).toContain('## User-Facing Response Gate');
+        expect(skill, skillPath).toContain('.specify/specs/{feature}/build-map.md');
+      }
+      const canonicalStages = fs
+        .readdirSync(path.join(REPO_ROOT, '.specify/commands'))
+        .filter((file) => file.endsWith('.md'))
+        .sort();
+      expect(canonicalStages).toEqual(FULL_COMMAND_FILES.map((file) => `${file}.md`).sort());
+      const expectedStageList = canonicalStages.map((file) => {
+        const canonical = fs.readFileSync(path.join(REPO_ROOT, '.specify/commands', file));
+        for (const packagedRoot of [
+          pluginRoot,
+          path.join(pluginRoot, 'plugins/eai-gofer'),
+          nativeRoot,
+        ]) {
+          expect(
+            fs.readFileSync(path.join(packagedRoot, '.specify/commands', file)).equals(canonical),
+            file
+          ).toBe(true);
+        }
+        return `- \`${path.basename(file, '.md')}\` - ${matter(canonical.toString('utf8')).data.description}`;
+      });
+      const packagedStageList = umbrellaSkill
+        .split('## Internal Pipeline And Helper Contracts\n\n')[1]
+        .split('\n\n## Stable Local Install Path')[0]
+        .split('\n');
+      expect(packagedStageList.sort()).toEqual(expectedStageList.sort());
+      const updateSkill = fs.readFileSync(
+        path.join(pluginRoot, 'skills/eai-update/SKILL.md'),
+        'utf8'
+      );
+      expect(updateSkill).toContain('Do not run a workspace check');
+      expect(updateSkill).not.toContain('## Workspace First');
+      expect(updateSkill).not.toContain('## Internal Pipeline And Helper Contracts');
       expect(
         fs.readFileSync(path.join(pluginRoot, '.claude-plugin', 'hooks', 'hooks.json'), 'utf8')
       ).toContain('UserPromptSubmit');

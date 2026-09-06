@@ -50,14 +50,6 @@ const WINDOWS_RESERVED_BASENAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?
 const WINDOWS_SAFE_RELATIVE_PATH_LIMIT = 240;
 const PERSONAL_PATH_PATTERN =
   /(^|[\s"'])(\/Users\/[^/\s"']+|\/home\/[^/\s"']+|[A-Za-z]:\\Users\\[^\\\s"']+)/;
-const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
-  'gofer:plan',
-  'gofer:side',
-  'gofer:personality',
-  'gofer:check-workspace',
-  'gofer:bootstrap-workspace',
-  'gofer:eai-first-run',
-]);
 
 function parseArgs(argv) {
   const args = {
@@ -126,14 +118,6 @@ async function loadStages(root) {
   }
 
   return stages;
-}
-
-function yamlString(value) {
-  return JSON.stringify(String(value));
-}
-
-function stageNames(stages) {
-  return stages.map((stage) => String(stage.frontmatter.name));
 }
 
 function buildPublicVsixUrl(version) {
@@ -715,110 +699,6 @@ When this is the first EAI conversation for a new app:
 6. Pause once for approval of the business specification. Then continue unless a material business, security, cost, deployment, or destructive decision needs approval.
 7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.`;
   return content.replace('## EAI CLI Discovery And Recovery', `${section}\n\n## EAI CLI Discovery And Recovery`);
-}
-
-function buildWorkspacePreflightSection() {
-  return `
-## Workspace Preflight
-
-Before doing stage/helper work:
-
-1. Resolve the repository root.
-2. Check the core Gofer sentinels:
-   - \`.specify/.gofer-version\`
-   - \`.specify/commands/0_gofer_start.md\`
-   - \`.specify/templates/spec-template.md\`
-   - \`.specify/templates/build-map-template.md\`
-   - \`.specify/templates/loop-contract-template.json\`
-   - \`.specify/templates/working-backwards-prfaq-template.md\`
-   - \`.specify/scripts/node/gofer-local-settings-cleanup.mjs\`
-   - \`.specify/scripts/node/gofer-ui-preview.mjs\`
-   - \`.specify/scripts/node/gofer-workspace-check.mjs\`
-   - \`.specify/scripts/node/gofer-workspace-bootstrap.mjs\`
-   - \`.specify/specs/\`
-   - \`.specify/memory/\`
-3. If the repo has the workspace checker script, prefer running:
-   - \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`
-4. If the workspace is missing or stale, ask exactly:
-   - **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-5. If the user says yes, run the Gofer workspace bootstrap helper and then resume this command from the top.
-6. After a Gofer install, update, or bootstrap, remove stale local Gofer command entries with:
-   - \`node .specify/scripts/node/gofer-local-settings-cleanup.mjs --workspace . --apply --json\`
-7. For EAI app delivery, use the repo runner for local previews:
-   - macOS, Linux, and GitHub Codespaces: \`./run.sh dev 3001\`
-   - Windows: \`run.bat dev 3001\`
-8. Do not start app previews with direct \`npm run dev\` commands when the repo runner exists.
-9. If the user says no, stop and explain that Gofer stage/helper work depends on the repo-owned scaffold.
-`.trim();
-}
-
-function buildBusinessProgressContractSection() {
-  return `
-## Business-Friendly Progress Contract
-
-- Keep user-facing updates concise and business-level by default.
-- Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts.
-- Do not bundle the protected ASD dictionary and do not claim ASD certification.
-- Use one action per instruction and keep instructions to 20 words or fewer where possible.
-- Use active voice, simple verb forms, approved project terms, and defined acronyms.
-- Avoid idioms, marketing adjectives, vague praise, and hedging.
-- Explain what is being connected, changed, checked, or fixed and why it matters.
-- For application delivery, create or update \`.specify/specs/{feature}/build-map.md\` from \`.specify/templates/build-map-template.md\` and refer to that map in progress updates.
-- Keep technical detail, logs, tests, and security evidence in durable artifacts; provide that detail when the user asks.
-- Before each user-facing reply, check the business effect, language, and useful technical detail. If any check fails, rewrite the reply before sending it.
-`.trim();
-}
-
-function injectBusinessProgressContract(body) {
-  if (body.includes('## Business-Friendly Progress Contract')) {
-    return body;
-  }
-
-  const headingIndex = body.indexOf('## Workspace Preflight');
-  if (headingIndex !== -1) {
-    const nextHeading = body.indexOf('\n## ', headingIndex + 1);
-    if (nextHeading !== -1) {
-      return `${body.slice(0, nextHeading).trimEnd()}\n\n${buildBusinessProgressContractSection()}\n\n${body
-        .slice(nextHeading)
-        .replace(/^\n+/, '')}`;
-    }
-  }
-
-  const headingMatch = body.match(/^# [^\n]+\n*/);
-  if (!headingMatch) {
-    return `${buildBusinessProgressContractSection()}\n\n${body}`;
-  }
-
-  const insertAt = headingMatch[0].length;
-  return `${body.slice(0, insertAt).trimEnd()}\n\n${buildBusinessProgressContractSection()}\n\n${body
-    .slice(insertAt)
-    .replace(/^\n+/, '')}`;
-}
-
-function injectWorkspacePreflight(stage, body) {
-  if (WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS.has(String(stage.frontmatter.name))) {
-    return injectBusinessProgressContract(body);
-  }
-  if (body.includes('## Workspace Preflight')) {
-    return injectBusinessProgressContract(body);
-  }
-
-  const headingMatch = body.match(/^# [^\n]+\n*/);
-  if (!headingMatch) {
-    return injectBusinessProgressContract(`${buildWorkspacePreflightSection()}\n\n${body}`);
-  }
-
-  const insertAt = headingMatch[0].length;
-  return injectBusinessProgressContract(
-    `${body.slice(0, insertAt).trimEnd()}\n\n${buildWorkspacePreflightSection()}\n\n${body
-      .slice(insertAt)
-      .replace(/^\n+/, '')}`
-  );
-}
-
-function buildStageSkill(stage) {
-  const body = injectWorkspacePreflight(stage, stage.body.trim());
-  return `---\nname: ${stage.frontmatter.name}\ndescription: ${yamlString(stage.frontmatter.description)}\n---\n\n${body}\n`;
 }
 
 function buildPluginReadmeBase(version) {

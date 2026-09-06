@@ -173,7 +173,7 @@ export class CommandMetadataExtractor {
   ): Promise<CommandMetadata> {
     const content = await fsPromises.readFile(filePath, 'utf8');
     const { frontmatter, body } = this.parseMarkdownWithFrontmatter(content);
-    const name = (frontmatter.name as string) || filePath.split(/[\\\\/]/).at(-2) || 'unknown';
+    const name = (frontmatter.name as string) || filePath.split(/[\\/]/).at(-2) || 'unknown';
     return {
       name,
       description: (frontmatter.description as string) || name,

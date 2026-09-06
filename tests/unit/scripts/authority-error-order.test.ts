@@ -8,7 +8,7 @@ describe('workspace authority error order', () => {
   it('reports the first contract path even when another required read fails first', async () => {
     const original = fs.readFile.bind(fs);
     vi.spyOn(fs, 'readFile').mockImplementation((async (file: unknown, ...args: unknown[]) => {
-      const name = String(file);
+      const name = String(file).replace(/\\/g, '/');
       if (name.includes('/ops/tech-docs/') || name.includes('/ops/gofer/')) {
         if (name.endsWith('/contracts/object-type-routing-v1.json')) {
           await new Promise((resolve) => setTimeout(resolve, 30));

@@ -100,7 +100,10 @@ export class InstructionGenerator {
     }
 
     // Keep the compact host file budget without dropping any instruction text.
-    return (await this.withAlwaysOnContract(content)).trimEnd().replace(/\n{2,}/g, '\n');
+    return (await this.withAlwaysOnContract(content))
+      .replace(/\r\n/g, '\n')
+      .trimEnd()
+      .replace(/\n{2,}/g, '\n');
   }
 
   /**

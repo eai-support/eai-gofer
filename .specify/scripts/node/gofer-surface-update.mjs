@@ -470,19 +470,31 @@ async function directoryBelow(root, parts, fileSystem, create = false) {
 }
 
 async function regularFile(file, fileSystem) {
-  const stat = await fileSystem.lstat(file);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 16 * 1024 * 1024) {
-    throw new Error('Refusing an unsafe or oversized plugin file.');
-  }
-  const handle = await fileSystem.open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  // Validate the opened object, never reopen a pathname after checking it.
+  // NONBLOCK prevents a substituted FIFO from waiting for a writer before fstat.
+  const handle = await fileSystem.open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const opened = await handle.stat();
-    if (!opened.isFile() || opened.ino !== stat.ino || opened.dev !== stat.dev || opened.nlink !== 1) {
+    if (!opened.isFile() || opened.nlink !== 1 || opened.size > 16 * 1024 * 1024) {
+      throw new Error('Refusing an unsafe or oversized plugin file.');
+    }
+    const named = await fileSystem.lstat(file);
+    if (named.isSymbolicLink() || named.ino !== opened.ino || named.dev !== opened.dev) {
       throw new Error('Plugin file changed during verification.');
     }
-    const data = await handle.readFile();
-    if (data.length > 16 * 1024 * 1024) throw new Error('Plugin file exceeds the size limit.');
-    return { data, mode: stat.mode & 0o777 };
+    const buffer = Buffer.alloc(opened.size + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
+      if (bytesRead === 0) break;
+      length += bytesRead;
+    }
+    const after = await handle.stat();
+    if (length !== opened.size || after.size !== opened.size || after.nlink !== 1 ||
+        after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs) {
+      throw new Error('Plugin file changed during verification.');
+    }
+    return { data: buffer.subarray(0, length), mode: opened.mode & 0o777 };
   } finally { await handle.close(); }
 }
 
@@ -599,7 +611,6 @@ async function deployDesktop(snapshot, home, fileSystem) {
           try { await fileSystem.lstat(target); throw new Error('Destination is occupied; do not overwrite it during recovery.'); }
           catch (absent) { if (absent.code !== 'ENOENT') throw absent; }
           await fileSystem.rename(backupPath, target);
-          moved = false;
         } catch { throw new Error(`Desktop update failed; previous Gofer remains backed up at ${backupPath}. Manual recovery is required.`); }
       }
       throw error;

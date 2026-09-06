@@ -12,7 +12,7 @@ answer is a proposal, not proof that the feature works.
 
 ## Validation
 
-The final 2026-09-07 local full run passed 4,719 tests with retries disabled.
+The final 2026-09-07 local full run passed 4,737 tests with retries disabled.
 One opt-in native qualification test was not run by that suite. Run separately,
 the Codex qualification test failed. It remains a release blocker.
 

@@ -198,6 +198,19 @@ describe('InstructionGenerator', () => {
       expect(content).toContain('@AGENTS.md');
     });
 
+    it('keeps CRLF templates under 65 lines without changing instruction content', async () => {
+      const info = makeProjectInfo();
+      const lf = await generator.generateClaudeMd(info);
+      vi.mocked(FileUtils.readTextFile).mockImplementation(async (filePath: string) => {
+        const fs = await import('fs/promises');
+        return (await fs.readFile(filePath, 'utf-8')).replace(/\r?\n/g, '\r\n');
+      });
+      const crlf = await generator.generateClaudeMd(info);
+      expect(crlf.split('\n').length).toBeLessThan(65);
+      expect(crlf).not.toContain('\r');
+      expect(crlf).toBe(lf);
+    });
+
     it('includes Gofer pipeline commands', async () => {
       const info = makeProjectInfo();
       const content = await generator.generateClaudeMd(info);

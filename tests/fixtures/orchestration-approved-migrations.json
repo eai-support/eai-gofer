@@ -1,7 +1,8 @@
 {
   ".specify/scripts/node/gofer-surface-update.mjs": {
     "previousHash": "3a985446e80e36b1e7427c84acd6239a86bf31d364c7511e3b7dfe1421a0cf7b",
-    "approvedHash": "b53a1115b0730b30e58c88907da3cc8f3053aa81b97d276966d0ae2618afab20",
+    "approvedHash": "1b24adfcdc5fbc870ddf312e9d191cb6c6aec01eaac9ecb17d082f94c1839e42",
+    "securityReview": "PR 337 CodeQL review replaces path-check-then-open reads with bounded reads through one validated descriptor, verifies identity and change metadata, and removes an unused rollback assignment. Replacement, growth, non-file and linked-file regression cases preserve fail-closed installation. Parent-directory races remain a documented local concurrency limit.",
     "releaseReview": "Standalone installer validation found that symlinked macOS temporary paths did not invoke main. Resolve only the invoked helper path before comparing its module identity. Preserve import safety, update plans and permission checks. The original baseline hash remains unchanged.",
     "reason": "User approved retiring Gemini CLI in favor of distinct Antigravity CLI and desktop surfaces, then requested native Grok checks. The Grok change adds only read-only, bounded discovery and leaves install/update blocked. Preserve all other update plans and safety boundaries. Native Antigravity packages require verified contents, explicit targets and installed help; desktop changes use ownership receipts and recoverable backups. Changed existing CLI packages remain blocked. No credential imports or broad deletion. Supersedes the preceding legacy-Gemini preservation requirement, retaining its frozen original hash. The six-surface follow-up adds the complete five-record scope-change rule and MVP/non-app exceptions to managed always-on instructions; it does not alter updater execution or permissions.",
     "tests": [
