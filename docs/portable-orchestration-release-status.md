@@ -12,10 +12,15 @@ answer is a proposal, not proof that the feature works.
 
 ## Validation
 
-The 2026-09-07 local full run passed 4,560 tests with retries disabled. Type
-checking, lint, source formatting, generated assets and the preservation
-contract also passed. The preservation check covers 26 internal stages, 100
-recorded surface paths and 11 protected contracts.
+The final 2026-09-07 local full run passed 4,719 tests with retries disabled.
+One opt-in native qualification test was not run by that suite. Run separately,
+the Codex qualification test failed. It remains a release blocker.
+
+Type checking, lint, source formatting, generated assets and the preservation
+contract passed. The preservation check covers 26 internal stages, 100 recorded
+surface paths and 11 protected contracts. Native VS Code extension tests passed
+135 checks, with 11 existing pending tests. The fresh VSIX package check passed;
+package contents alone do not prove activation or a complete user journey.
 
 Earlier native bridge checks ran on Codex, Claude, Copilot and Grok CLI. A
 normal Copilot Chat `/eai` session in VS Code completed two separate model
@@ -26,7 +31,9 @@ calls. These are bounded scenarios, not full customer delivery journeys.
 - The latest security review found a Codex delegate isolation gap. Native
   read-only mode can still read outside the supplied review context. Earlier
   successful model calls do not prove that boundary. This is a release blocker,
-  not part of the accepted Antigravity exception.
+  not part of the accepted Antigravity exception. Discovery reports this limit,
+  and new Codex delegation stops before execution. Ordinary Gofer work in the
+  main session remains available.
 - Antigravity extra-model execution remains blocked. Its read-only boundary is
   unverified, and the latest native probe stopped on exhausted account quota.
   The user accepted this limitation for release; no permission bypass is added.
