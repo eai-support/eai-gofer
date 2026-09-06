@@ -794,7 +794,10 @@ describe('read-only Antigravity inspection', () => {
 });
 
 function nativeFixture() {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-native-updater-')));
+  // Match fs.promises.realpath in production, including Windows 8.3 temp-path expansion.
+  const root = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-native-updater-'))
+  );
   const home = path.join(root, 'test home');
   const sourceRoot = path.join(root, 'stable source');
   const plugin = path.join(sourceRoot, 'plugins', 'antigravity', 'eai-gofer');
@@ -842,6 +845,17 @@ function nativeFixture() {
 }
 
 describe('bounded native Antigravity deployment', () => {
+  it('uses the same canonical fixture paths as the native async filesystem', async () => {
+    const f = nativeFixture();
+    try {
+      for (const directory of [f.root, f.home, f.sourceRoot, f.plugin]) {
+        expect(directory).toBe(await fs.promises.realpath(directory));
+      }
+    } finally {
+      f.dispose();
+    }
+  });
+
   it.each([
     ['source-tree', 'antigravity'],
     ['native-root', 'antigravity'],
