@@ -9,7 +9,7 @@ surfaces:
   - copilot
   - vscode
   - codex
-  - gemini
+  - antigravity
   - github-prompts
   - agents-skills
   - system-skills
@@ -64,16 +64,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -447,7 +447,7 @@ Each agent receives the feature context and returns structured findings.
 ### Agent 1: Correctness Validator
 
 ```
-Task: subagent_type="validation-correctness", model="sonnet"
+Task: subagent_type="validation-correctness", model_tier="medium"
 Prompt: "Validate functional correctness for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -462,7 +462,7 @@ Return findings in your standard report format (<2000 tokens)."
 ### Agent 2: Security Validator
 
 ```
-Task: subagent_type="validation-security", model="sonnet"
+Task: subagent_type="validation-security", model_tier="medium"
 Prompt: "Validate security posture for feature [FEATURE_NAME].
 
 Scan all new/modified files (from tasks.md file paths).
@@ -473,7 +473,7 @@ Return findings with Red/Yellow/Gray severity (<2000 tokens)."
 ### Agent 3: Performance Validator
 
 ```
-Task: subagent_type="validation-performance", model="haiku"
+Task: subagent_type="validation-performance", model_tier="simple"
 Prompt: "Validate performance characteristics for feature [FEATURE_NAME].
 
 Scan all new/modified source files (from tasks.md file paths).
@@ -485,7 +485,7 @@ Return findings with complexity scores (<2000 tokens)."
 ### Agent 4: Test Quality Validator
 
 ```
-Task: subagent_type="validation-test-quality", model="haiku"
+Task: subagent_type="validation-test-quality", model_tier="simple"
 Prompt: "Validate test quality for feature [FEATURE_NAME].
 
 Scan test files related to the feature.
@@ -497,7 +497,7 @@ Return findings with mock ratio calculation (<2000 tokens)."
 ### Agent 5: Integration Validator
 
 ```
-Task: subagent_type="validation-integration", model="sonnet"
+Task: subagent_type="validation-integration", model_tier="medium"
 Prompt: "Validate integration contracts for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -509,7 +509,7 @@ Return findings with contract compliance status (<2000 tokens)."
 ### Agent 6: Standards Validator
 
 ```
-Task: subagent_type="validation-standards", model="sonnet"
+Task: subagent_type="validation-standards", model_tier="medium"
 Prompt: "Validate standards compliance for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -527,23 +527,23 @@ strategy (#13):
 
 ```
 # Diverge: 3 attack perspectives
-Task: subagent_type="validate-security-red-team", model="opus"
+Task: subagent_type="validate-security-red-team", model_tier="arbiter"
 Prompt: "Perspective 1: OWASP Top 10 attack analysis for feature [FEATURE_NAME].
 Scan all new/modified files from tasks.md. Attack from OWASP perspective.
 Return findings with exploit steps (<2000 tokens)."
 
-Task: subagent_type="validate-security-red-team", model="opus"
+Task: subagent_type="validate-security-red-team", model_tier="arbiter"
 Prompt: "Perspective 2: Business logic abuse analysis for feature [FEATURE_NAME].
 Scan all new/modified files from tasks.md. Attack business logic.
 Return findings with exploit steps (<2000 tokens)."
 
-Task: subagent_type="validate-security-red-team", model="opus"
+Task: subagent_type="validate-security-red-team", model_tier="arbiter"
 Prompt: "Perspective 3: CVE search for feature [FEATURE_NAME].
 Check package.json dependencies for known CVEs.
 Return findings with advisory references (<2000 tokens)."
 
 # Converge: Judge synthesizes attack findings
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Synthesize 3 security red team perspectives for [FEATURE_NAME].
 Perspective 1 (OWASP): [result]. Perspective 2 (Business Logic): [result].
 Perspective 3 (CVE): [result].
@@ -674,7 +674,7 @@ truth.
 ### Agent 8: Change Graph / Ripple Analyzer
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Blast-radius change-graph analysis for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -700,7 +700,7 @@ Return findings with Red/Yellow/Gray severity and a concise ripple summary
 ### Agent 9: Interface Contract Diff
 
 ```
-Task: subagent_type="validation-integration", model="sonnet"
+Task: subagent_type="validation-integration", model_tier="medium"
 Prompt: "Interface contract blast-radius analysis for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -729,7 +729,7 @@ silent coverage regression). Return findings (<2000 tokens) with sections:
 ### Agent 10: Error Logging & Observability Integrity
 
 ```
-Task: subagent_type="validation-standards", model="sonnet"
+Task: subagent_type="validation-standards", model_tier="medium"
 Prompt: "Observability blast-radius analysis for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -757,7 +757,7 @@ Logs', 'PII Risk', 'Metric Coverage Delta', 'Trace Propagation'."
 ### Agent 11: Dependency & Submodule Impact (with npm audit delta)
 
 ```
-Task: subagent_type="research-dependency-evaluator", model="haiku"
+Task: subagent_type="research-dependency-evaluator", model_tier="simple"
 Prompt: "Dependency and submodule blast-radius analysis for feature
 [FEATURE_NAME].
 
@@ -788,7 +788,7 @@ Bumps', 'Lockfile Drift', 'CVE Delta', 'Submodule Boundary Crossings'."
 ### Agent 12: Rollback Readiness & Release Checklist
 
 ```
-Task: subagent_type="tasks-rollback-planner", model="haiku"
+Task: subagent_type="tasks-rollback-planner", model_tier="simple"
 Prompt: "Rollback readiness + release-checklist review for feature
 [FEATURE_NAME].
 
@@ -1277,7 +1277,7 @@ frontmatter `pass:` marker is bumped from 1 to 2 so downstream consumers can
 tell which pass produced the artefact.
 
 ```
-Task: subagent_type="visual-canvas-writer", model="haiku"
+Task: subagent_type="visual-canvas-writer", model_tier="simple"
 Prompt: "Pass-2 refresh for {FEATURE_DIR}/visuals/impact-canvas.md.
 Read validation council output from {FEATURE_DIR}/validation.md.
 Replace ONLY the topThreeRisks section with the council's top three risks.
@@ -1307,7 +1307,7 @@ top-quadrant entries that pass-1 (run from this same stage before validation)
 populated from the spec NFR / Out-of-Scope sections.
 
 ```
-Task: subagent_type="visual-risk-writer", model="haiku"
+Task: subagent_type="visual-risk-writer", model_tier="simple"
 Prompt: "Pass 2: refresh risk heatmap for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -1767,7 +1767,7 @@ feature context and returns structured findings.
 ### Agent 13: Engineer Review (Spec↔Plan↔Tasks↔Research Alignment)
 
 ```
-Task: subagent_type="engineer-review", model="sonnet"
+Task: subagent_type="engineer-review", model_tier="medium"
 Prompt: "Post-implementation engineering review for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -1788,7 +1788,7 @@ Return findings in your standard report format (<2000 tokens)."
 ### Agent 14: Codebase Analyzer (Code↔Tasks Verification)
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Post-implementation code verification for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -1810,7 +1810,7 @@ Gray = style suggestions, optional improvements"
 ### Agent 15: Correctness Re-verification
 
 ```
-Task: subagent_type="validation-correctness", model="sonnet"
+Task: subagent_type="validation-correctness", model_tier="medium"
 Prompt: "Post-implementation correctness re-verification for feature [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}

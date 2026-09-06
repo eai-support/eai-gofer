@@ -45,10 +45,15 @@ describe('control commands — surfaces and category', () => {
 
         const surfaces = frontmatter.surfaces as string[];
         expect(Array.isArray(surfaces)).toBe(true);
+        expect(surfaces).toContain('antigravity');
+        expect(surfaces).not.toContain('gemini');
 
         // Same set, no extras, no missing
         const sortedActual = [...surfaces].sort();
-        const sortedExpected = [...CROSS_CLI_SURFACES].sort();
+        // Only the retired surface changes; retain the rest of the legacy fixture exactly.
+        const sortedExpected = CROSS_CLI_SURFACES.map((surface) =>
+          surface === 'gemini' ? 'antigravity' : surface
+        ).sort();
         expect(sortedActual).toEqual(sortedExpected);
 
         expect(surfaces.length).toBe(CROSS_CLI_SURFACES.length);

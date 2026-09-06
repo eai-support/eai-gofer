@@ -25,7 +25,7 @@ External services are optional and user-configured.
 | Service              | Purpose                                         | Authentication             | Rate Limit                    | Criticality |
 | -------------------- | ----------------------------------------------- | -------------------------- | ----------------------------- | ----------- |
 | **Claude Code CLI**  | Claude routes from the Gofer model policy       | Provider CLI login/session | Provider/account dependent    | Optional    |
-| **Gemini CLI**       | Gemini routes from the Gofer model policy       | Provider CLI login/session | Provider/account dependent    | Optional    |
+| **Antigravity CLI**  | Gemini routes from the Gofer model policy       | Provider CLI login/session | Provider/account dependent    | Optional    |
 | **OpenAI Codex CLI** | Codex/OpenAI routes from the Gofer model policy | Provider CLI login/session | Provider/account dependent    | Optional    |
 | **GitHub API**       | Auto-update checking                            | No auth (public API)       | 60 req/hour (unauthenticated) | Optional    |
 
@@ -41,12 +41,12 @@ External services are optional and user-configured.
 
 ### AI Assistant CLIs
 
-| Assistant               | Integration Method                        | Tool Access                   | Status  |
-| ----------------------- | ----------------------------------------- | ----------------------------- | ------- |
-| **Claude Code CLI**     | MCP via LSP                               | 22+ tools (direct invocation) | Primary |
-| **GitHub Copilot Chat** | Prompt files (`.github/prompts/`)         | Indirect (files only)         | Core    |
-| **OpenAI Codex CLI**    | Skill files (`.agents/skills/`)           | Indirect (files only)         | Core    |
-| **Gemini CLI**          | Command files (`.gemini/commands/gofer/`) | Indirect (files only)         | Core    |
+| Assistant               | Integration Method                | Tool Access                   | Status  |
+| ----------------------- | --------------------------------- | ----------------------------- | ------- |
+| **Claude Code CLI**     | MCP via LSP                       | 22+ tools (direct invocation) | Primary |
+| **GitHub Copilot Chat** | Prompt files (`.github/prompts/`) | Indirect (files only)         | Core    |
+| **OpenAI Codex CLI**    | Skill files (`.agents/skills/`)   | Indirect (files only)         | Core    |
+| **Antigravity CLI**     | Command files (`.agents/skills/`) | Indirect (files only)         | Core    |
 
 ### VS Code Extension Consumers
 
@@ -149,12 +149,12 @@ graph LR
         Claude["Claude Code CLI"]
         Copilot["GitHub Copilot"]
         Codex["OpenAI Codex"]
-        Gemini["Gemini CLI"]
+        Gemini["Antigravity CLI"]
     end
 
     subgraph "External Services"
         ClaudeCLI["Claude Code CLI"]
-        GeminiCLI["Gemini CLI"]
+        GeminiCLI["Antigravity CLI"]
         CodexCLI["OpenAI Codex CLI"]
         GitHubAPI["GitHub API"]
     end

@@ -9,7 +9,7 @@ surfaces:
   - copilot
   - vscode
   - codex
-  - gemini
+  - antigravity
   - github-prompts
   - agents-skills
   - system-skills
@@ -62,16 +62,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -331,7 +331,7 @@ only orchestrate and review agent outputs.
 ### Agent 1: Codebase Locator
 
 ```
-Task: subagent_type="codebase-locator", model="haiku"
+Task: subagent_type="codebase-locator", model_tier="simple"
 Prompt: "Find all code related to [FEATURE AREA] in this codebase.
 Identify: entry points, related files, directory structure, key classes/functions.
 Focus on: [specific aspects from user's description]"
@@ -340,7 +340,7 @@ Focus on: [specific aspects from user's description]"
 ### Agent 2: Codebase Analyzer
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Analyze how [RELATED FUNCTIONALITY] is implemented in this codebase.
 Explain: architecture patterns, data flow, key abstractions.
 Focus on: [how similar features work]"
@@ -349,7 +349,7 @@ Focus on: [how similar features work]"
 ### Agent 3: Pattern Finder
 
 ```
-Task: subagent_type="codebase-pattern-finder", model="haiku"
+Task: subagent_type="codebase-pattern-finder", model_tier="simple"
 Prompt: "Find examples of [PATTERN TYPE] in this codebase.
 Show: similar implementations we should model after.
 Include: file paths, code snippets, conventions used."
@@ -376,7 +376,7 @@ When the feature involves complex integration or unfamiliar territory, spawn 5
 perspective agents:
 
 ```
-Task: subagent_type="research-perspective-multiplier", model="haiku"
+Task: subagent_type="research-perspective-multiplier", model_tier="simple"
 Prompt: "Research [TOPIC] from perspective [1-5].
 Perspective 1: Existing codebase patterns
 Perspective 2: Open-source project approaches
@@ -389,7 +389,7 @@ Context: [summary of feature and existing research findings]"
 Run all 5 perspectives in parallel, then synthesize with judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: research synthesis.
 Synthesize these 5 research perspectives into a unified recommendation.
 [paste all 5 agent outputs]"
@@ -400,7 +400,7 @@ Synthesize these 5 research perspectives into a unified recommendation.
 When the research proposes new dependencies, evaluate each one:
 
 ```
-Task: subagent_type="research-dependency-evaluator", model="haiku"
+Task: subagent_type="research-dependency-evaluator", model_tier="simple"
 Prompt: "Evaluate [LIBRARY NAME] from perspective [1-3].
 Perspective 1: Evaluate the proposed library
 Perspective 2: Find alternatives
@@ -411,7 +411,7 @@ Needed functionality: [what we need from it]"
 Run all 3 perspectives in parallel, then synthesize with judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: dependency decision.
 Decide whether to adopt, find alternative, or build in-house.
 [paste all 3 agent outputs]"
@@ -422,7 +422,7 @@ Decide whether to adopt, find alternative, or build in-house.
 For features touching evolving technology areas:
 
 ```
-Task: subagent_type="research-horizon-scanner", model="haiku"
+Task: subagent_type="research-horizon-scanner", model_tier="simple"
 Prompt: "Scan for emerging alternatives and approaches relevant to [TOPIC].
 Current approach: [what we're considering]
 Tech stack: [relevant technologies]"

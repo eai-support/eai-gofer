@@ -2,11 +2,11 @@
 
 Version: 3.12.4
 
-This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
+This package is the portable Claude, Antigravity, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
 ## Public Sources
 
-Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, and Gemini CLI:
+Use the public GitHub repository as the install source for Claude Code, Codex and Copilot CLI. Antigravity uses the native sub-bundle:
 
 ```text
 https://github.com/eai-support/eai-gofer
@@ -27,7 +27,7 @@ That host publishes:
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
-- Gemini extension manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json`
+- Antigravity native plugin: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugins/antigravity/eai-gofer`
 
 ## First EAI Platform App
 
@@ -48,7 +48,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | Codex App / Codex IDE | `eai` plugin skill when a workspace is open | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json` |
 | GitHub Copilot app / VS Code agent mode | `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
 | Claude Code app | `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
-| Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json` |
+| Antigravity CLI / desktop | `/eai` native skill | `.agents/skills/`, `GEMINI.md`, `.specify/scripts/` |
 | Grok Build | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/` |
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
@@ -115,7 +115,7 @@ Optional helpers like problem validation, save, branding, tests, stakeholder com
 | Claude Code | `claude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer` then `claude plugin install eai-gofer@eai-gofer --scope user` | Unzip to `~/plugins/eai-gofer`, then `claude plugin marketplace add ~/plugins/eai-gofer --scope user` |
 | Codex | `codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer` then `codex plugin add eai-gofer@eai-gofer` | Unzip to `~/plugins/eai-gofer`, then `codex plugin marketplace add ~/plugins/eai-gofer` |
 | GitHub Copilot CLI | `copilot plugin marketplace add https://github.com/eai-support/eai-gofer` then `copilot plugin install eai-gofer@eai-gofer` | Unzip to `~/plugins/eai-gofer`, then `copilot plugin marketplace add ~/plugins/eai-gofer` |
-| Gemini CLI | `gemini extensions install https://github.com/eai-support/eai-gofer --auto-update` | Unzip to `~/plugins/eai-gofer`, then `gemini extensions install ~/plugins/eai-gofer` |
+| Antigravity CLI / desktop | Use `eai-update` with the matching host target | Native bundle: `plugins/antigravity/eai-gofer`; do not install the generic root as an Antigravity plugin. |
 
 ## Download And Replace The Local Bundle Folder
 
@@ -195,19 +195,15 @@ copilot plugin marketplace add ~/plugins/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
-## Gemini CLI
+## Antigravity CLI and Desktop
 
-Recommended public install:
-
-```bash
-gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
-```
-
-Downloaded bundle install:
-
-```bash
-gemini extensions install ~/plugins/eai-gofer
-```
+Use the native bundle at `plugins/antigravity/eai-gofer` inside this download.
+CLI: check `agy plugin --help`, validate the native package, then install that local directory.
+Desktop: the native plugin directory belongs under `~/.gemini/config/plugins/`.
+Use `eai-update` with the exact host for managed updates. Restart the client
+after a successful update. Do not copy the generic plugin manifest into the
+native directory. Do not migrate credentials or other plugins automatically.
+See [Google's migration guide](https://antigravity.google/docs/cli/gcli-migration).
 
 ## Model Policy
 

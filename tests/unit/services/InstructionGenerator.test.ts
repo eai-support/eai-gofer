@@ -58,6 +58,28 @@ describe('InstructionGenerator', () => {
   });
 
   describe('generateAgentsMd()', () => {
+    it.each(['generateAgentsMd', 'generateClaudeMd', 'generateCopilotMd'] as const)(
+      '%s includes the complete always-on scope and MVP rules without EAI setup',
+      async (method) => {
+        const content = await generator[method](makeProjectInfo());
+        for (const file of [
+          'spec.md',
+          'plan.md',
+          'tasks.md',
+          'traceability.md',
+          'validation-report.md',
+        ]) {
+          expect(content).toContain(file);
+        }
+        expect(content).toContain('before implementation continues');
+        expect(content).toContain('mark affected old evidence pending');
+        expect(content).toContain('A question alone does not authorize artifact edits');
+        expect(content).toContain('no implemented or required authentication needs no login');
+        expect(content).toContain('confirmed non-app work exempt');
+        expect(content.match(/<!-- gofer:always-on-eai:start -->/g)).toHaveLength(1);
+      }
+    );
+
     it('generates AGENTS.md for TypeScript project', async () => {
       const info = makeProjectInfo({
         name: 'my-app',
@@ -174,6 +196,19 @@ describe('InstructionGenerator', () => {
       expect(lineCount).toBeLessThan(65);
       expect(content).toContain('# CLAUDE.md');
       expect(content).toContain('@AGENTS.md');
+    });
+
+    it('keeps CRLF templates under 65 lines without changing instruction content', async () => {
+      const info = makeProjectInfo();
+      const lf = await generator.generateClaudeMd(info);
+      vi.mocked(FileUtils.readTextFile).mockImplementation(async (filePath: string) => {
+        const fs = await import('fs/promises');
+        return (await fs.readFile(filePath, 'utf-8')).replace(/\r?\n/g, '\r\n');
+      });
+      const crlf = await generator.generateClaudeMd(info);
+      expect(crlf.split('\n').length).toBeLessThan(65);
+      expect(crlf).not.toContain('\r');
+      expect(crlf).toBe(lf);
     });
 
     it('includes Gofer pipeline commands', async () => {

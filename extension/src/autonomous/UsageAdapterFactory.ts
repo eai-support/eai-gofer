@@ -8,6 +8,7 @@
  * @see .specify/specs/027-multi-provider-cli-support/plan.md Phase 7
  */
 
+import { parseRuntimeSurfacePreference } from '../config/runtimeSurface';
 import type { ProviderId } from '../council/types';
 import type { CLIUsageAdapter, UsageEntry } from './cli/CLIUsageAdapter';
 import { ClaudeCodeUsageAdapter } from './ClaudeCodeUsageAdapter';
@@ -118,22 +119,19 @@ export class UsageAdapterFactory {
   getCurrentAdapter(): CLIUsageAdapter | null {
     const vscode = require('vscode');
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get('cliProvider', 'auto') as
-      | 'claude'
-      | 'codex'
-      | 'copilot'
-      | 'gemini'
-      | 'auto';
+    const preference = parseRuntimeSurfacePreference(config.get('cliProvider', 'auto'));
+    const defaultCLI = parseRuntimeSurfacePreference(config.get('defaultCLI', 'auto'));
+    const selected = preference === 'auto' ? defaultCLI : preference;
 
     const providerId =
-      preference === 'auto'
+      selected === 'auto'
         ? 'claude-cli'
-        : preference === 'claude' || preference === 'codex'
-          ? (`${preference}-cli` as CLIProviderId)
+        : selected === 'claude' || selected === 'codex'
+          ? (`${selected}-cli` as CLIProviderId)
           : null;
 
     if (!providerId) {
-      // Copilot/Gemini selections do not have CLI usage adapters.
+      // Copilot/Antigravity selections do not have CLI usage adapters.
       return null;
     }
 

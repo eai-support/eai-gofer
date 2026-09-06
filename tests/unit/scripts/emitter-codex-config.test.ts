@@ -65,7 +65,7 @@ surfaces:
   - claude
   - agents-skills
   - codex
-  - gemini
+  - antigravity
 ---
 
 # Gofer Research
@@ -84,7 +84,7 @@ surfaces:
   - claude
   - agents-skills
   - codex
-  - gemini
+  - antigravity
 ---
 
 # Problem Validation
@@ -103,7 +103,7 @@ surfaces:
   - claude
   - agents-skills
   - codex
-  - gemini
+  - antigravity
 ---
 
 # Gofer Specify

@@ -3,6 +3,11 @@
  * Feature 028: Extracts metadata from platform-specific command files
  */
 
+import {
+  assertNotRetiredSurface,
+  isAntigravitySurface,
+  GEMINI_CLI_MIGRATION_MESSAGE,
+} from '../config/runtimeSurface';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as yaml from 'js-yaml';
@@ -15,7 +20,7 @@ import { PlatformType, CommandMetadata, CommandInvocationSyntax } from './types/
  * - Claude CLI (.claude/commands)
  * - Copilot Chat (.github/prompts)
  * - Codex CLI (.agents/skills, with .system/skills legacy fallback)
- * - Gemini CLI (.gemini/commands/gofer)
+ * - Antigravity CLI/desktop (.agents/skills)
  */
 export class CommandMetadataExtractor {
   /**
@@ -153,48 +158,33 @@ export class CommandMetadataExtractor {
     };
   }
 
-  /**
-   * Extract metadata from a Gemini CLI command TOML file (async version)
-   */
-  public async extractFromGeminiCommand(filePath: string): Promise<CommandMetadata> {
+  /** Legacy entrypoints reject retired files without reading or converting them. */
+  public async extractFromGeminiCommand(_filePath: string): Promise<CommandMetadata> {
+    throw new Error(GEMINI_CLI_MIGRATION_MESSAGE);
+  }
+
+  public extractFromGeminiCommandSync(_filePath: string): CommandMetadata {
+    throw new Error(GEMINI_CLI_MIGRATION_MESSAGE);
+  }
+
+  public async extractFromAntigravitySkill(
+    filePath: string,
+    platform: 'antigravity' | 'antigravity-desktop'
+  ): Promise<CommandMetadata> {
     const content = await fsPromises.readFile(filePath, 'utf8');
-    return this.parseGeminiCommandContent(content, filePath);
-  }
-
-  /**
-   * Extract metadata from a Gemini CLI command TOML file (sync version)
-   * Note: Prefer async version when possible to avoid blocking event loop
-   */
-  public extractFromGeminiCommandSync(filePath: string): CommandMetadata {
-    const content = fs.readFileSync(filePath, 'utf8');
-    return this.parseGeminiCommandContent(content, filePath);
-  }
-
-  private parseGeminiCommandContent(content: string, filePath: string): CommandMetadata {
-    const frontmatter = this.parseSimpleToml(content);
-    const name = this.extractCommandNameFromPath(filePath, '.toml');
-    const description = (frontmatter.description as string) || name;
-    const prompt = (frontmatter.prompt as string) || content;
-
-    const supportsAutoChain =
-      prompt.includes('Next Command:') ||
-      prompt.includes('continue the pipeline') ||
-      content.includes('AUTO-CHAIN');
-    const supportsParallelAgents =
-      prompt.includes('parallel') ||
-      prompt.includes('Multi-Agent Delegation') ||
-      content.includes('parallel agents');
-
+    const { frontmatter, body } = this.parseMarkdownWithFrontmatter(content);
+    const name = (frontmatter.name as string) || filePath.split(/[\\/]/).at(-2) || 'unknown';
     return {
       name,
-      description,
-      platform: 'gemini',
+      description: (frontmatter.description as string) || name,
+      platform,
       filePath,
       frontmatter,
-      content,
-      supportsAutoChain,
-      supportsParallelAgents,
-      invocationSyntax: this.getInvocationSyntax('gemini', name),
+      content: body,
+      // File contents do not prove native execution capabilities.
+      supportsAutoChain: false,
+      supportsParallelAgents: false,
+      invocationSyntax: this.getInvocationSyntax(platform, name),
       extractedAt: new Date(),
     };
   }
@@ -203,11 +193,13 @@ export class CommandMetadataExtractor {
    * Validate command invocation syntax for a platform
    */
   public validateInvocationSyntax(invocation: string, platform: PlatformType): boolean {
+    assertNotRetiredSurface(platform);
     const syntaxPatterns: Record<PlatformType, RegExp> = {
       claude: /^\/[^\s]+(?:\s+.*)?$/,
       copilot: /^#[^\s]+(?:\s+.*)?$/,
       codex: /^\/[^\s]+(?:\s+.*)?$/,
-      gemini: /^\/gofer:[^\s]+(?:\s+.*)?$/,
+      antigravity: /^\/[^\s]+(?:\s+.*)?$/,
+      'antigravity-desktop': /^\/[^\s]+(?:\s+.*)?$/,
     };
 
     return syntaxPatterns[platform].test(invocation);
@@ -283,20 +275,6 @@ export class CommandMetadataExtractor {
     return 'No description available';
   }
 
-  private parseSimpleToml(content: string): Record<string, unknown> {
-    const values: Record<string, unknown> = {};
-    const stringFieldPattern = /^([A-Za-z0-9_-]+)\s*=\s*"((?:\\"|[^"])*)"\s*$/;
-
-    for (const line of content.split(/\r?\n/)) {
-      const match = line.trim().match(stringFieldPattern);
-      if (match) {
-        values[match[1]] = match[2].replace(/\\"/g, '"');
-      }
-    }
-
-    return values;
-  }
-
   /**
    * Get invocation syntax for a platform and command
    */
@@ -337,17 +315,17 @@ export class CommandMetadataExtractor {
       };
     }
 
-    if (platform === 'gemini') {
-      const geminiCommand = commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
+    if (isAntigravitySurface(platform)) {
       return {
-        platform: 'gemini',
-        prefix: '/gofer:',
-        example: '/' + geminiCommand,
-        pattern: '^/' + geminiCommand + '(\\s+.*)?$',
+        platform,
+        prefix: '/',
+        example: '/' + commandName,
+        pattern: '^/' + commandName + '(\\\\s+.*)?$',
         supportsArguments: true,
         argumentFormat: 'space-separated after command',
       };
     }
+    assertNotRetiredSurface(platform);
 
     throw new Error('Unknown platform: ' + platform);
   }

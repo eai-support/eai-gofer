@@ -79,7 +79,7 @@ function createInternalApiPayloadFixtures(): Record<
     'IAP-008': {
       changeSetId: 'chg_001',
       canonicalSources: ['.specify/commands/0_gofer_start.md'],
-      targetMirrors: ['copilot', 'codex', 'gemini'],
+      targetMirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
       runParityValidation: true,
     },
     'IAP-009': {
@@ -162,7 +162,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
     'EVT-008': {
       eventId: 'evt_008',
       changeSetId: 'chg_001',
-      mirrors: ['copilot', 'codex', 'gemini'],
+      mirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
       filesChanged: 18,
       runtimeSyncCompleted: true,
     },

@@ -28,8 +28,8 @@ function buildButtons(release) {
   if (assets.copilot?.marketplace_url) {
     buttons.push({ label: 'Open Copilot Marketplace', href: assets.copilot.marketplace_url });
   }
-  if (assets.gemini?.manifest_url) {
-    buttons.push({ label: 'Open Gemini Manifest', href: assets.gemini.manifest_url });
+  if (assets.antigravity?.manifest_url) {
+    buttons.push({ label: 'Open Antigravity Manifest', href: assets.antigravity.manifest_url });
   }
   return buttons;
 }
@@ -112,7 +112,7 @@ export default function Releases() {
           <p>
             <strong>Agent surfaces:</strong> use the public GitHub repo{' '}
             <code>https://github.com/eai-support/eai-gofer</code> as the install source for Claude,
-            Codex, Copilot, and Gemini. Use the release card here for VSIX and downloadable zip
+            Codex, Copilot, and Antigravity. Use the release card here for VSIX and downloadable zip
             artifacts.
           </p>
           <p>

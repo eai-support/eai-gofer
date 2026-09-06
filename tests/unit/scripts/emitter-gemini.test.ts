@@ -1,235 +1,112 @@
-/**
- * T070 — Unit tests for the Gemini emitter (T065/T066) in generate-commands.mjs.
- *
- * Verifies that:
- * 1. emitGemini writes the public Gofer entrypoint files only
- * 2. internal stage contracts remain canonical under .specify/commands
- * 3. manifest.json contains the public command list in alphabetical order
- * 4. manifest.json is valid JSON
- */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { promises as fs } from 'fs';
-import path from 'path';
-import os from 'os';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { fileURLToPath } from 'node:url';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { FULL_COMMAND_COUNT } from '../../helpers/goferCommandSet';
 
-const execFileAsync = promisify(execFile);
-
-const generateCommandsUrl = new URL(
+const root = path.resolve(__dirname, '../../..');
+const generatorUrl = new URL(
   '../../../.specify/scripts/node/generate-commands.mjs',
   import.meta.url
 );
+const parserUrl = new URL(
+  '../../../.specify/scripts/node/parse-stage-command.mjs',
+  import.meta.url
+);
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+describe('Gemini CLI retirement and shared Antigravity renderer', () => {
+  let generator: typeof import('../../../.specify/scripts/node/generate-commands.mjs');
+  let stages: { filePath: string; frontmatter: Record<string, unknown>; body: string }[];
 
-async function ensureDir(dirPath: string): Promise<void> {
-  await fs.mkdir(dirPath, { recursive: true });
-}
-
-async function writeFile(filePath: string, content: string): Promise<void> {
-  await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, content, 'utf8');
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function readFile(filePath: string): Promise<string> {
-  return fs.readFile(filePath, 'utf8');
-}
-
-// ---------------------------------------------------------------------------
-// Fixtures — all stages list the gemini surface
-// ---------------------------------------------------------------------------
-
-const RESEARCH_STAGE = `---
-name: 1_gofer_research
-description: "Research codebase, CLI integrations, and technology landscape for the target feature."
-title: "Gofer Research"
-category: pipeline
-surfaces:
-  - claude
-  - claude-mirror
-  - copilot
-  - github-prompts
-  - agents-skills
-  - system-skills
-  - gemini
-  - codex
----
-
-# Gofer Research
-
-This is the research stage body content.
-
-## Instructions
-
-1. Analyse the codebase
-2. Identify integration points
-`;
-
-const PROBLEM_VALIDATION_STAGE = `---
-name: 0a_problem_validation
-description: "Validate the business problem using 5 Whys root-cause analysis and stakeholder mapping."
-title: "Problem Validation"
-category: pipeline
-surfaces:
-  - claude
-  - claude-mirror
-  - copilot
-  - github-prompts
-  - agents-skills
-  - system-skills
-  - gemini
-  - codex
----
-
-# Problem Validation
-
-Validate the business problem before design.
-`;
-
-const CLAUDE_ONLY_STAGE = `---
-name: 0_gofer_start
-description: "Define the business problem and scenario for Gofer to analyse and solve."
-title: "Business Scenario"
-category: pipeline
-surfaces:
-  - claude
-  - claude-mirror
-  - gemini
----
-
-# Business Scenario
-
-This is the business scenario body.
-`;
-
-// ---------------------------------------------------------------------------
-// Setup / teardown
-// ---------------------------------------------------------------------------
-
-let tmpRoot: string;
-
-beforeAll(async () => {
-  tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'gofer-emitter-gemini-test-'));
-
-  await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '1_gofer_research.md'),
-    RESEARCH_STAGE
-  );
-  await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '0a_problem_validation.md'),
-    PROBLEM_VALIDATION_STAGE
-  );
-  await writeFile(
-    path.join(tmpRoot, '.specify', 'commands', '0_gofer_start.md'),
-    CLAUDE_ONLY_STAGE
-  );
-
-  const scriptPath = fileURLToPath(generateCommandsUrl);
-  await execFileAsync('node', [scriptPath, '--root', tmpRoot, '--surfaces', 'gemini']);
-});
-
-afterAll(async () => {
-  await fs.rm(tmpRoot, { recursive: true, force: true });
-});
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('gemini emitter (T065)', () => {
-  it('does not emit retired gofer.md to .gemini/commands/gofer/', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'gofer.md');
-    expect(await fileExists(outPath)).toBe(false);
+  beforeAll(async () => {
+    generator = await import(generatorUrl.href);
+    const { parseStageCommand } = await import(parserUrl.href);
+    stages = [];
+    for (const name of (await fs.readdir(path.join(root, '.specify/commands'))).filter((f) =>
+      f.endsWith('.md')
+    )) {
+      const filePath = path.join(root, '.specify/commands', name);
+      stages.push({ filePath, ...(await parseStageCommand(filePath)) });
+    }
   });
 
-  it('emits eai.md to .gemini/commands/gofer/', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.md');
-    expect(await fileExists(outPath)).toBe(true);
+  it('removes Gemini from default generation without losing other emitters', () => {
+    expect(generator.resolveGenerationSurfaces()).toEqual([
+      'claude',
+      'claude-mirror',
+      'claude-skills',
+      'copilot',
+      'github-prompts',
+      'github-agents',
+      'github-skills',
+      'agents-skills',
+      'system-skills',
+      'grok-skills',
+      'agents-md',
+      'codex-config',
+    ]);
   });
 
-  it('written file contains public wrapper guidance', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.md');
-    const content = await readFile(outPath);
-    expect(content).toContain('# Eai');
-    expect(content).toContain('## User-Facing Contract');
+  it('rejects explicit Gemini generation, including mixed requests, before writes', () => {
+    for (const surfaces of [['gemini'], ['claude', 'gemini']]) {
+      expect(() => generator.resolveGenerationSurfaces(surfaces)).toThrow(
+        /Gemini CLI is retired.*Antigravity/
+      );
+    }
+    expect(() => generator.resolveGenerationSurfaces(['unknown'])).toThrow(/Unsupported/);
+  });
+
+  it('deduplicates CLI, desktop, and Codex onto the same skill output', () => {
+    expect(
+      generator.resolveGenerationSurfaces(['antigravity', 'agents-skills', 'antigravity-desktop'])
+    ).toEqual(['agents-skills']);
+  });
+
+  it.each(['eai', 'eai-update'])(
+    'renders %s with explicit current-host selection, not Codex impersonation',
+    (name) => {
+      const content = generator.buildPublicEntrypointSkill(
+        { name, title: name, description: 'Test entrypoint.' },
+        '1.0.0',
+        stages,
+        'Codex / Antigravity CLI / Antigravity desktop',
+        'portable'
+      );
+      expect(content).toContain('`codex`, `antigravity`, or `antigravity-desktop`');
+      expect(content).toContain('Never execute an unresolved placeholder');
+      expect(content).toContain('--host <host>');
+      expect(content).not.toContain('--host portable');
+      expect(content).not.toContain('--host codex');
+      expect(content).not.toContain('--host gemini');
+      expect(content).toContain('Keep `GEMINI.md` and `AGENTS.md`');
+      expect(content).toContain('do not prove native skill discovery or model execution');
+      expect(content).not.toContain('gemini extensions');
+    }
+  );
+
+  it('keeps all 26 internal contracts and safety gates in the shared entrypoint', () => {
+    expect(stages).toHaveLength(26);
+    expect(stages).toHaveLength(FULL_COMMAND_COUNT);
+    const content = generator.buildPublicEntrypointSkill(
+      { name: 'eai', title: 'Eai', description: 'Test.' },
+      '1.0.0',
+      stages,
+      'Shared',
+      'portable'
+    );
+    for (const stage of stages) {
+      expect(stage.frontmatter.surfaces).toContain('antigravity');
+      expect(stage.frontmatter.surfaces).not.toContain('gemini');
+      expect(content).toContain('`' + path.basename(stage.filePath, '.md') + '`');
+    }
+    for (const gate of [
+      '## User-Facing Response Gate',
+      '## EAI Platform Readiness',
+      '## App vs Non-App Routing',
+      '6_gofer_validate',
+      'Initialize/update it now?',
+    ]) {
+      expect(content).toContain(gate);
+    }
     expect(content).toContain('.specify/commands/*.md');
-    expect(content).toContain('1_gofer_research');
-    expect(content).not.toContain('category: pipeline');
-  });
-
-  it('does not expose formerly Claude-only stage 0_gofer_start as a Gemini command', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.md');
-    expect(await fileExists(outPath)).toBe(false);
-  });
-
-  it('does not expose TOML for 0_gofer_start', async () => {
-    const outPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', '0_gofer_start.toml');
-    expect(await fileExists(outPath)).toBe(false);
-  });
-});
-
-describe('gemini manifest (T066)', () => {
-  it('creates manifest.json in .gemini/commands/gofer/', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    expect(await fileExists(manifestPath)).toBe(true);
-  });
-
-  it('manifest.json is valid JSON', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const content = await readFile(manifestPath);
-    expect(() => JSON.parse(content)).not.toThrow();
-  });
-
-  it('manifest has version "1.0"', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.version).toBe('1.0');
-  });
-
-  it('manifest has a generated ISO timestamp', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.generated).toBeDefined();
-    expect(new Date(manifest.generated).toISOString()).toBe(manifest.generated);
-  });
-
-  it('manifest.commands contains the public entrypoints', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).not.toContain('gofer');
-    expect(manifest.commands).toContain('eai');
-    expect(manifest.commands).toContain('eai-update');
-  });
-
-  it('manifest.commands is sorted alphabetically', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    const sorted = [...manifest.commands].sort();
-    expect(manifest.commands).toEqual(sorted);
-  });
-
-  it('manifest.commands does not include 0_gofer_start', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).not.toContain('0_gofer_start');
-  });
-
-  it('manifest.commands contains only the public entrypoints', async () => {
-    const manifestPath = path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath));
-    expect(manifest.commands).toEqual(['eai', 'eai-update']);
   });
 });

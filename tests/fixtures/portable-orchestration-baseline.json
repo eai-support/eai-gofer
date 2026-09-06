@@ -1,0 +1,1436 @@
+{
+  "schemaVersion": 1,
+  "stageContentHashPolicy": "SHA256 after LF normalization and only the approved token-policy and symbolic-model substitutions; all other stage text is frozen.",
+  "stageContentHashes": {
+    ".specify/commands/0_gofer_start.md": "9ffc4056738724c0370168b2dd3dad1ea7c4486ab81def6a2ff05c6946c8f49f",
+    ".specify/commands/0a_problem_validation.md": "04c87a3a9283ac5300aac7abf6e022be123d968f94c5b75dc7f987fe80a75b0c",
+    ".specify/commands/10_gofer_cloud.md": "9a4cc8375f5770e7eca324b0df8f2bfede1ecb1def5f5d22e246d76ca35afadd",
+    ".specify/commands/1_gofer_research.md": "aa51f828e42e76ff4c4cc2d45a572e81cf8c26739c0fea97b417956dcd0795de",
+    ".specify/commands/2_gofer_specify.md": "dc61f8af1c921d8582b4473a405f3d25619dabc43017c109ab1e12c8add89a22",
+    ".specify/commands/3_gofer_plan.md": "35c5a811d3aac878202a7131bdbb45cdc9f961d9f841d19f0fa0b8c75c1664b0",
+    ".specify/commands/4_gofer_tasks.md": "2efdc2f876795f41deeb925303287f140a76a9e2430597b7987059d78d3d5866",
+    ".specify/commands/5_gofer_implement.md": "9ec45997efa3705ee64820b9a4acb40d6d24d30c780fa026fdc73ac3e86e7dfb",
+    ".specify/commands/6_gofer_validate.md": "4f3f3259023fa982e848b23728e8ddd195c8659a675b5b59e86897b080ec8b29",
+    ".specify/commands/7_gofer_save.md": "4a06b337fee52eb7de5afea35d3d97a56944322a9f0a77b2eb91f6fa505a4c4f",
+    ".specify/commands/7a_stakeholder_comms.md": "24db1260c6b6accce4976913970b76b1608d0497660d8e97d9bb2957f72ded93",
+    ".specify/commands/8_gofer_branding.md": "0b7c3e2c387f9bef469c2324d39901bcaac14ffc91b8db239828cad5ed23ed48",
+    ".specify/commands/9_gofer_tests.md": "b0fe01975f4d6c44968361e8082b795f768b6d1f0d2ebdc74db3d6e9d854de82",
+    ".specify/commands/gofer_bootstrap_workspace.md": "19e91bf6d2194854ae7c7161e7b2dcc36ab3608a99e8c66c5c2c91e97049ebfb",
+    ".specify/commands/gofer_check_workspace.md": "ded7052ed1592ebd5c649e331e72b4574610be4ad73d9bc124854c69139a62ce",
+    ".specify/commands/gofer_constitution.md": "ad30f682a7b6319df78f666ce7a4a86439b8b823439c8daabce7afc2fdfce602",
+    ".specify/commands/gofer_diagnose.md": "847ccf0eb8e8863e6284b62710226073f71c9843eee888e5635b7b5058887d8e",
+    ".specify/commands/gofer_eai_first_run.md": "ca2e38eb1195b4ba81f582b5b2248a823736fcb051fa0ce1af91b85f658fc8fe",
+    ".specify/commands/gofer_hydrate.md": "537f1ec2186d53bb72205be3f991e44bc2666bf419d30d12acd7738118fc9d65",
+    ".specify/commands/gofer_personality.md": "01a1e02247fe2297f7ed65f8710e1e6f6d9bc585654abf9e556d2294f6cf8e5f",
+    ".specify/commands/gofer_plan.md": "2c6c3368abf0ffac477e2f5e1a71febeeee69f90b665d3d9350c835ebc24f513",
+    ".specify/commands/gofer_side.md": "17d7646ab9393e9d0bc14585e35c60b4222250cdd945e3cf4848adcdf3b45c48",
+    ".specify/commands/gofer_spec_summary.md": "e4fdd8a1332e13680f91ae63a1265e8228331a64f3eb1110093c882cd8d1076c",
+    ".specify/commands/gofer_tdd.md": "7943f70075b33ba429aebe527b6f421517a457a50b41644c764612e3125ec7ad",
+    ".specify/commands/gofer_vocabulary.md": "bc7a5edaf9174f8d454d1bfb3c55b3efc2f8f6dfb2b87f4983adbf31af8dcfae",
+    ".specify/commands/gofer_zoom_out.md": "b8509ffc3b1c425ede52400cba0a24caba0b004304ac1079249c1ea3f5197d6c"
+  },
+  "baselineCommit": "74dc92000a9309d4735945b45227d1bcb4356f83",
+  "version": "3.12.4",
+  "project": "eai-gofer",
+  "repository": "https://github.com/eai-support/eai-gofer",
+  "stageFiles": [
+    "0_gofer_start.md",
+    "0a_problem_validation.md",
+    "10_gofer_cloud.md",
+    "1_gofer_research.md",
+    "2_gofer_specify.md",
+    "3_gofer_plan.md",
+    "4_gofer_tasks.md",
+    "5_gofer_implement.md",
+    "6_gofer_validate.md",
+    "7_gofer_save.md",
+    "7a_stakeholder_comms.md",
+    "8_gofer_branding.md",
+    "9_gofer_tests.md",
+    "gofer_bootstrap_workspace.md",
+    "gofer_check_workspace.md",
+    "gofer_constitution.md",
+    "gofer_diagnose.md",
+    "gofer_eai_first_run.md",
+    "gofer_hydrate.md",
+    "gofer_personality.md",
+    "gofer_plan.md",
+    "gofer_side.md",
+    "gofer_spec_summary.md",
+    "gofer_tdd.md",
+    "gofer_vocabulary.md",
+    "gofer_zoom_out.md"
+  ],
+  "publicEntrypoints": ["eai", "eai-update"],
+  "surfaceEntrypoints": [
+    ".agents/skills/eai-update/SKILL.md",
+    ".agents/skills/eai/SKILL.md",
+    ".claude/commands/eai-update.md",
+    ".claude/commands/eai.md",
+    ".claude/skills/eai-update/SKILL.md",
+    ".claude/skills/eai/SKILL.md",
+    ".gemini/commands/gofer/eai-update.md",
+    ".gemini/commands/gofer/eai-update.toml",
+    ".gemini/commands/gofer/eai.md",
+    ".gemini/commands/gofer/eai.toml",
+    ".github/prompts/eai-update.prompt.md",
+    ".github/prompts/eai.prompt.md",
+    ".github/skills/eai-update/SKILL.md",
+    ".github/skills/eai/SKILL.md",
+    ".grok/skills/eai-update/SKILL.md",
+    ".grok/skills/eai/SKILL.md",
+    ".system/skills/eai-update/SKILL.md",
+    ".system/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+    "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+    "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+    "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+    "docs-site/static/releases/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+    "docs-site/static/releases/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+    "docs-site/static/releases/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/commands/eai-update.md",
+    "docs-site/static/releases/plugins/eai-gofer/commands/eai.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/commands/eai-update.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/commands/eai.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/skills/eai-update/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/skills/eai/SKILL.md",
+    "extension/resources/claude-commands/eai-update.md",
+    "extension/resources/claude-commands/eai.md",
+    "extension/resources/claude-skills/eai-update/SKILL.md",
+    "extension/resources/claude-skills/eai/SKILL.md",
+    "extension/resources/copilot-prompts/eai-update.prompt.md",
+    "extension/resources/copilot-prompts/eai.prompt.md",
+    "extension/resources/gemini/commands/gofer/eai-update.md",
+    "extension/resources/gemini/commands/gofer/eai-update.toml",
+    "extension/resources/gemini/commands/gofer/eai.md",
+    "extension/resources/gemini/commands/gofer/eai.toml",
+    "extension/resources/github-skills/eai-update/SKILL.md",
+    "extension/resources/github-skills/eai/SKILL.md",
+    "extension/resources/grok-skills/eai-update/SKILL.md",
+    "extension/resources/grok-skills/eai/SKILL.md",
+    "plugin-skills/eai-update/SKILL.md",
+    "plugin-skills/eai/SKILL.md",
+    "plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+    "plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+    "plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+    "plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+    "plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+    "plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+    "plugins/eai-gofer/.github/prompts/eai.prompt.md",
+    "plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/.github/skills/eai/SKILL.md",
+    "plugins/eai-gofer/commands/eai-update.md",
+    "plugins/eai-gofer/commands/eai.md",
+    "plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+    "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+    "plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/commands/eai-update.md",
+    "plugins/eai-gofer/plugins/eai-gofer/commands/eai.md",
+    "plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md",
+    "plugins/eai-gofer/skills/eai-update/SKILL.md",
+    "plugins/eai-gofer/skills/eai/SKILL.md",
+    "skills/eai-update/SKILL.md",
+    "skills/eai/SKILL.md"
+  ],
+  "vscodeCommandIds": [
+    "gofer.run",
+    "gofer.eai",
+    "gofer.initialize",
+    "gofer.installOptionalTools",
+    "gofer.upgrade",
+    "gofer.showProgress",
+    "gofer.showDeliveryLineage",
+    "gofer.refreshSpecs",
+    "gofer.checkForUpdates",
+    "gofer.updateNow",
+    "gofer.refreshConstitution",
+    "gofer.refreshContextWindow",
+    "gofer.refreshAIUsage",
+    "gofer.showAIUsage",
+    "gofer.showContextCategoryContent",
+    "gofer.refreshMemory",
+    "gofer.remember",
+    "gofer.searchMemory",
+    "gofer.forgetMemory",
+    "gofer.clearMemory",
+    "gofer.viewMemories",
+    "gofer.migrateMemoriesToLayered",
+    "gofer.queryMemoryUsage",
+    "gofer.viewCompactionHistory",
+    "gofer.createHintFile",
+    "gofer.showConstitution",
+    "gofer.updateTemplates",
+    "gofer.fixSpecPaths",
+    "gofer.openSpec",
+    "gofer.createSpec",
+    "gofer.showSpecDetails",
+    "gofer.showSectionDetails",
+    "gofer.showArticleDetails",
+    "gofer.showMemoryDocument",
+    "gofer.showMemorySection",
+    "gofer.openWithPreview",
+    "gofer.openWithMarkSharp",
+    "gofer.openWithMarkdownEditor",
+    "gofer.openWithMarkdownWYSIWYG",
+    "gofer.executeAllPendingSpecs",
+    "gofer.debugAIUsage",
+    "gofer.checkForSlop",
+    "gofer.resumeSession",
+    "gofer.regenerateInstructions"
+  ],
+  "vscodeConfigurationKeys": [
+    "gofer.autoInitialize",
+    "gofer.preferredAI",
+    "gofer.claudeCodeCommand",
+    "gofer.cliProvider",
+    "gofer.defaultCLI",
+    "gofer.workflowProfile",
+    "gofer.codexCommand",
+    "gofer.markdownViewer",
+    "gofer.observationPreservePatterns",
+    "gofer.useLayeredMemory",
+    "gofer.stageDetectionStalenessMinutes",
+    "gofer.aiUsage.statusBar.enabled",
+    "gofer.aiUsage.polling.interval"
+  ],
+  "preservationHashes": {
+    "src/services/GoferImpactClassifier.ts": "60cfd08c206738c67632c71fe815de7c3c74c6cc45d557643b281c8fb0ca6502",
+    "extension/src/extension.ts": "cbaa72d6b8a4fa366a8ccb3373f2459ccaea87c02beace39488c0cc113d06372",
+    "extension/src/autonomous/CostBudgetEnforcer.ts": "0707733b9bd34dc2796ac939335f0d1ce4e133c4d8e4ba80e59494d105a1f856",
+    ".specify/scripts/node/gofer-loop-audit.mjs": "1d8b48b79b128500a29bbcb99c2dbf42ce09d107f8699fd5a5fc76dccfa9946b",
+    ".specify/scripts/node/gofer-closed-loop-audit.mjs": "f90b6110dfe0b90291ddacb39e5f48cf480b6c085b9c8f3d1a20ac01e8ca8e76",
+    ".specify/scripts/node/gofer-workspace-check.mjs": "0bebcfe7e53278bec310d7089716fb43c48c029dd0a32212c06d2e1c0f9fed58",
+    ".specify/scripts/node/gofer-surface-update.mjs": "3a985446e80e36b1e7427c84acd6239a86bf31d364c7511e3b7dfe1421a0cf7b",
+    ".specify/scripts/node/gofer-ui-preview.mjs": "f74712d98711f2116d6f7591fb51329441d76ee1124b355f76b62a37ac8f70d2",
+    ".specify/references/mvp-capability-validation.md": "7dc4d396fe02029bc00a171161bae32cba55c8133afeef4c1656933002a9e220",
+    ".specify/templates/gofer-model-policy.yaml": "10bbaf7517e2a13ec4eb5c1998d4ac4a861000f1353bf6551b5ab400624dbac1",
+    ".specify/scripts/bash/mark-task-complete.sh": "22e83aec457d0502bf4903199a979140eaa71a4a7d66168225d81d49c4f8e18e"
+  },
+  "preservationHashAlgorithm": "sha256",
+  "preservationHashSource": "git show origin/main:<path>; origin/main resolved to baselineCommit at capture",
+  "inventoryPolicy": {
+    "stageFiles": "Every canonical .specify/commands/*.md filename, including all stages, helpers and session controls.",
+    "surfaceEntrypoints": "Every tracked eai/eai-update command or skill wrapper in the baseline, including extension resources, plugin packages and published/nested snapshots. Platform reference eai.md is not an entrypoint.",
+    "preservationHashes": "Exact raw baseline blob bytes, not current worktree bytes. Fail on deletion or hash mismatch. Do not refresh this allowlist to bless changes without an explicit preservation decision.",
+    "compatibility": "Preserve every baseline ID, alias, function and setting contract. New opt-in capabilities may be additive. Deliberate migrations require an explicit decision and replacement evidence; never silently reduce the baseline.",
+    "snapshotPaths": "Nested/published copies are observed inventory, not proof of freshness or a requirement to recreate recursive packaging. Any intentional path removal needs a recorded migration rather than a silent baseline edit.",
+    "privateData": "Only public project names and repository-relative paths. Do not track private feature specifications, tenant/account IDs, local user paths, credentials or customer artifacts."
+  },
+  "counts": {
+    "stageFiles": 26,
+    "coreStages": 7,
+    "optionalStages": 8,
+    "helpers": 8,
+    "sessionControls": 3,
+    "publicEntrypoints": 2,
+    "surfaceEntrypoints": 100,
+    "vscodeCommands": 44,
+    "vscodeConfigurationKeys": 13,
+    "preservationHashes": 11,
+    "mustPreserveGates": 18
+  },
+  "coreStageIds": [
+    "0_gofer_start",
+    "1_gofer_research",
+    "2_gofer_specify",
+    "3_gofer_plan",
+    "4_gofer_tasks",
+    "5_gofer_implement",
+    "6_gofer_validate"
+  ],
+  "internalCommands": [
+    {
+      "id": "0_gofer_start",
+      "path": ".specify/commands/0_gofer_start.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:start", "0_business_scenario"]
+    },
+    {
+      "id": "0a_problem_validation",
+      "path": ".specify/commands/0a_problem_validation.md",
+      "role": "optional_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:validate-problem"]
+    },
+    {
+      "id": "10_gofer_cloud",
+      "path": ".specify/commands/10_gofer_cloud.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:cloud"]
+    },
+    {
+      "id": "1_gofer_research",
+      "path": ".specify/commands/1_gofer_research.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:research"]
+    },
+    {
+      "id": "2_gofer_specify",
+      "path": ".specify/commands/2_gofer_specify.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:specify"]
+    },
+    {
+      "id": "3_gofer_plan",
+      "path": ".specify/commands/3_gofer_plan.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:plan-stage"]
+    },
+    {
+      "id": "4_gofer_tasks",
+      "path": ".specify/commands/4_gofer_tasks.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:tasks"]
+    },
+    {
+      "id": "5_gofer_implement",
+      "path": ".specify/commands/5_gofer_implement.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:implement"]
+    },
+    {
+      "id": "6_gofer_validate",
+      "path": ".specify/commands/6_gofer_validate.md",
+      "role": "core_stage",
+      "category": "pipeline",
+      "aliases": ["gofer:validate"]
+    },
+    {
+      "id": "7_gofer_save",
+      "path": ".specify/commands/7_gofer_save.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:save"]
+    },
+    {
+      "id": "7a_stakeholder_comms",
+      "path": ".specify/commands/7a_stakeholder_comms.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:comms"]
+    },
+    {
+      "id": "8_gofer_branding",
+      "path": ".specify/commands/8_gofer_branding.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:branding", "gofer:brand-templates"]
+    },
+    {
+      "id": "9_gofer_tests",
+      "path": ".specify/commands/9_gofer_tests.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:tests"]
+    },
+    {
+      "id": "gofer:bootstrap-workspace",
+      "path": ".specify/commands/gofer_bootstrap_workspace.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:check-workspace",
+      "path": ".specify/commands/gofer_check_workspace.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer_constitution",
+      "path": ".specify/commands/gofer_constitution.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:constitution"]
+    },
+    {
+      "id": "gofer:diagnose",
+      "path": ".specify/commands/gofer_diagnose.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:eai-first-run",
+      "path": ".specify/commands/gofer_eai_first_run.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": ["gofer:first-run", "gofer:eai-setup"]
+    },
+    {
+      "id": "gofer_hydrate",
+      "path": ".specify/commands/gofer_hydrate.md",
+      "role": "optional_stage",
+      "category": "utility",
+      "aliases": ["gofer:hydrate"]
+    },
+    {
+      "id": "gofer:personality",
+      "path": ".specify/commands/gofer_personality.md",
+      "role": "session_control",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:plan",
+      "path": ".specify/commands/gofer_plan.md",
+      "role": "session_control",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:side",
+      "path": ".specify/commands/gofer_side.md",
+      "role": "session_control",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:spec-summary",
+      "path": ".specify/commands/gofer_spec_summary.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:tdd",
+      "path": ".specify/commands/gofer_tdd.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:vocabulary",
+      "path": ".specify/commands/gofer_vocabulary.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    },
+    {
+      "id": "gofer:zoom-out",
+      "path": ".specify/commands/gofer_zoom_out.md",
+      "role": "helper",
+      "category": "control",
+      "aliases": []
+    }
+  ],
+  "canonicalCommandSurfaceNames": [
+    "claude",
+    "claude-mirror",
+    "copilot",
+    "vscode",
+    "codex",
+    "gemini",
+    "github-prompts",
+    "agents-skills",
+    "system-skills"
+  ],
+  "surfaceEntrypointGroups": {
+    "canonical": [
+      "plugin-skills/eai-update/SKILL.md",
+      "plugin-skills/eai/SKILL.md",
+      "skills/eai-update/SKILL.md",
+      "skills/eai/SKILL.md"
+    ],
+    "repositoryGenerated": [
+      ".agents/skills/eai-update/SKILL.md",
+      ".agents/skills/eai/SKILL.md",
+      ".claude/commands/eai-update.md",
+      ".claude/commands/eai.md",
+      ".claude/skills/eai-update/SKILL.md",
+      ".claude/skills/eai/SKILL.md",
+      ".gemini/commands/gofer/eai-update.md",
+      ".gemini/commands/gofer/eai-update.toml",
+      ".gemini/commands/gofer/eai.md",
+      ".gemini/commands/gofer/eai.toml",
+      ".github/prompts/eai-update.prompt.md",
+      ".github/prompts/eai.prompt.md",
+      ".github/skills/eai-update/SKILL.md",
+      ".github/skills/eai/SKILL.md",
+      ".grok/skills/eai-update/SKILL.md",
+      ".grok/skills/eai/SKILL.md",
+      ".system/skills/eai-update/SKILL.md",
+      ".system/skills/eai/SKILL.md"
+    ],
+    "extensionResources": [
+      "extension/resources/claude-commands/eai-update.md",
+      "extension/resources/claude-commands/eai.md",
+      "extension/resources/claude-skills/eai-update/SKILL.md",
+      "extension/resources/claude-skills/eai/SKILL.md",
+      "extension/resources/copilot-prompts/eai-update.prompt.md",
+      "extension/resources/copilot-prompts/eai.prompt.md",
+      "extension/resources/gemini/commands/gofer/eai-update.md",
+      "extension/resources/gemini/commands/gofer/eai-update.toml",
+      "extension/resources/gemini/commands/gofer/eai.md",
+      "extension/resources/gemini/commands/gofer/eai.toml",
+      "extension/resources/github-skills/eai-update/SKILL.md",
+      "extension/resources/github-skills/eai/SKILL.md",
+      "extension/resources/grok-skills/eai-update/SKILL.md",
+      "extension/resources/grok-skills/eai/SKILL.md"
+    ],
+    "pluginPackage": [
+      "plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+      "plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+      "plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+      "plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+      "plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+      "plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+      "plugins/eai-gofer/.github/prompts/eai.prompt.md",
+      "plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/.github/skills/eai/SKILL.md",
+      "plugins/eai-gofer/commands/eai-update.md",
+      "plugins/eai-gofer/commands/eai.md",
+      "plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+      "plugins/eai-gofer/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/skills/eai/SKILL.md"
+    ],
+    "nestedPluginSnapshot": [
+      "plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+      "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+      "plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/commands/eai-update.md",
+      "plugins/eai-gofer/plugins/eai-gofer/commands/eai.md",
+      "plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/skills/eai-update/SKILL.md",
+      "plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md"
+    ],
+    "publishedPluginSnapshot": [
+      "docs-site/static/releases/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+      "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+      "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+      "docs-site/static/releases/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+      "docs-site/static/releases/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+      "docs-site/static/releases/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+      "docs-site/static/releases/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/commands/eai-update.md",
+      "docs-site/static/releases/plugins/eai-gofer/commands/eai.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/skills/eai/SKILL.md"
+    ],
+    "publishedNestedPluginSnapshot": [
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai-update.toml",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.toml",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai-update.prompt.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/commands/eai-update.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/commands/eai.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/skills/eai-update/SKILL.md",
+      "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md"
+    ]
+  },
+  "vscodeConfigurationContracts": {
+    "gofer.autoInitialize": {
+      "type": "boolean",
+      "default": false
+    },
+    "gofer.preferredAI": {
+      "type": "string",
+      "enum": ["claude", "copilot", "ask"],
+      "default": "ask"
+    },
+    "gofer.claudeCodeCommand": {
+      "type": "string",
+      "default": "claude"
+    },
+    "gofer.cliProvider": {
+      "type": "string",
+      "enum": ["claude", "codex", "copilot", "gemini", "auto"],
+      "default": "auto"
+    },
+    "gofer.defaultCLI": {
+      "type": "string",
+      "enum": ["claude", "copilot", "codex", "gemini", "auto"],
+      "default": "auto"
+    },
+    "gofer.workflowProfile": {
+      "type": "string",
+      "enum": ["standard", "enterpriseai"],
+      "default": "standard"
+    },
+    "gofer.codexCommand": {
+      "type": "string",
+      "default": "codex"
+    },
+    "gofer.markdownViewer": {
+      "type": "string",
+      "enum": ["preview", "mark-sharp", "markdown-editor", "markdown-wysiwyg"],
+      "default": "preview"
+    },
+    "gofer.observationPreservePatterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "gofer.useLayeredMemory": {
+      "type": "boolean",
+      "default": false
+    },
+    "gofer.stageDetectionStalenessMinutes": {
+      "type": "number",
+      "default": 30,
+      "minimum": 5,
+      "maximum": 120
+    },
+    "gofer.aiUsage.statusBar.enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "gofer.aiUsage.polling.interval": {
+      "type": "number",
+      "default": 3600000,
+      "minimum": 1000,
+      "maximum": 7200000
+    }
+  },
+  "vscodeChatPromptPaths": ["extension/resources/copilot-prompts/eai.prompt.md"],
+  "supportingInstructionPaths": [
+    ".github/agents/gofer-business.agent.md",
+    ".github/agents/gofer-implement.agent.md",
+    ".github/agents/gofer-plan.agent.md",
+    ".github/agents/gofer-research.agent.md",
+    ".github/agents/gofer-validate.agent.md",
+    "extension/resources/github-agents/gofer-business.agent.md",
+    "extension/resources/github-agents/gofer-implement.agent.md",
+    "extension/resources/github-agents/gofer-plan.agent.md",
+    "extension/resources/github-agents/gofer-research.agent.md",
+    "extension/resources/github-agents/gofer-validate.agent.md"
+  ],
+  "documentationSkillPaths": [
+    ".agents/skills/gofer-documentation/SKILL.md",
+    ".claude/skills/gofer-documentation/SKILL.md",
+    ".github/skills/gofer-documentation/SKILL.md",
+    ".specify/skills/gofer-documentation/SKILL.md",
+    ".system/skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.claude/skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/.github/skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugin-skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.claude/skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.github/skills/gofer-documentation/SKILL.md",
+    "docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/plugin-skills/gofer-documentation/SKILL.md",
+    "extension/resources/claude-skills/gofer-documentation/SKILL.md",
+    "extension/resources/github-skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/.claude/skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/.github/skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/plugin-skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.claude/skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/.github/skills/gofer-documentation/SKILL.md",
+    "plugins/eai-gofer/plugins/eai-gofer/plugin-skills/gofer-documentation/SKILL.md"
+  ],
+  "baselineEvidence": {
+    "provenance": "Results supplied by the parent task/user; not rerun by this documentation task. No raw result artifact was supplied here.",
+    "rootSuite": {
+      "command": "npm test -- --retry=0",
+      "status": "reported_failure",
+      "passedTests": 3467,
+      "failedTests": 1,
+      "passedFiles": 280,
+      "totalFiles": 281,
+      "pendingTests": null,
+      "failure": {
+        "path": "tests/integration/file-change-performance.test.ts",
+        "reason": "Timed out on unchanged baseline source"
+      },
+      "noSourceChanges": true
+    },
+    "fileWatchFocusedRerun": {
+      "status": "reported_pass",
+      "path": "tests/integration/file-change-performance.test.ts",
+      "passedTests": 2,
+      "totalTests": 2,
+      "command": null,
+      "note": "Focused rerun only; does not rewrite the original full-suite result."
+    },
+    "nativeVSCode": {
+      "status": "reported_partial",
+      "version": "1.127.0",
+      "platform": "macOS",
+      "passedTests": 131,
+      "pendingTests": 11,
+      "command": null,
+      "environmentNote": "Short temporary user-data path required because of UNIX socket path length.",
+      "note": "Do not count pending tests as passed or infer other-host execution from this result."
+    },
+    "otherDesktopAndCliHosts": {
+      "status": "not_proven"
+    },
+    "realModelQuality": {
+      "status": "not_proven"
+    },
+    "realModelSpeedAndCost": {
+      "status": "not_proven"
+    },
+    "rootSuiteLimits": {
+      "configurationPath": "vitest.config.ts",
+      "coverageThresholdPercent": 40,
+      "excluded": [
+        "tests/e2e/**",
+        "tests/manual/**",
+        "tests/integration/spec-loading-flow.test.ts",
+        "tests/integration/lsp-mcp/**",
+        "extension/**",
+        "language-server/**",
+        "src/**/*.test.ts",
+        "tests/unit/autonomous/CodexUsageAdapter.test.ts",
+        "tests/unit/autonomous/observation-tracking.test.ts",
+        "tests/unit/autonomous/acc-integration.test.ts",
+        "tests/unit/autonomous/contextbuilder-wiring.test.ts",
+        "tests/unit/exponentialBackoff.test.ts"
+      ],
+      "note": "Root discovery targets tests/**/*.test.ts. Named test references establish coverage locations, not individual passing verdicts; suite skips and native pending tests remain visible."
+    }
+  },
+  "gatePolicy": {
+    "mustPreserveGateCount": 18,
+    "statusVocabulary": ["not_individually_verified", "verified", "failed", "pending", "not_run", "not_proven"],
+    "defaultGateStatus": "not_individually_verified",
+    "scoring": "No weighted completion score is assigned. If a count is reported, the denominator is all 18 must-preserve gates, not only tests that ran. State each gate's missing evidence. Contract checks and runtime/model evidence are separate layers.",
+    "untestedTreatment": "Pending, skipped, excluded, timed-out, unavailable and unrun evidence stays visible and never becomes a pass or disappears from the preservation denominator.",
+    "conditionalCapabilities": "A capability can be not_applicable to an individual MVP task while its product preservation gate remains in this rubric. Use synthetic cases for this maintenance; do not authenticate or provision EAI.",
+    "failureTreatment": "Retain the original failure, focused rerun and any later complete rerun separately. Do not hide a failure by changing retries, exclusions or the fixture.",
+    "completion": "Do not claim blanket 100% preservation, all-host readiness, model-quality parity or no speed regression from inventory, hashes, contract text or simulated tests.",
+    "authority": "This is approved Gofer product maintenance. No customer app setup, EAI authentication/provisioning, publishing or external mutation is authorized by these artifacts."
+  },
+  "rubric": [
+    {
+      "id": "PO-001",
+      "name": "Opt-in portable model routing",
+      "mustPreserve": true,
+      "scope": ["app", "non_app", "product_maintenance"],
+      "acceptance": "With portable routing disabled, preserve current outputs, command routes, settings and model-call behavior. Enabling routing must be explicit. Preserve repository model-policy edits and report unsupported routes without silently changing accounts, installing providers or buying capacity.",
+      "sourcePaths": [
+        ".specify/templates/gofer-model-policy.yaml",
+        "extension/src/config/modelPolicy.ts",
+        "extension/src/services/migration/ResourceSyncer.ts"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/config/modelPolicy.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/extension/ResourceSyncer.workspace-sync.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Default model constants and resource preservation do not prove portable execution or opt-out equivalence. Model availability is not verified by this snapshot.",
+      "requiredAdditionalEvidence": [
+        "Routing off/on differential tests",
+        "Invalid configuration and unavailable provider tests",
+        "Native host consent and settings-preservation evidence"
+      ]
+    },
+    {
+      "id": "PO-002",
+      "name": "Public surfaces and maintenance separation",
+      "mustPreserve": true,
+      "scope": ["all_hosts"],
+      "acceptance": "Preserve eai and support-only eai-update, always-on request preservation, host-specific wrappers, documentation support skills and managed instructions. Keep numbered/helper commands internal. Updates must work without an EAI project and must not become application provisioning.",
+      "sourcePaths": [
+        "skills/eai/SKILL.md",
+        "skills/eai-update/SKILL.md",
+        ".specify/scripts/node/generate-commands.mjs",
+        ".specify/scripts/node/gofer-surface-update.mjs"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/cross-platform-parity.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/workspace-preflight-surfaces.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/gofer-surface-update.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/agents-md-shape.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "File presence and wrapper content do not establish installed picker visibility, always-on delivery or command execution on each host. Generator --check validates inputs, not equality of generated output.",
+      "requiredAdditionalEvidence": [
+        "Parent cross-surface fixture regression tests",
+        "Isolated generation and packaged-output comparison",
+        "Real desktop and CLI entrypoint/maintenance checks for each supported host"
+      ]
+    },
+    {
+      "id": "PO-003",
+      "name": "Complete internal stage and helper inventory",
+      "mustPreserve": true,
+      "scope": ["app", "non_app"],
+      "acceptance": "Preserve every internalCommands ID, canonical path, alias and function. Keep seven core stages ordered through validation; optional stages, controls and helpers remain optional. Vocabulary, summary, zoom-out, TDD, diagnose and side conversations must not advance or corrupt the main pipeline.",
+      "sourcePaths": [
+        ".specify/commands/",
+        "tests/helpers/goferCommandSet.ts",
+        ".specify/scripts/node/parse-stage-command.mjs"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/stage-manifest.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/helper-commands-cross-cli-parity.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/stage-local-helper-seams.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/cli/side-conversation.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/cli/plan-mode-toggle.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Existing helper seam tests primarily check wording. Historical comments describing 16 or 24 stages are not the current 26-command inventory.",
+      "requiredAdditionalEvidence": [
+        "Baseline inventory subset assertions for every generated/package surface",
+        "Executable helper failure, resume and state-isolation checks"
+      ]
+    },
+    {
+      "id": "PO-004",
+      "name": "VS Code commands, settings and panels",
+      "mustPreserve": true,
+      "scope": ["vscode"],
+      "acceptance": "Preserve all 44 command IDs and 13 configuration IDs with baseline defaults, types, bounds and enum values. Preserve specification/progress/constitution/lineage, memory, context, AI usage, markdown viewing, initialization, updates and checkpoint actions. Additions must not silently repurpose existing IDs.",
+      "sourcePaths": ["extension/package.json", "extension/src/extension.ts", "extension/src/commands/specCommands.ts"],
+      "existingTests": [
+        {
+          "path": "tests/integration/command-registration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/extension/reinitializable-memory-commands.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/ui/AIUsageProvider.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/ui/MemoryPanel.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/ui/deliveryLineageViewer.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "extension/src/test/suite/extension.test.ts",
+          "evidenceClass": "native_host_suite_reported_partial"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Parent reports native VS Code 1.127.0 on macOS: 131 passed, 11 pending, using a short temporary user-data path because of the UNIX socket length limit. Pending tests and other hosts remain unproven.",
+      "requiredAdditionalEvidence": [
+        "Fixture checks for contributes command/configuration compatibility",
+        "Native VS Code activation, panels, command actions and settings checks"
+      ]
+    },
+    {
+      "id": "PO-005",
+      "name": "Material specifications and acceptance traceability",
+      "mustPreserve": true,
+      "scope": ["app", "non_app", "operator_tools"],
+      "acceptance": "Block downstream stages for missing or template-only specs. Preserve research, requirements, plan, tasks, acceptance criteria and traceability. A direction change updates affected artifacts before work resumes. Unrelated feature files must not be overwritten.",
+      "sourcePaths": [
+        ".specify/scripts/bash/check-prerequisites.sh",
+        ".specify/scripts/bash/common.sh",
+        ".specify/templates/spec-template.md",
+        ".specify/references/mvp-capability-validation.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/spec-artifact-guard.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/traceability-fr-coverage.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/traceability-nfr-coverage.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/traceability-sc-coverage.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/traceability-acceptance-coverage.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/gofer-closed-loop-audit.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Traceability tests use public fixtures, not a portable-orchestration feature specification. The baseline tracks only .gitkeep in .specify/specs.",
+      "requiredAdditionalEvidence": [
+        "Public synthetic app and non-app spec fixtures",
+        "Before/after preservation checks for unrelated feature artifacts",
+        "Requirement-to-test mapping for every new routing behavior"
+      ]
+    },
+    {
+      "id": "PO-006",
+      "name": "Non-app and approved product-maintenance boundaries",
+      "mustPreserve": true,
+      "scope": ["non_app", "product_maintenance"],
+      "acceptance": "Honor confirmed research/docs/audit/maintenance scope without EAI identity, tenant selection, app initialization or provisioning. Preserve standard-profile defaults, research/planning outputs and stakeholder artifacts. Do not reclassify Gofer maintenance as a customer application.",
+      "sourcePaths": [
+        "skills/eai/SKILL.md",
+        ".specify/commands/0_gofer_start.md",
+        "extension/src/config/workflowProfile.ts"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/enterpriseai/non-eai-output-regression.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/enterpriseai/plan-standard-profile-regression.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/enterpriseai/eai-app-preflight.integration.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Standard output snapshots do not prove that all agent/tool routes avoid EAI side effects. No EAI authentication or provisioning is authorized for this maintenance.",
+      "requiredAdditionalEvidence": [
+        "Tool-spy tests proving zero EAI identity/provisioning calls",
+        "Standard-profile artifact parity for representative non-app requests"
+      ]
+    },
+    {
+      "id": "PO-007",
+      "name": "MVP capability states and conditional gates",
+      "mustPreserve": true,
+      "scope": ["app", "non_app"],
+      "acceptance": "Preserve not_applicable, planned, implemented, verified and blocked. Validate implemented or currently required capabilities; do not impose future authentication, EAI or deployment requirements on an early local MVP. Preserve scope-change reporting and distinguish a running server from a verified journey.",
+      "sourcePaths": [
+        ".specify/references/mvp-capability-validation.md",
+        ".specify/commands/4_gofer_tasks.md",
+        ".specify/commands/6_gofer_validate.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/enterpriseai/mvp-capability-validation.integration.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/validation-evidence-gates.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "The MVP tests assert contract text. They do not execute the complete capability-state decision matrix.",
+      "requiredAdditionalEvidence": [
+        "Executable capability-state matrix with scope transitions",
+        "Negative tests for false completion and unnecessary future-scope gates"
+      ]
+    },
+    {
+      "id": "PO-008",
+      "name": "EAI-first, identity and approval safeguards",
+      "mustPreserve": true,
+      "scope": ["app_when_in_scope"],
+      "acceptance": "Preserve EAI Platform first, Azure second and explicitly approved exceptions. Require authentic template readiness for EAI integration. When authentication is in scope, require provider, callback, sign-in, session, authorized protected access and safe denial. Preserve architecture and capability-removal approval boundaries.",
+      "sourcePaths": [
+        "skills/eai/SKILL.md",
+        ".specify/references/mvp-capability-validation.md",
+        ".specify/scripts/node/eai-app-template-readiness.mjs"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/enterpriseai/eai-app-template-readiness.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/enterpriseai/eai-app-preflight.integration.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/integration/enterpriseai/architecture-approval-loop.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/enterpriseai/capability-removal-approval.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Template and approval tests exercise synthetic inputs; authentication journey wording is not live sign-in evidence. This product-maintenance task must not authenticate or provision EAI.",
+      "requiredAdditionalEvidence": [
+        "Synthetic denial, callback, template and approval regression cases",
+        "Separately authorized real app journey evidence before claiming live EAI/authentication behavior"
+      ]
+    },
+    {
+      "id": "PO-009",
+      "name": "UI-first preview and business scenarios",
+      "mustPreserve": true,
+      "scope": ["app_with_user_facing_changes"],
+      "acceptance": "Preserve build maps, service-fit review, repo-runner priority, Windows runner support, preview after UI changes, executable browser scenarios, screenshots and show-and-tell/review logs. Missing, failed or stale evidence must remain blocked or unverified rather than becoming success from HTTP reachability.",
+      "sourcePaths": [
+        ".specify/scripts/node/gofer-ui-preview.mjs",
+        ".specify/commands/5_gofer_implement.md",
+        ".specify/templates/business-scenarios-template.json",
+        ".specify/templates/ui-review-log-template.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/gofer-ui-preview.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/enterpriseai/ui-first-app-delivery-guidance.integration.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "The dedicated preview test file covers two runner-selection cases, not manifest validation, browser launch, screenshot failure, scenario execution or end-to-end review evidence.",
+      "requiredAdditionalEvidence": [
+        "Preview failure-path and stale-evidence tests",
+        "Local synthetic app browser journey with scenario report and screenshot",
+        "Real desktop browser opening and Windows runner evidence"
+      ]
+    },
+    {
+      "id": "PO-010",
+      "name": "Release capability completeness",
+      "mustPreserve": true,
+      "scope": ["release_claims"],
+      "acceptance": "Do not claim complete or 100% when a required capability lacks specification/traceability, acceptance evidence, responsible PR/commit, release-branch inclusion or applicable deployed proof. Keep capability-removal approvals and deferred outcomes visible. Publishing a package or passing CI is not proof of user behavior.",
+      "sourcePaths": [
+        ".specify/references/mvp-capability-validation.md",
+        ".specify/templates/release-capability-ledger-template.md",
+        ".specify/commands/6_gofer_validate.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/enterpriseai/mvp-capability-validation.integration.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/integration/enterpriseai/capability-removal-approval.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/release/release-verification.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "The release-ledger test checks text, not actual PR merge state, release ancestry or deployed outcomes. No runtime release-capability ledger enforcement was found in the inspected baseline source.",
+      "requiredAdditionalEvidence": [
+        "Executable missing/open-PR/absent-commit/missing-proof rejection cases",
+        "Read-only release ancestry and installed-artifact evidence at release time"
+      ]
+    },
+    {
+      "id": "PO-011",
+      "name": "Bounded loops, drift and pipeline resume",
+      "mustPreserve": true,
+      "scope": ["app", "non_app"],
+      "acceptance": "Preserve goal reconciliation, contract and loop ledgers, iteration limits, repeated-failure escalation, freshness checks, re-opening only affected stages, state transitions and checkpoint/resume. Do not reset retry counts or erase earlier failures on provider handoff.",
+      "sourcePaths": [
+        ".specify/scripts/node/gofer-loop-audit.mjs",
+        ".specify/scripts/node/gofer-closed-loop-audit.mjs",
+        ".specify/templates/loop-contract-template.json",
+        ".specify/commands/7_gofer_save.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/gofer-loop-audit.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/gofer-closed-loop-audit.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/PipelineStateManager.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/RunLedger.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/ErrorRecovery.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Loop audits check ledger structure and bounded records, not the truth of every claimed model evaluation. Cross-provider cancellation/resume is not established.",
+      "requiredAdditionalEvidence": [
+        "Cross-provider retry, cancellation and resume tests",
+        "Evidence hashes or stable references retained across handoffs",
+        "Stop-condition and repeated-failure negative cases"
+      ]
+    },
+    {
+      "id": "PO-012",
+      "name": "Context, memory, cost and privacy continuity",
+      "mustPreserve": true,
+      "scope": ["app", "non_app", "vscode"],
+      "acceptance": "Preserve memory persistence/search/filtering, hints, layered memory, context compaction, observation preservation, usage display and configured budget enforcement. Carry relevant context without leaking secrets or unrelated customer data to another model. Preserve advisory versus blocking budget behavior.",
+      "sourcePaths": [
+        "extension/src/autonomous/ContextBuilder.ts",
+        "extension/src/autonomous/SubAgentDispatcher.ts",
+        "extension/src/config/modelPolicy.ts"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/memoryIntegration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/hintIntegration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/ContextCompactor.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/SubAgentContextFactory.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/CostBudgetEnforcer.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/council/providers/CredentialRedactor.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Some context/observation integration tests are excluded by the root configuration. Existing tests do not prove privacy and memory continuity through the new portable router.",
+      "requiredAdditionalEvidence": [
+        "Context-loss and credential-redaction tests at every provider boundary",
+        "Budget exhaustion and unavailable usage-data cases",
+        "Native checkpoint and memory continuity evidence"
+      ]
+    },
+    {
+      "id": "PO-013",
+      "name": "Evidence-based escalation",
+      "mustPreserve": true,
+      "scope": ["portable_routing_enabled"],
+      "acceptance": "Escalate for recorded failed checks, contradiction, repeated failure or material security/architecture/release risk. Record the attempted route, evidence, reason, next route and budget effect. A model's confidence claim alone is insufficient proof. Preserve user cost and approval boundaries.",
+      "sourcePaths": [
+        "skills/eai/SKILL.md",
+        ".specify/templates/gofer-model-policy.yaml",
+        ".specify/scripts/node/gofer-loop-audit.mjs"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/config/modelPolicy.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/ErrorRecovery.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/autonomous/CostBudgetEnforcer.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Existing model tier constants and error-recovery tests do not establish an evidence-driven portable routing decision.",
+      "requiredAdditionalEvidence": [
+        "Deterministic no-escalation/escalation/stop decision cases",
+        "Real paired model tasks showing escalation improves a previously failing outcome"
+      ]
+    },
+    {
+      "id": "PO-014",
+      "name": "Independent critique and honest validation",
+      "mustPreserve": true,
+      "scope": ["review_required"],
+      "acceptance": "Preserve correctness, security, performance, test quality, integration and standards review roles plus applicable blast-radius/release checks. Run the critic independently from the author with recorded execution/model identity and source evidence. Do not relabel author output as independent review; missing critique stays unverified. Findings must affect acceptance and remediation.",
+      "sourcePaths": [
+        ".specify/commands/6_gofer_validate.md",
+        ".claude/agents/validation-correctness.md",
+        ".claude/agents/validation-security.md",
+        ".claude/agents/validation-test-quality.md"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/integration/cross-platform-parity.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/validation-evidence-gates.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/validation-report-compat.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Role files and prompt wording do not prove separate critic execution, useful findings or quality equivalence across models.",
+      "requiredAdditionalEvidence": [
+        "Independent execution and no-self-approval tests",
+        "Seeded-defect/refutation benchmark and adjudicated findings",
+        "Missing, timed-out, contradictory and unsupported critic cases"
+      ]
+    },
+    {
+      "id": "PO-015",
+      "name": "Execution profiles, quality and speed",
+      "mustPreserve": true,
+      "scope": ["app", "non_app", "all_hosts"],
+      "acceptance": "Preserve fast, standard, full and dynamic profiles without forcing broad fanout for every small task or removing required safety checks. Compare unchanged tasks and accepted outcomes with routing off/on. Record time to first useful output, total completion time, cold/warm p50/p95, calls, tokens and spend against a pre-agreed tolerance.",
+      "sourcePaths": [
+        ".specify/commands/6_gofer_validate.md",
+        ".specify/scripts/node/gofer-performance-report.mjs",
+        ".specify/scripts/hooks/log-stage-launch-time.mjs"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/cli/picker-time-to-stage.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/log-stage-launch-time.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/performance-report.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/performance/validation-parallel.test.ts",
+          "evidenceClass": "simulated_performance"
+        },
+        {
+          "path": "tests/integration/file-change-performance.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Parallel tests simulate jobs and no real-model baseline is established. The original root run had one existing file-watch timeout; the parent reports a focused rerun passed 2/2. Retain both results: the rerun does not replace a complete full-suite rerun.",
+      "requiredAdditionalEvidence": [
+        "Repeated paired native desktop/CLI workloads with pinned environment and recorded model versions",
+        "Quality non-inferiority at the same accepted outcome",
+        "Separate record and disposition of the existing watcher timeout"
+      ]
+    },
+    {
+      "id": "PO-016",
+      "name": "Business documents, visuals and branding",
+      "mustPreserve": true,
+      "scope": ["app", "non_app"],
+      "acceptance": "Preserve business-readable progress, research/market/business outputs, PR/FAQ, persona reviews/decks, release notes, demo scripts, diagrams and documentation lineage. Branding must preserve scope, acceptance criteria and evidence. Keep private brands/assets out of public bundles and do not block unrelated work on missing optional branding.",
+      "sourcePaths": [
+        ".specify/commands/8_gofer_branding.md",
+        ".specify/commands/7a_stakeholder_comms.md",
+        ".specify/skills/gofer-documentation/SKILL.md",
+        ".specify/templates/brand/brand-profile-template.json"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/gofer-command-guidance.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/market-business-always-emitted.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/integration/enterpriseai/persona-marp-decks.integration.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/integration/stakeholder-marp-output.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/visuals/render-visual.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/ui/deliveryLineageCorpus.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "No dedicated branding-behavior test was found. Text/template and rendering tests do not establish business usefulness, faithful branding or readability in real viewers.",
+      "requiredAdditionalEvidence": [
+        "Branding no-scope-change and no-private-asset tests",
+        "Rendered document/deck review against the same acceptance brief",
+        "Documentation support skill preservation on every baseline surface"
+      ]
+    },
+    {
+      "id": "PO-017",
+      "name": "Headless portability, identity and export integrity",
+      "mustPreserve": true,
+      "scope": ["headless", "app_exports"],
+      "acceptance": "Preserve executor-neutral stage requests/results, canonical app/run identity, immutable approvals, artifact hashes, safe feature paths, source lineage, deterministic exports and customer/internal separation. Do not impose headless tenant/app requirements on the separate non-app maintenance path.",
+      "sourcePaths": [
+        "src/headless/contracts.ts",
+        "src/headless/stageExecutionValidators.ts",
+        "src/headless/portableScaffold.ts",
+        "src/headless/exportBundle.ts"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/headless/stageExecutor.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/headless/validators.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/headless/exportBundle.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/headless/deliveryLineage.test.ts",
+          "evidenceClass": "automated_behavior"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Existing portable scaffold/export contracts are not evidence that portable model routing works. Native import/use of released exports remains unverified here.",
+      "requiredAdditionalEvidence": [
+        "New routing artifact compatibility with existing headless validators",
+        "Cross-app, path traversal and tampered-output rejection",
+        "Released export round-trip in an authorized environment"
+      ]
+    },
+    {
+      "id": "PO-018",
+      "name": "Packaging, offline use and release delivery",
+      "mustPreserve": true,
+      "scope": ["all_hosts", "release_claims"],
+      "acceptance": "Preserve extension resources, CLI/plugin metadata, version alignment, public entrypoints, canonical helpers, offline runtime assets and safe update behavior. Record deliberate path migrations; do not silently drop a surface or inherit duplicated nested bundle layout as a new architecture requirement.",
+      "sourcePaths": [
+        ".specify/scripts/node/package-agent-plugin.mjs",
+        ".specify/scripts/node/sync-extension-resources.mjs",
+        "scripts/verify-surface-release-contract.mjs",
+        "release.sh",
+        ".github/workflows/release.yml"
+      ],
+      "existingTests": [
+        {
+          "path": "tests/unit/scripts/agent-plugin-package.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/vsix-packaging.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/scripts/sync-extension-resources.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/runtime-offline-after-publish.test.ts",
+          "evidenceClass": "automated_contract"
+        },
+        {
+          "path": "tests/unit/release/surface-release-contract.test.ts",
+          "evidenceClass": "automated_behavior"
+        },
+        {
+          "path": "tests/unit/scripts/version-alignment.test.ts",
+          "evidenceClass": "automated_contract"
+        }
+      ],
+      "baselineStatus": "not_individually_verified",
+      "baselineGap": "Committed package/release snapshots include nested copies. Inventory captures their paths, not freshness or installed operation. Public marketplace/deployed evidence is not supplied.",
+      "requiredAdditionalEvidence": [
+        "Parent fixture comparisons for generated and packaged assets",
+        "No-private-path/no-secret checks on release artifacts",
+        "Native install/update/offline smoke and released-version readback"
+      ]
+    }
+  ]
+}

@@ -15,6 +15,7 @@ describe('surface release contract', () => {
       { cwd: repoRoot }
     );
 
-    expect(stdout).toContain(`Gofer release surface contract passed for v${version}.`);
+    expect(stdout).toContain(`Gofer release surface contract passed for v${version};`);
+    expect(stdout).toContain('native app loading is not tested.');
   });
 });

@@ -1,3 +1,4 @@
+import { assertNotRetiredSurface, isAntigravitySurface } from '../config/runtimeSurface';
 import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -7,13 +8,24 @@ import * as vscode from 'vscode';
 import { Logger } from './Logger';
 import { ProjectDetector, type ProjectInfo } from './ProjectDetector';
 
-export type OptionalToolId = 'stryker' | 'playwright' | 'claude' | 'codex' | 'gemini' | 'gh' | 'az';
+export type OptionalToolId =
+  | 'stryker'
+  | 'playwright'
+  | 'claude'
+  | 'codex'
+  | 'antigravity'
+  | 'antigravity-desktop'
+  | 'gh'
+  | 'az';
 
 export interface OptionalToolRecommendation {
   id: OptionalToolId;
   label: string;
   category: 'repo' | 'global';
   installed: boolean;
+  /** False excludes recognized surfaces without an approved installer. */
+  installSupported?: boolean;
+  verification?: 'version-only' | 'unverified';
   recommended: boolean;
   detail: string;
   reason: string;
@@ -35,7 +47,7 @@ export class OptionalToolInstaller {
   public async promptForRecommendedTools(workspacePath: string): Promise<void> {
     const recommendations = await this.getRecommendations(workspacePath);
     const missingRecommendedTools = recommendations.filter(
-      (tool): boolean => !tool.installed && tool.recommended
+      (tool): boolean => !tool.installed && tool.recommended && tool.installSupported !== false
     );
 
     if (missingRecommendedTools.length === 0) {
@@ -65,7 +77,9 @@ export class OptionalToolInstaller {
 
   public async promptForToolSelection(workspacePath: string): Promise<void> {
     const recommendations = await this.getRecommendations(workspacePath);
-    const missingTools = recommendations.filter((tool): boolean => !tool.installed);
+    const missingTools = recommendations.filter(
+      (tool): boolean => !tool.installed && tool.installSupported !== false
+    );
 
     if (missingTools.length === 0) {
       vscode.window.showInformationMessage(
@@ -106,6 +120,14 @@ export class OptionalToolInstaller {
       return;
     }
 
+    for (const toolId of toolIds) {
+      assertNotRetiredSurface(toolId);
+      if (isAntigravitySurface(toolId)) {
+        throw new Error(
+          `${toolId}: automatic installation is not verified. No installer was launched.`
+        );
+      }
+    }
     const scriptPath = this.getScriptPath(workspacePath);
     try {
       await fs.access(scriptPath);
@@ -143,7 +165,7 @@ export class OptionalToolInstaller {
     const availability = await Promise.all([
       this.isCommandAvailable('claude', ['--version']),
       this.isCommandAvailable('codex', ['--version']),
-      this.isCommandAvailable('gemini', ['--version']),
+      this.isCommandAvailable('agy', ['--version']),
       this.isCommandAvailable('gh', ['--version']),
       this.isCommandAvailable('az', ['version']),
     ]);
@@ -196,13 +218,26 @@ export class OptionalToolInstaller {
         reason: 'Enables Codex-based Gofer workflows from the terminal.',
       },
       {
-        id: 'gemini',
-        label: 'Google Gemini CLI',
+        id: 'antigravity',
+        label: 'Google Antigravity CLI (agy)',
         category: 'global',
         installed: availability[2],
-        recommended: true,
-        detail: 'Installs @google/gemini-cli globally via npm.',
-        reason: 'Adds Gemini CLI support to the local developer environment.',
+        recommended: false,
+        installSupported: false,
+        verification: availability[2] ? 'version-only' : 'unverified',
+        detail: 'Automatic Gofer installation is not verified.',
+        reason: 'Version discovery does not verify authentication or native Gofer execution.',
+      },
+      {
+        id: 'antigravity-desktop',
+        label: 'Google Antigravity Desktop',
+        category: 'global',
+        installed: false,
+        recommended: false,
+        installSupported: false,
+        verification: 'unverified',
+        detail: 'Desktop availability and installation are not verified.',
+        reason: 'Do not infer desktop availability from the agy CLI.',
       },
       {
         id: 'gh',
@@ -269,20 +304,34 @@ export class OptionalToolInstaller {
 
   private async isCommandAvailable(command: string, args: string[]): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      execFile(command, args, { timeout: 5000 }, (error) => {
-        if (!error) {
+      execFile(
+        command,
+        args,
+        {
+          timeout: 5000,
+          ...(command === 'agy'
+            ? {
+                shell: false,
+                maxBuffer: 1024 * 1024,
+                env: { ...process.env, AGY_CLI_DISABLE_AUTO_UPDATE: 'true' },
+              }
+            : {}),
+        },
+        (error) => {
+          if (!error) {
+            resolve(true);
+            return;
+          }
+
+          const typedError = error as NodeJS.ErrnoException;
+          if (typedError.code === 'ENOENT' || command === 'agy') {
+            resolve(false);
+            return;
+          }
+
           resolve(true);
-          return;
         }
-
-        const typedError = error as NodeJS.ErrnoException;
-        if (typedError.code === 'ENOENT') {
-          resolve(false);
-          return;
-        }
-
-        resolve(true);
-      });
+      );
     });
   }
 

@@ -34,15 +34,15 @@ is controlled by the client, plan, and organization policy.
 ### CLI Authentication
 
 Gofer no longer stores provider API keys in VS Code settings. Claude, Codex,
-Copilot, and Gemini should use each tool's normal login/session state. For CLIs
-that support environment fallback, set those variables in your shell or secret
-manager, not in repository files.
+Copilot, and Antigravity should use each tool's normal login/session state. For
+CLIs that support environment fallback, set those variables in your shell or
+secret manager, not in repository files.
 
 **Security Notes:**
 
 - Never commit API keys, tokens, or credentials to version control.
-- Prefer `claude login`, `codex login`, Gemini CLI login, and Copilot account
-  state over direct provider SDK/API-key configuration.
+- Prefer `claude login`, `codex login`, Antigravity CLI login, and Copilot
+  account state over direct provider SDK/API-key configuration.
 - Gofer usage panels read local CLI usage artifacts and logs; they do not use
   Gofer-managed provider credentials.
 
@@ -52,8 +52,8 @@ manager, not in repository files.
 | ----------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------ |
 | `gofer.workflowProfile` | enum    | `"standard"` | Public baseline workflow. Use `enterpriseai` only for older workflow contracts during migration. |
 | `gofer.autoInitialize`  | boolean | `false`      | Auto-initialize `.specify/` on workspace open                                                    |
-| `gofer.preferredAI`     | enum    | `"ask"`      | Preferred AI assistant: `ask`, `claude`, `copilot`, `codex`, `gemini`                            |
-| `gofer.defaultCLI`      | enum    | `"auto"`     | Default CLI surface: `auto`, `claude`, `copilot`, `codex`, `gemini`                              |
+| `gofer.preferredAI`     | enum    | `"ask"`      | Preferred AI assistant: `ask`, `claude`, `copilot`, `codex`, `antigravity`                       |
+| `gofer.defaultCLI`      | enum    | `"auto"`     | Default CLI surface: `auto`, `claude`, `copilot`, `codex`, `antigravity`                         |
 
 ### AI Usage and Billing
 
@@ -64,12 +64,12 @@ manager, not in repository files.
 
 ### CLI and Workflow Selection
 
-| Setting                   | Type   | Default     | Description                                                                         |
-| ------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------- |
-| `gofer.cliProvider`       | enum   | `"auto"`    | AI CLI provider for autonomous mode: `claude`, `codex`, `copilot`, `gemini`, `auto` |
-| `gofer.claudeCodeCommand` | string | `"claude"`  | Command or path used when Gofer invokes the Claude Code CLI                         |
-| `gofer.codexCommand`      | string | `"codex"`   | Custom path to the Codex CLI executable                                             |
-| `gofer.markdownViewer`    | enum   | `"preview"` | Markdown viewer integration to open when clicking files                             |
+| Setting                   | Type   | Default     | Description                                                                              |
+| ------------------------- | ------ | ----------- | ---------------------------------------------------------------------------------------- |
+| `gofer.cliProvider`       | enum   | `"auto"`    | AI CLI provider for autonomous mode: `claude`, `codex`, `copilot`, `antigravity`, `auto` |
+| `gofer.claudeCodeCommand` | string | `"claude"`  | Command or path used when Gofer invokes the Claude Code CLI                              |
+| `gofer.codexCommand`      | string | `"codex"`   | Custom path to the Codex CLI executable                                                  |
+| `gofer.markdownViewer`    | enum   | `"preview"` | Markdown viewer integration to open when clicking files                                  |
 
 ### Context and Memory
 

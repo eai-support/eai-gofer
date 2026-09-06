@@ -389,12 +389,12 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain('./dist/eai-gofer-agent-plugin-$NEW_VERSION.zip');
     });
 
-    it('should verify the public Gemini manifest alongside Claude and Codex', () => {
+    it('should verify the public Antigravity manifest alongside Claude and Codex', () => {
       expect(RELEASE_SCRIPT).toContain(
-        'GEMINI_EXTENSION_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json"'
+        'ANTIGRAVITY_PLUGIN_URL="https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugins/antigravity/eai-gofer/plugin.json"'
       );
-      expect(RELEASE_SCRIPT).toContain('REMOTE_GEMINI_URL=');
-      expect(RELEASE_SCRIPT).toContain('Gemini extension URL is correct');
+      expect(RELEASE_SCRIPT).toContain('REMOTE_ANTIGRAVITY_URL=');
+      expect(RELEASE_SCRIPT).toContain('Antigravity plugin URL is correct');
     });
 
     it('should keep GitHub release workflow aligned with the local release gate', () => {

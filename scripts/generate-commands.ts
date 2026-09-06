@@ -5,7 +5,7 @@
  * Regenerates the canonical Codex and Copilot surfaces from
  * `.specify/commands/*.md` via the shared Node generator. This keeps the release
  * path byte-identical with the canonical source-of-truth surfaces already used
- * across Claude, Copilot, Codex, and Gemini.
+ * across Claude, Copilot, Codex, and Antigravity.
  *
  * Usage:
  *   npm run generate-commands               # Generate all commands

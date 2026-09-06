@@ -50,7 +50,7 @@ jobs:
             echo "The following files have changes after generation:"
             git diff --name-only .system/skills/ .agents/skills/ .github/prompts/
             echo ""
-            echo "This means generated Codex/Gemini/Copilot command artifacts don't match Claude templates."
+            echo "This means generated Codex/Antigravity/Copilot command artifacts don't match canonical templates."
             echo ""
             echo "To fix:"
             echo "1. Run: npm run generate-commands"

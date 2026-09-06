@@ -13,6 +13,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as path from 'path';
+import * as os from 'os';
 
 // Unmock fs module for integration tests
 vi.unmock('fs');
@@ -29,13 +30,14 @@ import { MemoryManager } from '../../../extension/src/autonomous/MemoryManager';
 import { HintLoader } from '../../../extension/src/autonomous/HintLoader';
 import { StageContextProfileLoader } from '../../../extension/src/autonomous/StageContextProfileLoader';
 import type { GoferStage } from '../../../extension/src/autonomous/StageContextProfile';
+import { settleBackgroundWrites } from '../../helpers/settleBackgroundWrites';
 
 describe('Context Management Pipeline Integration (T072-T075)', () => {
-  const testWorkspaceRoot = path.join(__dirname, 'test-workspace-context-pipeline');
-  const specsDir = path.join(testWorkspaceRoot, '.specify', 'specs');
-  const memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
-  const logsDir = path.join(testWorkspaceRoot, '.specify', 'logs');
-  const globalStoragePath = path.join(testWorkspaceRoot, 'global-storage');
+  let testWorkspaceRoot: string;
+  let specsDir: string;
+  let memoryDir: string;
+  let logsDir: string;
+  let globalStoragePath: string;
 
   // Test components
   let contextBuilder: ContextBuilder;
@@ -46,7 +48,7 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
   let profileLoader: StageContextProfileLoader;
 
   const mockVSCodeContext = {
-    globalStoragePath,
+    globalStoragePath: '',
     globalState: {
       get: vi.fn().mockReturnValue(undefined),
       update: vi.fn().mockResolvedValue(undefined),
@@ -54,10 +56,12 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
   } as any;
 
   beforeEach(() => {
-    // Clean up and create test workspace
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
-    }
+    testWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-context-pipeline-'));
+    specsDir = path.join(testWorkspaceRoot, '.specify', 'specs');
+    memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
+    logsDir = path.join(testWorkspaceRoot, '.specify', 'logs');
+    globalStoragePath = path.join(testWorkspaceRoot, 'global-storage');
+    mockVSCodeContext.globalStoragePath = globalStoragePath;
 
     // Create directories
     fs.mkdirSync(specsDir, { recursive: true });
@@ -81,6 +85,9 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
     hintLoader = new HintLoader(testWorkspaceRoot);
     memoryManager = new MemoryManager(mockVSCodeContext, testWorkspaceRoot);
     observationMasker = new ObservationMasker(testWorkspaceRoot);
+    // Observe real background writes so teardown can await them without mocking storage.
+    vi.spyOn(memoryManager, 'recordUsage');
+    vi.spyOn(observationMasker, 'saveCacheToDisk');
     profileLoader = new StageContextProfileLoader(testWorkspaceRoot);
     healthMonitor = new ContextHealthMonitor({
       warningThreshold: 0.5,
@@ -103,13 +110,22 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
     );
   });
 
-  afterEach(() => {
-    // Clean up
-    hintLoader?.dispose();
-    healthMonitor?.dispose();
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
-    }
+  afterEach(async () => {
+    await settleBackgroundWrites(
+      [
+        ...vi.mocked(memoryManager.recordUsage).mock.results,
+        ...vi.mocked(observationMasker.saveCacheToDisk).mock.results,
+      ]
+        .filter((result) => result.type === 'return')
+        .map((result) => result.value),
+      () => {
+        hintLoader?.dispose();
+        healthMonitor?.dispose();
+        if (fs.existsSync(testWorkspaceRoot)) {
+          fs.rmSync(testWorkspaceRoot, { recursive: true });
+        }
+      }
+    );
   });
 
   // ==========================================================================

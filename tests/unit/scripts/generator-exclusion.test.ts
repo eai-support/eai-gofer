@@ -18,11 +18,11 @@ describe('shouldExclude', () => {
 
   it.each([
     ['0_gofer_start', 'codex'],
-    ['gofer_constitution', 'gemini'],
+    ['gofer_constitution', 'antigravity'],
     ['gofer_hydrate', 'codex'],
     ['7_gofer_save', 'copilot'],
     ['8_gofer_branding', 'github-prompts'],
-    ['1_gofer_research', 'gemini'],
+    ['1_gofer_research', 'antigravity'],
     ['6_gofer_validate', 'agents-skills'],
   ])('does not exclude %s from %s', (stageName, surface) => {
     expect(shouldExclude(stageName, surface)).toBe(false);

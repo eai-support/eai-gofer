@@ -129,8 +129,8 @@ function resolveTargetPlatform(targetMirror: string): TargetPlatform {
   if (normalizedTarget === 'codex' || normalizedTarget.includes('.agents/skills')) {
     return 'codex';
   }
-  if (normalizedTarget === 'gemini' || normalizedTarget.includes('.gemini/commands/gofer')) {
-    return 'gemini';
+  if (normalizedTarget === 'antigravity' || normalizedTarget === 'antigravity-desktop') {
+    return normalizedTarget;
   }
 
   // Compatibility fallback for generic mirror roots like extension/resources.
@@ -147,8 +147,8 @@ function resolveTargetPath(targetMirror: string, workspaceRoot: string): string 
   if (targetMirror === 'codex') {
     return normalizePath(path.resolve(workspaceRoot, '.agents', 'skills'));
   }
-  if (targetMirror === 'gemini') {
-    return normalizePath(path.resolve(workspaceRoot, '.gemini', 'commands', 'gofer'));
+  if (targetMirror === 'antigravity' || targetMirror === 'antigravity-desktop') {
+    return normalizePath(path.resolve(workspaceRoot, '.agents', 'skills'));
   }
 
   return resolveWorkspaceRelativePath(workspaceRoot, targetMirror, 'targetMirrors');
@@ -298,7 +298,9 @@ function buildMirrorRecords(
           propagationId: buildPropagationId(
             request.changeSetId,
             canonicalSourcePath,
-            mirrorTarget.targetPath
+            mirrorTarget.targetPlatform.startsWith('antigravity')
+              ? `${mirrorTarget.targetPath}#${mirrorTarget.targetPlatform}`
+              : mirrorTarget.targetPath
           ),
           artifactId: buildArtifactId(request.changeSetId, canonicalSourcePath),
           canonicalSourcePath,

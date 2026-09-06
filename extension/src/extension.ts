@@ -1,6 +1,11 @@
 // reflect-metadata MUST be imported before anything that uses tsyringe decorators
 // (e.g. @injectable() in ./services). Without this, the extension crashes at load time.
 import 'reflect-metadata';
+import {
+  parseRuntimeSurfacePreference,
+  isAntigravitySurface,
+  GEMINI_CLI_MIGRATION_MESSAGE,
+} from './config/runtimeSurface';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -54,6 +59,7 @@ import {
   type CommandDependencies,
 } from './services';
 import { Logger as LegacyLogger } from './utils/logger';
+import { registerStageExecutionTool } from './services/StageExecutionTool';
 
 /**
  * Gofer Extension
@@ -101,10 +107,7 @@ async function resolveCopilotAvailability(
     supportsSubcommand(cliCommand: string, args: string[]): Promise<boolean>;
   }
 ): Promise<CopilotAvailabilityContext> {
-  const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-    'defaultCLI',
-    'auto'
-  );
+  const defaultCLI = parseRuntimeSurfacePreference(config.get<string>('defaultCLI', 'auto'));
   const preferredAI = config.get<'ask' | 'claude' | 'copilot'>('preferredAI', 'ask');
   const viaExtension =
     vscode.extensions.getExtension('GitHub.copilot') !== undefined ||
@@ -211,6 +214,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Register global commands (available even without workspace)
   registerGlobalCommands(context);
+  registerStageExecutionTool(context);
 
   // Get or create EventHandlers instance
   const eventHandlers = getContainer().resolve(EventHandlers);
@@ -696,22 +700,19 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
   try {
     const { CLIHealthChecker } = await import('./council/providers/cli/CLIHealthChecker');
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      'cliProvider',
-      'auto'
-    );
-    const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
+    const preference = parseRuntimeSurfacePreference(config.get<string>('cliProvider', 'auto'));
+    const defaultCLI = parseRuntimeSurfacePreference(config.get<string>('defaultCLI', 'auto'));
     const copilotAvailability = await resolveCopilotAvailability(config, CLIHealthChecker);
 
-    if (preference === 'copilot' || preference === 'gemini') {
+    if (preference === 'copilot' || isAntigravitySurface(preference)) {
       logger?.debug(
         'Extension',
         `Skipping autonomous CLI health check for gofer.cliProvider=${preference}`
       );
-    } else if (preference === 'auto' && (defaultCLI === 'copilot' || defaultCLI === 'gemini')) {
+    } else if (
+      preference === 'auto' &&
+      (defaultCLI === 'copilot' || isAntigravitySurface(defaultCLI))
+    ) {
       logger?.debug(
         'Extension',
         `Skipping autonomous CLI health check for gofer.defaultCLI=${defaultCLI}`
@@ -810,6 +811,12 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
       }
     }
   } catch (error) {
+    if (error instanceof Error && error.message === GEMINI_CLI_MIGRATION_MESSAGE) {
+      void vscode.window.showWarningMessage(error.message, 'View Settings').then((choice) => {
+        if (choice === 'View Settings')
+          void vscode.commands.executeCommand('workbench.action.openSettings', 'gofer.defaultCLI');
+      });
+    }
     // Non-fatal: CLI health check is optional
     logger?.debug('Extension', 'CLI health check failed (non-critical)', {
       error: error instanceof Error ? error.message : String(error),
@@ -819,14 +826,8 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
   // T035: Show persistent provider status in status bar (US3: Settings UI shows ✓/✗ status)
   try {
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      'cliProvider',
-      'auto'
-    );
-    const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
+    const preference = parseRuntimeSurfacePreference(config.get<string>('cliProvider', 'auto'));
+    const defaultCLI = parseRuntimeSurfacePreference(config.get<string>('defaultCLI', 'auto'));
     const { CLIHealthChecker } = await import('./council/providers/cli/CLIHealthChecker');
     const copilotAvailability = await resolveCopilotAvailability(config, CLIHealthChecker);
 
@@ -834,12 +835,18 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
     let statusText = 'No CLI';
     let statusTooltip = 'No AI CLI provider found. Open settings to configure.';
 
-    if (preference === 'copilot' || preference === 'gemini') {
-      statusIcon = '$(check)';
-      statusText = preference === 'copilot' ? 'Copilot' : 'Gemini';
+    if (preference === 'copilot' || isAntigravitySurface(preference)) {
+      statusIcon = preference === 'copilot' ? '$(check)' : '$(warning)';
+      statusText =
+        preference === 'copilot'
+          ? 'Copilot'
+          : preference === 'antigravity'
+            ? 'Antigravity CLI'
+            : 'Antigravity Desktop';
       statusTooltip =
-        `${statusText} selected for command routing. ` +
-        'Autonomous mode uses Claude/Codex fallback when required.';
+        preference === 'copilot'
+          ? 'Copilot selected for command routing. Autonomous mode uses Claude/Codex fallback when required.'
+          : `${statusText} selected; native operation is unverified. Autonomous execution is blocked; no fallback.`;
     } else if (preference !== 'auto') {
       const cmd = config.get<string>(
         preference === 'claude' ? 'claudeCodeCommand' : 'codexCommand',
@@ -855,12 +862,18 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
         statusText = preference === 'claude' ? 'Claude' : 'Codex';
         statusTooltip = `${statusText} CLI found but not authenticated`;
       }
-    } else if (defaultCLI === 'copilot' || defaultCLI === 'gemini') {
-      statusIcon = '$(check)';
-      statusText = defaultCLI === 'copilot' ? 'Copilot' : 'Gemini';
+    } else if (defaultCLI === 'copilot' || isAntigravitySurface(defaultCLI)) {
+      statusIcon = defaultCLI === 'copilot' ? '$(check)' : '$(warning)';
+      statusText =
+        defaultCLI === 'copilot'
+          ? 'Copilot'
+          : defaultCLI === 'antigravity'
+            ? 'Antigravity CLI'
+            : 'Antigravity Desktop';
       statusTooltip =
-        `${statusText} selected via gofer.defaultCLI. ` +
-        'Autonomous mode uses Claude/Codex fallback when required.';
+        defaultCLI === 'copilot'
+          ? 'Copilot selected via gofer.defaultCLI. Autonomous mode uses Claude/Codex fallback when required.'
+          : `${statusText} selected; native operation is unverified. Autonomous execution is blocked; no fallback.`;
     } else {
       const claudeCmd = config.get<string>('claudeCodeCommand', 'claude');
       const claudeResult = await CLIHealthChecker.check('claude', claudeCmd);

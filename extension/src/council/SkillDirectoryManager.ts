@@ -50,7 +50,6 @@ export interface SkillDirectoryManager {
  * Searches multiple directories with priority:
  * 1. .claude/commands/ (Claude CLI - highest priority)
  * 2. .agents/skills/  (Codex CLI canonical path, with legacy .system fallback)
- * 3. .gemini/commands/gofer/ (Gemini CLI)
  * 4. .github/prompts/ (Copilot Chat - lowest priority)
  */
 export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
@@ -84,7 +83,7 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
       return this.commandCache.get(commandName)!;
     }
 
-    // Search in priority order: Claude > Codex > Gemini > Copilot
+    // Search in priority order: Claude > shared .agents skills > Copilot
     // 1. Try Claude CLI
     const claudeMetadata = this.searchClaudeCommands(commandName);
     if (claudeMetadata) {
@@ -97,13 +96,6 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     if (codexMetadata) {
       this.commandCache.set(commandName, codexMetadata);
       return codexMetadata;
-    }
-
-    // 3. Try Gemini CLI
-    const geminiMetadata = this.searchGeminiCommands(commandName);
-    if (geminiMetadata) {
-      this.commandCache.set(commandName, geminiMetadata);
-      return geminiMetadata;
     }
 
     // 4. Try Copilot Chat
@@ -131,7 +123,6 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     // Collect from all platforms
     commands.push(...this.getAllClaudeCommands());
     commands.push(...this.getAllCodexSkills());
-    commands.push(...this.getAllGeminiCommands());
     commands.push(...this.getAllCopilotPrompts());
 
     // Update cache
@@ -211,17 +202,6 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     legacyCodexNamespaceWatcher.onDidCreate(() => this.onDirectoryChange(callback));
     legacyCodexNamespaceWatcher.onDidDelete(() => this.onDirectoryChange(callback));
     watchers.push(legacyCodexNamespaceWatcher);
-
-    // Watch .gemini/commands/gofer/
-    const geminiPattern = new vscode.RelativePattern(
-      this.workspacePath,
-      '.gemini/commands/gofer/*.toml'
-    );
-    const geminiWatcher = vscode.workspace.createFileSystemWatcher(geminiPattern);
-    geminiWatcher.onDidChange(() => this.onDirectoryChange(callback));
-    geminiWatcher.onDidCreate(() => this.onDirectoryChange(callback));
-    geminiWatcher.onDidDelete(() => this.onDirectoryChange(callback));
-    watchers.push(geminiWatcher);
 
     // Watch .github/prompts/
     const copilotPattern = new vscode.RelativePattern(
@@ -314,29 +294,6 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
   }
 
   /**
-   * Search for command in Gemini CLI directory
-   */
-  private searchGeminiCommands(commandName: string): CommandMetadata | null {
-    const geminiDir = path.join(this.workspacePath, '.gemini/commands/gofer');
-    if (!fs.existsSync(geminiDir)) {
-      return null;
-    }
-
-    for (const fileStem of this.getCommandFileStemCandidates(commandName)) {
-      const filePath = path.join(geminiDir, `${fileStem}.toml`);
-      if (fs.existsSync(filePath)) {
-        try {
-          return this.extractor.extractFromGeminiCommandSync(filePath);
-        } catch {
-          return null;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
    * Search for prompt in Copilot Chat directory
    */
   private searchCopilotPrompts(commandName: string): CommandMetadata | null {
@@ -417,33 +374,6 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
       }
 
       return Array.from(dedupedSkills.values());
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * Get all commands from Gemini CLI directory
-   */
-  private getAllGeminiCommands(): CommandMetadata[] {
-    const geminiDir = path.join(this.workspacePath, '.gemini/commands/gofer');
-    if (!fs.existsSync(geminiDir)) {
-      return [];
-    }
-
-    try {
-      const files = fs.readdirSync(geminiDir).filter((file) => file.endsWith('.toml'));
-
-      return files
-        .map((skillPath) => {
-          try {
-            const filePath = path.join(geminiDir, skillPath);
-            return this.extractor.extractFromGeminiCommandSync(filePath);
-          } catch {
-            return null;
-          }
-        })
-        .filter((metadata): metadata is CommandMetadata => metadata !== null);
     } catch {
       return [];
     }

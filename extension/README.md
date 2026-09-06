@@ -16,7 +16,7 @@ Gofer pipeline.
 - surfaces specs, memory, and progress inside VS Code
 - helps launch and monitor supported AI CLI workflows
 - keeps the VS Code surface aligned with the portable
-  Claude/Codex/Copilot/Gemini bundle
+  Claude/Codex/Copilot/Antigravity bundle
 
 ## Quick Start
 

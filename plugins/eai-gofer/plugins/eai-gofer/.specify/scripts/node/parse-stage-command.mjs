@@ -138,9 +138,12 @@ function validateFrontmatter(fm, filePath) {
 
   const validSurfaces = new Set([
     'claude', 'claude-mirror', 'copilot', 'vscode', 'codex',
-    'gemini', 'github-prompts', 'agents-skills', 'system-skills',
+    'antigravity', 'github-prompts', 'agents-skills', 'system-skills',
   ]);
   for (const s of fm.surfaces) {
+    if (s === 'gemini') {
+      throw new Error(`Gemini CLI is retired in ${filePath}; use the antigravity surface and shared .agents/skills. Keep GEMINI.md.`);
+    }
     if (!validSurfaces.has(s)) {
       throw new Error(`Invalid surface '${s}' in ${filePath}`);
     }

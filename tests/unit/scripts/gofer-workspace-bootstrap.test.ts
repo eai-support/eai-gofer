@@ -179,15 +179,17 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(embeddedPost.payload.status).toBe('healthy');
     expect(embeddedPost.payload.expectedVersion).toBe(embeddedPost.payload.actualVersion);
 
-    const geminiPost = runJson(CHECK_SCRIPT, [
+    const antigravityPost = runJson(CHECK_SCRIPT, [
       '--workspace',
       workspaceRoot,
       '--host',
-      'gemini',
+      'antigravity',
       '--json',
     ]);
-    expect(geminiPost.exitCode).toBe(0);
-    expect(geminiPost.payload.status).toBe('healthy');
+    expect(antigravityPost.exitCode).toBe(2);
+    expect(antigravityPost.payload.status).toBe('missing');
+    expect(antigravityPost.payload.host).toBe('antigravity');
+    expect(antigravityPost.payload.missingHost).toContain('.agents/skills/eai/SKILL.md');
   });
 
   it('preserves existing instruction files and adds only the managed always-on section', () => {
@@ -203,6 +205,8 @@ Legacy Gofer instructions.
 Keep this instruction.
 `;
     const customModelPolicy = 'version: 1\nprofile: custom\n';
+    const customGemini = '# My Antigravity rules\n\nKeep my approvals.\n';
+    fs.writeFileSync(path.join(workspaceRoot, 'GEMINI.md'), customGemini);
     fs.writeFileSync(path.join(workspaceRoot, 'AGENTS.md'), customAgents);
     fs.writeFileSync(path.join(workspaceRoot, 'CLAUDE.md'), customClaude);
     fs.mkdirSync(path.join(workspaceRoot, '.specify', 'memory'), { recursive: true });
@@ -223,6 +227,9 @@ Keep this instruction.
     expect(claude.match(/## Always-On EAI Contract/g) || []).toHaveLength(1);
     expect(claude).not.toContain('Legacy Gofer instructions.');
     expect(claude).toContain('## Personal Rules');
+    expect(fs.readFileSync(path.join(workspaceRoot, 'GEMINI.md'), 'utf8')).toContain(
+      customGemini.trim()
+    );
     expect(
       fs.readFileSync(
         path.join(workspaceRoot, '.specify', 'memory', 'gofer-model-policy.yaml'),
@@ -353,7 +360,7 @@ Keep this instruction.
     }
   });
 
-  it('can include host app mirror resources for Claude, Codex, Copilot, and Gemini', () => {
+  it('can include host app mirrors for Claude, Codex, Copilot, and Antigravity without Gemini CLI', () => {
     const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
       '--workspace',
       workspaceRoot,
@@ -368,12 +375,110 @@ Keep this instruction.
       '.github/agents/gofer-business.agent.md',
       '.github/skills/eai/SKILL.md',
       '.agents/skills/eai/SKILL.md',
-      '.gemini/extension.json',
+      '.agents/skills/eai-update/SKILL.md',
+      'GEMINI.md',
     ]) {
       expect(
         fs.existsSync(path.join(workspaceRoot, relativePath)),
         `${relativePath} should exist`
       ).toBe(true);
     }
+    expect(fs.existsSync(path.join(workspaceRoot, '.gemini'))).toBe(false);
+  });
+
+  it.each(['antigravity', 'antigravity-desktop'])(
+    'bootstraps %s with native skills even without optional mirrors',
+    (host) => {
+      const result = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', host]);
+      expect(result.exitCode).toBe(0);
+      expect(result.payload.host).toBe(host);
+      expect(result.payload.status).toBe('healthy');
+      expect(fs.existsSync(path.join(workspaceRoot, '.gemini'))).toBe(false);
+      expect(fs.existsSync(path.join(workspaceRoot, '.claude/commands'))).toBe(false);
+      expect(
+        fs
+          .readdirSync(path.join(workspaceRoot, '.specify/commands'))
+          .filter((f) => f.endsWith('.md'))
+      ).toHaveLength(26);
+      for (const relative of [
+        'GEMINI.md',
+        '.agents/skills/eai/SKILL.md',
+        '.agents/skills/eai-update/SKILL.md',
+      ]) {
+        fs.renameSync(
+          path.join(workspaceRoot, relative),
+          path.join(workspaceRoot, relative + '.saved')
+        );
+        const check = runJson(CHECK_SCRIPT, [
+          '--workspace',
+          workspaceRoot,
+          '--host',
+          host,
+          '--json',
+        ]);
+        expect(check.payload.host).toBe(host);
+        expect(check.payload.status).toBe('missing');
+        expect(check.payload.missingHost).toContain(relative);
+        fs.renameSync(
+          path.join(workspaceRoot, relative + '.saved'),
+          path.join(workspaceRoot, relative)
+        );
+      }
+    }
+  );
+
+  it.each([CHECK_SCRIPT, BOOTSTRAP_SCRIPT])(
+    'rejects retired Gemini in %s before changing the workspace',
+    (script) => {
+      const before = findFiles(workspaceRoot).map((file) => [file, fs.readFileSync(file, 'utf8')]);
+      const result = spawnSync(
+        process.execPath,
+        [script, '--workspace', workspaceRoot, '--host', 'gemini', '--json'],
+        { encoding: 'utf8' }
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/Gemini CLI is retired.*Antigravity/);
+      expect(result.stdout).toBe('');
+      expect(findFiles(workspaceRoot).map((file) => [file, fs.readFileSync(file, 'utf8')])).toEqual(
+        before
+      );
+    }
+  );
+
+  it('archives retired Gofer Gemini files without losing unrelated settings or commands', () => {
+    const retired = new Map([
+      ['.gemini/commands/gofer/eai.md', '# custom old EAI\n'],
+      ['.gemini/commands/gofer/eai.toml', 'prompt = "old"\n'],
+      ['.gemini/commands/gofer/eai-update.md', '# custom old update\n'],
+      ['.gemini/commands/gofer/eai-update.toml', 'prompt = "update"\n'],
+      ['.gemini/commands/gofer/manifest.json', '{"commands":["eai","eai-update"]}\n'],
+      ['.gemini/extension.json', '{"name":"eai-gofer","gofer":{"version":"old"}}\n'],
+    ]);
+    const untouched = new Map([
+      ['.gemini/settings.json', '{"personal":true}\n'],
+      ['.gemini/commands/custom.toml', 'prompt = "personal"\n'],
+      ['.gemini/skills/custom/SKILL.md', '# Personal skill\n'],
+    ]);
+    for (const [relative, content] of [...retired, ...untouched]) {
+      fs.mkdirSync(path.dirname(path.join(workspaceRoot, relative)), { recursive: true });
+      fs.writeFileSync(path.join(workspaceRoot, relative), content);
+    }
+    const result = runJson(BOOTSTRAP_SCRIPT, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'antigravity',
+      '--include-mirrors',
+    ]);
+    expect(result.payload.status).toBe('healthy');
+    const archives = findFiles(path.join(workspaceRoot, '.specify/logs/legacy-command-backups'));
+    for (const [relative, content] of retired) {
+      expect(fs.existsSync(path.join(workspaceRoot, relative))).toBe(false);
+      const archived = archives.find((file) => file.endsWith(relative));
+      expect(archived).toBeTruthy();
+      expect(fs.readFileSync(archived!, 'utf8')).toBe(content);
+    }
+    for (const [relative, content] of untouched)
+      expect(fs.readFileSync(path.join(workspaceRoot, relative), 'utf8')).toBe(content);
   });
 });

@@ -215,7 +215,7 @@ export class GoferMigrator {
   }
 
   /**
-   * Setup Gemini CLI extension commands
+   * Retired Gemini CLI entrypoint. Reports migration guidance without changing files.
    */
   public async setupGeminiCommands(): Promise<void> {
     await this.resourceSyncer.setupGeminiCommands();
@@ -382,8 +382,7 @@ export class GoferMigrator {
     await this.resourceSyncer.setupCopilotPrompts();
     await this.resourceSyncer.setupCopilotInstructions();
     await this.resourceSyncer.setupCopilotSkills();
-    await this.resourceSyncer.setupGeminiCommands();
-    await this.resourceSyncer.setupCodexSkills(); // Generate repo-local Codex skills
+    await this.resourceSyncer.setupCodexSkills(); // Shared .agents skills for Codex and Antigravity
     await this.resourceSyncer.createBashScripts();
     await this.resourceSyncer.createPowerShellScripts();
     await this.resourceSyncer.createNodeScripts();
@@ -451,11 +450,6 @@ export class GoferMigrator {
         name: 'Copilot instructions',
       },
       { path: path.join(this.workspacePath, '.github', 'skills'), name: 'Copilot skills' },
-      { path: path.join(this.workspacePath, '.gemini', 'extension.json'), name: 'Gemini commands' },
-      {
-        path: path.join(this.workspacePath, '.gemini', 'commands', 'gofer'),
-        name: 'Gemini commands',
-      },
       { path: path.join(this.workspacePath, '.agents', 'skills'), name: 'Codex skills' },
       {
         path: path.join(this.specifyPath, 'commands', '6_gofer_validate.md'),
@@ -580,11 +574,6 @@ export class GoferMigrator {
         if (missing.includes('Copilot skills')) {
           reportProgress('Syncing Copilot skills');
           await this.resourceSyncer.setupCopilotSkills();
-        }
-
-        if (missing.includes('Gemini commands')) {
-          reportProgress('Syncing Gemini commands');
-          await this.resourceSyncer.setupGeminiCommands();
         }
 
         if (missing.includes('Canonical commands')) {

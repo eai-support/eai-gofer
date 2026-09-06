@@ -63,7 +63,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
     'EVT-008': {
       eventId: 'evt_008',
       changeSetId: 'chg_001',
-      mirrors: ['copilot', 'codex', 'gemini'],
+      mirrors: ['copilot', 'codex', 'antigravity', 'antigravity-desktop'],
       filesChanged: 18,
       runtimeSyncCompleted: true,
     },

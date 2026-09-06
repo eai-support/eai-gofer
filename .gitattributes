@@ -1,0 +1,2 @@
+# Native ESM scripts must retain LF shebangs on every checkout platform.
+*.mjs text eol=lf

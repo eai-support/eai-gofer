@@ -4,7 +4,7 @@ EAI Gofer is a business specification-driven delivery workflow for repositories.
 Users talk to `/eai`, and use `/eai-update` when they need to install or update
 Gofer. Gofer manages the pipeline that designs with you, builds with you, and
 validates the result. It keeps working artifacts in `.specify/` and ships across
-VS Code, Claude Code, Codex, GitHub Copilot, Gemini, and Grok Build.
+VS Code, Claude Code, Codex, GitHub Copilot, Antigravity, and Grok Build.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -38,7 +38,7 @@ a first install, use the matching command in the
 [5-minute first run guide](./.tech-docs/first-run.md).
 
 The guide also includes a public Node.js bootstrap command. It installs Gofer
-without a repository for Claude, Codex, Copilot, Gemini, or VS Code.
+without a repository for Claude, Codex, Copilot, Antigravity, or VS Code.
 
 ## App-Native Integration Model
 
@@ -48,13 +48,13 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface                         | Clean entry point             | Repo integration                                                                                      |
-| ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | `eai` or `eai-update` skill   | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | `#eai` or `#eai-update`       | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | `/eai` or `/eai-update`       | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | `/eai` or `/eai-update`       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
-| Grok Build                      | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/`                                                                  |
+| Surface                      | Clean entry point             | Repo integration                                                                                      |
+| ---------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Codex App / Codex IDE        | `eai` or `eai-update` skill   | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
+| VS Code / GitHub Copilot app | `#eai` or `#eai-update`       | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
+| Claude Code app              | `/eai` or `/eai-update`       | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
+| Antigravity CLI / desktop    | `/eai` or `/eai-update`       | `.agents/skills/`, `GEMINI.md`, `.specify/scripts/`                                                   |
+| Grok Build                   | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/`                                                                  |
 
 The UX rule is: users start with `eai`; `eai-update` is the only support
 command. Gofer keeps numbered stages and helpers as internal contracts under
@@ -62,8 +62,9 @@ command. Gofer keeps numbered stages and helpers as internal contracts under
 state. The `gofer` entrypoint remains as a compatibility alias, but public
 instructions should teach `/eai`.
 
-For copy-paste commands across VS Code, Claude Code, Codex, Copilot, Gemini, and
-Grok, see the [5-minute first run guide](./.tech-docs/first-run.md).
+For copy-paste commands across VS Code, Claude Code, Codex, Copilot,
+Antigravity, and Grok, see the
+[5-minute first run guide](./.tech-docs/first-run.md).
 
 ## How The Pipeline Works
 
@@ -244,17 +245,23 @@ References:
 - [Finding and installing Copilot CLI plugins](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing)
 - [Copilot CLI plugin marketplace](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-marketplace)
 
-### Gemini CLI
+### Antigravity CLI And Desktop
 
-Recommended install path:
+Use the native bundle inside the public Gofer download:
 
 ```bash
-gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
+plugins/antigravity/eai-gofer
 ```
 
-Reference:
+CLI uses `agy plugin install <local-native-bundle>` after you check installed
+help. Desktop loads native plugins from `~/.gemini/config/plugins/`. Use
+`/eai-update` with the matching host for managed updates. Start a new session
+after an update. Do not install the generic root plugin in Antigravity.
 
-- [Gemini CLI extensions reference](https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md)
+Gemini CLI is no longer an active Gofer surface. Keep `GEMINI.md` and unrelated
+settings. See
+[Google's migration guide](https://antigravity.google/docs/cli/gcli-migration)
+and [Gofer Google support and test limits](docs/google-surfaces.md).
 
 ### Downloadable Bundle
 
@@ -280,8 +287,8 @@ tenant, template, or scaffold is not ready.
 
 When first-run setup is needed, Gofer:
 
-- detects Claude Code, Codex, Copilot, Gemini, VS Code, GitHub Codespaces, OS,
-  shell, and workspace folder
+- detects Claude Code, Codex, Copilot, Antigravity, VS Code, GitHub Codespaces,
+  OS, shell, and workspace folder
 - checks Git, Node.js, npm, the scoped EAI npm registry, and `eai --version`
 - asks before installing Git, Node.js, npm, EAI CLI, opening browser login, or
   changing tenant/project state

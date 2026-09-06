@@ -57,7 +57,6 @@ describe('Gofer public execution-depth guidance', () => {
       '.claude/skills/eai/SKILL.md',
       '.github/skills/eai/SKILL.md',
       '.grok/skills/eai/SKILL.md',
-      '.gemini/commands/gofer/eai.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
       'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
     ]) {

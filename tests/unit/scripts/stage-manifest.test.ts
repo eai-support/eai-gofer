@@ -226,7 +226,7 @@ describe('stage-manifest (T061)', () => {
       'copilot',
       'vscode',
       'codex',
-      'gemini',
+      'antigravity',
       'github-prompts',
       'agents-skills',
       'system-skills',

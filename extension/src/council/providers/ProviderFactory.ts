@@ -4,10 +4,11 @@
  * Factory for creating and managing CLI-backed LLM provider instances.
  */
 
+import { assertAutonomousSurfaceSupported } from '../../config/runtimeSurface';
 import * as vscode from 'vscode';
 import { LLMProvider } from './LLMProvider';
 import { notConfiguredError } from './ProviderError';
-import { CLIProviderId, ProviderId, PROVIDER_NAMES, DEFAULT_MODELS } from '../types';
+import { CLIProviderId, ProviderId, PROVIDER_NAMES, type CLIModelCatalogResolver } from '../types';
 import { redactCredentials, type ConversationMessage } from './CredentialRedactor';
 import {
   getCLIProviderDisplayName,
@@ -15,11 +16,16 @@ import {
 } from './ProviderFactoryCliResolver';
 import { type WorkflowProfile, getWorkflowProfile } from '../../config/workflowProfile';
 import { Logger } from '../../utils/logger';
+import { discoverCLIModels } from './cli/CLIModelDiscovery';
 
 /**
  * Type for CLI provider constructor functions
  */
-type CLIProviderConstructor = new (cliCommand: string, model: string) => LLMProvider;
+type CLIProviderConstructor = new (
+  cliCommand: string,
+  modelOverride?: string,
+  discoverModels?: CLIModelCatalogResolver
+) => LLMProvider;
 type CLIProviderWithHistory = LLMProvider & {
   getConversationHistory(): ConversationMessage[];
   setConversationHistory(history: ConversationMessage[]): void;
@@ -47,7 +53,7 @@ export class ProviderFactory {
   private readonly logger = Logger.for('ProviderFactory');
   private readonly cliResolver: ProviderFactoryCliResolver;
 
-  constructor() {
+  constructor(private readonly discoverModels: CLIModelCatalogResolver = discoverCLIModels) {
     this.cliResolver = new ProviderFactoryCliResolver({
       logger: this.logger,
       createCLIProvider: async (
@@ -93,8 +99,13 @@ export class ProviderFactory {
   public async createCLIProvider(
     cliType: 'claude' | 'codex',
     command?: string,
-    workflowProfile?: WorkflowProfile
+    workflowProfile?: WorkflowProfile,
+    modelOverride?: string
   ): Promise<LLMProvider> {
+    assertAutonomousSurfaceSupported(cliType);
+    if (cliType !== 'claude' && cliType !== 'codex') {
+      throw new Error('No verified Gofer autonomous adapter for the requested surface.');
+    }
     const providerId = `${cliType}-cli` as CLIProviderId;
 
     // Check if provider is registered
@@ -151,9 +162,6 @@ export class ProviderFactory {
       );
     }
 
-    // Get model from defaults
-    const model = DEFAULT_MODELS[providerId];
-
     // T068: Preserve conversation history across provider switches with credential redaction
     // Check if there's an existing CLI provider with conversation history
     let conversationHistory: ConversationMessage[] = [];
@@ -182,7 +190,7 @@ export class ProviderFactory {
     // Works for both Claude and Codex
 
     // Create provider (CLI providers use command as first param, not API key)
-    const provider = new Constructor(cliCommand, model);
+    const provider = new Constructor(cliCommand, modelOverride, this.discoverModels);
 
     // Restore conversation history if switching providers
     if (conversationHistory.length > 0 && this.isCLIProviderWithHistory(provider)) {

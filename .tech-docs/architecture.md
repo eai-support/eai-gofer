@@ -42,17 +42,17 @@ flowchart TB
         Claude["Claude Code CLI"]
         Copilot["GitHub Copilot Chat"]
         Codex["OpenAI Codex CLI"]
-        Gemini["Gemini CLI"]
+        Gemini["Antigravity CLI"]
     end
 
     subgraph "File System"
         Specify[".specify/<br/>specs, memory, logs"]
-        Generated["Generated Commands<br/>.claude, .github, .agents, .gemini"]
+        Generated["Generated Commands<br/>.claude, .github, .agents"]
     end
 
     subgraph "External Services"
         ClaudeService["Claude provider service<br/>(via Claude Code CLI)"]
-        GeminiService["Gemini provider service<br/>(via Gemini CLI)"]
+        GeminiService["Gemini provider service<br/>(via Antigravity CLI)"]
         CodexService["OpenAI provider service<br/>(via Codex CLI)"]
     end
 
@@ -348,8 +348,8 @@ export class StateManager {
 
 - **Pattern:** Multiple output formats from single source
 - **Location:** `extension/src/council/CrossPlatformCommandRouter.ts`
-- **Purpose:** Generate Claude, Copilot, Codex, Gemini commands from canonical
-  source
+- **Purpose:** Generate Claude, Copilot, Codex, Antigravity commands from
+  canonical source
 - **Example:** Single `.specify/commands/*.md` → 4 CLI surfaces
 
 ### 6. Observer Pattern (File Watching)
@@ -372,8 +372,8 @@ export class StateManager {
 ### Authentication Flow
 
 No Gofer-specific authentication is required. Gofer operates locally within the
-VS Code workspace and delegates AI access to Claude, Codex, Copilot, and Gemini
-through each tool's normal login or app session.
+VS Code workspace and delegates AI access to Claude, Codex, Copilot, and
+Antigravity through each tool's normal login or app session.
 
 ### Authorization Controls
 
@@ -432,17 +432,17 @@ protected_files:
 
 ### AI Assistant Integrations
 
-| Assistant      | Integration Method | Command Discovery         | Tool Access           |
-| -------------- | ------------------ | ------------------------- | --------------------- |
-| Claude Code    | MCP via LSP        | `.claude/commands/`       | Direct (23 tools)     |
-| GitHub Copilot | Prompt files       | `.github/prompts/`        | Indirect (files only) |
-| OpenAI Codex   | Skill files        | `.agents/skills/`         | Indirect (files only) |
-| Gemini CLI     | Command files      | `.gemini/commands/gofer/` | Indirect (files only) |
+| Assistant       | Integration Method | Command Discovery   | Tool Access           |
+| --------------- | ------------------ | ------------------- | --------------------- |
+| Claude Code     | MCP via LSP        | `.claude/commands/` | Direct (23 tools)     |
+| GitHub Copilot  | Prompt files       | `.github/prompts/`  | Indirect (files only) |
+| OpenAI Codex    | Skill files        | `.agents/skills/`   | Indirect (files only) |
+| Antigravity CLI | Command files      | `.agents/skills/`   | Indirect (files only) |
 
 ### External Service Integrations
 
-- **AI CLIs:** Claude, Codex, Copilot, and Gemini use their normal CLI or app
-  authentication flows
+- **AI CLIs:** Claude, Codex, Copilot, and Antigravity use their normal CLI or
+  app authentication flows
 - **GitHub API:** Optional, for auto-update checking
 
 ## Performance Characteristics
@@ -465,7 +465,7 @@ protected_files:
 
 - **Claude Code CLI:** Provider/account dependent; routed by
   `.specify/memory/gofer-model-policy.yaml`
-- **Gemini CLI:** Provider/account dependent; routed by
+- **Antigravity CLI:** Provider/account dependent; routed by
   `.specify/memory/gofer-model-policy.yaml`
 - **OpenAI Codex CLI:** Provider/account dependent; routed by
   `.specify/memory/gofer-model-policy.yaml`

@@ -39,7 +39,8 @@ test.describe('Gofer Brownfield Improvements', () => {
 
     const publicCommandDir = path.join(cwd, 'extension', 'resources', 'claude-commands');
     const publicCommands = fs.readdirSync(publicCommandDir).sort();
-    expect(publicCommands).toEqual(['eai.md', 'gofer.md']);
+    expect(publicCommands).toEqual(['eai-update.md', 'eai.md']);
+    expect(publicCommands).not.toContain('gofer.md');
     expect(publicCommands).not.toContain('gofer_hydrate.md');
   });
 

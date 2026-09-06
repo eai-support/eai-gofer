@@ -5,7 +5,7 @@
     "url": "https://github.com/eai-support/eai-gofer"
   },
   "metadata": {
-    "description": "Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.",
+    "description": "Install the Gofer repo marketplace for Claude Code, Codex, or Copilot CLI; use the native sub-bundle for Antigravity.",
     "version": "3.12.4"
   },
   "plugins": [
@@ -22,15 +22,7 @@
       "repository": "https://github.com/eai-support/eai-gofer",
       "license": "Apache-2.0",
       "category": "Coding",
-      "tags": [
-        "eai-gofer",
-        "gofer",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "spec-driven-development"
-      ]
+      "tags": ["eai-gofer", "gofer", "claude", "codex", "copilot", "antigravity", "spec-driven-development"]
     }
   ]
 }

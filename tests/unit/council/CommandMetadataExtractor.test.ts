@@ -21,6 +21,16 @@ describe('CommandMetadataExtractor', () => {
     extractor = new CommandMetadataExtractor();
   });
 
+  it.each(['/repo/.agents/skills/eai/SKILL.md', 'C:\\repo\\.agents\\skills\\eai\\SKILL.md'])(
+    'derives Antigravity skill names from %s',
+    async (filePath) => {
+      vi.mocked(fs.promises.readFile).mockResolvedValue('# EAI\n\nContinue the current task.');
+      const metadata = await extractor.extractFromAntigravitySkill(filePath, 'antigravity');
+      expect(metadata.name).toBe('eai');
+      expect(metadata.platform).toBe('antigravity');
+    }
+  );
+
   describe('extractFromClaudeCommand', () => {
     it('extracts metadata from valid Claude command (async)', async () => {
       const content = `---
@@ -185,7 +195,7 @@ description: [unterminated
       expect(extractor.validateInvocationSyntax('$ $ 1_gofer_research', 'codex')).toBe(false);
     });
 
-    it('formats Gemini helper syntax without double-prefixing gofer names', async () => {
+    it('rejects retired Gemini metadata before reading legacy files', async () => {
       const content = `---
 name: gofer:diagnose
 description: Diagnose helper
@@ -194,11 +204,11 @@ description: Diagnose helper
 Body`;
       vi.mocked(fs.readFileSync).mockReturnValue(content);
 
-      const metadata = extractor.extractFromGeminiCommandSync(
-        '/repo/.gemini/commands/gofer/gofer_diagnose.toml'
-      );
-
-      expect(metadata.invocationSyntax.example).toBe('/gofer:diagnose');
+      vi.mocked(fs.readFileSync).mockClear();
+      expect(() =>
+        extractor.extractFromGeminiCommandSync('/repo/.gemini/commands/gofer/gofer_diagnose.toml')
+      ).toThrow('Gemini CLI is retired');
+      expect(fs.readFileSync).not.toHaveBeenCalled();
     });
   });
 });

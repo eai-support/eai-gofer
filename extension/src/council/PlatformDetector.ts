@@ -1,9 +1,10 @@
 /**
  * Platform Detector for Cross-Platform Command Parity
  * Feature 028: Detects which AI platform is active (Claude CLI, Copilot Chat,
- * Codex CLI, or Gemini CLI command files)
+ * Codex CLI, or Antigravity CLI/desktop skills)
  */
 
+import { assertNotRetiredSurface } from '../config/runtimeSurface';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigManager } from '../config';
@@ -14,7 +15,7 @@ import { PlatformType, PlatformDetectionContext } from './types/CrossPlatformTyp
  *
  * Detection priority:
  * 1. User setting (gofer.defaultCLI) if explicitly set
- * 2. Directory presence (.claude/commands/, .github/prompts/, .agents/skills/, .gemini/commands/gofer/)
+ * 2. Directory presence (.claude/commands/, .github/prompts/, .agents/skills/)
  * 3. Execution context (VSCode extension host)
  * 4. Fallback to 'auto'
  */
@@ -49,6 +50,7 @@ export class PlatformDetector {
    * @returns Detected platform or 'auto' if undetermined
    */
   public detectPlatform(): PlatformType | 'auto' {
+    assertNotRetiredSurface(ConfigManager.getInstance().getDefaultCLI());
     // Check cache first
     if (this.cachedDetection && Date.now() < this.cacheExpiry) {
       return this.cachedDetection.platform;
@@ -68,6 +70,7 @@ export class PlatformDetector {
    * @returns True if platform directory exists
    */
   public isPlatformAvailable(platform: PlatformType): boolean {
+    assertNotRetiredSurface(platform);
     switch (platform) {
       case 'claude':
         return this.hasDirectory('.claude/commands');
@@ -75,8 +78,9 @@ export class PlatformDetector {
         return this.hasDirectory('.github/prompts');
       case 'codex':
         return this.hasAnyDirectory(['.agents/skills', '.system/skills']);
-      case 'gemini':
-        return this.hasDirectory('.gemini/commands/gofer');
+      case 'antigravity':
+      case 'antigravity-desktop':
+        return this.hasDirectory('.agents/skills');
       default:
         return false;
     }
@@ -97,15 +101,12 @@ export class PlatformDetector {
     }
 
     // Auto-detect based on directory presence
-    // Priority: Claude > Codex > Gemini > Copilot (based on feature completeness)
+    // Priority: Claude > Codex > Copilot; shared skills cannot identify a Google client (based on feature completeness)
     if (this.isPlatformAvailable('claude')) {
       return 'claude';
     }
     if (this.isPlatformAvailable('codex')) {
       return 'codex';
-    }
-    if (this.isPlatformAvailable('gemini')) {
-      return 'gemini';
     }
     if (this.isPlatformAvailable('copilot')) {
       return 'copilot';
@@ -127,7 +128,7 @@ export class PlatformDetector {
     const hasClaudeDirectory = this.hasDirectory('.claude/commands');
     const hasCopilotDirectory = this.hasDirectory('.github/prompts');
     const hasCodexDirectory = this.hasAnyDirectory(['.agents/skills', '.system/skills']);
-    const hasGeminiDirectory = this.hasDirectory('.gemini/commands/gofer');
+    const hasAntigravityDirectory = this.hasDirectory('.agents/skills');
 
     // Determine platform
     let platform: PlatformType | 'auto' = 'auto';
@@ -149,8 +150,6 @@ export class PlatformDetector {
         platform = 'claude';
       } else if (hasCodexDirectory) {
         platform = 'codex';
-      } else if (hasGeminiDirectory) {
-        platform = 'gemini';
       } else if (hasCopilotDirectory) {
         platform = 'copilot';
       }
@@ -164,7 +163,7 @@ export class PlatformDetector {
       hasClaudeDirectory,
       hasCopilotDirectory,
       hasCodexDirectory,
-      hasGeminiDirectory,
+      hasAntigravityDirectory,
       detectedAt: new Date(),
       detectionMethod,
     };

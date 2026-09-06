@@ -10,6 +10,27 @@ export type CLIProviderId = 'claude-cli' | 'codex-cli';
 
 export type ProviderId = CLIProviderId;
 
+/** Reporting marker only: the CLI selects the model, whose identity is not yet reported. */
+export const HOST_DEFAULT_MODEL = 'host-default';
+
+/** A live, current-account catalog, not a static model list or cached preference. */
+export interface CLIModelCatalog {
+  providerId: CLIProviderId;
+  cliCommand: string;
+  source: 'live';
+  accountScoped: true;
+  observedAtMs: number;
+  availableModelIds: readonly string[];
+}
+
+/** Discovery must use the same CLI/account context without issuing an inference request. */
+export type CLIModelCatalogResolver = (request: {
+  providerId: CLIProviderId;
+  cliCommand: string;
+  requestedModelId: string;
+  signal: AbortSignal;
+}) => Promise<CLIModelCatalog | null>;
+
 export interface RateLimitConfig {
   requestsPerMinute: number;
   currentCount: number;
@@ -60,6 +81,7 @@ export const PROVIDER_NAMES: Record<ProviderId, string> = {
   'codex-cli': 'Codex CLI',
 };
 
+/** Legacy usage-accounting fallbacks. Never use these to select or authorize a CLI model. */
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   'claude-cli': 'claude-haiku-4-5',
   'codex-cli': 'gpt-5.4-mini',

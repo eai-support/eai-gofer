@@ -10,8 +10,15 @@
 
 import { CLIProviderAdapter, ParsedCLIOutput } from './CLIProviderAdapter';
 import { ClaudeOutputParser } from './ClaudeOutputParser';
-import { DEFAULT_MODELS, ProviderId, QueryRequest } from '../../types';
+import {
+  HOST_DEFAULT_MODEL,
+  ProviderId,
+  QueryRequest,
+  type CLIModelCatalogResolver,
+} from '../../types';
 import { registerProvider } from '../ProviderFactory';
+import { assertCLIModelOverride } from './CLIModelSelection';
+import { discoverCLIModels } from './CLIModelDiscovery';
 
 /**
  * Claude Code CLI provider implementation
@@ -26,11 +33,16 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
   /**
    * Constructor
    * @param cliCommand - Command to execute (default: 'claude')
-   * @param model - Model identifier (defaults to the cost-optimized Claude model)
+   * @param modelOverride - Explicit model only; omission retains the host's native default
+   * @param discoverModels - Live account-scoped discovery required for explicit overrides
    */
-  constructor(cliCommand: string = 'claude', model: string = DEFAULT_MODELS['claude-cli']) {
-    super(cliCommand, model);
-    this.model = model;
+  constructor(
+    cliCommand: string = 'claude',
+    private readonly modelOverride?: string,
+    private readonly discoverModels: CLIModelCatalogResolver = discoverCLIModels
+  ) {
+    super(cliCommand, modelOverride ?? HOST_DEFAULT_MODEL);
+    this.model = modelOverride ?? HOST_DEFAULT_MODEL;
     this.outputParser = new ClaudeOutputParser();
   }
 
@@ -72,13 +84,19 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
    * @returns Array of CLI arguments
    */
   protected buildCLIArgs(prompt: string): string[] {
-    // Claude CLI format: claude --model <model> --prompt "<prompt>"
-    const args = ['--model', this.model];
-
-    // Add prompt (pass as argument, not stdin)
-    args.push('--prompt', prompt);
+    const args = ['--print'];
+    if (this.modelOverride !== undefined) {
+      args.push('--model', this.modelOverride);
+    }
+    // Print mode accepts a positional prompt; do not interpret its contents as options.
+    args.push('--', prompt);
 
     return args;
+  }
+
+  protected async spawnCLI(prompt: string, options: { timeout?: number } = {}): Promise<string> {
+    await assertCLIModelOverride(this.id, this.cliCommand, this.modelOverride, this.discoverModels);
+    return super.spawnCLI(prompt, options);
   }
 
   /**
@@ -157,7 +175,4 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
 }
 
 // Register provider in factory
-registerProvider(
-  'claude-cli',
-  ClaudeCodeCLIProvider as unknown as new (cliCommand: string, model: string) => CLIProviderAdapter
-);
+registerProvider('claude-cli', ClaudeCodeCLIProvider);

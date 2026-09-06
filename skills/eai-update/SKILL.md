@@ -18,6 +18,10 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 7. Update only the current host unless the user explicitly asks for `--host all`.
 8. Complete the host reload step from the helper result before saying the update is ready.
 
-Supported hosts are `claude`, `codex`, `copilot`, `gemini`, and `vscode`.
+Supported host targets are `claude`, `codex`, `copilot`, `antigravity` (CLI), `antigravity-desktop`, and `vscode`. Check the helper result for native validation limits.
+
+Grok Build supports native plugins and repo skills, but Gofer automatic install/update is unverified. Diagnostic targets `grok` (CLI), `grok-bot` (official desktop), and `grok-desktop` (product not yet identified) remain blocked for install/update before writes. Do not treat CLI access as desktop support. Keep the existing Grok repository skill and full scaffold. Check the actual client and skill source before claiming `/eai` works; cross-loading Claude files does not change the active host.
+
+Gemini CLI is retired as a Gofer surface. Use the Antigravity target for the actual client. Do not run Gemini extension commands, invent `agy plugin update`, or import all legacy settings. `agy update` updates the CLI, not Gofer. Retain `GEMINI.md` and preserve unrelated settings. Verify installed CLI help before plugin changes. Read `.specify/references/portable-orchestration.md` for model and account boundaries.
 
 This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create `.specify/`. After the host update, use `/eai add or refresh the Gofer scaffold for this repo` when a repository needs Gofer files.

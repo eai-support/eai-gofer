@@ -222,7 +222,8 @@ All MCP tools return errors in the following format:
 - **Provider CLIs:** Subject to provider and account limits:
   - Claude Code CLI: model route comes from
     `.specify/memory/gofer-model-policy.yaml`
-  - Gemini CLI: model route comes from `.specify/memory/gofer-model-policy.yaml`
+  - Antigravity CLI: model route comes from
+    `.specify/memory/gofer-model-policy.yaml`
   - OpenAI Codex CLI: model route comes from
     `.specify/memory/gofer-model-policy.yaml`
 

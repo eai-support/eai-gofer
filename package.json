@@ -64,6 +64,8 @@
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
     "gofer:eai-refresh-layout:check": "node scripts/verify-eai-refresh-layout.mjs",
     "gofer:surface-release:check": "node scripts/verify-surface-release-contract.mjs",
+    "gofer:orchestration:check": "node scripts/verify-orchestration-preservation.mjs",
+    "gofer:orchestration:test": "vitest run tests/unit/scripts/stage-execution-cli-path.test.ts tests/unit/scripts/stage-execution.test.ts tests/unit/scripts/stage-cli-adapters.test.ts tests/unit/scripts/stage-execution-contract.test.ts tests/unit/services/StageExecutionTool.test.ts tests/unit/scripts/portable-orchestration.test.ts tests/unit/scripts/model-discovery.test.ts tests/unit/scripts/gofer-surface-update.test.ts tests/unit/scripts/always-on-scope-contract.test.ts tests/unit/scripts/authority-error-order.test.ts tests/unit/services/InstructionGenerator.test.ts tests/unit/config/modelPolicy.test.ts tests/unit/council/providers/cli/CLIModelSelection.test.ts tests/unit/council/providers/cli/CLIModelDiscovery.test.ts tests/unit/council/providers/ProviderFactoryModelSelection.test.ts tests/unit/council/providers/cli/CodexCLIProvider.test.ts tests/unit/council/providers/cli/ClaudeCodeCLIProvider.test.ts tests/unit/scripts/orchestration-preservation.test.ts tests/unit/headless/orchestrationScaffold.test.ts tests/performance/portableOrchestration.test.ts --retry=0",
     "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
     "prepack": "npm run build",
     "prepare": "husky"

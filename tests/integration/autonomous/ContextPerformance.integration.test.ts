@@ -26,6 +26,7 @@ import { ObservationMasker } from '../../../extension/src/autonomous/Observation
 import { MemoryManager } from '../../../extension/src/autonomous/MemoryManager';
 import { HintLoader } from '../../../extension/src/autonomous/HintLoader';
 import { ResearchChunker } from '../../../extension/src/autonomous/ResearchChunker';
+import { settleBackgroundWrites } from '../../helpers/settleBackgroundWrites';
 
 describe('Context Performance Validation (T076-T079)', () => {
   let testWorkspaceRoot: string;
@@ -71,6 +72,9 @@ describe('Context Performance Validation (T076-T079)', () => {
     hintLoader = new HintLoader(testWorkspaceRoot);
     memoryManager = new MemoryManager(mockVSCodeContext, testWorkspaceRoot);
     observationMasker = new ObservationMasker(testWorkspaceRoot);
+    // Observe real writes; finish them before removing the temporary workspace.
+    vi.spyOn(memoryManager, 'recordUsage');
+    vi.spyOn(observationMasker, 'saveCacheToDisk');
     researchChunker = new ResearchChunker(testWorkspaceRoot);
     healthMonitor = new ContextHealthMonitor({
       warningThreshold: 0.5,
@@ -92,12 +96,22 @@ describe('Context Performance Validation (T076-T079)', () => {
     );
   });
 
-  afterEach(() => {
-    hintLoader?.dispose();
-    healthMonitor?.dispose();
-    if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
-    }
+  afterEach(async () => {
+    await settleBackgroundWrites(
+      [
+        ...vi.mocked(memoryManager.recordUsage).mock.results,
+        ...vi.mocked(observationMasker.saveCacheToDisk).mock.results,
+      ]
+        .filter((result) => result.type === 'return')
+        .map((result) => result.value),
+      () => {
+        hintLoader?.dispose();
+        healthMonitor?.dispose();
+        if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
+          fs.rmSync(testWorkspaceRoot, { recursive: true });
+        }
+      }
+    );
   });
 
   // ==========================================================================

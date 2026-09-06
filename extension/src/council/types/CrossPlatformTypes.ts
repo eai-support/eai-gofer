@@ -1,13 +1,14 @@
 /**
  * Cross-Platform Command Parity Types
  * Feature 028: Enable complete feature parity across Claude CLI, Codex CLI,
- * GitHub Copilot Chat, and Gemini CLI command files.
+ * GitHub Copilot Chat, and Antigravity CLI/desktop skills.
  */
 
 /**
  * Supported AI platforms for Gofer commands
  */
-export type PlatformType = 'claude' | 'copilot' | 'codex' | 'gemini';
+export type { RuntimeSurface as PlatformType } from '../../config/runtimeSurface';
+import type { RuntimeSurface as PlatformType } from '../../config/runtimeSurface';
 
 /**
  * Platform detection context information
@@ -49,9 +50,9 @@ export interface PlatformDetectionContext {
   hasCodexDirectory: boolean;
 
   /**
-   * Gemini command directory exists (.gemini/commands/gofer/)
+   * Shared Antigravity skill directory exists (.agents/skills/); not native client evidence
    */
-  hasGeminiDirectory: boolean;
+  hasAntigravityDirectory: boolean;
 
   /**
    * Timestamp when detection was performed
@@ -129,7 +130,7 @@ export interface CommandInvocationSyntax {
   platform: PlatformType;
 
   /**
-   * Command prefix (Claude: "/", Copilot: "#", Codex: "/", Gemini: "/gofer:")
+   * Command prefix (Claude: "/", Copilot: "#", Codex: "/", Antigravity: "/")
    */
   prefix: string;
 
@@ -179,9 +180,12 @@ export interface CommandMapping {
   codexPath?: string;
 
   /**
-   * Gemini CLI command file path
+   * Antigravity CLI skill file path
    */
-  geminiPath?: string;
+  antigravityPath?: string;
+
+  /** Antigravity desktop skill file path; not CLI execution evidence. */
+  antigravityDesktopPath?: string;
 
   /**
    * Whether command is available on all platforms (100% parity)

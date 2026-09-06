@@ -45,16 +45,16 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run `/gofer:bootstrap-workspace` before continuing.
+1. Treat `.specify/memory/gofer-model-policy.yaml` as repo-owned tier preferences, not proof of model access. If missing, use the bootstrap contract. Before any model override, discover the current host/client/account/profile catalogue as described in `.specify/references/portable-orchestration.md`. Never reuse API or other-surface model IDs. Preserve user files; reject unadvertised preferences.
 2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+   - Resolve simple, medium, hard, and arbiter roles from the repo policy and verified host capabilities.
+   - Treat delegation examples as role descriptions, not literal host commands or model IDs.
+   - Keep Copilot Auto preferences and existing high-risk review. Ask before paid or provider changes.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
 6. Escalate model tier only when a cheaper pass is low-confidence, contradictory, security-sensitive, or blocking release quality.
+7. At each meaningful stage, inspect the approved task route. Follow the Stage Execution Bridge in `.specify/references/portable-orchestration.md`: `/eai` calls `gofer-stage-execute.mjs` on CLI or native `gofer_execute_stage` with `{request}` in VS Code, never a CLI substitute. Ordinary chat or no useful delegation stays native without discovery/inference. Preserve explicit disable, reuse approved task model/budget, and keep mandatory approvals. `GOFER_STAGE_DELEGATE=1` forbids recursive dispatch. Delegates return read-only proposals; the controller retains all original tests, gates, previews and docs. Cascade needs current failed-check evidence, not confidence alone; same-family peer-review never replaces required different-family critique.
 <!-- gofer:token-cost-policy:end -->
 
 ## Business-Friendly Progress Contract
@@ -240,7 +240,7 @@ orchestrate and review agent outputs.
 ### Agent 1: Task Breakdown Generator
 
 ```
-Task: subagent_type="general-purpose", model="sonnet"
+Task: subagent_type="general-purpose", model_tier="medium"
 Prompt: "Generate a complete, dependency-ordered task breakdown for [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -315,7 +315,7 @@ Return a structured summary:
 ### Agent 2: Traceability Analyzer
 
 ```
-Task: subagent_type="general-purpose", model="haiku"
+Task: subagent_type="general-purpose", model_tier="simple"
 Prompt: "Generate a requirement traceability artifact for [FEATURE_NAME].
 
 Feature directory: {FEATURE_DIR}
@@ -404,7 +404,7 @@ catch misalignment early.
 **Agent 1**: engineer-review (sonnet) — cross-check spec↔plan↔tasks alignment
 
 ```
-Task: subagent_type="engineer-review", model="sonnet"
+Task: subagent_type="engineer-review", model_tier="medium"
 Prompt: "Review alignment between spec.md, plan.md, and tasks.md in {FEATURE_DIR}.
 Find every gap, inconsistency, and misalignment. Report Red/Yellow/Gray findings."
 ```
@@ -412,7 +412,7 @@ Find every gap, inconsistency, and misalignment. Report Red/Yellow/Gray findings
 **Agent 2**: codebase-analyzer (sonnet) — verify file paths and code patterns
 
 ```
-Task: subagent_type="codebase-analyzer", model="sonnet"
+Task: subagent_type="codebase-analyzer", model_tier="medium"
 Prompt: "Verify that the tasks at {FEATURE_DIR}/tasks.md reference correct
 file paths and follow existing codebase patterns from {FEATURE_DIR}/research.md.
 Report Red/Yellow/Gray findings."
@@ -422,7 +422,7 @@ Report Red/Yellow/Gray findings."
 coverage
 
 ```
-Task: subagent_type="validation-correctness", model="sonnet"
+Task: subagent_type="validation-correctness", model_tier="medium"
 Prompt: "Verify that every acceptance criterion in {FEATURE_DIR}/spec.md
 is covered by at least one task in {FEATURE_DIR}/tasks.md.
 Report Red/Yellow/Gray findings with coverage gaps."
@@ -449,7 +449,7 @@ time-constrained.**
 Spawn 5 agents scanning for missing cross-cutting concerns:
 
 ```
-Task: subagent_type="tasks-cross-cutting-scanner", model="haiku"
+Task: subagent_type="tasks-cross-cutting-scanner", model_tier="simple"
 Prompt: "Scan tasks.md at [FEATURE_DIR]/tasks.md for missing cross-cutting concerns.
 Dimension [1-5]:
 1: Logging/observability  2: Accessibility  3: Internationalization
@@ -460,7 +460,7 @@ Spec: [FEATURE_DIR]/spec.md"
 Run all 5 in parallel, then synthesize with judge:
 
 ```
-Task: subagent_type="multi-perspective-judge", model="opus"
+Task: subagent_type="multi-perspective-judge", model_tier="arbiter"
 Prompt: "Judge verdict type: cross-cutting concern gap analysis.
 Identify which missing concerns should be added as tasks before implementation.
 [paste all 5 agent outputs]"
@@ -473,7 +473,7 @@ Add HIGH priority missing tasks to tasks.md if the judge recommends them.
 Plan rollback for each implementation phase:
 
 ```
-Task: subagent_type="tasks-rollback-planner", model="haiku"
+Task: subagent_type="tasks-rollback-planner", model_tier="simple"
 Prompt: "Analyze tasks.md at [FEATURE_DIR]/tasks.md.
 For each phase, design a rollback plan. Identify irreversible steps that need checkpoints."
 ```

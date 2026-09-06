@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { ResourceSyncer } from '../../../services/migration/ResourceSyncer';
 import { Logger } from '../../../services/Logger';
 
@@ -42,21 +43,50 @@ suite('enterpriseai resource sync parity (extension integration)', () => {
     await fs.rm(fixtureWorkspace, { recursive: true, force: true });
   });
 
-  test('syncs generated Codex skills to .agents non-destructively with parity', async () => {
+  test('syncs bundled shared skills with exact parity while preserving local commands and custom skills', async () => {
+    const extension = vscode.extensions.getExtension('EnterpriseAI.gofer');
+    assert.ok(extension, 'The Gofer extension must be available to resolve its release bundle');
     const syncer = new ResourceSyncer(new Logger());
     syncer.setWorkspacePath(fixtureWorkspace);
 
     await syncer.setupCodexSkills();
 
-    const codexSkillPath = path.join(fixtureWorkspace, '.system', 'skills', 'eai', 'SKILL.md');
-    const mirroredAgentPath = path.join(fixtureWorkspace, '.agents', 'skills', 'eai', 'SKILL.md');
+    for (const entrypoint of ['eai', 'eai-update']) {
+      const bundledContent: string = await fs.readFile(
+        path.join(extension.extensionPath, 'resources', 'agents-skills', entrypoint, 'SKILL.md'),
+        'utf8'
+      );
+      assert.ok(bundledContent.includes('Host: Codex / Antigravity CLI / Antigravity desktop'));
+      assert.ok(bundledContent.includes('--host <host>'));
+      for (const root of ['.system', '.agents']) {
+        const syncedContent = await fs.readFile(
+          path.join(fixtureWorkspace, root, 'skills', entrypoint, 'SKILL.md'),
+          'utf8'
+        );
+        assert.strictEqual(syncedContent, bundledContent, `${root}/${entrypoint} bundle parity`);
+      }
+    }
 
-    const codexSkillContent = await fs.readFile(codexSkillPath, 'utf8');
-    const mirroredAgentContent = await fs.readFile(mirroredAgentPath, 'utf8');
+    const mirroredAgentContent = await fs.readFile(
+      path.join(fixtureWorkspace, '.agents', 'skills', 'eai', 'SKILL.md'),
+      'utf8'
+    );
     const preservedCustomSkill = await fs.readFile(customAgentSkillPath, 'utf8');
 
-    assert.strictEqual(mirroredAgentContent, codexSkillContent);
-    assert.ok(codexSkillContent.includes('Route internally through .specify/commands.'));
+    assert.ok(
+      mirroredAgentContent.includes(
+        'Treat `.specify/commands/*.md` as internal stage contracts, not user-facing commands.'
+      )
+    );
+    assert.ok(
+      mirroredAgentContent.includes(
+        'Keep all Gofer functions available by routing internally to the right stage contract.'
+      )
+    );
+    assert.strictEqual(
+      await fs.readFile(path.join(fixtureWorkspace, '.claude', 'commands', 'eai.md'), 'utf8'),
+      TEST_COMMAND_CONTENT
+    );
     assert.strictEqual(preservedCustomSkill, '# Custom Skill\n\nDo not overwrite.');
   });
 });

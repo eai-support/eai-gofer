@@ -10,8 +10,15 @@
 
 import { CLIProviderAdapter, ParsedCLIOutput } from './CLIProviderAdapter';
 import { CodexOutputParser } from './CodexOutputParser';
-import { DEFAULT_MODELS, ProviderId, QueryRequest } from '../../types';
+import {
+  HOST_DEFAULT_MODEL,
+  ProviderId,
+  QueryRequest,
+  type CLIModelCatalogResolver,
+} from '../../types';
 import { registerProvider } from '../ProviderFactory';
+import { assertCLIModelOverride } from './CLIModelSelection';
+import { discoverCLIModels } from './CLIModelDiscovery';
 
 /**
  * Codex CLI provider implementation
@@ -26,11 +33,16 @@ export class CodexCLIProvider extends CLIProviderAdapter {
   /**
    * Constructor
    * @param cliCommand - Command to execute (default: 'codex')
-   * @param model - Model identifier (defaults to the cost-optimized Codex model)
+   * @param modelOverride - Explicit model only; omission retains the host's native default
+   * @param discoverModels - Live account-scoped discovery required for explicit overrides
    */
-  constructor(cliCommand: string = 'codex', model: string = DEFAULT_MODELS['codex-cli']) {
-    super(cliCommand, model);
-    this.model = model;
+  constructor(
+    cliCommand: string = 'codex',
+    private readonly modelOverride?: string,
+    private readonly discoverModels: CLIModelCatalogResolver = discoverCLIModels
+  ) {
+    super(cliCommand, modelOverride ?? HOST_DEFAULT_MODEL);
+    this.model = modelOverride ?? HOST_DEFAULT_MODEL;
     this.outputParser = new CodexOutputParser();
   }
 
@@ -73,13 +85,19 @@ export class CodexCLIProvider extends CLIProviderAdapter {
    * @returns Array of CLI arguments
    */
   protected buildCLIArgs(prompt: string): string[] {
-    // Codex CLI format: codex exec --model <model> --prompt "<prompt>"
-    const args = ['exec', '--model', this.model];
-
-    // Add prompt
-    args.push('--prompt', prompt);
+    const args = ['exec'];
+    if (this.modelOverride !== undefined) {
+      args.push('--model', this.modelOverride);
+    }
+    // The option terminator prevents prompt text from becoming CLI flags or subcommands.
+    args.push('--', prompt);
 
     return args;
+  }
+
+  protected async spawnCLI(prompt: string, options: { timeout?: number } = {}): Promise<string> {
+    await assertCLIModelOverride(this.id, this.cliCommand, this.modelOverride, this.discoverModels);
+    return super.spawnCLI(prompt, options);
   }
 
   /**
@@ -120,7 +138,13 @@ export class CodexCLIProvider extends CLIProviderAdapter {
     }
 
     // Model not found
-    if (error.includes('model') && (error.includes('not found') || error.includes('invalid'))) {
+    if (
+      error.includes('model') &&
+      (error.includes('not found') ||
+        error.includes('invalid') ||
+        error.includes('not supported') ||
+        error.includes('unsupported'))
+    ) {
       return `Model not available: The requested model is not accessible. Please check your model configuration.`;
     }
 
@@ -163,7 +187,4 @@ export class CodexCLIProvider extends CLIProviderAdapter {
 }
 
 // Register provider in factory
-registerProvider(
-  'codex-cli',
-  CodexCLIProvider as unknown as new (cliCommand: string, model: string) => CLIProviderAdapter
-);
+registerProvider('codex-cli', CodexCLIProvider);

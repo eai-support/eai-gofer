@@ -61,7 +61,7 @@ surfaces:
   - claude-mirror
   - copilot
   - agents-skills
-  - gemini
+  - antigravity
   - codex
 ---
 
@@ -80,7 +80,7 @@ surfaces:
   - claude-mirror
   - copilot
   - agents-skills
-  - gemini
+  - antigravity
   - codex
 ---
 
@@ -98,7 +98,7 @@ surfaces:
   - claude
   - claude-mirror
   - agents-skills
-  - gemini
+  - antigravity
   - codex
 ---
 
@@ -116,7 +116,7 @@ surfaces:
   - claude
   - claude-mirror
   - agents-skills
-  - gemini
+  - antigravity
   - codex
 ---
 
@@ -134,7 +134,7 @@ surfaces:
   - claude
   - claude-mirror
   - agents-skills
-  - gemini
+  - antigravity
   - codex
 ---
 

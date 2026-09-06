@@ -69,7 +69,7 @@ export class InstructionGenerator {
       );
     }
 
-    return content;
+    return this.withAlwaysOnContract(content);
   }
 
   /**
@@ -99,7 +99,11 @@ export class InstructionGenerator {
       content = `${content.trimEnd()}\n\n${this.buildEaiRepoContractSection()}\n`;
     }
 
-    return content.trimEnd();
+    // Keep the compact host file budget without dropping any instruction text.
+    return (await this.withAlwaysOnContract(content))
+      .replace(/\r\n/g, '\n')
+      .trimEnd()
+      .replace(/\n{2,}/g, '\n');
   }
 
   /**
@@ -128,10 +132,15 @@ export class InstructionGenerator {
       );
     }
 
-    return content;
+    return this.withAlwaysOnContract(content);
   }
 
   // --- Private helpers ---
+
+  private async withAlwaysOnContract(content: string): Promise<string> {
+    const contract = await this.loadTemplate('workflow', 'always-on-eai.md');
+    return `${content.trimEnd()}\n\n${contract.trim()}\n`;
+  }
 
   private async loadTemplate(subdir: string, filename: string): Promise<string> {
     const filePath = path.join(this.templatesPath, subdir, filename);

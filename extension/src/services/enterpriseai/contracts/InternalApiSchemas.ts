@@ -1,3 +1,5 @@
+import { validateActiveMirrorTargets } from '../models/Propagation';
+
 export type InternalApiContractId =
   | 'IAP-001'
   | 'IAP-002'
@@ -234,7 +236,7 @@ export const INTERNAL_API_SCHEMAS: Readonly<
     required: {
       changeSetId: { type: 'string' },
       canonicalSources: { type: 'string[]' },
-      targetMirrors: { type: 'string[]' },
+      targetMirrors: { type: 'string[]', customValidator: validateActiveMirrorTargets },
       runParityValidation: { type: 'boolean' },
     },
   },
