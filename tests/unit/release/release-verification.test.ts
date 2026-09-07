@@ -262,7 +262,7 @@ describe('Release Verification', () => {
         'run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"'
       );
       expect(RELEASE_SCRIPT).toContain(
-        'run_release_check "Gofer unit test suite" npm run test:unit'
+        'run_release_check "Gofer unit and integration test suite" npm test'
       );
       expect(RELEASE_SCRIPT).toContain(
         'run_release_check "Language Server production build" npm --prefix language-server run build'
