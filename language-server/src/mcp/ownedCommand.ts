@@ -39,6 +39,8 @@ export function runOwnedCommand(
     const deadline = setTimeout(() => terminate(new Error('Command timed out')), timeout);
     signal?.addEventListener('abort', cancel, { once: true });
     if (signal?.aborted) cancel();
+    // Node emits close after a spawn error too; execFile captures that error in
+    // its callback. Settle here so output and process cleanup remain complete.
     child.once('close', () => {
       clearTimeout(deadline);
       clearTimeout(escalation);
