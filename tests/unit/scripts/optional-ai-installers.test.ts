@@ -1,0 +1,171 @@
+import 'reflect-metadata';
+import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import * as vscode from 'vscode';
+import {
+  OptionalToolInstaller,
+  probeCommandAvailability,
+} from '../../../extension/src/services/OptionalToolInstaller';
+
+const root = fileURLToPath(new URL('../../../', import.meta.url));
+const temporaryDirectories: string[] = [];
+const execFileAsync = promisify(execFile);
+
+beforeEach(() => {
+  (vscode.workspace as unknown as { isTrusted: boolean }).isTrusted = true;
+  vi.mocked(vscode.extensions.getExtension).mockReset();
+  vi.mocked(vscode.tasks.executeTask).mockReset();
+  vi.mocked(vscode.tasks.executeTask).mockResolvedValue({} as vscode.TaskExecution);
+});
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await Promise.all(
+    temporaryDirectories.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))
+  );
+});
+
+describe('optional AI tool installers', () => {
+  test.each([
+    [['--tools'], 'Missing value for --tools.'],
+    [['--workspace-path', '--tools', 'claude'], 'Missing value for --workspace-path.'],
+    [
+      ['--not-a-real-option=token\u001b[31m'],
+      'Unknown argument. Expected --workspace-path or --tools.',
+    ],
+  ] as const)(
+    'Bash rejects malformed arguments without reflecting raw input',
+    async (args, message) => {
+      let failure: (Error & { code?: number; stderr?: string }) | undefined;
+      try {
+        await execFileAsync('bash', [
+          resolve(root, '.specify/scripts/bash/install-optional-tools.sh'),
+          ...args,
+        ]);
+      } catch (error) {
+        failure = error as Error & { code?: number; stderr?: string };
+      }
+      expect(failure).toMatchObject({ code: 64 });
+      expect(failure?.stderr).toContain(message);
+      expect(failure?.stderr).not.toContain('token');
+      expect(failure?.stderr).not.toContain('\u001b');
+    }
+  );
+
+  test.each(['ENOENT', 'ETIMEDOUT', 'EACCES', '1'])(
+    'reports failed executable probe %s as unavailable',
+    async (code) => {
+      const execute = vi.fn((_command, _args, _options, callback) =>
+        callback(Object.assign(new Error('failed'), { code }))
+      );
+      await expect(probeCommandAvailability('provider', ['--version'], execute)).resolves.toBe(
+        false
+      );
+    }
+  );
+
+  test('uses current provider sources with bounded verified execution', async () => {
+    const bash = await readFile(
+      resolve(root, '.specify/scripts/bash/install-optional-tools.sh'),
+      'utf8'
+    );
+    const powershell = await readFile(
+      resolve(root, '.specify/scripts/powershell/install-optional-tools.ps1'),
+      'utf8'
+    );
+    for (const url of [
+      'https://antigravity.google/cli/install.sh',
+      'https://claude.ai/install.sh',
+      'https://chatgpt.com/codex/install.sh',
+      'https://x.ai/cli/install.sh',
+    ])
+      expect(bash).toContain(url);
+    for (const url of [
+      'https://antigravity.google/cli/install.ps1',
+      'https://claude.ai/install.ps1',
+      'https://chatgpt.com/codex/install.ps1',
+      'https://x.ai/cli/install.ps1',
+    ])
+      expect(powershell).toContain(url);
+    expect(bash).toContain("--proto-redir '=https'");
+    expect(bash).toContain('--max-filesize 1048576');
+    expect(bash).toContain('INSTALLER_TIMEOUT_SECONDS=900');
+    expect(bash).toContain('/dev/fd/');
+    expect(bash).toContain('terminate_process_tree');
+    expect(bash).not.toMatch(/curl[^\n]*\|[^\n]*(?:bash|sh)/);
+    expect(powershell).toContain('$handler.AllowAutoRedirect = $false');
+    expect(powershell).toContain('$httpClient.MaxResponseContentBufferSize = 1MB');
+    expect(powershell).toContain(
+      "$startInfo.Arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -'"
+    );
+    expect(powershell).toContain('EnvironmentVariables.Clear()');
+    expect(powershell).toContain('Stop-InstallerProcess -Process $installerProcess');
+    expect(powershell).not.toContain('Invoke-Expression');
+    for (const source of [bash, powershell]) {
+      expect(source).not.toContain('@google/gemini-cli');
+      expect(source).not.toContain('@openai/codex-cli');
+      expect(source).not.toContain('@anthropic-ai/claude-code');
+    }
+  });
+
+  test('executes the integrity-checked packaged script instead of a workspace script', async () => {
+    const workspace = await mkdtemp(resolve(tmpdir(), 'gofer-workspace-'));
+    temporaryDirectories.push(workspace);
+    const malicious = resolve(workspace, '.specify/scripts/bash/install-optional-tools.sh');
+    await mkdir(resolve(malicious, '..'), { recursive: true });
+    await writeFile(malicious, '#!/bin/sh\nexit 99\n');
+    await chmod(malicious, 0o755);
+    const extensionPath = resolve(root, 'extension');
+    vi.mocked(vscode.extensions.getExtension).mockReturnValue({ extensionPath } as never);
+    await new OptionalToolInstaller({ info: vi.fn() } as never).runInstaller(workspace, ['claude']);
+    const task = vi.mocked(vscode.tasks.executeTask).mock.calls[0]?.[0] as vscode.Task;
+    const execution = task.execution as vscode.ProcessExecution;
+    expect(execution.args).toContain(
+      resolve(extensionPath, 'resources/bash-scripts/install-optional-tools.sh')
+    );
+    expect(execution.args).not.toContain(malicious);
+  });
+
+  test('rejects altered and escaping packaged scripts', async () => {
+    const extensionRoot = await mkdtemp(resolve(tmpdir(), 'gofer-extension-'));
+    temporaryDirectories.push(extensionRoot);
+    const resources = resolve(extensionRoot, 'resources/bash-scripts');
+    await mkdir(resources, { recursive: true });
+    const script = resolve(resources, 'install-optional-tools.sh');
+    await writeFile(script, '#!/bin/sh\nexit 0\n');
+    vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      extensionPath: extensionRoot,
+    } as never);
+    const installer = new OptionalToolInstaller({ info: vi.fn() } as never);
+    await expect(installer.runInstaller(extensionRoot, ['claude'])).rejects.toThrow(
+      'failed SHA-256 verification'
+    );
+    await rm(script);
+    await symlink(resolve(root, '.specify/scripts/bash/install-optional-tools.sh'), script);
+    await expect(installer.runInstaller(extensionRoot, ['claude'])).rejects.toThrow(
+      'outside the extension'
+    );
+  });
+
+  test('embedded digests match generated resources', async () => {
+    const source = await readFile(
+      resolve(root, 'extension/src/services/OptionalToolInstaller.ts'),
+      'utf8'
+    );
+    for (const relative of [
+      'extension/resources/bash-scripts/install-optional-tools.sh',
+      'extension/resources/powershell-scripts/install-optional-tools.ps1',
+    ]) {
+      const digest = createHash('sha256')
+        .update(await readFile(resolve(root, relative)))
+        .digest('hex');
+      expect(source).toContain(digest);
+    }
+  });
+});

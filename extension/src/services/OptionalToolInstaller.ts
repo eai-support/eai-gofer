@@ -2,12 +2,22 @@ import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { execFile } from 'child_process';
+import { createHash } from 'crypto';
 import { injectable } from 'tsyringe';
 import * as vscode from 'vscode';
 import { Logger } from './Logger';
 import { ProjectDetector, type ProjectInfo } from './ProjectDetector';
 
-export type OptionalToolId = 'stryker' | 'playwright' | 'claude' | 'codex' | 'gemini' | 'gh' | 'az';
+export type OptionalToolId =
+  | 'stryker'
+  | 'playwright'
+  | 'claude'
+  | 'codex'
+  | 'copilot'
+  | 'antigravity'
+  | 'grok'
+  | 'gh'
+  | 'az';
 
 export interface OptionalToolRecommendation {
   id: OptionalToolId;
@@ -28,11 +38,52 @@ interface ToolPickItem extends vscode.QuickPickItem {
   toolId: OptionalToolId;
 }
 
+interface PackagedInstaller {
+  executable: string;
+  scriptPath: string;
+  argumentPrefix: string[];
+  platform: 'posix' | 'windows';
+}
+
+type CommandAvailabilityProbe = (
+  command: string,
+  args: readonly string[],
+  options: { timeout: number },
+  callback: (error: NodeJS.ErrnoException | null) => void
+) => unknown;
+
+const EXTENSION_ID = 'EnterpriseAI.gofer';
+// These digests are the execution trust boundary. Update them only after reviewing the
+// corresponding extension resource; workspace copies are deliberately never executed.
+const PACKAGED_INSTALLERS: Readonly<
+  Record<'posix' | 'windows', { relativePath: readonly string[]; sha256: string }>
+> = {
+  posix: {
+    relativePath: ['resources', 'bash-scripts', 'install-optional-tools.sh'],
+    sha256: 'f24b8840d838b85fa5a1ed1e2670b54a185340cb20f0ad41396a705987f025a9',
+  },
+  windows: {
+    relativePath: ['resources', 'powershell-scripts', 'install-optional-tools.ps1'],
+    sha256: '530c21f8beafcebce88e903a734a4ee7cab8c263a31e2a98a8d5084b8d1abb3f',
+  },
+};
+
+export async function probeCommandAvailability(
+  command: string,
+  args: string[],
+  execute: CommandAvailabilityProbe = execFile as unknown as CommandAvailabilityProbe
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    execute(command, args, { timeout: 5000 }, (error) => resolve(error === null));
+  });
+}
+
 @injectable()
 export class OptionalToolInstaller {
   constructor(private readonly logger: Logger) {}
 
   public async promptForRecommendedTools(workspacePath: string): Promise<void> {
+    this.assertWorkspaceTrusted();
     const recommendations = await this.getRecommendations(workspacePath);
     const missingRecommendedTools = recommendations.filter(
       (tool): boolean => !tool.installed && tool.recommended
@@ -64,6 +115,7 @@ export class OptionalToolInstaller {
   }
 
   public async promptForToolSelection(workspacePath: string): Promise<void> {
+    this.assertWorkspaceTrusted();
     const recommendations = await this.getRecommendations(workspacePath);
     const missingTools = recommendations.filter((tool): boolean => !tool.installed);
 
@@ -106,27 +158,40 @@ export class OptionalToolInstaller {
       return;
     }
 
-    const scriptPath = this.getScriptPath(workspacePath);
-    try {
-      await fs.access(scriptPath);
-    } catch {
-      throw new Error(`Optional tools installer script not found: ${scriptPath}`);
-    }
+    this.assertWorkspaceTrusted();
+    const installer = await this.resolvePackagedInstaller();
 
     const toolsCsv = toolIds.join(',');
     this.logger.info('OptionalToolInstaller', 'Launching optional tools installer', {
-      workspacePath,
       toolIds,
-      scriptPath,
+      platform: installer.platform,
     });
 
-    const terminal = vscode.window.createTerminal({
-      name: 'Gofer Optional Tools',
-      cwd: vscode.Uri.file(workspacePath),
-    });
+    const execution = new vscode.ProcessExecution(
+      installer.executable,
+      [
+        ...installer.argumentPrefix,
+        installer.scriptPath,
+        ...(installer.platform === 'windows'
+          ? ['-WorkspacePath', workspacePath, '-Tools', toolsCsv]
+          : ['--workspace-path', workspacePath, '--tools', toolsCsv]),
+      ],
+      { cwd: workspacePath }
+    );
+    const task = new vscode.Task(
+      { type: 'gofer-optional-tools', tools: toolsCsv },
+      vscode.TaskScope.Workspace,
+      'Install Optional Developer Tools',
+      'Gofer',
+      execution
+    );
+    task.presentationOptions = {
+      reveal: vscode.TaskRevealKind.Always,
+      panel: vscode.TaskPanelKind.Dedicated,
+      clear: false,
+    };
 
-    terminal.show(true);
-    terminal.sendText(this.buildTerminalCommand(scriptPath, workspacePath, toolsCsv));
+    await vscode.tasks.executeTask(task);
 
     const installedLabels = toolIds.join(', ');
     vscode.window.showInformationMessage(
@@ -143,7 +208,9 @@ export class OptionalToolInstaller {
     const availability = await Promise.all([
       this.isCommandAvailable('claude', ['--version']),
       this.isCommandAvailable('codex', ['--version']),
-      this.isCommandAvailable('gemini', ['--version']),
+      this.isCommandAvailable('copilot', ['--version']),
+      this.isCommandAvailable('agy', ['--version']),
+      this.isCommandAvailable('grok', ['--version']),
       this.isCommandAvailable('gh', ['--version']),
       this.isCommandAvailable('az', ['version']),
     ]);
@@ -183,7 +250,7 @@ export class OptionalToolInstaller {
         category: 'global',
         installed: availability[0],
         recommended: true,
-        detail: 'Installs @anthropic-ai/claude-code globally via npm.',
+        detail: 'Installs or updates Claude Code with Anthropic’s recommended native installer.',
         reason: 'Enables Claude-based Gofer workflows from the terminal.',
       },
       {
@@ -192,23 +259,42 @@ export class OptionalToolInstaller {
         category: 'global',
         installed: availability[1],
         recommended: true,
-        detail: 'Installs @openai/codex-cli globally via npm.',
+        detail: 'Installs or updates Codex CLI with OpenAI’s recommended standalone installer.',
         reason: 'Enables Codex-based Gofer workflows from the terminal.',
       },
       {
-        id: 'gemini',
-        label: 'Google Gemini CLI',
+        id: 'copilot',
+        label: 'GitHub Copilot CLI',
         category: 'global',
         installed: availability[2],
         recommended: true,
-        detail: 'Installs @google/gemini-cli globally via npm.',
-        reason: 'Adds Gemini CLI support to the local developer environment.',
+        detail: 'Installs or updates the current @github/copilot CLI package.',
+        reason:
+          'Enables GitHub Copilot Gofer workflows from the terminal and supported app handoff.',
+      },
+      {
+        id: 'antigravity',
+        label: 'Google Antigravity CLI (agy)',
+        category: 'global',
+        installed: availability[3],
+        recommended: true,
+        detail: 'Installs or updates agy with Google’s Antigravity native installer.',
+        reason: 'Adds the current Google Antigravity CLI instead of Gemini CLI.',
+      },
+      {
+        id: 'grok',
+        label: 'Grok Build CLI',
+        category: 'global',
+        installed: availability[4],
+        recommended: true,
+        detail: 'Installs or updates Grok Build with xAI’s native installer.',
+        reason: 'Enables local-project Grok Build workflows from the terminal.',
       },
       {
         id: 'gh',
         label: 'GitHub CLI',
         category: 'global',
-        installed: availability[3],
+        installed: availability[5],
         recommended: true,
         detail: 'Installs the GitHub CLI with the OS package manager.',
         reason: 'Useful for Gofer release, repo, and workflow tasks.',
@@ -217,7 +303,7 @@ export class OptionalToolInstaller {
         id: 'az',
         label: 'Azure CLI',
         category: 'global',
-        installed: availability[4],
+        installed: availability[6],
         recommended: true,
         detail: 'Installs the Azure CLI with the OS package manager.',
         reason: 'Useful for Gofer cloud and Azure-adjacent workflows.',
@@ -268,63 +354,90 @@ export class OptionalToolInstaller {
   }
 
   private async isCommandAvailable(command: string, args: string[]): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      execFile(command, args, { timeout: 5000 }, (error) => {
-        if (!error) {
-          resolve(true);
-          return;
-        }
-
-        const typedError = error as NodeJS.ErrnoException;
-        if (typedError.code === 'ENOENT') {
-          resolve(false);
-          return;
-        }
-
-        resolve(true);
-      });
-    });
+    return probeCommandAvailability(command, args);
   }
 
-  private getScriptPath(workspacePath: string): string {
-    if (process.platform === 'win32') {
-      return path.join(
-        workspacePath,
-        '.specify',
-        'scripts',
-        'powershell',
-        'install-optional-tools.ps1'
+  private assertWorkspaceTrusted(): void {
+    if (!vscode.workspace.isTrusted) {
+      throw new Error(
+        'Gofer can install optional developer tools only after you trust this VS Code workspace.'
       );
     }
-
-    return path.join(workspacePath, '.specify', 'scripts', 'bash', 'install-optional-tools.sh');
   }
 
-  private buildTerminalCommand(
-    scriptPath: string,
-    workspacePath: string,
-    toolsCsv: string
-  ): string {
-    if (process.platform === 'win32') {
-      return (
-        `powershell -ExecutionPolicy Bypass -File ${this.quoteForPowerShell(scriptPath)} ` +
-        `-WorkspacePath ${this.quoteForPowerShell(workspacePath)} ` +
-        `-Tools ${this.quoteForPowerShell(toolsCsv)}`
-      );
+  private getInstallerPlatform(): NodeJS.Platform {
+    return process.platform;
+  }
+
+  private async resolvePackagedInstaller(): Promise<PackagedInstaller> {
+    const extension = vscode.extensions.getExtension(EXTENSION_ID);
+    if (!extension) {
+      throw new Error(`Cannot locate the installed ${EXTENSION_ID} extension package.`);
     }
 
-    return (
-      `bash ${this.quoteForPosix(scriptPath)} ` +
-      `--workspace-path ${this.quoteForPosix(workspacePath)} ` +
-      `--tools ${this.quoteForPosix(toolsCsv)}`
-    );
-  }
+    const platform = this.getInstallerPlatform();
+    const definition = PACKAGED_INSTALLERS[platform === 'win32' ? 'windows' : 'posix'];
+    const extensionRoot = await fs.realpath(extension.extensionPath);
+    const declaredScriptPath = path.join(extensionRoot, ...definition.relativePath);
 
-  private quoteForPosix(value: string): string {
-    return `'${value.replace(/'/g, `'\\''`)}'`;
-  }
+    let scriptPath: string;
+    try {
+      scriptPath = await fs.realpath(declaredScriptPath);
+    } catch {
+      throw new Error('Packaged optional tools installer not found.');
+    }
 
-  private quoteForPowerShell(value: string): string {
-    return `'${value.replace(/'/g, "''")}'`;
+    const relativeScriptPath = path.relative(extensionRoot, scriptPath);
+    if (
+      relativeScriptPath === '' ||
+      relativeScriptPath === '..' ||
+      relativeScriptPath.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativeScriptPath)
+    ) {
+      throw new Error('Packaged optional tools installer resolves outside the extension package.');
+    }
+
+    const fileStatus = await fs.stat(scriptPath);
+    if (!fileStatus.isFile()) {
+      throw new Error('Packaged optional tools installer is not a regular file.');
+    }
+
+    const digest = createHash('sha256')
+      .update(await fs.readFile(scriptPath))
+      .digest('hex');
+    if (digest !== definition.sha256) {
+      throw new Error('Packaged optional tools installer failed SHA-256 verification.');
+    }
+
+    if (platform === 'win32') {
+      const windowsRoot = process.env.SystemRoot ?? process.env.WINDIR ?? 'C:\\Windows';
+      const systemRoot = path.win32.isAbsolute(windowsRoot) ? windowsRoot : 'C:\\Windows';
+      return {
+        executable: path.win32.join(
+          systemRoot,
+          'System32',
+          'WindowsPowerShell',
+          'v1.0',
+          'powershell.exe'
+        ),
+        scriptPath,
+        platform: 'windows',
+        argumentPrefix: [
+          '-NoLogo',
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+        ],
+      };
+    }
+
+    return {
+      executable: '/bin/bash',
+      scriptPath,
+      argumentPrefix: [],
+      platform: 'posix',
+    };
   }
 }
