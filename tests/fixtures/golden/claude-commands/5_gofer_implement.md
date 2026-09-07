@@ -4,6 +4,21 @@ description: Execute tasks from tasks.md to implement the feature
 
 # Gofer Implement
 
+## Continuation And Stop Contract
+<!-- gofer:continuation:start -->
+
+1. Preserve the requested scope and mode, including read-only, plan-only, research-only and MVP work. Keep the full applicable pipeline, stage functions, artifacts, reviews and validation; do not expand an MVP into an unapproved release.
+2. After a stage's required evidence is complete, read and follow the next internal file in .specify/commands/ in the same conversation. Do not require a numbered command or a host-specific skill dispatcher. Optional helpers remain optional; maintenance and control commands do not start delivery work.
+3. After explicit business-specification approval, continue routine planning, tasks, implementation and validation within that approved scope. Record the approval source and scope; missing or ambiguous approval is not approval. A proposal or generated status is not user consent.
+4. Preserve any explicit plan/task approval requirement unless it is already satisfied by recorded user approval covering that work. Rejected, revoked, changed or unclear approval requires a pause. Never invent approvedBy, approvedAt or a new approval event when reusing an existing approval.
+5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. Business approval does not authorize publishing, spending, external changes or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
+6. A tool proposal is not execution. If host consent is required, wait for it. After the tool result or approved proposal returns, inspect the result and resume the next authorized action within approved scope; do not end with only a plan or a proposed tool call. A denied tool or unavailable capability must not be bypassed through another host or CLI.
+7. Use the current agent's available native tools. Optional Gofer/MCP tools are conveniences, not prerequisites. If the current agent lacks a required capability, report that limitation and the safe next action; do not pretend a handoff button transfers control automatically.
+8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
+9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
+10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
+<!-- gofer:continuation:end -->
+
 ## MVP Capability-Based Validation
 
 Use `.specify/references/mvp-capability-validation.md` as the source of
@@ -165,7 +180,10 @@ This command expects in `.specify/specs/{feature}/`:
 - `tasks.md` - Task breakdown (from /4_gofer_tasks)
 - `loop-contract.json` - Bounded eval commands and stop rules (from /1 through /4)
 
-If missing, prompt user to run the prerequisite stage.
+If an artifact is missing, read its prerequisite contract and complete the
+authorized prerequisite work internally. If scope, approval or access blocks
+that work, report Progress, Stop reason and Next action rather than asking
+the user to run a numbered command.
 
 ---
 
@@ -756,10 +774,11 @@ After the stakeholder PR/FAQ artifacts are updated:
 ════════════════════════════════════════════════════════════════
 ```
 
-**AUTO-CHAIN (MANDATORY)**: You MUST immediately invoke the next pipeline stage
-by calling the Skill tool with skill="/6_gofer_validate". Do NOT ask the user
-for confirmation. Do NOT output "Ready for next stage". Just invoke the skill
-NOW.
+After required implementation evidence and approval checks pass, read and
+follow `.specify/commands/6_gofer_validate.md` in the same conversation under
+the Continuation And Stop Contract. A proposed tool call is not execution;
+inspect the returned result and continue authorized validation. Preserve all
+material/user gates and do not ask for a numbered command.
 
 ---
 

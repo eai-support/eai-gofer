@@ -1,0 +1,79 @@
+name: Desktop Continuation Contracts
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  workflow_call:
+    inputs:
+      source-sha:
+        description: Exact caller commit to validate and publish
+        type: string
+        required: true
+      verify-public-assets:
+        description: Also validate the committed VSIX served by Pages
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  protocol:
+    name: Native protocol (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
+      - name: Verify exact checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source-sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: language-server/package-lock.json
+      - name: Install server dependencies
+        run: npm ci --prefix language-server
+      - name: Test actual MCP and LSP processes
+        run: npm run test:mcp-protocol
+
+  packaged-runtime:
+    name: Packaged desktop runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
+      - name: Verify exact checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source-sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+      - name: Install build dependencies
+        run: |
+          npm ci
+          npm ci --prefix extension
+          npm ci --prefix language-server
+      - name: Package extension without installation
+        working-directory: extension
+        run: npx @vscode/vsce package --no-dependencies --out /tmp/gofer-desktop-test.vsix
+      - name: Test extracted runtime outside the checkout
+        run: npm run test:packaged-protocol -- --vsix /tmp/gofer-desktop-test.vsix
+      - name: Test committed public runtime before Pages promotion
+        if: inputs.verify-public-assets
+        run: npm run test:packaged-protocol -- --vsix docs-site/static/releases/eai-gofer-latest.vsix

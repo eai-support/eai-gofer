@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CrossPlatformCommandRouter } from '../../extension/src/council/CrossPlatformCommandRouter';
+import { buildContinuationContractSection } from '../../.specify/scripts/node/generate-commands.mjs';
 import {
   FULL_COMMAND_FILES,
   FULL_COMMAND_NAMES,
@@ -81,34 +82,113 @@ describe('Cross-Platform Feature Parity', () => {
     });
   });
 
-  describe('T079: Auto-Chain Functionality', () => {
-    it('keeps auto-chain instructions in each internal stage contract', () => {
-      const pipelineStages = [
-        '1_gofer_research',
-        '2_gofer_specify',
-        '3_gofer_plan',
-        '4_gofer_tasks',
-        '5_gofer_implement',
-        '6_gofer_validate',
-      ];
+  describe('T079: Internal-File Continuation', () => {
+    const pipelineStages = [
+      '0_gofer_start',
+      '0a_problem_validation',
+      '1_gofer_research',
+      '2_gofer_specify',
+      '3_gofer_plan',
+      '4_gofer_tasks',
+      '5_gofer_implement',
+      '6_gofer_validate',
+    ];
+    const compact = (content: string) => content.replace(/\s+/g, ' ');
 
-      pipelineStages.forEach((stage, index) => {
-        const content = readInternalContract(stage);
+    function expectSharedContinuation(content: string): void {
+      expect(content.match(/<!-- gofer:continuation:start -->/g)).toHaveLength(1);
+      expect(content.match(/<!-- gofer:continuation:end -->/g)).toHaveLength(1);
+      expect(content).toContain(buildContinuationContractSection());
+      expect(content).not.toMatch(/Skill tool|skill=["`]\/?\d/);
+      expect(content).toContain('read and follow the next internal file in .specify/commands/');
+      expect(content).toContain('in the same conversation');
+      expect(content).toContain('Progress, Stop reason and Next action');
+      expect(content).toContain('missing or ambiguous approval is not approval');
+      expect(content).toContain('explicit plan/task approval requirement');
+      expect(content).toContain(
+        'Pause for material scope, security, cost, deployment, destructive'
+      );
+      expect(content).toContain('Business approval does not authorize publishing');
+      expect(content).toContain('A tool proposal is not execution');
+      expect(content).toContain('If host consent is required, wait for it');
+    }
 
-        if (index < pipelineStages.length - 1) {
-          expect(content.toLowerCase()).toContain('auto-chain');
-          expect(content).toContain(pipelineStages[index + 1]);
-        }
-      });
+    it.each(pipelineStages)('preserves shared continuation and approval gates in %s', (stage) => {
+      expectSharedContinuation(readInternalContract(stage));
     });
 
-    it('keeps continuation guidance in the main public entrypoint wrapper', () => {
-      for (const command of ['eai']) {
-        const content = fs.readFileSync(router.getCommandPath(command, 'claude'), 'utf8');
+    it.each([
+      ['0a_problem_validation', '1_gofer_research'],
+      ['1_gofer_research', '2_gofer_specify'],
+      ['2_gofer_specify', '3_gofer_plan'],
+      ['3_gofer_plan', '4_gofer_tasks'],
+      ['4_gofer_tasks', '5_gofer_implement'],
+      ['5_gofer_implement', '6_gofer_validate'],
+    ])('continues %s by reading the existing %s contract', (stage, next) => {
+      const content = compact(readInternalContract(stage)).toLowerCase();
+      expect(content).toContain(`read and follow \`.specify/commands/${next}.md\``);
+      expect(fs.existsSync(path.join(workspacePath, '.specify/commands', `${next}.md`))).toBe(true);
+    });
+
+    it('routes kickoff internally and keeps problem validation optional', () => {
+      expect(readInternalContract('0_gofer_start')).toContain(
+        'Read the selected internal contract from `.specify/commands/{stage}.md`'
+      );
+      expect(compact(readInternalContract('0a_problem_validation'))).toContain(
+        'This helper remains optional in the full pipeline'
+      );
+    });
+
+    it('honors requested research-only work rather than stopping every research stage', () => {
+      const content = compact(readInternalContract('1_gofer_research'));
+      expect(content).toContain(
+        'Unless the user explicitly asks to stop after research or a real gate blocks progress'
+      );
+      expect(content).toContain(
+        'For requested research-only work, report that scope complete without claiming the delivery pipeline is complete'
+      );
+    });
+
+    it('checks business approval and reuses only task authorization already covered', () => {
+      expect(compact(readInternalContract('2_gofer_specify'))).toContain(
+        'Before continuing to planning, verify approval of the business specification and its scope'
+      );
+      const tasks = compact(readInternalContract('4_gofer_tasks'));
+      expect(tasks).toContain(
+        'If the approved business scope already covers these tasks and no outstanding explicit plan/task approval or material-change gate applies'
+      );
+      expect(tasks).toContain('Otherwise, pause for the required approval');
+      expect(tasks).toContain(
+        'Missing, ambiguous, rejected or revoked approval is not authorization'
+      );
+      expect(tasks).toContain(
+        'record `approvalBasis` with the original approval source and covered scope'
+      );
+      expect(tasks).toContain('Do not fabricate a fresh user approval, approver or timestamp');
+    });
+
+    it('keeps validation terminal only when the requested evidence passes', () => {
+      const content = readInternalContract('6_gofer_validate');
+      expect(content).toContain(
+        "At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work"
+      );
+      expect(content).toContain('Stage completion alone is not pipeline completion');
+      expect(content).toContain('budget, context and retry limits');
+      expect(content).not.toContain('Next internal contract:');
+    });
+
+    it.each(['claude', 'copilot', 'codex', 'gemini'] as const)(
+      'preserves the same continuation and approval contract in the %s public wrapper',
+      (platform) => {
+        const wrapperPath =
+          platform === 'gemini'
+            ? path.join(workspacePath, '.gemini/commands/gofer/eai.md')
+            : router.getCommandPath('eai', platform);
+        const content = fs.readFileSync(wrapperPath, 'utf8');
         expect(content).toContain('.specify/commands/*.md');
-        expect(content.toLowerCase()).toMatch(/route|continue|internal/);
+        expectSharedContinuation(content);
       }
-    });
+    );
 
     it('keeps the update entrypoint independent of a repository scaffold', () => {
       for (const platform of ['claude', 'copilot', 'codex'] as const) {
