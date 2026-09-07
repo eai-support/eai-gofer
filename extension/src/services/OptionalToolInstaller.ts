@@ -80,6 +80,13 @@ export async function probeCommandAvailability(
   });
 }
 
+export function getTrustedWindowsPowerShellExecutable(): string {
+  // The interpreter is part of the execution trust boundary. Do not derive it
+  // from SystemRoot/WINDIR because extension-host environment variables can be
+  // supplied by the process that launches VS Code.
+  return 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+}
+
 @injectable()
 export class OptionalToolInstaller {
   constructor(private readonly logger: Logger) {}
@@ -193,15 +200,14 @@ export class OptionalToolInstaller {
       clear: false,
     };
 
-    let taskExecution: vscode.TaskExecution | undefined;
     const cleanupSubscription = vscode.tasks.onDidEndTaskProcess((event): void => {
-      if (taskExecution && event.execution === taskExecution) {
+      if (event.execution.task === task) {
         cleanupSubscription.dispose();
         void this.cleanupInstallerSnapshot(installer.cleanupRoot);
       }
     });
     try {
-      taskExecution = await vscode.tasks.executeTask(task);
+      await vscode.tasks.executeTask(task);
     } catch (error) {
       cleanupSubscription.dispose();
       await this.cleanupInstallerSnapshot(installer.cleanupRoot);
@@ -460,16 +466,8 @@ export class OptionalToolInstaller {
     }
 
     if (platform === 'win32') {
-      const windowsRoot = process.env.SystemRoot ?? process.env.WINDIR ?? 'C:\\Windows';
-      const systemRoot = path.win32.isAbsolute(windowsRoot) ? windowsRoot : 'C:\\Windows';
       return {
-        executable: path.win32.join(
-          systemRoot,
-          'System32',
-          'WindowsPowerShell',
-          'v1.0',
-          'powershell.exe'
-        ),
+        executable: getTrustedWindowsPowerShellExecutable(),
         scriptPath: verifiedScriptPath,
         cleanupRoot,
         platform: 'windows',

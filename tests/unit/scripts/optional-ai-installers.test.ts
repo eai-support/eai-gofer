@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as vscode from 'vscode';
 import {
+  getTrustedWindowsPowerShellExecutable,
   OptionalToolInstaller,
   probeCommandAvailability,
 } from '../../../extension/src/services/OptionalToolInstaller';
@@ -266,5 +267,47 @@ describe('optional AI tool installers', () => {
     expect(source).toContain('await this.cleanupInstallerSnapshot(installer.cleanupRoot)');
     expect(source).toContain("this.logger.warn('OptionalToolInstaller'");
     expect(source).not.toContain('void fs.rm(installer.cleanupRoot');
+  });
+
+  test('does not trust hostile environment variables for the Windows interpreter', () => {
+    const originalSystemRoot = process.env.SystemRoot;
+    const originalWindir = process.env.WINDIR;
+    process.env.SystemRoot = 'C:\\attacker-controlled';
+    process.env.WINDIR = 'D:\\also-attacker-controlled';
+    try {
+      expect(getTrustedWindowsPowerShellExecutable()).toBe(
+        'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+      );
+    } finally {
+      if (originalSystemRoot === undefined) delete process.env.SystemRoot;
+      else process.env.SystemRoot = originalSystemRoot;
+      if (originalWindir === undefined) delete process.env.WINDIR;
+      else process.env.WINDIR = originalWindir;
+    }
+  });
+
+  test('matches fast task completion by task identity before executeTask resolves', async () => {
+    const workspace = await mkdtemp(resolve(tmpdir(), 'gofer-workspace-'));
+    temporaryDirectories.push(workspace);
+    vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      extensionPath: resolve(root, 'extension'),
+    } as never);
+    const dispose = vi.fn();
+    let endTask: ((event: vscode.TaskProcessEndEvent) => void) | undefined;
+    vi.mocked(vscode.tasks.onDidEndTaskProcess).mockImplementation((listener) => {
+      endTask = listener;
+      return { dispose };
+    });
+    vi.mocked(vscode.tasks.executeTask).mockImplementation(async (task) => {
+      endTask?.({ execution: { task } } as vscode.TaskProcessEndEvent);
+      return { task } as vscode.TaskExecution;
+    });
+
+    await new OptionalToolInstaller({ info: vi.fn(), warn: vi.fn() } as never).runInstaller(
+      workspace,
+      ['claude']
+    );
+
+    expect(dispose).toHaveBeenCalledOnce();
   });
 });
