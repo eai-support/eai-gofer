@@ -197,14 +197,14 @@ export class OptionalToolInstaller {
     const cleanupSubscription = vscode.tasks.onDidEndTaskProcess((event): void => {
       if (taskExecution && event.execution === taskExecution) {
         cleanupSubscription.dispose();
-        void fs.rm(installer.cleanupRoot, { recursive: true, force: true });
+        void this.cleanupInstallerSnapshot(installer.cleanupRoot);
       }
     });
     try {
       taskExecution = await vscode.tasks.executeTask(task);
     } catch (error) {
       cleanupSubscription.dispose();
-      await fs.rm(installer.cleanupRoot, { recursive: true, force: true });
+      await this.cleanupInstallerSnapshot(installer.cleanupRoot);
       throw error;
     }
 
@@ -370,6 +370,17 @@ export class OptionalToolInstaller {
 
   private async isCommandAvailable(command: string, args: string[]): Promise<boolean> {
     return probeCommandAvailability(command, args);
+  }
+
+  private async cleanupInstallerSnapshot(cleanupRoot: string): Promise<void> {
+    try {
+      await fs.rm(cleanupRoot, { recursive: true, force: true });
+    } catch (error) {
+      this.logger.warn('OptionalToolInstaller', 'Failed to remove installer snapshot', {
+        cleanupRoot,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private assertWorkspaceTrusted(): void {

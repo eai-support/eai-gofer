@@ -254,4 +254,15 @@ describe('optional AI tool installers', () => {
     expect(source).toContain("flag: 'wx'");
     expect(source).not.toContain('await fs.readFile(scriptPath)');
   });
+
+  test('handles asynchronous installer snapshot cleanup failures', async () => {
+    const source = await readFile(
+      resolve(root, 'extension/src/services/OptionalToolInstaller.ts'),
+      'utf8'
+    );
+    expect(source).toContain('void this.cleanupInstallerSnapshot(installer.cleanupRoot)');
+    expect(source).toContain('await this.cleanupInstallerSnapshot(installer.cleanupRoot)');
+    expect(source).toContain("this.logger.warn('OptionalToolInstaller'");
+    expect(source).not.toContain('void fs.rm(installer.cleanupRoot');
+  });
 });
