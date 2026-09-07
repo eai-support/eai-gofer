@@ -468,6 +468,12 @@ install_azure_cli() {
   fi
 
   if has_command apt-get; then
+    if ! has_command apt-cache || ! apt-cache show azure-cli >/dev/null 2>&1; then
+      HAS_FAILURE=1
+      log_warn "Azure CLI is unavailable from the configured apt repositories"
+      log_warn "Configure Microsoft's signed Azure CLI apt repository, then rerun Gofer"
+      return 1
+    fi
     run_command "Updating apt package index for Azure CLI" sudo apt-get update
     run_command "Installing Azure CLI with apt-get" sudo apt-get install --yes azure-cli
     return

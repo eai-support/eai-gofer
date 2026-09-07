@@ -114,6 +114,70 @@ describe('optional AI tool installers', () => {
     }
   });
 
+  test('fails with targeted Azure feed guidance when apt cannot resolve azure-cli', async () => {
+    const fixture = await mkdtemp(resolve(tmpdir(), 'gofer-azure-apt-'));
+    temporaryDirectories.push(fixture);
+    const bin = resolve(fixture, 'bin');
+    await mkdir(bin);
+    await writeFile(resolve(bin, 'apt-cache'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    await writeFile(resolve(bin, 'apt-get'), '#!/bin/sh\necho called >> "$APT_MARKER"\n', {
+      mode: 0o755,
+    });
+    const marker = resolve(fixture, 'apt-get-called');
+
+    let failure: (Error & { code?: number; stdout?: string; stderr?: string }) | undefined;
+    try {
+      await execFileAsync(
+        '/bin/bash',
+        [
+          resolve(root, '.specify/scripts/bash/install-optional-tools.sh'),
+          '--workspace-path',
+          fixture,
+          '--tools',
+          'az',
+        ],
+        { env: { PATH: `${bin}:/usr/bin:/bin`, APT_MARKER: marker } }
+      );
+    } catch (error) {
+      failure = error as Error & { code?: number; stdout?: string; stderr?: string };
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(`${failure?.stdout ?? ''}\n${failure?.stderr ?? ''}`).toContain(
+      "Configure Microsoft's signed Azure CLI apt repository, then rerun Gofer"
+    );
+    await expect(readFile(marker)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  test('keeps every packaged and public installer mirror byte-identical', async () => {
+    for (const [platform, resourceDirectory, file] of [
+      ['bash', 'bash-scripts', 'install-optional-tools.sh'],
+      ['powershell', 'powershell-scripts', 'install-optional-tools.ps1'],
+    ] as const) {
+      const canonical = await readFile(resolve(root, '.specify/scripts', platform, file));
+      const mirrors = [
+        resolve(root, 'extension/resources', resourceDirectory, file),
+        resolve(root, 'plugins/eai-gofer/.specify/scripts', platform, file),
+        resolve(root, 'plugins/eai-gofer/plugins/eai-gofer/.specify/scripts', platform, file),
+        resolve(
+          root,
+          'docs-site/static/releases/plugins/eai-gofer/.specify/scripts',
+          platform,
+          file
+        ),
+        resolve(
+          root,
+          'docs-site/static/releases/plugins/eai-gofer/plugins/eai-gofer/.specify/scripts',
+          platform,
+          file
+        ),
+      ];
+      for (const mirror of mirrors) {
+        expect(await readFile(mirror)).toEqual(canonical);
+      }
+    }
+  });
+
   test('executes an immutable verified snapshot instead of either mutable source path', async () => {
     const workspace = await mkdtemp(resolve(tmpdir(), 'gofer-workspace-'));
     temporaryDirectories.push(workspace);

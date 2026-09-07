@@ -62,7 +62,7 @@ const PACKAGED_INSTALLERS: Readonly<
 > = {
   posix: {
     relativePath: ['resources', 'bash-scripts', 'install-optional-tools.sh'],
-    sha256: 'f24b8840d838b85fa5a1ed1e2670b54a185340cb20f0ad41396a705987f025a9',
+    sha256: '9b870c7c803df01738a614aab115e41e1e880d08244992e905694456ee73abac',
   },
   windows: {
     relativePath: ['resources', 'powershell-scripts', 'install-optional-tools.ps1'],
