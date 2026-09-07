@@ -83,6 +83,21 @@ sandbox. Generated configurations do not enable these options.
 
 ## Tests And Their Limits
 
+All test sources are tracked in the repository. They are not temporary support
+scripts. Before approving a PR, run the full unit and integration suite with
+`npm test`, the protocol checks below, and `npm --prefix extension test` for
+the isolated VS Code tests. Build a VSIX and run the packaged check against
+that exact file. These checks do not publish or update a user's plugin.
+
+PR validation runs the full suite with coverage, VS Code tests, security checks,
+and package checks. The desktop-contract workflow runs actual MCP/LSP processes
+on Windows, macOS and Linux. Do not substitute a CLI smoke test for this set.
+
+`release.sh` repeats the full unit and integration suite, real-process checks,
+and isolated VS Code tests before packaging. It then tests the built VSIX.
+Release and Pages publication also require the exact-commit desktop CI checks.
+Each failed required check stops the process; do not skip it to publish.
+
 `npm run test:mcp-protocol` builds the server and tests real child processes.
 CI runs this check on Windows, macOS and Linux. `release.sh` must pass it
 before packaging the extension. A failure stops the release gate.
