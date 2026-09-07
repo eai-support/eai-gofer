@@ -115,6 +115,45 @@ describe('optional AI tool installers', () => {
     }
   });
 
+  test('PowerShell safely handles a null exception message', async () => {
+    const powershell = await readFile(
+      resolve(root, '.specify/scripts/powershell/install-optional-tools.ps1'),
+      'utf8'
+    );
+    const diagnosticFunction = powershell.match(
+      /function ConvertTo-SafeDiagnostic \{[\s\S]*?\n\}\n\nfunction Invoke-Step/
+    )?.[0];
+    expect(diagnosticFunction).toBeDefined();
+    expect(diagnosticFunction).toContain('if ([string]::IsNullOrEmpty($Message)) {');
+    expect(diagnosticFunction).toContain("return 'No diagnostic details were provided.'");
+
+    if (
+      !(await probeCommandAvailability('pwsh', ['-NoLogo', '-NoProfile', '-Command', 'exit 0']))
+    ) {
+      return;
+    }
+
+    const fixture = await mkdtemp(resolve(tmpdir(), 'gofer-safe-diagnostic-'));
+    temporaryDirectories.push(fixture);
+    const harness = resolve(fixture, 'null-diagnostic.ps1');
+    await writeFile(
+      harness,
+      `$WorkspacePath = 'C:\\workspace'\n${diagnosticFunction!.replace(
+        /\n\nfunction Invoke-Step$/,
+        ''
+      )}\nConvertTo-SafeDiagnostic -Message $null\n`
+    );
+
+    const { stdout } = await execFileAsync('pwsh', [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-File',
+      harness,
+    ]);
+    expect(stdout.trim()).toBe('No diagnostic details were provided.');
+  });
+
   test('fails with targeted Azure feed guidance when apt cannot resolve azure-cli', async () => {
     const fixture = await mkdtemp(resolve(tmpdir(), 'gofer-azure-apt-'));
     temporaryDirectories.push(fixture);
