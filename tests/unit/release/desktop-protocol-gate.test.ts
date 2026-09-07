@@ -22,10 +22,10 @@ const workflow = (name: string) => load(read(`.github/workflows/${name}.yml`)) a
 };
 
 describe('desktop protocol release gate', () => {
-  it('runs the complete unit and integration suite during release validation', () => {
+  it('runs the full Vitest suite during release validation', () => {
     const release = read('release.sh');
     const gate = release.slice(release.indexOf('run_release_validation_gate() {'), release.indexOf('ensure_release_base() {'));
-    expect(gate).toContain('run_release_check "Gofer unit and integration test suite" npm test');
+    expect(gate).toContain('run_release_check "Gofer full Vitest suite" npm test');
     expect(gate).not.toContain('npm run test:unit');
     const scripts = JSON.parse(read('package.json')).scripts;
     expect(scripts.test).toBe('vitest run');
@@ -33,7 +33,7 @@ describe('desktop protocol release gate', () => {
     const qualitySteps = workflow('ci').jobs['quality-gates'].steps!;
     expect(qualitySteps.find(step => step.name === 'Run Tests with Coverage')?.run)
       .toContain('npm run test:coverage-report');
-    expect(gate.indexOf('Gofer unit and integration test suite')).toBeLessThan(
+    expect(gate.indexOf('Gofer full Vitest suite')).toBeLessThan(
       gate.indexOf('VS Code production package build')
     );
   });

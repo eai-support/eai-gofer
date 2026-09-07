@@ -84,7 +84,7 @@ sandbox. Generated configurations do not enable these options.
 ## Tests And Their Limits
 
 All test sources are tracked in the repository. They are not temporary support
-scripts. Before approving a PR, run the full unit and integration suite with
+scripts. Before approving a PR, run the full Vitest suite (including unit, integration, and performance tests) with
 `npm test`, the protocol checks below, and `npm --prefix extension test` for
 the isolated VS Code tests. Build a VSIX and run the packaged check against
 that exact file. These checks do not publish or update a user's plugin.
@@ -93,7 +93,7 @@ PR validation runs the full suite with coverage, VS Code tests, security checks,
 and package checks. The desktop-contract workflow runs actual MCP/LSP processes
 on Windows, macOS and Linux. Do not substitute a CLI smoke test for this set.
 
-`release.sh` repeats the full unit and integration suite, real-process checks,
+`release.sh` repeats the full Vitest suite, real-process checks,
 and isolated VS Code tests before packaging. It then tests the built VSIX.
 The publish phase repeats validation and checks the committed versioned VSIX
 before creating a release tag.
