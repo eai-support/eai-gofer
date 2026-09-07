@@ -130,6 +130,7 @@ vi.mock('vscode', () => {
     },
     tasks: {
       executeTask: vi.fn(async (task: MockTask) => ({ task })),
+      onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
     },
     commands: {
       registerCommand: vi.fn(),
@@ -209,6 +210,7 @@ vi.mock('vscode', () => {
   },
   tasks: {
     executeTask: vi.fn(),
+    onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
   },
   TreeItem: class {},
   TreeItemCollapsibleState: {

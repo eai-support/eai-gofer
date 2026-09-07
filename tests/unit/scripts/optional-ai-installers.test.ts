@@ -114,7 +114,7 @@ describe('optional AI tool installers', () => {
     }
   });
 
-  test('executes the integrity-checked packaged script instead of a workspace script', async () => {
+  test('executes an immutable verified snapshot instead of either mutable source path', async () => {
     const workspace = await mkdtemp(resolve(tmpdir(), 'gofer-workspace-'));
     temporaryDirectories.push(workspace);
     const malicious = resolve(workspace, '.specify/scripts/bash/install-optional-tools.sh');
@@ -126,10 +126,18 @@ describe('optional AI tool installers', () => {
     await new OptionalToolInstaller({ info: vi.fn() } as never).runInstaller(workspace, ['claude']);
     const task = vi.mocked(vscode.tasks.executeTask).mock.calls[0]?.[0] as vscode.Task;
     const execution = task.execution as vscode.ProcessExecution;
-    expect(execution.args).toContain(
+    const snapshotPath = execution.args.find((argument) => argument.endsWith('installer.sh'));
+    expect(snapshotPath).toBeDefined();
+    expect(snapshotPath).not.toBe(
       resolve(extensionPath, 'resources/bash-scripts/install-optional-tools.sh')
     );
     expect(execution.args).not.toContain(malicious);
+    expect(await readFile(snapshotPath!, 'utf8')).toBe(
+      await readFile(
+        resolve(extensionPath, 'resources/bash-scripts/install-optional-tools.sh'),
+        'utf8'
+      )
+    );
   });
 
   test('rejects altered and escaping packaged scripts', async () => {
@@ -167,5 +175,19 @@ describe('optional AI tool installers', () => {
         .digest('hex');
       expect(source).toContain(digest);
     }
+  });
+
+  test('binds file validation to one no-follow handle before staging execution bytes', async () => {
+    const source = await readFile(
+      resolve(root, 'extension/src/services/OptionalToolInstaller.ts'),
+      'utf8'
+    );
+    expect(source).toContain(
+      "constants.O_RDONLY | (platform === 'win32' ? 0 : constants.O_NOFOLLOW)"
+    );
+    expect(source).toContain('await installerHandle.stat()');
+    expect(source).toContain('await installerHandle.readFile()');
+    expect(source).toContain("flag: 'wx'");
+    expect(source).not.toContain('await fs.readFile(scriptPath)');
   });
 });

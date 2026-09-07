@@ -1,5 +1,6 @@
-import { existsSync } from 'fs';
+import { constants, existsSync } from 'fs';
 import * as fs from 'fs/promises';
+import { tmpdir } from 'os';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { createHash } from 'crypto';
@@ -41,6 +42,7 @@ interface ToolPickItem extends vscode.QuickPickItem {
 interface PackagedInstaller {
   executable: string;
   scriptPath: string;
+  cleanupRoot: string;
   argumentPrefix: string[];
   platform: 'posix' | 'windows';
 }
@@ -191,7 +193,20 @@ export class OptionalToolInstaller {
       clear: false,
     };
 
-    await vscode.tasks.executeTask(task);
+    let taskExecution: vscode.TaskExecution | undefined;
+    const cleanupSubscription = vscode.tasks.onDidEndTaskProcess((event): void => {
+      if (taskExecution && event.execution === taskExecution) {
+        cleanupSubscription.dispose();
+        void fs.rm(installer.cleanupRoot, { recursive: true, force: true });
+      }
+    });
+    try {
+      taskExecution = await vscode.tasks.executeTask(task);
+    } catch (error) {
+      cleanupSubscription.dispose();
+      await fs.rm(installer.cleanupRoot, { recursive: true, force: true });
+      throw error;
+    }
 
     const installedLabels = toolIds.join(', ');
     vscode.window.showInformationMessage(
@@ -397,16 +412,40 @@ export class OptionalToolInstaller {
       throw new Error('Packaged optional tools installer resolves outside the extension package.');
     }
 
-    const fileStatus = await fs.stat(scriptPath);
-    if (!fileStatus.isFile()) {
-      throw new Error('Packaged optional tools installer is not a regular file.');
+    const openFlags = constants.O_RDONLY | (platform === 'win32' ? 0 : constants.O_NOFOLLOW);
+    let installerBytes: Buffer;
+    let installerHandle: fs.FileHandle;
+    try {
+      installerHandle = await fs.open(declaredScriptPath, openFlags);
+    } catch {
+      throw new Error('Packaged optional tools installer could not be opened safely.');
+    }
+    try {
+      const fileStatus = await installerHandle.stat();
+      if (!fileStatus.isFile()) {
+        throw new Error('Packaged optional tools installer is not a regular file.');
+      }
+      installerBytes = await installerHandle.readFile();
+    } finally {
+      await installerHandle.close();
     }
 
-    const digest = createHash('sha256')
-      .update(await fs.readFile(scriptPath))
-      .digest('hex');
+    const digest = createHash('sha256').update(installerBytes).digest('hex');
     if (digest !== definition.sha256) {
       throw new Error('Packaged optional tools installer failed SHA-256 verification.');
+    }
+
+    const cleanupRoot = await fs.mkdtemp(path.join(tmpdir(), 'gofer-optional-tools-'));
+    const snapshotName = platform === 'win32' ? 'installer.ps1' : 'installer.sh';
+    const verifiedScriptPath = path.join(cleanupRoot, snapshotName);
+    try {
+      await fs.writeFile(verifiedScriptPath, installerBytes, {
+        flag: 'wx',
+        mode: platform === 'win32' ? 0o600 : 0o700,
+      });
+    } catch (error) {
+      await fs.rm(cleanupRoot, { recursive: true, force: true });
+      throw error;
     }
 
     if (platform === 'win32') {
@@ -420,7 +459,8 @@ export class OptionalToolInstaller {
           'v1.0',
           'powershell.exe'
         ),
-        scriptPath,
+        scriptPath: verifiedScriptPath,
+        cleanupRoot,
         platform: 'windows',
         argumentPrefix: [
           '-NoLogo',
@@ -435,7 +475,8 @@ export class OptionalToolInstaller {
 
     return {
       executable: '/bin/bash',
-      scriptPath,
+      scriptPath: verifiedScriptPath,
+      cleanupRoot,
       argumentPrefix: [],
       platform: 'posix',
     };
