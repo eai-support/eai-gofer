@@ -124,6 +124,14 @@ describe('optional AI tool installers', () => {
       /function ConvertTo-SafeDiagnostic \{[\s\S]*?\n\}\n\nfunction Invoke-Step/
     )?.[0];
     expect(diagnosticFunction).toBeDefined();
+    expect(diagnosticFunction).toContain('if ([string]::IsNullOrEmpty($Message)) {');
+    expect(diagnosticFunction).toContain("return 'No diagnostic details were provided.'");
+
+    if (
+      !(await probeCommandAvailability('pwsh', ['-NoLogo', '-NoProfile', '-Command', 'exit 0']))
+    ) {
+      return;
+    }
 
     const fixture = await mkdtemp(resolve(tmpdir(), 'gofer-safe-diagnostic-'));
     temporaryDirectories.push(fixture);
