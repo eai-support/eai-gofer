@@ -136,7 +136,9 @@ describe('optional AI tool installers', () => {
           '--tools',
           'az',
         ],
-        { env: { PATH: `${bin}:/usr/bin:/bin`, APT_MARKER: marker } }
+        // Keep the probe hermetic: hosted Linux runners commonly have `az`
+        // preinstalled, which would otherwise bypass the apt branch entirely.
+        { env: { PATH: bin, APT_MARKER: marker } }
       );
     } catch (error) {
       failure = error as Error & { code?: number; stdout?: string; stderr?: string };
