@@ -602,6 +602,7 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
 
     install_release_dependencies
     run_release_validation_gate "$CURRENT_VERSION"
+    run_release_check "Merged Gofer release artifact" npm run test:packaged-protocol -- --vsix "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix"
 
     if remote_tag_exists "$TAG_NAME"; then
         print_error "Remote tag $TAG_NAME already exists"

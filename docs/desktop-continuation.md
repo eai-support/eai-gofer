@@ -95,6 +95,8 @@ on Windows, macOS and Linux. Do not substitute a CLI smoke test for this set.
 
 `release.sh` repeats the full unit and integration suite, real-process checks,
 and isolated VS Code tests before packaging. It then tests the built VSIX.
+The publish phase repeats validation and checks the committed versioned VSIX
+before creating a release tag.
 Release and Pages publication also require the exact-commit desktop CI checks.
 Each failed required check stops the process; do not skip it to publish.
 

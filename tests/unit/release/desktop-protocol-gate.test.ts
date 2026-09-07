@@ -77,6 +77,15 @@ describe('desktop protocol release gate', () => {
     expect(workflow).toContain('node scripts/test-mcp-protocol.mjs --runtime-root');
   });
 
+  it('rechecks the committed versioned VSIX before the publish phase creates a tag', () => {
+    const release = read('release.sh');
+    const phase = release.slice(release.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then'));
+    const check = 'run_release_check "Merged Gofer release artifact" npm run test:packaged-protocol -- --vsix "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix"';
+    expect(phase).toContain(check);
+    expect(phase.indexOf('run_release_validation_gate "$CURRENT_VERSION"')).toBeLessThan(phase.indexOf(check));
+    expect(phase.indexOf(check)).toBeLessThan(phase.indexOf('git tag "$TAG_NAME"'));
+  });
+
   it.each(['release', 'pages'])('requires exact-SHA desktop checks before %s publication', (name) => {
     const jobs = workflow(name).jobs;
     const gate = jobs['desktop-contracts'];
