@@ -107,6 +107,10 @@ describe('optional AI tool installers', () => {
     );
     expect(powershell).toContain('EnvironmentVariables.Clear()');
     expect(powershell).toContain('Stop-InstallerProcess -Process $installerProcess');
+    expect(powershell).toContain(
+      'param([AllowNull()][AllowEmptyString()][string]$Message)'
+    );
+    expect(powershell).toContain('$safeMessage = [string]$Message');
     expect(powershell).not.toContain('Invoke-Expression');
     for (const source of [bash, powershell]) {
       expect(source).not.toContain('@google/gemini-cli');

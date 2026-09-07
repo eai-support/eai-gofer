@@ -66,7 +66,7 @@ const PACKAGED_INSTALLERS: Readonly<
   },
   windows: {
     relativePath: ['resources', 'powershell-scripts', 'install-optional-tools.ps1'],
-    sha256: '530c21f8beafcebce88e903a734a4ee7cab8c263a31e2a98a8d5084b8d1abb3f',
+    sha256: '30d42924a12144d02a9b1e93fa49ebdb51166751bf83090a3340701385badc0b',
   },
 };
 

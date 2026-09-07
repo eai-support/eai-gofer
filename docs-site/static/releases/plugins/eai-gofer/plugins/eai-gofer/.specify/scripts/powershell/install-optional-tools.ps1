@@ -8,7 +8,7 @@ $HasFailure = $false
 $LastStepSucceeded = $true
 
 function Write-Info {
-  param([string]$Message)
+  param([AllowNull()][AllowEmptyString()][string]$Message)
   Write-Host "[gofer] $Message"
 }
 
@@ -20,7 +20,7 @@ function Write-Warn {
 function ConvertTo-SafeDiagnostic {
   param([string]$Message)
 
-  $safeMessage = $Message
+  $safeMessage = [string]$Message
   foreach ($localRoot in @(
     $WorkspacePath,
     $HOME,
