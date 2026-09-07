@@ -75,6 +75,26 @@ vi.mock('vscode', () => {
     }
   }
 
+  class MockProcessExecution {
+    constructor(
+      public readonly process: string,
+      public readonly args: string[] = [],
+      public readonly options?: { cwd?: string; env?: Record<string, string> }
+    ) {}
+  }
+
+  class MockTask {
+    public presentationOptions: Record<string, unknown> = {};
+
+    constructor(
+      public readonly definition: Record<string, unknown>,
+      public readonly scope: number,
+      public readonly name: string,
+      public readonly source: string,
+      public readonly execution: MockProcessExecution
+    ) {}
+  }
+
   return {
     window: {
       showInformationMessage: vi.fn(),
@@ -89,6 +109,7 @@ vi.mock('vscode', () => {
       })),
     },
     workspace: {
+      isTrusted: true,
       getConfiguration: vi.fn(() => ({
         get: vi.fn(),
         update: vi.fn(),
@@ -107,6 +128,10 @@ vi.mock('vscode', () => {
     extensions: {
       getExtension: vi.fn(),
     },
+    tasks: {
+      executeTask: vi.fn(async (task: MockTask) => ({ task })),
+      onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
+    },
     commands: {
       registerCommand: vi.fn(),
       executeCommand: vi.fn(),
@@ -123,6 +148,17 @@ vi.mock('vscode', () => {
         scheme: 'file',
         path,
       }),
+    },
+    ProcessExecution: MockProcessExecution,
+    Task: MockTask,
+    TaskScope: {
+      Workspace: 1,
+    },
+    TaskRevealKind: {
+      Always: 1,
+    },
+    TaskPanelKind: {
+      Dedicated: 2,
     },
     RelativePattern: class {
       constructor(
@@ -160,6 +196,7 @@ vi.mock('vscode', () => {
     })),
   },
   workspace: {
+    isTrusted: true,
     getConfiguration: vi.fn(() => ({
       get: vi.fn(),
       update: vi.fn(),
@@ -170,6 +207,10 @@ vi.mock('vscode', () => {
   commands: {
     registerCommand: vi.fn(),
     executeCommand: vi.fn(),
+  },
+  tasks: {
+    executeTask: vi.fn(),
+    onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
   },
   TreeItem: class {},
   TreeItemCollapsibleState: {
