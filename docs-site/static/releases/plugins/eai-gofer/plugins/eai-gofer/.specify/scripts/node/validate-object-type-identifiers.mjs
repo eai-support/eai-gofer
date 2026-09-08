@@ -199,11 +199,10 @@ export async function loadIdentifierValidationContract(options = {}) {
   const schemaPath = options.schemaPath ?? DEFAULT_SCHEMA_PATH;
   const contractPath =
     options.contractPath ?? (await firstReadableContract(DEFAULT_CONTRACT_CANDIDATES));
-  const [{ value: config }, { value: schema }, { value: routing }] = await Promise.all([
-    readJson(configPath, 'config'),
-    readJson(schemaPath, 'schema'),
-    readJson(contractPath, 'contract'),
-  ]);
+  // Preserve error precedence when more than one required asset is invalid.
+  const { value: config } = await readJson(configPath, 'config');
+  const { value: schema } = await readJson(schemaPath, 'schema');
+  const { value: routing } = await readJson(contractPath, 'contract');
   assertContractAssets(config, schema, routing);
 
   return Object.freeze({

@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.5] - 2026-09-08
+
+Fix desktop pipeline continuation, restore standards-compliant MCP connections, preserve permission controls, and require full repository and packaged-extension tests before release.
+
 ## [3.12.4] - 2026-09-05
 
 Allow normal Visual Studio Marketplace indexing before release verification fails
