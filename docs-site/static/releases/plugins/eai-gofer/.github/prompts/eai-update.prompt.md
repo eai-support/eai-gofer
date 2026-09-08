@@ -2,12 +2,6 @@
 name: eai-update
 description: Install or update EAI Gofer for this AI coding app.
 agent: agent
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - WebSearch
 argument-hint: goal-or-feature-description
 gofer:
   workflowProfile: standard
