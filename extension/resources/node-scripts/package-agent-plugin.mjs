@@ -12,6 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
+import { buildContinuationContractSection } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -521,6 +522,8 @@ Version: ${version}
 
 Apply this skill to every request when the plugin is enabled. The user does not need to type a Gofer command. Keep the user's request unchanged and route it through Gofer internally. Use the separate update skill only when the user explicitly asks to install or update Gofer.
 
+${buildContinuationContractSection()}
+
 ## Clean Surface Contract
 
 - User-facing command and skill pickers should expose only \`eai\`.
@@ -869,13 +872,15 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 | Surface | Best entry point | Repo-owned files used |
 | ------- | ---------------- | --------------------- |
-| Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
-| GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
+| Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\` |
+| GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\` |
 | Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
-| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\` |
 | Grok Build | Ask Grok to use the EAI skill | \`.grok/skills/\`, \`.specify/scripts/\` |
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
+
+This lightweight plugin does not include a compiled MCP server. The VS Code extension supplies and configures that runtime separately. Repository skills do not require that optional connection.
 
 ## Update Cleanup
 
@@ -1258,7 +1263,6 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     '.claude/skills',
     '.claude-plugin/hooks',
     '.gemini',
-    '.vscode/mcp.json',
     'AGENTS.md',
     'LICENSE',
     'NOTICE',

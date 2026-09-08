@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { executableTypeScriptDeriver } from '../../.specify/scripts/node/validate-object-type-routing-workspace.mjs';
@@ -28,6 +29,94 @@ function runTool(...arguments_: string[]) {
 }
 
 describe('Object Type routing workspace reducer', () => {
+  it.each([
+    {
+      script: tool,
+      invocation: 'validator.reduceObjectTypeRoutingWorkspace(root)',
+      firstPath: 'ops/tech-docs/static/contracts/object-type-routing-v1.json',
+      code: 'AUTHORITY_UNREADABLE',
+      message:
+        'ops/tech-docs/static/contracts/object-type-routing-v1.json is not readable (ENOENT).',
+    },
+    {
+      script: path.resolve('.specify/scripts/node/validate-object-type-identifiers.mjs'),
+      invocation:
+        "validator.loadIdentifierValidationContract({ configPath: root + '/config.json', schemaPath: root + '/schema.json', contractPath: root + '/contract.json' })",
+      firstPath: 'config.json',
+      code: 'CONFIG_UNREADABLE',
+      message: 'config is not readable.',
+    },
+  ])('reports $code in declared order even when its read is delayed', async (scenario) => {
+    const root = await mkdtemp(path.join(tmpdir(), 'object-type-routing-order-'));
+    temporaryRoots.push(root);
+    // Force later missing reads to reject first, without relying on filesystem timing.
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+          import { promises as fs } from 'node:fs';
+          import { syncBuiltinESMExports } from 'node:module';
+          const root = ${JSON.stringify(root)};
+          fs.readFile = async (file) => {
+            if (file === ${JSON.stringify(path.join(root, scenario.firstPath))}) {
+              await new Promise((resolve) => setImmediate(resolve));
+            }
+            throw Object.assign(new Error('missing fixture'), { code: 'ENOENT' });
+          };
+          syncBuiltinESMExports();
+          const validator = await import(${JSON.stringify(pathToFileURL(scenario.script).href)});
+          try {
+            await ${scenario.invocation};
+          } catch (error) {
+            process.stderr.write(error.code + ': ' + error.message + '\\n');
+            process.exitCode = 4;
+          }
+        `,
+      ],
+      { encoding: 'utf8' }
+    );
+
+    expect(result.status).toBe(4);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe(`${scenario.code}: ${scenario.message}\n`);
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it('rejects every missing authority in order without creating requested output', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'object-type-routing-missing-'));
+    temporaryRoots.push(root);
+    const authorityPaths = [
+      'ops/tech-docs/static/contracts/object-type-routing-v1.json',
+      'ops/tech-docs/static/schemas/object-type-manifest-v1.schema.json',
+      'ops/tech-docs/static/schemas/resource-action-v1.schema.json',
+      'ops/gofer/.specify/schemas/object-type-identifier-audit-v1.schema.json',
+      'ops/gofer/.specify/config/object-type-routing.json',
+    ];
+    for (const relativePath of authorityPaths) {
+      const before = await readdir(root, { recursive: true });
+      const result = runTool(
+        '--workspace',
+        root,
+        '--output',
+        path.join(root, 'output/report.json'),
+        '--json'
+      );
+
+      expect(result.status).toBe(4);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe(
+        `AUTHORITY_UNREADABLE: ${relativePath} is not readable (ENOENT).\n`
+      );
+      expect(await readdir(root, { recursive: true })).toEqual(before);
+
+      const file = path.join(root, relativePath);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, '{}\n');
+    }
+  });
+
   it('executes TypeScript adapters with their established mapping and ASCII trim helpers', () => {
     const source = `
       const ESTABLISHED_NAME_SLUGS = new Map([['GitHubConnection', 'github-connection']]);

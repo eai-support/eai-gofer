@@ -5,7 +5,16 @@
  * via VSCode's native MCP support (1.102+)
  */
 
-import { Connection } from 'vscode-languageserver';
+import type { Dirent } from 'node:fs';
+import type { WorkspaceAccess } from './workspaceAccess.js';
+import { runOwnedCommand } from './ownedCommand.js';
+
+export interface ToolEventSink {
+  sendNotification(
+    method: 'gofer/securityViolation' | 'gofer/taskProgress',
+    payload: unknown
+  ): void | Promise<void>;
+}
 import { GoferLoader, Spec, Task } from '../utils/goferLoader';
 import { ValidationService } from '../utils/ValidationService';
 import { TestHarnessGenerator } from '../utils/TestHarnessGenerator';
@@ -357,6 +366,11 @@ interface StageCommandMetadata {
 }
 
 export class MCPToolHandler {
+  private requestSignal?: AbortSignal;
+
+  setRequestSignal(signal: AbortSignal | undefined): void {
+    this.requestSignal = signal;
+  }
   private goferLoader: GoferLoader;
   private validationService: ValidationService;
   private testHarnessGenerator: TestHarnessGenerator;
@@ -364,12 +378,30 @@ export class MCPToolHandler {
 
   constructor(
     private workspacePath: string,
-    private connection: Connection
+    private connection: ToolEventSink,
+    private readonly access?: WorkspaceAccess,
+    private readonly trustedWorkspace = false
   ) {
-    this.goferLoader = new GoferLoader(workspacePath);
+    this.goferLoader = new GoferLoader(workspacePath, access);
     this.validationService = new ValidationService(workspacePath);
     this.testHarnessGenerator = new TestHarnessGenerator(workspacePath);
     this.researchChunker = new ResearchChunker(workspacePath);
+  }
+
+  async shutdown(): Promise<void> {
+    await this.goferLoader.shutdown();
+  }
+
+  private async readText(target: string, encoding: 'utf-8'): Promise<string> {
+    return this.access && !this.trustedWorkspace
+      ? (await this.access.readText(target)).content
+      : fs.readFile(target, encoding);
+  }
+
+  private async readDirectory(target: string): Promise<Dirent[]> {
+    return this.access
+      ? this.access.readDirectory(target)
+      : fs.readdir(target, { withFileTypes: true });
   }
 
   /**
@@ -485,8 +517,12 @@ export class MCPToolHandler {
         'node-scripts',
         scriptName
       ),
-      path.join(process.cwd(), 'extension', 'resources', 'node-scripts', scriptName),
-      path.join(process.cwd(), '.specify', 'scripts', 'node', scriptName),
+      ...(!this.access
+        ? [
+            path.join(process.cwd(), 'extension', 'resources', 'node-scripts', scriptName),
+            path.join(process.cwd(), '.specify', 'scripts', 'node', scriptName),
+          ]
+        : []),
     ];
 
     for (const candidate of candidates) {
@@ -510,13 +546,21 @@ export class MCPToolHandler {
     args: string[],
     timeout = 60000
   ): Promise<ScriptExecutionResult> {
-    const cwd = (await this.pathExists(this.workspacePath)) ? this.workspacePath : process.cwd();
+    if (this.access) await this.access.assertRoot();
+    const cwd = this.access
+      ? this.workspacePath
+      : (await this.pathExists(this.workspacePath))
+        ? this.workspacePath
+        : process.cwd();
     try {
-      const { stdout, stderr } = await execFileAsync(command, args, {
-        cwd,
-        timeout,
-        maxBuffer: 1024 * 1024,
-      });
+      const { stdout, stderr } = this.access
+        ? await runOwnedCommand(command, args, cwd, timeout, this.requestSignal)
+        : await execFileAsync(command, args, {
+            signal: this.requestSignal,
+            cwd,
+            timeout,
+            maxBuffer: 1024 * 1024,
+          });
       return { success: true, stdout, stderr };
     } catch (error) {
       const execError = error as NodeJS.ErrnoException & {
@@ -548,8 +592,14 @@ export class MCPToolHandler {
 
   private async readJsonIfExists(filePath: string): Promise<unknown | null> {
     try {
-      return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+      return JSON.parse(await this.readText(filePath, 'utf-8'));
     } catch (error) {
+      if (
+        this.access &&
+        !this.trustedWorkspace &&
+        (error as NodeJS.ErrnoException).code !== 'ENOENT'
+      )
+        throw error;
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
@@ -558,6 +608,10 @@ export class MCPToolHandler {
   }
 
   private async resolveSourceDirectory(relativePath: string): Promise<string | null> {
+    if (this.access) {
+      const target = path.join(this.workspacePath, relativePath);
+      return (await this.pathExists(target)) ? target : null;
+    }
     const candidates = [
       path.join(this.workspacePath, relativePath),
       path.join(process.cwd(), relativePath),
@@ -600,10 +654,12 @@ export class MCPToolHandler {
       return commandMap;
     }
 
-    const entries = (await fs.readdir(commandsDir)).filter((entry) => entry.endsWith('.md'));
+    const entries = (await this.readDirectory(commandsDir))
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .map((entry) => entry.name);
     for (const entry of entries) {
       const stem = path.basename(entry, '.md');
-      const content = await fs.readFile(path.join(commandsDir, entry), 'utf-8');
+      const content = await this.readText(path.join(commandsDir, entry), 'utf-8');
       const frontmatter = content.match(/^---\n([\s\S]*?)\n---/);
       const block = frontmatter?.[1] || '';
       const name = block.match(/^name:\s*(.+)$/m)?.[1]?.trim() || stem;
@@ -711,7 +767,7 @@ export class MCPToolHandler {
     const artifacts: Record<string, string[]> = {};
 
     try {
-      const entries = await fs.readdir(specsDir, { withFileTypes: true });
+      const entries = await this.readDirectory(specsDir);
       for (const entry of entries) {
         if (!entry.isDirectory() || entry.name.startsWith('_')) {
           continue;
@@ -723,7 +779,7 @@ export class MCPToolHandler {
           states.push(state);
         }
 
-        const featureFiles = (await fs.readdir(featureDir, { withFileTypes: true }))
+        const featureFiles = (await this.readDirectory(featureDir))
           .filter((file) => file.isFile())
           .map((file) => file.name)
           .filter((file) => file.endsWith('.md') || file.endsWith('.json'))
@@ -835,7 +891,7 @@ export class MCPToolHandler {
     );
     let fallback = '';
     try {
-      const catalog = await fs.readFile(catalogPath, 'utf-8');
+      const catalog = await this.readText(catalogPath, 'utf-8');
       const lines = catalog.split('\n');
       const needle = codeOrReason.toLowerCase();
       const matches = lines
@@ -866,7 +922,14 @@ export class MCPToolHandler {
     }
 
     try {
-      const content = await fs.readFile(resolved.path, 'utf-8');
+      if (this.access) {
+        return {
+          success: true,
+          path: relativePath,
+          ...(await this.access.readText(resolved.path, maxBytes, true)),
+        };
+      }
+      const content = await this.readText(resolved.path, 'utf-8');
       const limit = Math.max(1000, Math.min(Number(maxBytes) || 20000, 100000));
       return {
         success: true,
@@ -995,7 +1058,7 @@ export class MCPToolHandler {
         'memory',
         'enriched-context.json'
       );
-      const content = await fs.readFile(bridgePath, 'utf-8');
+      const content = await this.readText(bridgePath, 'utf-8');
       const bridge: EnrichedContextBridge = JSON.parse(content);
 
       // Freshness check: ignore data older than 60 seconds
@@ -1069,7 +1132,7 @@ export class MCPToolHandler {
       const constitutionPath = `${this.workspacePath}/.specify/memory/constitution.md`;
       let constitution = '';
       try {
-        constitution = await fs.readFile(constitutionPath, 'utf-8');
+        constitution = await this.readText(constitutionPath, 'utf-8');
       } catch {
         // Constitution is optional
       }
@@ -1316,7 +1379,7 @@ export class MCPToolHandler {
       );
 
       try {
-        const cacheContent = await fs.readFile(cachePath, 'utf-8');
+        const cacheContent = await this.readText(cachePath, 'utf-8');
         const cache = JSON.parse(cacheContent) as {
           version: number;
           observations: Array<{
@@ -1382,7 +1445,7 @@ export class MCPToolHandler {
       // Try to read real state from extension (Spec 012)
       const stateFile = path.join(this.workspacePath, '.specify/memory/context-health-state.json');
       try {
-        const stateContent = await fs.readFile(stateFile, 'utf-8');
+        const stateContent = await this.readText(stateFile, 'utf-8');
         const state = JSON.parse(stateContent);
 
         // Check if state is fresh (within last 30 seconds)
@@ -1768,7 +1831,7 @@ ${notes || 'No additional notes.'}
         'observation-cache',
         'index.json'
       );
-      const cacheContent = await fs.readFile(cachePath, 'utf-8');
+      const cacheContent = await this.readText(cachePath, 'utf-8');
       const cache = JSON.parse(cacheContent) as { observations: Array<ObservationCacheEntry> };
 
       const observation = cache.observations.find((o) => o.id === observationId);
@@ -1835,7 +1898,7 @@ ${notes || 'No additional notes.'}
         'observation-cache',
         'index.json'
       );
-      const cacheContent = await fs.readFile(cachePath, 'utf-8');
+      const cacheContent = await this.readText(cachePath, 'utf-8');
       const cache = JSON.parse(cacheContent) as {
         version: number;
         observations: Array<ObservationCacheEntry>;
@@ -1907,7 +1970,7 @@ ${notes || 'No additional notes.'}
         'observation-cache',
         'index.json'
       );
-      const cacheContent = await fs.readFile(cachePath, 'utf-8');
+      const cacheContent = await this.readText(cachePath, 'utf-8');
       const cache = JSON.parse(cacheContent) as { observations: Array<ObservationCacheEntry> };
 
       let regex: RegExp;
@@ -1990,7 +2053,7 @@ ${notes || 'No additional notes.'}
         'context-health-state.json'
       );
       try {
-        const content = await fs.readFile(statePath, 'utf-8');
+        const content = await this.readText(statePath, 'utf-8');
         const state = JSON.parse(content);
         const sectionContent = state.sections?.[section];
         if (sectionContent) {
@@ -2038,7 +2101,7 @@ ${notes || 'No additional notes.'}
         'memory',
         'context-health-state.json'
       );
-      const content = await fs.readFile(statePath, 'utf-8');
+      const content = await this.readText(statePath, 'utf-8');
       const state = JSON.parse(content);
 
       let regex: RegExp;
@@ -2131,7 +2194,7 @@ ${notes || 'No additional notes.'}
           'index.json'
         );
         try {
-          const cacheContent = await fs.readFile(cachePath, 'utf-8');
+          const cacheContent = await this.readText(cachePath, 'utf-8');
           const cache = JSON.parse(cacheContent) as {
             version: number;
             observations: Array<ObservationCacheEntry>;
@@ -2389,7 +2452,7 @@ ${notes || 'No additional notes.'}
               );
               let foldState: Record<string, string> = {};
               try {
-                const content = await fs.readFile(foldStatePath, 'utf-8');
+                const content = await this.readText(foldStatePath, 'utf-8');
                 foldState = JSON.parse(content);
               } catch {
                 /* start fresh */
@@ -2511,11 +2574,14 @@ ${notes || 'No additional notes.'}
       const command = `${cmd} ${args.join(' ')}`;
 
       try {
-        const { stdout, stderr } = await execFileAsync(cmd, args, {
-          cwd: this.workspacePath,
-          timeout: 120000,
-          maxBuffer: 1024 * 1024,
-        });
+        const { stdout, stderr } = this.access
+          ? await runOwnedCommand(cmd, args, this.workspacePath, 120000, this.requestSignal)
+          : await execFileAsync(cmd, args, {
+              signal: this.requestSignal,
+              cwd: this.workspacePath,
+              timeout: 120000,
+              maxBuffer: 1024 * 1024,
+            });
         const output = (stdout + '\n' + stderr).trim();
 
         // Parse results
@@ -2594,7 +2660,7 @@ ${notes || 'No additional notes.'}
       );
       let foldState: Record<string, string> = {};
       try {
-        const content = await fs.readFile(foldStatePath, 'utf-8');
+        const content = await this.readText(foldStatePath, 'utf-8');
         foldState = JSON.parse(content);
       } catch {
         /* start fresh */
@@ -2661,7 +2727,7 @@ ${notes || 'No additional notes.'}
         'memory',
         'context-operation-history.json'
       );
-      const content = await fs.readFile(histPath, 'utf-8');
+      const content = await this.readText(histPath, 'utf-8');
       this.contextOperationHistory = JSON.parse(content);
       return this.contextOperationHistory;
     } catch {

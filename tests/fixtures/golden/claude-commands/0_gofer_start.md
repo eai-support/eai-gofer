@@ -4,6 +4,21 @@ description: Start Gofer, confirm EAI readiness, and orchestrate the unified pip
 
 # Gofer Start
 
+## Continuation And Stop Contract
+<!-- gofer:continuation:start -->
+
+1. Preserve the requested scope and mode, including read-only, plan-only, research-only and MVP work. Keep the full applicable pipeline, stage functions, artifacts, reviews and validation; do not expand an MVP into an unapproved release.
+2. After a stage's required evidence is complete, read and follow the next internal file in .specify/commands/ in the same conversation. Do not require a numbered command or a host-specific skill dispatcher. Optional helpers remain optional; maintenance and control commands do not start delivery work.
+3. After explicit business-specification approval, continue routine planning, tasks, implementation and validation within that approved scope. Record the approval source and scope; missing or ambiguous approval is not approval. A proposal or generated status is not user consent.
+4. Preserve any explicit plan/task approval requirement unless it is already satisfied by recorded user approval covering that work. Rejected, revoked, changed or unclear approval requires a pause. Never invent approvedBy, approvedAt or a new approval event when reusing an existing approval.
+5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. Business approval does not authorize publishing, spending, external changes or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
+6. A tool proposal is not execution. If host consent is required, wait for it. After the tool result or approved proposal returns, inspect the result and resume the next authorized action within approved scope; do not end with only a plan or a proposed tool call. A denied tool or unavailable capability must not be bypassed through another host or CLI.
+7. Use the current agent's available native tools. Optional Gofer/MCP tools are conveniences, not prerequisites. If the current agent lacks a required capability, report that limitation and the safe next action; do not pretend a handoff button transfers control automatically.
+8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
+9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
+10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
+<!-- gofer:continuation:end -->
+
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
 
@@ -1352,7 +1367,8 @@ If no checkpoint but unchecked tasks exist:
 
 1. Find features with `- [ ]` in tasks.md
 2. Present options to user
-3. Resume with `/5_gofer_implement`
+3. Read and follow `.specify/commands/5_gofer_implement.md` after rechecking
+   the selected feature's scope, approval basis and unfinished work.
 
 Output:
 
@@ -1381,24 +1397,26 @@ REASON: User wants to establish project principles
 After determining the route:
 
 1. Output the routing decision clearly
-2. Invoke the target command using the Skill tool
-3. Let that command take over the workflow
+2. Read the selected internal contract from `.specify/commands/{stage}.md`.
+3. Follow that file in the same conversation, preserving scope, approvals and
+   the Continuation And Stop Contract. Do not ask for a numbered command.
 
 ### Auto-Chaining Behavior
 
-The unified Gofer pipeline automatically chains commands:
+The unified Gofer pipeline continues through internal files after required
+evidence and approval checks pass:
 
 ```text
-/1_gofer_research completes  → auto-invokes /2_gofer_specify unless user pauses
-/2_gofer_specify completes  → auto-invokes /3_gofer_plan
-/3_gofer_plan completes     → auto-invokes /4_gofer_tasks
-/4_gofer_tasks completes    → auto-invokes /5_gofer_implement
-/5_gofer_implement completes→ auto-invokes /6_gofer_validate
-/6_gofer_validate completes → pipeline complete
+1_gofer_research.md -> 2_gofer_specify.md unless research-only or blocked
+2_gofer_specify.md -> 3_gofer_plan.md after business-scope approval
+3_gofer_plan.md -> 4_gofer_tasks.md after required plan/user gates
+4_gofer_tasks.md -> 5_gofer_implement.md when task authorization is covered
+5_gofer_implement.md -> 6_gofer_validate.md after implementation evidence
+6_gofer_validate.md -> completion only when required scope evidence passes
 ```
 
-**The user only needs to run `/0_gofer_start` once** - the orchestrator
-handles everything else automatically.
+The public `eai` entrypoint handles internal continuation. The user does not
+need to invoke numbered stages. Preserve the Continuation And Stop Contract.
 
 ---
 
@@ -1406,14 +1424,14 @@ handles everything else automatically.
 
 If the user needs to pause:
 
-1. Invoke `/7_gofer_save` to create checkpoint
+1. Follow `.specify/commands/7_gofer_save.md` to create a checkpoint
 2. Document current state
 3. User can start a fresh session, read the checkpoint, and continue from the
    named stage
 
 If context window is filling up:
 
-1. Save progress with `/7_gofer_save`
+1. Save progress using `.specify/commands/7_gofer_save.md`
 2. Recommend user start new conversation
 3. User opens the checkpoint and continues from the appropriate stage
 

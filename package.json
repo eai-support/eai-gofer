@@ -33,6 +33,8 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:mcp-protocol": "npm --prefix language-server run build && node scripts/test-mcp-protocol.mjs",
+    "test:packaged-protocol": "node scripts/test-packaged-protocol.mjs",
     "test:e2e": "npm --prefix extension test",
     "test:e2e:playwright": "playwright test",
     "test:performance": "vitest run tests/performance --reporter=verbose",
@@ -80,6 +82,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@playwright/test": "1.58.2",
     "@types/chokidar": "1.7.5",
     "@types/graphlib": "2.1.12",
