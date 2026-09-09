@@ -363,6 +363,7 @@ npm run gofer:package-plugin -- --sync-repo
 - Security guidance: [SECURITY.md](./SECURITY.md)
 - Contribution guidance: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Support policy: [SUPPORT.md](./SUPPORT.md)
+- Desktop pauses and continuation: [Troubleshooting guide](./docs/desktop-continuation.md)
 
 Roadmap-fit issues may also receive an automation-generated draft intake PR so a
 human reviewer can scope the work before implementation starts.

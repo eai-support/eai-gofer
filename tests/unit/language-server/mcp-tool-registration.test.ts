@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MCPToolHandler } from '../../../language-server/src/mcp/toolHandler.js';
 import { GoferLoader } from '../../../language-server/src/utils/goferLoader.js';
+import { TOOL_REGISTRY } from '../../../language-server/src/mcp/toolRegistry.js';
 
 vi.mock('../../../language-server/src/utils/goferLoader.js');
 vi.mock('vscode-languageserver');
@@ -53,6 +54,7 @@ describe('MCP Tool Registration (T010)', () => {
    * the expected tool names.
    */
   it('should define all MCP tools without duplicates', () => {
+    expect(TOOL_REGISTRY.map((tool) => tool.name)).toEqual(ALL_MCP_TOOL_NAMES);
     // Verify the complete list of expected tools
     expect(ALL_MCP_TOOL_NAMES).toHaveLength(29);
 

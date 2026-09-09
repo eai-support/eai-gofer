@@ -240,6 +240,9 @@ get_vscode_marketplace_version() {
 verify_vscode_marketplace_version() {
     local expected_version="$1"
     local deployed_version=""
+    # Marketplace indexing is asynchronous. Allow twenty minutes by default so
+    # a confirmed publish is not reported as a failed release too early.
+    local max_attempts="${VSCODE_MARKETPLACE_PROPAGATION_ATTEMPTS:-60}"
 
     if is_truthy "${SKIP_VSCODE_MARKETPLACE_PUBLISH:-}"; then
         print_warning "Skipping VS Code Marketplace version verification because SKIP_VSCODE_MARKETPLACE_PUBLISH is set."
@@ -247,7 +250,7 @@ verify_vscode_marketplace_version() {
     fi
 
     print_info "Verifying Visual Studio Marketplace EnterpriseAI.gofer is at v$expected_version..."
-    for i in {1..30}; do
+    for ((i = 1; i <= max_attempts; i++)); do
         deployed_version=$(get_vscode_marketplace_version || echo "")
 
         if [ "$deployed_version" = "$expected_version" ]; then
@@ -255,7 +258,7 @@ verify_vscode_marketplace_version() {
             return 0
         fi
 
-        print_info "Waiting for Marketplace propagation... (attempt $i/30, deployed: ${deployed_version:-MISSING}, expected: $expected_version)"
+        print_info "Waiting for Marketplace propagation... (attempt $i/$max_attempts, deployed: ${deployed_version:-MISSING}, expected: $expected_version)"
         sleep 20
     done
 
@@ -315,6 +318,25 @@ run_release_check() {
     fi
 }
 
+run_logged_release_check() {
+    local label="$1"
+    local log_path="$2"
+    shift 2
+    local pipeline_status
+
+    # Capture both statuses immediately, without changing global pipefail behavior.
+    if "$@" 2>&1 | tee "$log_path"; then
+        pipeline_status=("${PIPESTATUS[@]}")
+    else
+        pipeline_status=("${PIPESTATUS[@]}")
+    fi
+    if [ "${pipeline_status[0]}" -eq 0 ] && [ "${pipeline_status[1]}" -eq 0 ]; then
+        print_success "$label passed"
+    else
+        fail_release_validation "$label (command=${pipeline_status[0]}, log=${pipeline_status[1]})"
+    fi
+}
+
 install_release_dependencies() {
     print_info "Installing root dependencies..."
     if npm install 2>&1; then
@@ -353,6 +375,11 @@ ensure_language_server_release_runtime() {
     if [ ! -d "extension/language-server/node_modules/vscode-languageserver" ]; then
         print_error "The VS Code release runtime is missing language-server dependencies."
         fail_release_validation "Language Server release runtime check"
+    fi
+
+    if [ ! -f "extension/language-server/dist/mcpServer.js" ] || [ ! -d "extension/language-server/node_modules/@modelcontextprotocol/sdk" ]; then
+        print_error "The VS Code release runtime is missing the MCP server or its SDK."
+        fail_release_validation "MCP release runtime check"
     fi
 
     print_success "Language Server release runtime is present"
@@ -418,8 +445,10 @@ run_release_validation_gate() {
     run_release_check "Gofer typecheck" npm run typecheck
     run_release_check "Gofer production build" npm run build
     run_release_check "Gofer generated surface check" npm run gofer:generate:check
-    run_release_check "Gofer unit test suite" npm run test:unit
+    run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"
+    run_release_check "Gofer full Vitest suite" npm test
     run_release_check "Language Server production build" npm --prefix language-server run build
+    run_release_check "Gofer real MCP and LSP protocol tests" npm run test:mcp-protocol
     run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server
     ensure_language_server_release_runtime
     run_release_check "VS Code extension runtime test suite" npm --prefix extension test
@@ -573,6 +602,7 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
 
     install_release_dependencies
     run_release_validation_gate "$CURRENT_VERSION"
+    run_release_check "Merged Gofer release artifact" npm run test:packaged-protocol -- --vsix "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix"
 
     if remote_tag_exists "$TAG_NAME"; then
         print_error "Remote tag $TAG_NAME already exists"
@@ -804,6 +834,8 @@ else
     exit 1
 fi
 
+run_release_check "Packaged Gofer MCP and LSP protocol tests" npm run test:packaged-protocol -- --vsix "./eai-gofer-$NEW_VERSION.vsix"
+
 # Build the portable Claude/Codex/Copilot plugin bundle that will be mirrored
 # to the same public GitHub Pages release host as the VSIX.
 print_info "Packaging Claude/Codex/Copilot agent plugin..."
@@ -867,12 +899,7 @@ if [ -f "./test-commands.sh" ]; then
     # VSIX is already installed by test-vsix.sh above
 
     # Command tests are a hard release gate.
-    if ./test-commands.sh 2>&1 | tee /tmp/command-test.log; then
-        print_success "All extension commands validated successfully"
-    else
-        print_error "Some extension commands had issues (see /tmp/command-test.log)"
-        fail_release_validation "Extension command validation"
-    fi
+    run_logged_release_check "Extension command validation" /tmp/command-test.log ./test-commands.sh
 else
     print_error "test-commands.sh not found, cannot validate extension commands"
     fail_release_validation "Extension command validation"

@@ -27,8 +27,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  desktop-contracts:
+    uses: ./.github/workflows/desktop-contracts.yml
+    permissions:
+      contents: read
+    with:
+      source-sha: ${{ github.sha }}
+
   release:
     name: Build and Publish Release
+    needs: [desktop-contracts]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: release
@@ -37,6 +45,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Checkout EAI App Template
@@ -112,6 +121,9 @@ jobs:
         env:
           CI: true
 
+      - name: Test actual MCP and LSP processes
+        run: npm run test:mcp-protocol
+
       - name: Prepare VS Code Language Server Runtime
         run: npm --prefix extension run prepare-language-server
 
@@ -142,21 +154,65 @@ jobs:
         working-directory: ./extension
         run: npx @vscode/vsce package --out "eai-gofer-${{ steps.version.outputs.version }}.vsix"
 
+      - name: Test packaged MCP and LSP runtime
+        run: npm run test:packaged-protocol -- --vsix "extension/eai-gofer-${{ steps.version.outputs.version }}.vsix"
+
       - name: Package Agent Plugin
         run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
+
+      - name: Verify All-Surface Release Contract
+        run: npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"
 
       - name: Create Release Archive
         run: |
           mkdir -p release-assets/orchestrator release-assets/extension release-assets/language-server
 
           cp -R dist/. release-assets/orchestrator/
+          cp -R dist release-assets/orchestrator/dist
+          cp package.json package-lock.json release-assets/orchestrator/
+          (cd release-assets/orchestrator && npm ci --omit=dev --ignore-scripts)
           cp -R extension/dist/. release-assets/extension/
           cp -R language-server/dist/. release-assets/language-server/
+          cp -R language-server/dist language-server/node_modules release-assets/language-server/
+          cp language-server/package.json language-server/package-lock.json release-assets/language-server/
+          node scripts/test-mcp-protocol.mjs --runtime-root "$PWD/release-assets/language-server"
           cp "extension/eai-gofer-${{ steps.version.outputs.version }}.vsix" release-assets/
           cp "dist/eai-gofer-agent-plugin-${{ steps.version.outputs.version }}.zip" release-assets/
           cp README.md CHANGELOG.md LICENSE release-assets/
 
           tar -czf "gofer-${{ steps.version.outputs.tag_name }}.tar.gz" release-assets/
+
+      - name: Test extracted archive runtimes
+        env:
+          RELEASE_ARCHIVE: gofer-${{ steps.version.outputs.tag_name }}.tar.gz
+        run: |
+          archive_test="$(mktemp -d)"
+          trap 'rm -rf "$archive_test"' EXIT
+          tar -xzf "$RELEASE_ARCHIVE" -C "$archive_test"
+          export ARCHIVE_TEST_ROOT="$archive_test"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { mkdirSync, realpathSync } from 'node:fs';
+          import path from 'node:path';
+          const root = realpathSync(process.env.ARCHIVE_TEST_ROOT);
+          const workspace = path.join(root, 'empty-workspace');
+          const specs = path.join(workspace, '.specify', 'specs');
+          mkdirSync(specs, { recursive: true });
+          const env = { ...process.env, SPEC_DIR: specs, WORKSPACE_DIR: workspace, LOG_LEVEL: 'info' };
+          for (const key of Object.keys(env)) {
+            if (['NODE_PATH', 'NODE_OPTIONS'].includes(key.toUpperCase())) delete env[key];
+          }
+          const runtime = path.join(root, 'release-assets', 'orchestrator');
+          const output = execFileSync(process.execPath, [path.join(runtime, 'dist', 'index.js')], {
+            cwd: workspace, env, encoding: 'utf8', timeout: 15000,
+          });
+          assert.match(output, /"event":"orchestrator_stopped"/);
+          execFileSync(process.execPath, [path.resolve('scripts/test-mcp-protocol.mjs'),
+            '--runtime-root', path.join(root, 'release-assets', 'language-server')], {
+            cwd: workspace, env, stdio: 'inherit', timeout: 120000,
+          });
+          NODE
 
       - name: Generate Release Notes
         run: |

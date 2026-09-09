@@ -129,7 +129,9 @@ describe('Gofer workspace bootstrap scripts', () => {
       '.specify/README.md',
       'AGENTS.md',
       'CLAUDE.md',
+      'GEMINI.md',
       '.claude/settings.json',
+      '.github/copilot-instructions.md',
       '.gitignore',
     ]) {
       expect(
@@ -144,6 +146,10 @@ describe('Gofer workspace bootstrap scripts', () => {
     const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
     expect(agents).toContain('## User-Facing Response Gate');
     expect(agents).toContain('If any check fails, rewrite the reply before sending it');
+    expect(agents).toContain('gofer:always-on-eai:start');
+    expect(fs.readFileSync(path.join(workspaceRoot, 'GEMINI.md'), 'utf8')).toContain(
+      'gofer:always-on-eai:start'
+    );
 
     const post = runJson(CHECK_SCRIPT, [
       '--workspace',
@@ -172,11 +178,30 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(embeddedPost.exitCode).toBe(0);
     expect(embeddedPost.payload.status).toBe('healthy');
     expect(embeddedPost.payload.expectedVersion).toBe(embeddedPost.payload.actualVersion);
+
+    const geminiPost = runJson(CHECK_SCRIPT, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'gemini',
+      '--json',
+    ]);
+    expect(geminiPost.exitCode).toBe(0);
+    expect(geminiPost.payload.status).toBe('healthy');
   });
 
-  it('does not overwrite existing instruction files by default', () => {
+  it('preserves existing instruction files and adds only the managed always-on section', () => {
     const customAgents = '# custom agents\n';
-    const customClaude = '# custom claude\n';
+    const customClaude = `# custom claude
+
+## Always-On EAI Contract
+
+Legacy Gofer instructions.
+
+## Personal Rules
+
+Keep this instruction.
+`;
     const customModelPolicy = 'version: 1\nprofile: custom\n';
     fs.writeFileSync(path.join(workspaceRoot, 'AGENTS.md'), customAgents);
     fs.writeFileSync(path.join(workspaceRoot, 'CLAUDE.md'), customClaude);
@@ -189,8 +214,15 @@ describe('Gofer workspace bootstrap scripts', () => {
     const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
     expect(bootstrap.exitCode).toBe(0);
 
-    expect(fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8')).toBe(customAgents);
-    expect(fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8')).toBe(customClaude);
+    const agents = fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8');
+    const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
+    expect(agents).toContain(customAgents.trim());
+    expect(claude).toContain('# custom claude');
+    expect(agents).toContain('gofer:always-on-eai:start');
+    expect(claude).toContain('gofer:always-on-eai:start');
+    expect(claude.match(/## Always-On EAI Contract/g) || []).toHaveLength(1);
+    expect(claude).not.toContain('Legacy Gofer instructions.');
+    expect(claude).toContain('## Personal Rules');
     expect(
       fs.readFileSync(
         path.join(workspaceRoot, '.specify', 'memory', 'gofer-model-policy.yaml'),

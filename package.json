@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.12.1",
+  "version": "3.12.5",
   "description": "Spec-driven delivery workflow for VS Code and AI coding CLIs",
   "author": "EAI Tools",
   "license": "Apache-2.0",
@@ -33,6 +33,8 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:mcp-protocol": "npm --prefix language-server run build && node scripts/test-mcp-protocol.mjs",
+    "test:packaged-protocol": "node scripts/test-packaged-protocol.mjs",
     "test:e2e": "npm --prefix extension test",
     "test:e2e:playwright": "playwright test",
     "test:performance": "vitest run tests/performance --reporter=verbose",
@@ -63,6 +65,7 @@
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
     "gofer:eai-refresh-layout:check": "node scripts/verify-eai-refresh-layout.mjs",
+    "gofer:surface-release:check": "node scripts/verify-surface-release-contract.mjs",
     "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
     "prepack": "npm run build",
     "prepare": "husky"
@@ -79,6 +82,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@playwright/test": "1.58.2",
     "@types/chokidar": "1.7.5",
     "@types/graphlib": "2.1.12",

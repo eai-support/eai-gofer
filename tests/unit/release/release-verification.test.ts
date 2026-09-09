@@ -259,7 +259,10 @@ describe('Release Verification', () => {
         'run_release_check "Gofer generated surface check" npm run gofer:generate:check'
       );
       expect(RELEASE_SCRIPT).toContain(
-        'run_release_check "Gofer unit test suite" npm run test:unit'
+        'run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'run_release_check "Gofer full Vitest suite" npm test'
       );
       expect(RELEASE_SCRIPT).toContain(
         'run_release_check "Language Server production build" npm --prefix language-server run build'
@@ -293,6 +296,12 @@ describe('Release Verification', () => {
     it('should make extension command validation fatal for releases', () => {
       expect(RELEASE_SCRIPT).toContain('fail_release_validation "Extension command validation"');
       expect(RELEASE_SCRIPT).not.toContain('Continuing with release - manual testing recommended');
+    });
+
+    it('should allow enough time for Visual Studio Marketplace indexing', () => {
+      expect(RELEASE_SCRIPT).toContain('VSCODE_MARKETPLACE_PROPAGATION_ATTEMPTS:-60');
+      expect(RELEASE_SCRIPT).toContain('for ((i = 1; i <= max_attempts; i++)); do');
+      expect(RELEASE_SCRIPT).toContain('sleep 20');
     });
 
     it('should not push directly to origin/main from release.sh', () => {
@@ -392,6 +401,9 @@ describe('Release Verification', () => {
       expect(RELEASE_WORKFLOW).toContain('Checkout EAI App Template');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix eai-app-template ci');
       expect(RELEASE_WORKFLOW).toContain('npm run gofer:generate:check');
+      expect(RELEASE_WORKFLOW).toContain(
+        'npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"'
+      );
       expect(RELEASE_WORKFLOW).toContain('npm run typecheck');
       expect(RELEASE_WORKFLOW).toContain('npm run test:unit');
       expect(RELEASE_WORKFLOW).toContain('npm --prefix extension run prepare-language-server');

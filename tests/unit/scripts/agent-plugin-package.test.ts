@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildContinuationContractSection } from '../../../.specify/scripts/node/generate-commands.mjs';
 import {
   FULL_COMMAND_FILES,
   PUBLIC_ENTRYPOINT_COUNT,
@@ -102,6 +103,14 @@ describe('Gofer agent plugin package', () => {
         path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'),
         'utf8'
       );
+      expect(umbrellaSkill).toContain(buildContinuationContractSection());
+      // Codex plugins load root skills; repo-local Codex skills use .agents.
+      for (const surface of ['skills', '.claude/skills', '.github/skills']) {
+        const skill = fs.readFileSync(path.join(pluginRoot, surface, 'eai', 'SKILL.md'), 'utf8');
+        expect(skill).toContain(buildContinuationContractSection());
+      }
+      expect(fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8'))
+        .toContain(buildContinuationContractSection());
       expect(fs.existsSync(zipPath)).toBe(true);
       expect(fs.existsSync(pluginRoot)).toBe(true);
 
@@ -116,13 +125,13 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/plugin.json',
         'eai-gofer/.codex-plugin/plugin.json',
         'eai-gofer/.claude-plugin/plugin.json',
+        'eai-gofer/.claude-plugin/hooks/hooks.json',
         'eai-gofer/.agents/plugins/marketplace.json',
         'eai-gofer/.github/plugin/marketplace.json',
         'eai-gofer/gemini-extension.json',
         'eai-gofer/plugins/eai-gofer/plugin.json',
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
-        'eai-gofer/.vscode/mcp.json',
         'eai-gofer/.claude/skills/eai/SKILL.md',
         'eai-gofer/.github/agents/gofer-business.agent.md',
         'eai-gofer/.github/skills/eai/SKILL.md',
@@ -142,6 +151,7 @@ describe('Gofer agent plugin package', () => {
       ]) {
         expect(zipListing).toContain(required);
       }
+      expect(zipEntries).not.toContain('eai-gofer/.vscode/mcp.json');
 
       const copilotManifest = readJson<{
         name: string;
@@ -226,6 +236,9 @@ describe('Gofer agent plugin package', () => {
       );
       expect(umbrellaSkill).toContain('eai publicapi');
       expect(umbrellaSkill).toContain('## Controlled English Contract');
+      expect(umbrellaSkill).toContain(
+        'Apply this skill to every request when the plugin is enabled'
+      );
       expect(umbrellaSkill).toContain('ASD-STE100 Simplified Technical English');
       expect(umbrellaSkill).toContain('Use one action per instruction');
       expect(umbrellaSkill).toContain('do not claim ASD certification');
@@ -238,6 +251,9 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('## App Preview Runner Contract');
       expect(umbrellaSkill).toContain('./run.sh dev 3001');
       expect(umbrellaSkill).toContain('run.bat dev 3001');
+      expect(
+        fs.readFileSync(path.join(pluginRoot, '.claude-plugin', 'hooks', 'hooks.json'), 'utf8')
+      ).toContain('UserPromptSubmit');
 
       for (const command of PUBLIC_ENTRYPOINT_FILES) {
         expect(fs.existsSync(path.join(pluginRoot, 'commands', `${command}.md`))).toBe(true);

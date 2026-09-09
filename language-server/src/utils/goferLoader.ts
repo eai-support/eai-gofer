@@ -1,3 +1,4 @@
+import type { WorkspaceAccess } from '../mcp/workspaceAccess.js';
 /**
  * GoferLoader - Loads specifications from .specify/specs/ directory
  *
@@ -50,17 +51,22 @@ export interface TechnicalPlan {
 export class GoferLoader {
   private cache: SpecCache;
 
-  constructor(private workspacePath: string) {
+  constructor(
+    private workspacePath: string,
+    private readonly access?: WorkspaceAccess
+  ) {
     const specsDir = path.join(workspacePath, '.specify', 'specs');
     this.cache = new SpecCache(specsDir, 100, 5 * 60 * 1000); // 100 specs, 5 min TTL
-    void this.cache.initialize();
+    if (!access) void this.cache.initialize();
   }
 
   async loadAllSpecs(): Promise<Spec[]> {
     const specsDir = path.join(this.workspacePath, '.specify', 'specs');
 
     try {
-      const entries = await fs.readdir(specsDir, { withFileTypes: true });
+      const entries = this.access
+        ? await this.access.readDirectory(specsDir)
+        : await fs.readdir(specsDir, { withFileTypes: true });
       const specDirs = entries.filter((e) => e.isDirectory());
 
       const specs = await Promise.all(
@@ -68,6 +74,7 @@ export class GoferLoader {
           try {
             return await this.loadSpec(dir.name);
           } catch (_error) {
+            if (this.access) throw _error;
             // Silently skip specs that fail to load
             return null;
           }
@@ -76,6 +83,7 @@ export class GoferLoader {
 
       return specs.filter((s): s is Spec => s !== null);
     } catch (_error) {
+      if (this.access && (_error as NodeJS.ErrnoException).code !== 'ENOENT') throw _error;
       // Return empty array if directory doesn't exist
       return [];
     }
@@ -83,7 +91,7 @@ export class GoferLoader {
 
   async loadSpec(specId: string): Promise<Spec> {
     // Check cache first
-    const cached = this.cache.get(specId);
+    const cached = this.access ? null : this.cache.get(specId);
     if (cached) {
       return cached;
     }
@@ -93,11 +101,15 @@ export class GoferLoader {
     const tasksPath = path.join(specDir, 'tasks.md');
 
     // Parse spec.md
-    const specContent = await fs.readFile(specPath, 'utf-8');
+    const specContent = this.access
+      ? (await this.access.readText(specPath)).content
+      : await fs.readFile(specPath, 'utf-8');
     const { frontmatter, content } = this.parseFrontmatter(specContent);
 
     // Parse tasks.md
-    const tasksContent = await fs.readFile(tasksPath, 'utf-8');
+    const tasksContent = this.access
+      ? (await this.access.readText(tasksPath)).content
+      : await fs.readFile(tasksPath, 'utf-8');
     const tasks = this.parseTasks(tasksContent);
 
     const spec: Spec = {
@@ -115,7 +127,7 @@ export class GoferLoader {
     };
 
     // Cache the parsed spec
-    this.cache.set(specId, spec, specPath);
+    if (!this.access) this.cache.set(specId, spec, specPath);
 
     return spec;
   }

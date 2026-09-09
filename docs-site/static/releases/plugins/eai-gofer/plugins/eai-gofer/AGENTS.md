@@ -12,6 +12,25 @@ Before each user-facing reply, check the draft against these rules:
    for it.
 4. If any check fails, rewrite the reply before sending it.
 
+## Always-On EAI Contract
+
+<!-- gofer:always-on-eai:start -->
+
+Apply this contract to every request after Gofer is installed for this repo or
+AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
+
+1. Preserve the user's request. Do not rewrite it or add a visible command
+   prefix.
+2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request
+   for the same contract.
+3. Apply Gofer's Controlled English and business-first response rules.
+4. Select the internal pipeline stage. Do not make the user select a stage.
+5. Check workspace health before meaningful repo work, tool use, or a pipeline
+   stage. Do not repeat setup on every message.
+6. When the user explicitly asks to update Gofer, use its maintenance contract
+only.
+<!-- gofer:always-on-eai:end -->
+
 ## Core Pipeline Stages
 
 ### 0_gofer_start
@@ -162,9 +181,9 @@ No commands detected. Add build/test/lint scripts to your project.
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Use `/eai` to start or
-continue work; use `#eai` in Copilot-style prompts and `$eai` in hosts that use
-dollar-prefixed skills. Gofer routes internally through `.specify/commands/*.md`
+This project uses Gofer for spec-driven development. Gofer applies this pipeline
+to every request after installation. `/eai`, `#eai`, and `$eai` are optional
+explicit entrypoints. Gofer routes internally through `.specify/commands/*.md`
 contracts for start, research, specify, plan, tasks, implement, and validate.
 Validation is the terminal quality gate and includes the final engineering
 review loop. Artifacts live in `.specify/specs/{feature}/`.

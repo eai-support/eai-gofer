@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const surfaceUpdateModuleUrl = new URL(
   '../../../.specify/scripts/node/gofer-surface-update.mjs',
@@ -67,26 +70,123 @@ describe('gofer surface update', () => {
     ]);
   });
 
-  it('leaves a Codex local marketplace unchanged instead of running Git-only commands', async () => {
+  it('uses the supported user instruction locations on macOS, Windows, and Linux', async () => {
+    const { getAlwaysOnInstructionPath } = await import(surfaceUpdateModuleUrl.href);
+    const home = '/Users/example';
+
+    expect(getAlwaysOnInstructionPath('codex', { home })).toBe('/Users/example/.codex/AGENTS.md');
+    expect(getAlwaysOnInstructionPath('claude', { home })).toBe('/Users/example/.claude/CLAUDE.md');
+    expect(getAlwaysOnInstructionPath('copilot', { home })).toBe(
+      '/Users/example/.copilot/copilot-instructions.md'
+    );
+    expect(getAlwaysOnInstructionPath('gemini', { home })).toBe('/Users/example/.gemini/GEMINI.md');
+    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'darwin' })).toBe(
+      '/Users/example/Library/Application Support/Code/User/settings.json'
+    );
+    expect(
+      getAlwaysOnInstructionPath('vscode', {
+        home: 'C:\\Users\\example',
+        platform: 'win32',
+        env: { APPDATA: 'C:\\Users\\example\\AppData\\Roaming' },
+      })
+    ).toBe('C:\\Users\\example\\AppData\\Roaming/Code/User/settings.json');
+    expect(getAlwaysOnInstructionPath('vscode', { home, platform: 'linux', env: {} })).toBe(
+      '/Users/example/.config/Code/User/settings.json'
+    );
+  });
+
+  it('replaces a managed CRLF section and does not add a leading blank line', async () => {
+    const { upsertAlwaysOnEaiSection } = await import(surfaceUpdateModuleUrl.href);
+    const windowsContent = [
+      '## Always-On EAI Contract',
+      '<!-- gofer:always-on-eai:start -->',
+      'Old Gofer contract.',
+      '<!-- gofer:always-on-eai:end -->',
+      '',
+      '## Personal Rules',
+      'Keep this.',
+    ].join('\r\n');
+
+    const updated = upsertAlwaysOnEaiSection(windowsContent);
+    expect(updated.match(/## Always-On EAI Contract/g) || []).toHaveLength(1);
+    expect(updated).toContain('## Personal Rules');
+    expect(upsertAlwaysOnEaiSection('').startsWith('## Always-On EAI Contract')).toBe(true);
+  });
+
+  it('fast-forwards a clean official Codex local marketplace and enables always-on routing', async () => {
     const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
     const cleanup = vi.fn();
-    const execute = vi.fn();
+    const execute = vi.fn(async () => ({ stdout: 'updated' }));
+    const configureInstructions = vi.fn(async () => [
+      { host: 'codex', targetPath: '/Users/example/.codex/AGENTS.md', ok: true },
+    ]);
 
     const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
       inspect: async () => ({ available: true }),
       inspectMarketplace: async () => ({ type: 'local', root: '/Users/example/gofer' }),
+      inspectLocalMarketplace: async () => ({ clean: true, official: true, branch: 'main' }),
       execute,
       cleanup,
+      configureInstructions,
     });
 
-    expect(execute).not.toHaveBeenCalled();
-    expect(cleanup).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledWith(
+      'git',
+      ['-C', '/Users/example/gofer', 'fetch', 'origin', 'main'],
+      { windowsHide: true }
+    );
+    expect(execute).toHaveBeenCalledWith(
+      'git',
+      ['-C', '/Users/example/gofer', 'merge', '--ff-only', 'origin/main'],
+      { windowsHide: true }
+    );
+    expect(cleanup).toHaveBeenCalledWith({ apply: true });
+    expect(configureInstructions).toHaveBeenCalledWith(['codex']);
     expect(result).toContainEqual(
       expect.objectContaining({
         host: 'codex',
         ok: true,
-        label: 'Inspect local EAI Gofer marketplace',
-        note: expect.stringContaining('local work and settings are preserved'),
+        label: 'Fast-forward the local EAI Gofer marketplace',
+        stdout: 'updated',
+      })
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        label: 'Enable always-on Gofer instructions',
+        ok: true,
+      })
+    );
+  });
+
+  it('preserves a dirty or non-main Codex local marketplace while still enabling always-on routing', async () => {
+    const { buildSurfacePlan, runPlan } = await import(surfaceUpdateModuleUrl.href);
+    const execute = vi.fn();
+    const configureInstructions = vi.fn(async () => [
+      { host: 'codex', targetPath: '/Users/example/.codex/AGENTS.md', ok: true },
+    ]);
+
+    const result = await runPlan(buildSurfacePlan({ action: 'update', host: 'codex' }), {
+      inspect: async () => ({ available: true }),
+      inspectMarketplace: async () => ({ type: 'local', root: '/Users/example/gofer' }),
+      inspectLocalMarketplace: async () => ({
+        clean: false,
+        official: true,
+        branch: 'feature/local-work',
+      }),
+      execute,
+      cleanup: vi.fn(),
+      configureInstructions,
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(configureInstructions).toHaveBeenCalledWith(['codex']);
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        host: 'codex',
+        label: 'Update local EAI Gofer marketplace',
+        ok: false,
+        error: expect.stringContaining('uncommitted changes'),
       })
     );
   });
@@ -101,6 +201,7 @@ describe('gofer surface update', () => {
       inspectMarketplace: async () => ({ type: 'unknown' }),
       execute,
       cleanup,
+      configureInstructions: vi.fn(async () => []),
     });
 
     expect(execute).not.toHaveBeenCalled();
@@ -115,7 +216,9 @@ describe('gofer surface update', () => {
   });
 
   it('classifies Codex marketplace sources without assuming missing output is Git', async () => {
-    const { inspectCodexMarketplace } = await import(surfaceUpdateModuleUrl.href);
+    const { inspectCodexMarketplace, inspectLocalCodexMarketplace } = await import(
+      surfaceUpdateModuleUrl.href
+    );
     const list = async () => ({
       stdout: 'eai-gofer  /Users/example/gofer\n',
     });
@@ -131,6 +234,22 @@ describe('gofer surface update', () => {
       stdout: 'other-plugin  /tmp/other\n',
     }));
     expect(missing).toEqual({ type: 'unknown' });
+
+    const localInspection = await inspectLocalCodexMarketplace(
+      '/Users/example/gofer',
+      async (_command, args) => {
+        if (args.includes('status')) return { stdout: '' };
+        if (args.includes('remote'))
+          return { stdout: 'git@github.com:eai-support/eai-gofer.git\n' };
+        return { stdout: 'main\n' };
+      }
+    );
+    expect(localInspection).toEqual({
+      root: '/Users/example/gofer',
+      clean: true,
+      official: true,
+      branch: 'main',
+    });
   });
 
   it('keeps the update plan independent of installed repository files', async () => {
@@ -179,6 +298,7 @@ describe('gofer surface update', () => {
         inspect: async () => ({ available: true }),
         execute: async () => ({ stdout: 'updated' }),
         cleanup,
+        configureInstructions: vi.fn(async () => []),
       }
     );
 
@@ -214,6 +334,7 @@ describe('gofer surface update', () => {
           throw new Error('update failed');
         },
         cleanup,
+        configureInstructions: vi.fn(async () => []),
       }
     );
 
@@ -235,6 +356,7 @@ describe('gofer surface update', () => {
           throw 'unexpected failure';
         },
         cleanup: vi.fn(),
+        configureInstructions: vi.fn(async () => []),
       }
     );
 
@@ -291,5 +413,60 @@ describe('gofer surface update', () => {
     });
 
     expect(output).toContain('codex: reload - Start a new Codex task.');
+  });
+
+  it('adds managed always-on instructions without replacing user instructions', async () => {
+    const { configureAlwaysOnInstructions } = await import(surfaceUpdateModuleUrl.href);
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-always-on-'));
+    const codexPath = path.join(home, '.codex', 'AGENTS.md');
+    const copilotPath = path.join(home, '.copilot', 'copilot-instructions.md');
+    const vscodePath = path.join(home, '.config', 'Code', 'User', 'settings.json');
+    fs.mkdirSync(path.dirname(codexPath), { recursive: true });
+    fs.mkdirSync(path.dirname(vscodePath), { recursive: true });
+    fs.writeFileSync(codexPath, '# Personal rules\n\nKeep this instruction.\n');
+    fs.writeFileSync(
+      vscodePath,
+      '{\n  // User settings can include comments and trailing commas.\n  "editor.fontSize": 16,\n}\n'
+    );
+
+    try {
+      const results = await configureAlwaysOnInstructions(['codex', 'copilot', 'vscode'], {
+        home,
+        platform: 'linux',
+        env: {},
+      });
+
+      expect(results.every((entry: { ok: boolean }) => entry.ok)).toBe(true);
+      const codex = fs.readFileSync(codexPath, 'utf8');
+      expect(codex).toContain('Keep this instruction.');
+      expect(codex).toContain('gofer:always-on-eai:start');
+      expect(fs.readFileSync(copilotPath, 'utf8')).toContain('gofer:always-on-eai:start');
+
+      const vscode = fs.readFileSync(vscodePath, 'utf8');
+      expect(vscode).toContain('// User settings can include comments and trailing commas.');
+      expect(vscode).toContain('"editor.fontSize": 16,');
+      expect(vscode).toContain('gofer:always-on-eai:start');
+
+      fs.writeFileSync(
+        vscodePath,
+        `{
+  "editor.fontSize": 16, // retain this comment
+  "github.copilot.chat.codeGeneration.instructions": [{ "text": "<!-- gofer:always-on-eai:start --> old <!-- gofer:always-on-eai:end -->" }],
+}
+`
+      );
+      const refreshed = await configureAlwaysOnInstructions(['vscode'], {
+        home,
+        platform: 'linux',
+        env: {},
+      });
+      expect(refreshed[0].ok).toBe(true);
+      const refreshedVscode = fs.readFileSync(vscodePath, 'utf8');
+      expect(refreshedVscode).toContain('// retain this comment');
+      expect(refreshedVscode).toContain('Always-On EAI Contract');
+      expect(refreshedVscode).not.toContain('<!-- gofer:always-on-eai:start --> old');
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 });

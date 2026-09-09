@@ -2,6 +2,17 @@
 
 See @AGENTS.md for project conventions, commands, and code style.
 
+## Always-On EAI Contract
+
+<!-- gofer:always-on-eai:start -->
+
+Gofer applies to every request. Preserve the user prompt. Do not add a visible
+command prefix. Select the internal route and stage. Check workspace health only
+before meaningful repo work. Use the update path only for explicit Gofer
+maintenance requests.
+
+<!-- gofer:always-on-eai:end -->
+
 ## Workflow Orchestration
 
 ### 1. Plan Node Default
@@ -67,9 +78,10 @@ See @AGENTS.md for project conventions, commands, and code style.
 
 ## Gofer Pipeline
 
-Use `/eai ...` as the public Gofer entrypoint. Gofer will work out the current
-feature state and route internally through business scenario -> research ->
-specify -> plan -> tasks -> implement -> validate. Validation is the terminal
-quality gate and includes the final engineering review loop. Ask through `/eai`
-for checkpoints, branded document/deck templates, stakeholder summaries, tests,
-or other helper work. Artifacts go to `.specify/specs/{feature}/`.
+Use Gofer for every request. `/eai ...` is an optional public entrypoint. Gofer
+will work out the current feature state and route internally through business
+scenario -> research -> specify -> plan -> tasks -> implement -> validate.
+Validation is the terminal quality gate and includes the final engineering
+review loop. Ask through `/eai` for checkpoints, branded document/deck
+templates, stakeholder summaries, tests, or other helper work. Artifacts go to
+`.specify/specs/{feature}/`.

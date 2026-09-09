@@ -33,6 +33,8 @@ describe('Context Performance Validation (T076-T079)', () => {
   let memoryDir: string;
   let logsDir: string;
   let globalStoragePath: string;
+  let pendingPersistence: Promise<void>[];
+  let cleanupPromise: Promise<void> | undefined;
 
   let contextBuilder: ContextBuilder;
   let healthMonitor: ContextHealthMonitor;
@@ -42,7 +44,35 @@ describe('Context Performance Validation (T076-T079)', () => {
   let researchChunker: ResearchChunker;
   let mockVSCodeContext: any;
 
+  function trackPersistence(operation: Promise<void>): Promise<void> {
+    pendingPersistence.push(operation);
+    return operation;
+  }
+
+  function disposeFixture(): Promise<void> {
+    return (cleanupPromise ??= (async () => {
+      healthMonitor?.dispose();
+      memoryManager?.stopConsolidationTimer();
+      // Dispose stops producers, but does not await their fire-and-forget writes.
+      const results = await Promise.allSettled(pendingPersistence);
+      contextBuilder?.dispose();
+      hintLoader?.dispose();
+      if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
+        fs.rmSync(testWorkspaceRoot, { recursive: true });
+      }
+      const errors = results.filter((result) => result.status === 'rejected');
+      if (errors.length) {
+        throw new AggregateError(
+          errors.map((result) => result.reason),
+          'Fixture persistence failed'
+        );
+      }
+    })());
+  }
+
   beforeEach(() => {
+    pendingPersistence = [];
+    cleanupPromise = undefined;
     testWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-context-performance-'));
     specsDir = path.join(testWorkspaceRoot, '.specify', 'specs');
     memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
@@ -78,6 +108,19 @@ describe('Context Performance Validation (T076-T079)', () => {
       effectiveContextLimit: 120000,
     });
 
+    const saveCache = observationMasker.saveCacheToDisk.bind(observationMasker);
+    vi.spyOn(observationMasker, 'saveCacheToDisk').mockImplementation(() =>
+      trackPersistence(saveCache())
+    );
+    const persistHealth = healthMonitor.persistState.bind(healthMonitor);
+    vi.spyOn(healthMonitor, 'persistState').mockImplementation((status) =>
+      trackPersistence(persistHealth(status))
+    );
+    const recordUsage = memoryManager.recordUsage.bind(memoryManager);
+    vi.spyOn(memoryManager, 'recordUsage').mockImplementation((...args) =>
+      trackPersistence(recordUsage(...args))
+    );
+
     contextBuilder = new ContextBuilder(
       testWorkspaceRoot,
       memoryManager,
@@ -92,12 +135,42 @@ describe('Context Performance Validation (T076-T079)', () => {
     );
   });
 
-  afterEach(() => {
-    hintLoader?.dispose();
-    healthMonitor?.dispose();
-    if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
+  afterEach(async () => {
+    try {
+      await disposeFixture();
+    } finally {
+      vi.restoreAllMocks();
     }
+  });
+
+  it('waits for delayed cache and health persistence before removing the workspace', async () => {
+    healthMonitor.setWorkspaceRoot(testWorkspaceRoot);
+    const status = healthMonitor.analyzeContext({ breakdown: { specArtifacts: 100 } });
+    await Promise.all(pendingPersistence);
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    trackPersistence(
+      barrier.then(async () => {
+        await observationMasker.saveCacheToDisk();
+        await healthMonitor.persistState({ ...status, utilizationPercent: 10 });
+      })
+    );
+    let disposed = false;
+    const cleanup = disposeFixture().then(() => {
+      disposed = true;
+    });
+    try {
+      await Promise.resolve();
+      expect(disposed).toBe(false);
+      expect(fs.existsSync(testWorkspaceRoot)).toBe(true);
+    } finally {
+      release();
+      await cleanup;
+    }
+    expect(disposed).toBe(true);
+    expect(fs.existsSync(testWorkspaceRoot)).toBe(false);
   });
 
   // ==========================================================================
