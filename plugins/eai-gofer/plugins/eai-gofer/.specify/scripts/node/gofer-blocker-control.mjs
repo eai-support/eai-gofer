@@ -25,8 +25,7 @@ async function readBounded(file) {
     if (!stat.isFile()) throw new Error('Evidence must be a regular file');
     if (stat.size > MAX_EVIDENCE_BYTES) throw new Error('Evidence exceeds the 16 MiB limit');
   };
-  check(await fs.lstat(file));
-  // Nonblocking open also handles a regular file replaced by a FIFO after lstat.
+  // Inspect the opened descriptor; a pathname precheck can race with replacement.
   const handle = await fs.open(file, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
   try {
     check(await handle.stat());

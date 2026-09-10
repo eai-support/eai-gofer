@@ -477,60 +477,59 @@ describe('persistent blocker mediation', () => {
     expect(fs.existsSync(path.join(dir, '.gofer-blocker.lock'))).toBe(false);
   });
 
-  it.skipIf(process.platform === 'win32')(
-    'rejects a file replaced by a FIFO between checking and opening it',
-    async () => {
-      const { blockerId } = await open();
-      const verification = diagnosis(blockerId);
-      fs.writeFileSync(
-        path.join(dir, 'event.json'),
-        JSON.stringify({ action: 'ask', blockerId, verification })
-      );
-      const result = spawnSync(
-        process.execPath,
-        [
-          '--input-type=module',
-          '--eval',
-          `
+  it('rejects a file replaced by a nonregular entry immediately before opening it', async () => {
+    const { blockerId } = await open();
+    const verification = diagnosis(blockerId);
+    fs.writeFileSync(
+      path.join(dir, 'event.json'),
+      JSON.stringify({ action: 'ask', blockerId, verification })
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `
           import fs from 'node:fs';
           import path from 'node:path';
           import { pathToFileURL } from 'node:url';
           import { spawnSync } from 'node:child_process';
           const dir = process.argv[2];
           const output = fs.realpathSync(path.join(dir, 'diagnostic-output.txt'));
-          const lstat = fs.promises.lstat.bind(fs.promises);
-          fs.promises.lstat = async (...args) => {
-            const stat = await lstat(...args);
+          const open = fs.promises.open.bind(fs.promises);
+          fs.promises.open = async (...args) => {
             if (args[0] === output) {
               fs.unlinkSync(output);
-              if (spawnSync('mkfifo', [output]).status !== 0) throw new Error('FIFO setup failed');
+              if (process.platform === 'win32') fs.mkdirSync(output);
+              else if (spawnSync('mkfifo', [output]).status !== 0) throw new Error('FIFO setup failed');
             }
-            return stat;
+            return open(...args);
           };
-          const { applyBlockerEvent } = await import(pathToFileURL(process.argv[1]).href);
+          const script = process.argv[1];
+          process.argv[1] = 'controlled-race-harness';
+          const { applyBlockerEvent } = await import(pathToFileURL(script).href);
           try {
             await applyBlockerEvent(dir, JSON.parse(fs.readFileSync(path.join(dir, 'event.json'))));
           } catch (error) {
-            console.error(error.message);
+            console.error(error.code || error.message);
             process.exitCode = 1;
           }
         `,
-          helper,
-          dir,
-        ],
-        { encoding: 'utf8', timeout: 5000 }
-      );
-      expect(result.error).toBeUndefined();
-      expect(result.status).toBe(1);
-      expect(result.stderr).toContain('regular file');
-      expect(fs.existsSync(path.join(dir, '.gofer-blocker.lock'))).toBe(false);
-    }
-  );
+        helper,
+        dir,
+      ],
+      { encoding: 'utf8', timeout: 5000 }
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    if (process.platform === 'win32')
+      expect(result.stderr).toMatch(/regular file|EISDIR|EPERM|EACCES/);
+    else expect(result.stderr).toContain('regular file');
+    expect(fs.existsSync(path.join(dir, '.gofer-blocker.lock'))).toBe(false);
+  });
 
-  it
-    .skipIf(process.platform === 'win32')
-    .each(['diagnostic-output.txt', 'diagnosis.json', 'blocker-register.json', 'event.json'])(
-    'rejects FIFO %s promptly, without leaving a writer lock',
+  it.each(['diagnostic-output.txt', 'diagnosis.json', 'blocker-register.json', 'event.json'])(
+    'rejects nonregular %s promptly, without leaving a writer lock',
     async (file) => {
       const { blockerId } = await open();
       const verification = diagnosis(blockerId);
@@ -538,7 +537,8 @@ describe('persistent blocker mediation', () => {
       fs.writeFileSync(input, JSON.stringify({ action: 'ask', blockerId, verification }));
       const fifo = path.join(dir, file);
       fs.unlinkSync(fifo);
-      expect(spawnSync('mkfifo', [fifo]).status).toBe(0);
+      if (process.platform === 'win32') fs.mkdirSync(fifo);
+      else expect(spawnSync('mkfifo', [fifo]).status).toBe(0);
       const result = spawnSync(process.execPath, [helper, '--state-dir', dir, '--event', input], {
         encoding: 'utf8',
         timeout: 5000,
