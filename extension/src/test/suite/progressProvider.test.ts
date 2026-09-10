@@ -435,6 +435,9 @@ created: "2025-10-22"
   // Helper functions
   async function setWorkflowProfile(profile: 'standard' | 'enterpriseai'): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('gofer');
+    if (configuration.get<string>('workflowProfile') === profile) {
+      return;
+    }
     await configuration.update('workflowProfile', profile, vscode.ConfigurationTarget.Global);
   }
 
