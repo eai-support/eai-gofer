@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "requireDeliveryCheckpoint": true,
   "loopId": "{{featureId}}",
   "profile": "standard",
   "objective": "Keep feature delivery aligned with current goals, approved scope, implementation evidence, and validation gates.",

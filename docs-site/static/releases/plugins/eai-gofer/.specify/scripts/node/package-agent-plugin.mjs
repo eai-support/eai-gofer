@@ -12,7 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
-import { buildContinuationContractSection } from './generate-commands.mjs';
+import { buildAuthAccessDecisionContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -493,13 +493,14 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
 2. Use \`run.bat dev 3001\` on Windows.
 3. Use a different port only when the feature notes record the reason.
-4. The runner must stop any process on the selected port before it restarts the app.
+4. Restart only this app. Before stopping a process, verify its exact checkout, process ID, start time and command, then recheck immediately before stopping it. Never stop another app, an unknown process, or every process on a port. If ownership is uncertain, leave it running and ask the user. Inspect older runners before use; do not run one that kills by port alone.
 5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
 6. After every UI-facing change, run:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
 7. On Windows, use:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
-8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.`;
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.`;
 }
 
 function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
@@ -649,6 +650,7 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
 
 This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
+${buildBlockerMediationContract()}
 `;
 }
 
@@ -682,6 +684,10 @@ function withEaiAppTemplateGate(content) {
 - Do not report a release complete or score 100% if a required capability is on an open PR, absent from the release branch, missing traceability, or lacks deployed evidence.
 - Do not accept copied marker files, partial scaffolds, or custom templates as EAI readiness evidence.
 - Confirmed non-app work is exempt from app-only gates.
+
+${buildAuthAccessDecisionContract()}
+
+${buildDeliveryDisciplineContract()}
 
 ## EAI App Template Gate
 
