@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.12.6
+Version: 3.12.7
 Host: Grok Build
 
 # Eai
