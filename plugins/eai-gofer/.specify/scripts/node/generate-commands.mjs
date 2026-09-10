@@ -293,7 +293,17 @@ Before each user-facing reply, check the draft against these rules:
 1. Lead with the business outcome, effect, risk, or decision.
 2. Use concise, simple language.
 3. Include technical detail only when it supports a decision or the user asks for it.
-4. If any check fails, rewrite the reply before sending it.`;
+4. If any check fails, rewrite the reply before sending it.
+
+${buildDeliveryDisciplineContract()}`;
+}
+
+export function buildDeliveryDisciplineContract() {
+  return `**Business Updates And Goal Checks**
+
+Use \`.specify/references/business-updates-and-goal-checks.md\`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run \`node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>\` before sending a drafted progress update; rewrite failed drafts. Use \`--kind answer\` for answers and \`--technical\` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
+
+Before each work batch, read the current goal, specification, tasks, and latest findings. After new knowledge or an approved change, update affected feature documents and explain the effect. Never weaken acceptance criteria to match failing code or invent user approval. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable \`requireDeliveryCheckpoint\` in \`loop-contract.json\` and run \`node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>\` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.`;
 }
 
 function buildJourneyStateSection() {
@@ -420,6 +430,8 @@ ${buildJourneyStateSection()}
 
 ${buildMvpCapabilityValidationSection()}
 
+${buildAuthAccessDecisionContract()}
+
 ## App vs Non-App Routing
 
 1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
@@ -486,6 +498,7 @@ Grok Build has no supported user-level plugin installer or updater. This command
 3. Use the repository \`eai\` skill to continue work.
 
 Do not run \`gofer-surface-update.mjs --host grok\`. That host is not supported by the updater.
+${buildBlockerMediationContract()}
 `;
   }
 
@@ -522,6 +535,7 @@ Use this command to install or update EAI Gofer for the current AI coding app. T
 - For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
 - Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
 - Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
+${buildBlockerMediationContract()}
 `;
 }
 
@@ -782,6 +796,14 @@ export function injectPipelineContinuation(content, platform, commandName) {
   return content + autoChainSection;
 }
 
+export function buildAuthAccessDecisionContract() {
+  return `**Authentication Access Decision**
+
+When adding or changing authentication, read \`.specify/references/platform/eai-auth-access.md\`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to \`workspace-only\`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
+
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.`;
+}
+
 function buildEaiPlatformSessionPreflightSection() {
   return `
 ## Application Classification And EAI Preflight
@@ -801,6 +823,8 @@ Before any EAI CLI, login, tenant, template, or app-enrollment action:
 11. If the user changes scope, update \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
 13. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+
+${buildAuthAccessDecisionContract()}
 `.trim();
 }
 
@@ -993,6 +1017,8 @@ certification.
 15. Before each user-facing reply, check that it leads with the business effect,
     uses concise simple language, and includes only useful technical detail.
 16. If any check fails, rewrite the reply before sending it.
+${buildDeliveryDisciplineContract()}
+
 <!-- gofer:business-progress:end -->
 `.trim();
 }
@@ -1045,20 +1071,21 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
 2. Use \`run.bat dev 3001\` on Windows.
 3. Use a different port only when the feature notes record the reason.
-4. The runner must stop any process on the selected port before it restarts the app.
+4. Restart only this app. Before stopping a process, verify its exact checkout, process ID, start time and command, then recheck immediately before stopping it. Never stop another app, an unknown process, or every process on a port. If ownership is uncertain, leave it running and ask the user. Inspect older runners before use; do not run one that kills by port alone.
 5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
 6. After every UI-facing change, run:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
 7. On Windows, use:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
 8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.
 <!-- gofer:app-preview-runner:end -->
 `.trim();
 }
 
 function injectAppPreviewRunnerContract(content) {
   if (content.includes('<!-- gofer:app-preview-runner:start -->')) {
-    return content;
+    return content.replace(/## App Preview Runner Contract\n<!-- gofer:app-preview-runner:start -->[\s\S]*?<!-- gofer:app-preview-runner:end -->/, buildAppPreviewRunnerContractSection());
   }
 
   const progressHeadingIndex = content.indexOf('## Business-Friendly Progress Contract');
@@ -1141,7 +1168,21 @@ export function buildContinuationContractSection() {
 8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
 9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
 10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
+${buildBlockerMediationContract()}
 <!-- gofer:continuation:end -->`;
+}
+
+export function buildBlockerMediationContract() {
+  return `
+**Blocker Mediation**
+
+- Before repeating a failed action or asking for missing input, read .specify/references/blocker-mediation.md and inspect the private blocker register with gofer-blocker-control.mjs. Reuse the same state directory and goal, subject and condition keys across stages, restarts and surfaces. Different wording, models or tools do not create a new blocker.
+- Classify the cause first. Missing user decisions, access, external dependencies and unavailable capabilities require a recorded wait. Reserve an ask event before asking; ask once, explain the business impact and required change, then stop affected work. An unanswered question is not new evidence. Do not poll or rephrase it to keep running.
+- For AI-solvable or unknown causes, reserve each attempt before execution. Allow one investigation and one different recovery within existing tighter budgets. Record its result even when interrupted or unsuccessful. An unfinished reservation must not launch again. Do not reset the register, change keys or switch surfaces to obtain more attempts.
+- Resume only after a real user answer or changed external evidence has been recorded and checked. The helper allows one evidence-backed resumption; exhausted limits need human review. Never invent approval or evidence. Successful model output and a running server do not resolve a blocker without the relevant check.
+- Save the blocker, unfinished tasks and next action before stopping. Continue only approved tasks that do not depend on it. Keep the original goal; update specs, plans, tasks and validation for accepted direction changes, and reopen stale checks. Do not quietly drop requirements to make progress.
+- Use node .specify/scripts/node/gofer-blocker-control.mjs --state-dir <private-state-directory> --event <private-event.json> before controlled actions; inspect with --state-dir alone, or add --task T001 for an independent task. A denied action, invalid record or missing helper means stop and explain the limitation, not bypass it. Use the installed plugin script path if no repo scaffold exists. Conversation-only work uses a private session state directory and does not require app setup or feature files.
+- Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.`;
 }
 
 export function injectContinuationContract(content) {
@@ -1222,9 +1263,22 @@ async function refreshCanonicalCommandSources(root, dryRun) {
     // Emitter tests use intentionally partial command fixtures. Only normalize
     // canonical command files that can be parsed and emitted as real stages.
     if (!source.startsWith('---')) continue;
-    const refreshed = LEGACY_HELPER_COMMAND_FILES.has(entry)
+    let refreshed = LEGACY_HELPER_COMMAND_FILES.has(entry)
       ? injectContinuationContract(source)
       : injectTokenCostPolicy(injectEaiPlatformSessionPreflight(source));
+    if (refreshed.includes('<!-- gofer:app-preview-runner:start -->')) {
+      refreshed = injectAppPreviewRunnerContract(refreshed);
+    }
+    if (entry === 'gofer_eai_first_run.md') {
+      const withoutAuthScope = refreshed.replace(
+        /\n?## Auth Scope Before Setup\n[\s\S]*?(?=\n## |\s*$)/g,
+        ''
+      );
+      refreshed = insertSectionAfterTitle(
+        withoutAuthScope,
+        `## Auth Scope Before Setup\n\n${buildAuthAccessDecisionContract()}`
+      );
+    }
     if (refreshed === source) continue;
 
     changed++;

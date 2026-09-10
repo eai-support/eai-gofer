@@ -51,6 +51,13 @@ checks:
 5. The first protected API call succeeds for an authorised user.
 6. An unauthorised user fails safely.
 
+Use `.specify/references/platform/eai-auth-access.md` for the access decision.
+Record owner confirmation of `workspace-only` (default) or explicitly approved
+`platform-authenticated` access. Test non-members, cross-tenant requests,
+revocation, and unavailable membership checks. Sign-in alone is not permission.
+Client SSO is a separate choice. Changing the provider must not widen access.
+Require a real federated journey before claiming that SSO is verified.
+
 If authentication is `not_applicable` or `planned`, record that state and the
 trigger that will make it required. Do not report an authentication failure.
 

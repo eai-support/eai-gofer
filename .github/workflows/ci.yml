@@ -310,6 +310,11 @@ jobs:
         env:
           CI: true
 
+      - name: Verify safe and truthful app previews
+        run: npx playwright test tests/e2e/safe-preview.spec.ts --project chromium --workers 1 --retries 0 --reporter=line
+        env:
+          CI: true
+
       - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v7

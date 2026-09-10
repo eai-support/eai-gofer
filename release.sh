@@ -447,6 +447,8 @@ run_release_validation_gate() {
     run_release_check "Gofer generated surface check" npm run gofer:generate:check
     run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"
     run_release_check "Gofer full Vitest suite" npm test
+    run_release_check "Gofer preview browser install" npm exec -- playwright install chromium
+    run_release_check "Gofer checked preview browser tests" npm exec -- playwright test tests/e2e/safe-preview.spec.ts --project chromium --workers 1 --retries 0
     run_release_check "Language Server production build" npm --prefix language-server run build
     run_release_check "Gofer real MCP and LSP protocol tests" npm run test:mcp-protocol
     run_release_check "VS Code Language Server prepublish sync" npm --prefix extension run prepare-language-server
