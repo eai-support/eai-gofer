@@ -21,6 +21,14 @@ pipeline.
 **Tests**: The examples below include test tasks. Tests are OPTIONAL - only
 include them if explicitly requested in the feature specification.
 
+**Priority protection**: Maintain `priority-plan.json` from its template. Record
+the latest approved direction in `decisions.md`, the ordered critical path,
+dependencies and `allowedEditScope` per task. Place the first outcome proof
+after its minimum runtime prerequisites. Record approval for independent
+parallel work. Use `.specify/references/priority-outcome-protection.md`; retain
+all later release checks and do not add future auth or deployment requirements
+to local MVP work.
+
 **Organization**: Tasks are grouped by user story to enable independent
 implementation and testing of each story.
 

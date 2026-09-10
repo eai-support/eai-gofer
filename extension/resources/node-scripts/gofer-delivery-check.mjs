@@ -5,8 +5,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const REQUIRED = ['spec.md', 'plan.md', 'tasks.md', 'traceability.md'];
-const OPTIONAL = ['goal-ledger.json', 'research.md', 'discovery.md', 'issues.md', 'validation-report.md', 'decisions.md'];
+const OPTIONAL = ['goal-ledger.json', 'research.md', 'discovery.md', 'issues.md', 'validation-report.md', 'decisions.md', 'priority-plan.json'];
 const hash = text => createHash('sha256').update(text).digest('hex');
+
+function namesReceipt(line, receipt) {
+  // Consume Markdown links as a whole so their labels cannot stand in for destinations.
+  const references = line.matchAll(/`([^`]+)`|\[[^\[\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+["'][^"']*["'])?\s*\)|\[[^\[\]]*\](?:\[[^\[\]]*\])?|([^\s|`()[\]<>]+)/g);
+  return Array.from(references).some(match => (match[1] ?? match[2] ?? match[3] ?? match[4]) === receipt);
+}
 
 async function safeRead(root, relative) {
   if (typeof relative !== 'string' || path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..')) throw new Error('Unsafe artifact path');
@@ -55,6 +61,10 @@ export async function reviewDelivery(featureDir, { capture = false, evidenceMap 
     if (item.requirements.some(id => !requirements.has(id))) findings.push(`UNKNOWN_REQUIREMENT:${task}`);
     const trace = contents['traceability.md'] || '';
     if (!trace.split('\n').some(line => new RegExp(`\\b${task}\\b`).test(line) && item.requirements.every(id => typeof id === 'string' && /^(?:FR|NFR|SC)-\d+$/.test(id) && new RegExp(`\\b${id}\\b`).test(line)))) findings.push(`MISSING_TRACEABILITY:${task}`);
+    if (artifacts['priority-plan.json'] && !trace.split('\n').some(line =>
+      new RegExp(`\\b${task}\\b`).test(line) && typeof item.evidence === 'string' && namesReceipt(line, item.evidence))) {
+      findings.push(`MISSING_NAMED_TASK_RECEIPT:${task}`);
+    }
     try {
       const raw = await safeRead(root, item.evidence);
       const proof = JSON.parse(raw);
@@ -69,7 +79,7 @@ export async function reviewDelivery(featureDir, { capture = false, evidenceMap 
   if (!capture) {
     if (checkpoint?.schemaVersion !== 1) findings.push('INVALID_CHECKPOINT_VERSION');
     for (const file of Object.keys(artifacts)) {
-      if (checkpoint?.artifacts?.[file] !== artifacts[file]) findings.push(`ARTIFACT_DRIFT:${file}`);
+      if ((checkpoint?.artifacts?.[file] ?? null) !== artifacts[file]) findings.push(`ARTIFACT_DRIFT:${file}`);
     }
   }
   if (capture && !findings.length) {

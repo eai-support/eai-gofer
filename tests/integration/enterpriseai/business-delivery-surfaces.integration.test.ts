@@ -33,6 +33,10 @@ describe('business communication and goal review across packaged surfaces', () =
     const text = read(file);
     expect(text).toContain('gofer-response-check.mjs');
     expect(text).toContain('gofer-delivery-check.mjs');
+    expect(text).toContain('gofer-priority-check.mjs');
+    expect(text).toContain('Priority And Outcome Protection');
+    expect(text).toContain('Do not switch to unrelated work when blocked');
+    expect(text).toContain('missing or stale outcome receipt means unverified');
     expect(text).toContain('requireDeliveryCheckpoint');
     expect(text).toContain('Never weaken acceptance criteria');
     expect(text).toContain('reopen affected tasks when evidence is stale');
