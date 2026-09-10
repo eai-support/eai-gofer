@@ -11,7 +11,7 @@ import { CLIHealthChecker } from '../../../../../extension/src/council/providers
 
 describe('CLIHealthChecker', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('check', () => {
@@ -47,14 +47,14 @@ describe('CLIHealthChecker', () => {
       expect(result.authenticated).toBe(false);
     });
 
-    it('should return compatible=false when version is incompatible', async () => {
-      vi.spyOn(CLIHealthChecker as any, 'detectVersion').mockResolvedValue('0.1.0');
+    it('accepts the provider-supported Codex 0.x release line without an invented major-version floor', async () => {
+      vi.spyOn(CLIHealthChecker as any, 'detectVersion').mockResolvedValue('0.153.4');
       vi.spyOn(CLIHealthChecker as any, 'checkAuthentication').mockResolvedValue(true);
 
-      const result = await CLIHealthChecker.check('claude', 'claude');
+      const result = await CLIHealthChecker.check('codex', 'codex');
 
       expect(result.available).toBe(true);
-      expect(result.compatible).toBe(false);
+      expect(result.compatible).toBe(true);
     });
 
     it('should include installation instructions for claude CLI', async () => {
@@ -63,7 +63,7 @@ describe('CLIHealthChecker', () => {
       const result = await CLIHealthChecker.check('claude', 'claude');
 
       expect(result.installInstructions).toBeDefined();
-      expect(result.installInstructions).toContain('npm install');
+      expect(result.installInstructions).toContain('https://code.claude.com/docs/en/setup');
     });
 
     it('should include installation instructions for codex CLI', async () => {
@@ -79,15 +79,13 @@ describe('CLIHealthChecker', () => {
     it('should return installation instructions for claude', () => {
       const instructions = CLIHealthChecker.getInstallInstructions('claude');
 
-      expect(instructions).toContain('npm install');
-      expect(instructions).toContain('@anthropic/claude-code');
+      expect(instructions).toContain('https://code.claude.com/docs/en/setup');
     });
 
     it('should return installation instructions for codex', () => {
       const instructions = CLIHealthChecker.getInstallInstructions('codex');
 
-      expect(instructions).toBeDefined();
-      expect(instructions.length).toBeGreaterThan(0);
+      expect(instructions).toContain('https://learn.chatgpt.com/docs/codex/cli');
     });
   });
 
@@ -95,7 +93,7 @@ describe('CLIHealthChecker', () => {
     it('should return auth instructions for claude', () => {
       const instructions = CLIHealthChecker.getAuthInstructions('claude');
 
-      expect(instructions).toBe('Run: claude login');
+      expect(instructions).toBe('Run: claude auth login');
     });
 
     it('should return auth instructions for codex', () => {
@@ -120,14 +118,20 @@ describe('CLIHealthChecker', () => {
   });
 
   describe('checkAuthentication', () => {
-    it('uses CLI login/session health instead of provider API-key env vars', async () => {
-      vi.spyOn(CLIHealthChecker as any, 'detectVersion').mockResolvedValue('1.0.0');
-      vi.spyOn(CLIHealthChecker as any, 'checkAuthentication').mockResolvedValue(true);
+    it.each([
+      ['claude', ['auth', 'status']],
+      ['codex', ['login', 'status']],
+    ] as const)('uses the real %s session-status command', async (cliType, args) => {
+      const statusProbe = vi.spyOn(CLIHealthChecker, 'supportsSubcommand').mockResolvedValue(true);
 
-      const result = await CLIHealthChecker.check('claude', 'claude');
+      await expect(CLIHealthChecker.checkAuthentication(cliType, cliType)).resolves.toBe(true);
+      expect(statusProbe).toHaveBeenCalledWith(cliType, args);
+    });
 
-      expect(result.available).toBe(true);
-      expect(result.authenticated).toBe(true);
+    it('does not mistake an installed but logged-out CLI for an authenticated session', async () => {
+      vi.spyOn(CLIHealthChecker, 'supportsSubcommand').mockResolvedValue(false);
+
+      await expect(CLIHealthChecker.checkAuthentication('codex', 'codex')).resolves.toBe(false);
     });
   });
 

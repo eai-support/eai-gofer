@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  CROSS_CLI_SURFACES,
+  GENERATED_OUTPUT_TARGETS,
   HELPER_COMMANDS,
   getGeneratedCommandFileStem,
 } from '../../helpers/goferCommandSet';
@@ -157,7 +157,7 @@ describe('helper commands cross-CLI parity', () => {
 
       expect(frontmatter.name).toBe(helper.name);
       expect(frontmatter.category).toBe('control');
-      expect(frontmatter.surfaces).toEqual(CROSS_CLI_SURFACES);
+      expect(frontmatter.surfaces).toEqual(GENERATED_OUTPUT_TARGETS);
     });
 
     it(`${helper.name} stays hidden from generated public command surfaces`, () => {

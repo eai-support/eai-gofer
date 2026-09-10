@@ -73,23 +73,18 @@ export class CodexCLIProvider extends CLIProviderAdapter {
    * @returns Array of CLI arguments
    */
   protected buildCLIArgs(prompt: string): string[] {
-    // Codex CLI format: codex exec --model <model> --prompt "<prompt>"
-    const args = ['exec', '--model', this.model];
-
-    // Add prompt
-    args.push('--prompt', prompt);
-
-    return args;
+    // `codex exec` accepts the prompt as its positional argument.
+    return ['exec', '--model', this.model, prompt];
   }
 
   /**
    * Check if MCP servers are supported
-   * Codex CLI doesn't support MCP
+   * Codex CLI supports configuring and using MCP servers
    *
-   * @returns false (Codex CLI doesn't support MCP)
+   * @returns true (Codex CLI supports MCP)
    */
   public supportsMCPServers(): boolean {
-    return false;
+    return true;
   }
 
   /**
@@ -145,7 +140,7 @@ export class CodexCLIProvider extends CLIProviderAdapter {
 
     // Command not found
     if (error.includes('command not found') || error.includes('ENOENT')) {
-      return 'Codex CLI not found: Please install Codex CLI using: npm install -g @openai/codex-cli';
+      return 'Codex CLI not found: Install Codex CLI from https://learn.chatgpt.com/docs/codex/cli';
     }
 
     // Quota exceeded

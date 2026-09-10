@@ -17,6 +17,7 @@ import {
   FULL_COMMAND_NAMES,
   PUBLIC_ENTRYPOINT_NAMES,
 } from '../helpers/goferCommandSet';
+import { CURRENT_SEMANTIC_HOSTS } from '../../extension/src/config/semanticHosts';
 
 describe('Cross-Platform Feature Parity', () => {
   const workspacePath = process.cwd();
@@ -35,10 +36,26 @@ describe('Cross-Platform Feature Parity', () => {
     );
   }
 
+  function normalizeSharedAgentSkill(content: string): string {
+    return content
+      .replace(/^Host:.*$/m, 'Host: <semantic-host>')
+      .replace(/^This skill is shared by Codex and Google Antigravity\..*\n?/m, '')
+      .replace(
+        /^2\. This skill is shared by Codex and Google Antigravity\..*$/m,
+        '2. Select the current semantic host.'
+      )
+      .replace(
+        /^2\. Use `codex` as the current semantic host\.$/m,
+        '2. Select the current semantic host.'
+      )
+      .replace(/--host (?:codex|<current-host>)/g, '--host <semantic-host>')
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
   describe('T078: Command Availability', () => {
     it('exposes only public entrypoints in host command surfaces', () => {
       for (const command of publicCommands) {
-        for (const platform of ['claude', 'copilot', 'codex', 'gemini'] as const) {
+        for (const platform of CURRENT_SEMANTIC_HOSTS) {
           const commandPath = router.getCommandPath(command, platform);
           expect(fs.existsSync(commandPath), `${command} missing on ${platform}`).toBe(true);
           expect(fs.readFileSync(commandPath, 'utf8').trim().length).toBeGreaterThan(20);
@@ -49,7 +66,9 @@ describe('Cross-Platform Feature Parity', () => {
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'claude'))).toBe(false);
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'copilot'))).toBe(false);
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'codex'))).toBe(false);
-        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'gemini'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'antigravity'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'grok'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'vscode'))).toBe(false);
       }
     });
 
@@ -72,13 +91,17 @@ describe('Cross-Platform Feature Parity', () => {
 
     it('provides clean public command syntax for each platform', () => {
       expect(router.getCommandSyntax('eai', 'claude')).toBe('/eai');
-      expect(router.getCommandSyntax('eai', 'copilot')).toBe('#eai');
-      expect(router.getCommandSyntax('eai', 'codex')).toBe('/eai');
-      expect(router.getCommandSyntax('eai', 'gemini')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'copilot')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'codex')).toBe('$eai');
+      expect(router.getCommandSyntax('eai', 'antigravity')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'grok')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'vscode')).toBe('/eai');
       expect(router.getCommandSyntax('eai-update', 'claude')).toBe('/eai-update');
-      expect(router.getCommandSyntax('eai-update', 'copilot')).toBe('#eai-update');
-      expect(router.getCommandSyntax('eai-update', 'codex')).toBe('/eai-update');
-      expect(router.getCommandSyntax('eai-update', 'gemini')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'copilot')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'codex')).toBe('$eai-update');
+      expect(router.getCommandSyntax('eai-update', 'antigravity')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'grok')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'vscode')).toBe('/eai-update');
     });
   });
 
@@ -191,7 +214,7 @@ describe('Cross-Platform Feature Parity', () => {
     );
 
     it('keeps the update entrypoint independent of a repository scaffold', () => {
-      for (const platform of ['claude', 'copilot', 'codex'] as const) {
+      for (const platform of CURRENT_SEMANTIC_HOSTS) {
         const content = fs.readFileSync(router.getCommandPath('eai-update', platform), 'utf8');
         expect(content).toContain('works without an EAI project');
         expect(content).toContain('Do not run workspace checks');
@@ -201,9 +224,10 @@ describe('Cross-Platform Feature Parity', () => {
         path.join(workspacePath, '.gemini', 'commands', 'gofer', 'eai-update.md'),
         'utf8'
       );
-      expect(geminiContent).toContain('works without an EAI project');
-      expect(geminiContent).toContain('Do not run workspace checks');
-      expect(geminiContent).toContain('gofer-surface-update.mjs');
+      expect(geminiContent).toContain('Legacy Gemini File-Format Compatibility');
+      expect(geminiContent).toContain('Gemini is not a current Gofer host');
+      expect(geminiContent).toContain('agy plugin install');
+      expect(geminiContent).toContain('--host antigravity');
     });
   });
 
@@ -247,7 +271,7 @@ describe('Cross-Platform Feature Parity', () => {
   });
 
   describe('US-006: Public Mirror Parity Assertions', () => {
-    it('keeps .agents skills in parity with .system skills for public entrypoints', () => {
+    it('keeps shared .agents and Codex .system skills in parity apart from host selection', () => {
       publicCommands.forEach((commandName) => {
         const agentSkillPath = router.getCommandPath(commandName, 'codex');
         const relativeSkillPath = path.relative(
@@ -258,9 +282,11 @@ describe('Cross-Platform Feature Parity', () => {
 
         expect(fs.existsSync(agentSkillPath)).toBe(true);
         expect(fs.existsSync(systemSkillPath)).toBe(true);
-        expect(fs.readFileSync(systemSkillPath, 'utf8')).toBe(
-          fs.readFileSync(agentSkillPath, 'utf8')
-        );
+        const agentSkill = fs.readFileSync(agentSkillPath, 'utf8');
+        const systemSkill = fs.readFileSync(systemSkillPath, 'utf8');
+        expect(agentSkill).toContain('Google Antigravity');
+        expect(systemSkill).toContain('Host: Codex');
+        expect(normalizeSharedAgentSkill(systemSkill)).toBe(normalizeSharedAgentSkill(agentSkill));
       });
     });
   });

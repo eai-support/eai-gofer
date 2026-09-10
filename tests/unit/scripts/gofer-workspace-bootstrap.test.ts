@@ -4,6 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  HOST_POLICIES,
+  WORKSPACE_HOSTS,
+  normalizeHost,
+} from '../../../.specify/scripts/node/workspace-bootstrap-lib.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +41,13 @@ function runJson(scriptPath: string, args: string[]) {
     exitCode: result.status,
     payload: JSON.parse(result.stdout),
   };
+}
+
+function runRaw(scriptPath: string, args: string[]) {
+  return spawnSync('node', [scriptPath, ...args], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  });
 }
 
 function findFiles(root: string): string[] {
@@ -86,6 +98,43 @@ describe('Gofer workspace bootstrap scripts', () => {
 
   afterEach(() => {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it('uses exactly six current semantic hosts and maps legacy Gemini to Antigravity', () => {
+    expect(WORKSPACE_HOSTS).toEqual([
+      'claude',
+      'codex',
+      'copilot',
+      'antigravity',
+      'grok',
+      'vscode',
+    ]);
+    expect(Object.keys(HOST_POLICIES)).toEqual(['auto', ...WORKSPACE_HOSTS]);
+    expect(normalizeHost()).toBe('auto');
+    expect(normalizeHost('')).toBe('auto');
+    expect(normalizeHost('   ')).toBe('auto');
+    expect(normalizeHost('gemini')).toBe('antigravity');
+    expect(() => normalizeHost('grokk')).toThrow(/Unsupported Gofer host/);
+  });
+
+  it('keeps omitted and blank hosts as auto but rejects invalid explicit hosts without mutation', () => {
+    for (const args of [
+      ['--workspace', workspaceRoot, '--json'],
+      ['--workspace', workspaceRoot, '--host', '', '--json'],
+    ]) {
+      const result = runJson(CHECK_SCRIPT, args);
+      expect(result.exitCode).toBe(2);
+      expect(result.payload.host).toBe('auto');
+    }
+
+    for (const script of [CHECK_SCRIPT, BOOTSTRAP_SCRIPT]) {
+      const result = runRaw(script, ['--workspace', workspaceRoot, '--host', 'grokk', '--json']);
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toContain('Unsupported Gofer host');
+      expect(result.stderr).not.toContain('grokk');
+      expect(fs.existsSync(path.join(workspaceRoot, '.specify'))).toBe(false);
+    }
   });
 
   it('reports missing then bootstraps a healthy Claude workspace without repo-local mirrors', () => {
@@ -147,6 +196,10 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(agents).toContain('## User-Facing Response Gate');
     expect(agents).toContain('If any check fails, rewrite the reply before sending it');
     expect(agents).toContain('gofer:always-on-eai:start');
+    expect(agents).toContain(
+      '`/eai` in Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` in Codex'
+    );
+    expect(agents).not.toContain('#eai');
     expect(fs.readFileSync(path.join(workspaceRoot, 'GEMINI.md'), 'utf8')).toContain(
       'gofer:always-on-eai:start'
     );
@@ -179,15 +232,16 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(embeddedPost.payload.status).toBe('healthy');
     expect(embeddedPost.payload.expectedVersion).toBe(embeddedPost.payload.actualVersion);
 
-    const geminiPost = runJson(CHECK_SCRIPT, [
+    const legacyGeminiPost = runJson(CHECK_SCRIPT, [
       '--workspace',
       workspaceRoot,
       '--host',
       'gemini',
       '--json',
     ]);
-    expect(geminiPost.exitCode).toBe(0);
-    expect(geminiPost.payload.status).toBe('healthy');
+    expect(legacyGeminiPost.exitCode).toBe(0);
+    expect(legacyGeminiPost.payload.host).toBe('antigravity');
+    expect(legacyGeminiPost.payload.status).toBe('healthy');
   });
 
   it('preserves existing instruction files and adds only the managed always-on section', () => {
@@ -353,7 +407,7 @@ Keep this instruction.
     }
   });
 
-  it('can include host app mirror resources for Claude, Codex, Copilot, and Gemini', () => {
+  it('can include current host mirrors and legacy Gemini file-format resources', () => {
     const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
       '--workspace',
       workspaceRoot,
@@ -368,12 +422,152 @@ Keep this instruction.
       '.github/agents/gofer-business.agent.md',
       '.github/skills/eai/SKILL.md',
       '.agents/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
       '.gemini/extension.json',
     ]) {
       expect(
         fs.existsSync(path.join(workspaceRoot, relativePath)),
         `${relativePath} should exist`
       ).toBe(true);
+    }
+  });
+
+  it.each([
+    {
+      label: 'top-level managed directory',
+      includeMirrors: false,
+      prepare(outsideRoot: string) {
+        fs.symlinkSync(
+          outsideRoot,
+          path.join(workspaceRoot, '.specify'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      },
+    },
+    {
+      label: 'nested managed directory',
+      includeMirrors: false,
+      prepare(outsideRoot: string) {
+        fs.mkdirSync(path.join(workspaceRoot, '.specify'));
+        fs.symlinkSync(
+          outsideRoot,
+          path.join(workspaceRoot, '.specify', 'scripts'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      },
+    },
+    {
+      label: 'managed file leaf',
+      includeMirrors: false,
+      prepare(outsideRoot: string) {
+        const outsideFile = path.join(outsideRoot, 'version.txt');
+        fs.writeFileSync(outsideFile, 'outside-content\n');
+        fs.mkdirSync(path.join(workspaceRoot, '.specify'));
+        fs.symlinkSync(outsideFile, path.join(workspaceRoot, '.specify', '.gofer-version'));
+      },
+    },
+    {
+      label: 'legacy archive directory',
+      includeMirrors: false,
+      prepare(outsideRoot: string) {
+        fs.mkdirSync(path.join(workspaceRoot, '.specify', 'logs'), { recursive: true });
+        fs.mkdirSync(path.join(workspaceRoot, '.specify', 'commands'), { recursive: true });
+        fs.writeFileSync(
+          path.join(workspaceRoot, '.specify', 'commands', '0_business_scenario.md'),
+          '# legacy\n'
+        );
+        fs.symlinkSync(
+          outsideRoot,
+          path.join(workspaceRoot, '.specify', 'logs', 'legacy-command-backups'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      },
+    },
+    {
+      label: 'nested host mirror directory',
+      includeMirrors: true,
+      prepare(outsideRoot: string) {
+        fs.mkdirSync(path.join(workspaceRoot, '.github'), { recursive: true });
+        fs.symlinkSync(
+          outsideRoot,
+          path.join(workspaceRoot, '.github', 'prompts'),
+          process.platform === 'win32' ? 'junction' : 'dir'
+        );
+      },
+    },
+  ])('rejects a $label symlink without writing through it', ({ prepare, includeMirrors }) => {
+    const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-bootstrap-outside-'));
+    try {
+      prepare(outsideRoot);
+      const before = findFiles(outsideRoot).map((filePath) => ({
+        relativePath: path.relative(outsideRoot, filePath),
+        content: fs.readFileSync(filePath, 'utf8'),
+      }));
+
+      const args = ['--workspace', workspaceRoot, '--host', 'claude'];
+      if (includeMirrors) {
+        args.push('--include-mirrors');
+      }
+      const result = runRaw(BOOTSTRAP_SCRIPT, args);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/Unsafe Gofer workspace path.*symbolic link/i);
+      expect(
+        findFiles(outsideRoot).map((filePath) => ({
+          relativePath: path.relative(outsideRoot, filePath),
+          content: fs.readFileSync(filePath, 'utf8'),
+        }))
+      ).toEqual(before);
+    } finally {
+      fs.rmSync(outsideRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects non-directory managed parent components', () => {
+    fs.writeFileSync(path.join(workspaceRoot, '.specify'), 'not a directory\n');
+
+    const result = runRaw(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/managed directory component must be a real directory/i);
+  });
+
+  it('rejects a workspace root presented through a symbolic link', () => {
+    const aliasContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-bootstrap-alias-'));
+    const workspaceAlias = path.join(aliasContainer, 'workspace');
+    try {
+      fs.symlinkSync(
+        workspaceRoot,
+        workspaceAlias,
+        process.platform === 'win32' ? 'junction' : 'dir'
+      );
+
+      const result = runRaw(BOOTSTRAP_SCRIPT, ['--workspace', workspaceAlias, '--host', 'claude']);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/workspace root must be a real directory.*symbolic link/i);
+      expect(fs.existsSync(path.join(workspaceRoot, '.specify'))).toBe(false);
+    } finally {
+      fs.rmSync(aliasContainer, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a legacy archive source symlink without changing its target', () => {
+    const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-bootstrap-outside-'));
+    const outsideFile = path.join(outsideRoot, 'legacy.md');
+    const legacyPath = path.join(workspaceRoot, '.specify', 'commands', '0_business_scenario.md');
+    try {
+      fs.writeFileSync(outsideFile, '# outside legacy\n');
+      fs.mkdirSync(path.dirname(legacyPath), { recursive: true });
+      fs.symlinkSync(outsideFile, legacyPath);
+
+      const result = runRaw(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/Unsafe Gofer workspace path.*symbolic link/i);
+      expect(fs.readFileSync(outsideFile, 'utf8')).toBe('# outside legacy\n');
+    } finally {
+      fs.rmSync(outsideRoot, { recursive: true, force: true });
     }
   });
 });

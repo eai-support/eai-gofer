@@ -90,7 +90,7 @@ export class ClaudeOutputParser implements CLIOutputParser {
   detectErrors(output: string): string | null {
     // Check for authentication errors
     if (output.includes('authentication') || output.includes('API key')) {
-      return 'Authentication failed. Run: claude login';
+      return 'Authentication failed. Run: claude auth login';
     }
 
     // Check for rate limiting

@@ -67,7 +67,11 @@ export const FORMERLY_CLAUDE_ONLY_STAGES = [
   '8_gofer_branding',
 ] as const;
 
-export const CROSS_CLI_SURFACES = [
+/**
+ * Generator output targets. These names include file-format mirrors such as
+ * `gemini`; they are intentionally not the current semantic-host contract.
+ */
+export const GENERATED_OUTPUT_TARGETS = [
   'claude',
   'claude-mirror',
   'copilot',

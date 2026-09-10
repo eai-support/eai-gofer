@@ -18,13 +18,23 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        # actions/checkout v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        # actions/setup-node v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Protect Historical Public Release Artifacts
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          node scripts/verify-historical-release-artifacts.mjs --version "$version"
 
       - name: Install Dependencies
         run: npm ci

@@ -49,7 +49,7 @@ describe('PlatformDetector', () => {
       expect(detector.isPlatformAvailable('claude')).toBe(true);
       expect(detector.isPlatformAvailable('copilot')).toBe(false);
       expect(detector.isPlatformAvailable('codex')).toBe(false);
-      expect(detector.isPlatformAvailable('gemini')).toBe(false);
+      expect(detector.isPlatformAvailable('antigravity')).toBe(false);
     });
 
     it('returns true for copilot when .github/prompts exists', () => {
@@ -60,7 +60,7 @@ describe('PlatformDetector', () => {
       expect(detector.isPlatformAvailable('copilot')).toBe(true);
       expect(detector.isPlatformAvailable('claude')).toBe(false);
       expect(detector.isPlatformAvailable('codex')).toBe(false);
-      expect(detector.isPlatformAvailable('gemini')).toBe(false);
+      expect(detector.isPlatformAvailable('antigravity')).toBe(false);
     });
 
     it('returns true for codex when .system/skills exists', () => {
@@ -71,18 +71,27 @@ describe('PlatformDetector', () => {
       expect(detector.isPlatformAvailable('codex')).toBe(true);
       expect(detector.isPlatformAvailable('claude')).toBe(false);
       expect(detector.isPlatformAvailable('copilot')).toBe(false);
-      expect(detector.isPlatformAvailable('gemini')).toBe(false);
+      expect(detector.isPlatformAvailable('antigravity')).toBe(false);
     });
 
-    it('returns true for gemini when .gemini/commands/gofer exists', () => {
+    it('maps legacy .gemini command resources to the Antigravity host', () => {
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) =>
         String(p).includes('.gemini/commands/gofer')
       );
       const detector = PlatformDetector.getInstance(workspacePath);
-      expect(detector.isPlatformAvailable('gemini')).toBe(true);
+      expect(detector.isPlatformAvailable('antigravity')).toBe(true);
       expect(detector.isPlatformAvailable('claude')).toBe(false);
       expect(detector.isPlatformAvailable('copilot')).toBe(false);
       expect(detector.isPlatformAvailable('codex')).toBe(false);
+    });
+
+    it('detects Grok and the active VS Code extension surface', () => {
+      vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) =>
+        String(p).includes('.grok/skills')
+      );
+      const detector = PlatformDetector.getInstance(workspacePath);
+      expect(detector.isPlatformAvailable('grok')).toBe(true);
+      expect(detector.isPlatformAvailable('vscode')).toBe(true);
     });
   });
 
@@ -94,7 +103,7 @@ describe('PlatformDetector', () => {
       expect(detector.getDefaultPlatform()).toBe('copilot');
     });
 
-    it('auto-detects claude first, then codex, then gemini, then copilot', () => {
+    it('auto-detects hosts in canonical order', () => {
       mockConfig['defaultCLI'] = 'auto';
       ConfigManager.getInstance().refresh();
 
@@ -111,12 +120,11 @@ describe('PlatformDetector', () => {
       detector.clearCache();
       expect(detector.getDefaultPlatform()).toBe('claude');
 
-      vi.mocked(fs.existsSync).mockImplementation(
-        (p: fs.PathLike) =>
-          String(p).includes('.gemini/commands/gofer') || String(p).includes('.github/prompts')
+      vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) =>
+        String(p).includes('.gemini/commands/gofer')
       );
       detector.clearCache();
-      expect(detector.getDefaultPlatform()).toBe('gemini');
+      expect(detector.getDefaultPlatform()).toBe('antigravity');
 
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) =>
         String(p).includes('.github/prompts')
@@ -125,12 +133,12 @@ describe('PlatformDetector', () => {
       expect(detector.getDefaultPlatform()).toBe('copilot');
     });
 
-    it('returns auto when no directories are available and setting is auto', () => {
+    it('uses the active VS Code execution context when no filesystem surface exists', () => {
       mockConfig['defaultCLI'] = 'auto';
       ConfigManager.getInstance().refresh();
       vi.mocked(fs.existsSync).mockReturnValue(false);
       const detector = PlatformDetector.getInstance(workspacePath);
-      expect(detector.getDefaultPlatform()).toBe('auto');
+      expect(detector.getDefaultPlatform()).toBe('vscode');
     });
   });
 
@@ -161,7 +169,23 @@ describe('PlatformDetector', () => {
       expect(ctx.hasClaudeDirectory).toBe(true);
       expect(ctx.hasCopilotDirectory).toBe(false);
       expect(ctx.hasCodexDirectory).toBe(false);
-      expect(ctx.hasGeminiDirectory).toBe(false);
+      expect(ctx.hasAntigravityDirectory).toBe(false);
+      expect(ctx.hasGrokDirectory).toBe(false);
+      expect(ctx.hasVSCodeSurface).toBe(true);
+    });
+
+    it('records VS Code as an execution-context fallback when no host resources exist', () => {
+      mockConfig['defaultCLI'] = 'auto';
+      ConfigManager.getInstance().refresh();
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const detector = PlatformDetector.getInstance(workspacePath);
+
+      const ctx = detector.getDetectionContext();
+
+      expect(ctx.platform).toBe('vscode');
+      expect(ctx.detectionMethod).toBe('execution-context');
+      expect(ctx.isAutoDetected).toBe(true);
+      expect(ctx.isVSCodeExtension).toBe(true);
     });
 
     it('caches detectPlatform result until clearCache', () => {
@@ -194,7 +218,7 @@ describe('PlatformDetector', () => {
         throw new Error('fs failed');
       });
       const detector = PlatformDetector.getInstance(workspacePath);
-      expect(detector.getDefaultPlatform()).toBe('auto');
+      expect(detector.getDefaultPlatform()).toBe('vscode');
       expect(detector.isPlatformAvailable('claude')).toBe(false);
     });
   });

@@ -548,8 +548,8 @@ ready, tell the user to start:
 /gofer <what you want to build>
 ```
 
-Use `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` where that
-syntax fits the host. If `/gofer` or `/eai` is still unknown after the
+Use `/eai` on Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` on
+Codex. If `/gofer`, `/eai`, or `$eai` is still unknown after the
 plugin is installed and the repo is bootstrapped, explain that the host has not
 loaded the Gofer plugin or repo commands yet. Give the host-specific
 install/update command from the Gofer README, then retry after the host reloads.

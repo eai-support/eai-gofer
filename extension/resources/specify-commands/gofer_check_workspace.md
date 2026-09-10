@@ -41,7 +41,7 @@ Before spawning agents, calling tools, or loading large files:
 2. Use the cheapest capable model first.
    - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
    - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Google Antigravity (Gemini models): Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
    - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -149,13 +149,16 @@ Check the current host's required repo-owned files:
 - **Claude**: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
 - **Codex**: `AGENTS.md`
 - **Copilot**: `.github/copilot-instructions.md`
-- **Gemini**: no additional required repo-owned files beyond the core scaffold
+- **Google Antigravity**: `AGENTS.md`, `GEMINI.md`
+- **Grok Build**: `AGENTS.md`
+- **VS Code**: `.github/copilot-instructions.md`
 
 ## Step 4: Prefer Scripted Evidence When Available
 
 If the repo already has the Gofer workspace scripts, run the checker for the
 current host and report the JSON result. Use the host value that matches the
-client you are currently in: `claude`, `codex`, `copilot`, or `gemini`.
+client you are currently in: `claude`, `codex`, `copilot`, `antigravity`,
+`grok`, or `vscode`.
 
 ```bash
 node .specify/scripts/node/gofer-workspace-check.mjs --host "$GOFER_HOST" --json

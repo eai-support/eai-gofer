@@ -82,11 +82,11 @@ npm run test:integration
 # Run CLI provider tests
 npm test -- tests/integration/council/
 
-claude login
+claude auth login
 codex login
 ```
 
-**Note:** Tests should prefer `claude login`, `codex login`, and local CLI state
+**Note:** Tests should prefer `claude auth login`, `codex login`, and local CLI state
 over direct provider API clients.
 
 ### E2E Tests (`tests/e2e/`)

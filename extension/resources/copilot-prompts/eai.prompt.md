@@ -12,7 +12,7 @@ gofer:
 
 # Eai
 
-Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit `/eai`, `$eai`, or `#eai` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. Use `/eai` on Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` on Codex. The prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -50,10 +50,10 @@ Before each user-facing reply, check the draft against these rules:
 ## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
 
-Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai` or `$eai`.
 
 1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
-2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request for the same contract.
+2. Treat an explicit `/eai` (Claude, Copilot, Antigravity, Grok, or VS Code) or `$eai` (Codex) prefix as an idempotent request for the same contract.
 3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
 4. Keep the reply short unless the user asks for detail.
 5. Explain the business effect first.
@@ -64,6 +64,8 @@ Apply this contract to every request after Gofer is installed for this repo or A
 <!-- gofer:always-on-eai:end -->
 
 ## Workspace Preflight
+
+
 
 1. Resolve the repository root.
 2. Run `node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json` when available.

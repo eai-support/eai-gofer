@@ -244,6 +244,11 @@ export class CommandRegistry {
               label: 'CLAUDE.md',
             },
             {
+              path: path.join(deps.workspacePath, 'GEMINI.md'),
+              generate: () => generator.generateGeminiMd(),
+              label: 'GEMINI.md',
+            },
+            {
               path: path.join(deps.workspacePath, '.github', 'copilot-instructions.md'),
               generate: () => generator.generateCopilotMd(projectInfo),
               label: 'copilot-instructions.md',
@@ -699,7 +704,7 @@ priority: "P1"
   To generate a complete implementation, use the public Gofer entrypoint:
   /eai ${specTitle}
 
-  Use /eai, #eai, or $eai where that syntax fits the host.
+  Use /eai on Claude, Copilot, Antigravity, Grok, or VS Code, and $eai on Codex.
   Gofer routes internally through .specify/commands/*.md:
   1_gofer_research  → Creates research.md
   2_gofer_specify   → Updates this spec.md

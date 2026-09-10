@@ -35,6 +35,18 @@ describe('ClaudeCodeCLIProvider', () => {
     it('should return the CLI command', () => {
       expect(provider.getCLICommand()).toBe(mockCommand);
     });
+
+    it('should build a non-interactive command with a positional prompt', () => {
+      const prompt = 'Review this implementation';
+
+      expect(provider.getCLICommand()).toBe('claude');
+      expect(provider['buildCLIArgs'](prompt)).toEqual([
+        '--model',
+        mockModel,
+        '--print',
+        prompt,
+      ]);
+    });
   });
 
   describe('formatPrompt', () => {
@@ -98,7 +110,7 @@ Usage: 10 input tokens, 20 output tokens`;
 
       const parsed = provider.parseOutput(output);
 
-      expect(parsed.error).toBe('Authentication failed. Run: claude login');
+      expect(parsed.error).toBe('Authentication failed. Run: claude auth login');
     });
 
     it('should handle output without separator', () => {

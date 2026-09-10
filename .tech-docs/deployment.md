@@ -13,8 +13,8 @@ Gofer is deployed through three distribution channels:
 1. **GitHub Releases and Pages** - VSIX + agent plugin ZIP + source tarball
 2. **VS Code Marketplace** - Extension VSIX when publisher authorization is
    configured
-3. **Agent Plugin Marketplaces** - Claude Code, Copilot CLI, Codex, and Gemini
-   installations
+3. **Agent Plugin Marketplaces** - Claude Code, Codex, Copilot CLI, Google
+   Antigravity, and Grok Build installations
 
 All deployments are automated via GitHub Actions CI/CD pipelines with version
 tagging and semantic versioning.

@@ -4,7 +4,7 @@
  * Verifies that Gofer commands are discoverable via fuzzy matching across
  * the 15 pipeline stage files + 3 control commands (gofer:plan, gofer:side,
  * gofer:personality). This is the proxy for "Gofer commands appear in
- * Claude/Copilot/Gemini fuzzy suggestions" (US5 AC-2).
+ * current-host fuzzy suggestions" (US5 AC-2).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -71,11 +71,11 @@ const ALL_COMMANDS: string[] = [
 ];
 
 // Surfaces that carry pickers (Codex has no picker — explicitly omitted).
-type Surface = 'claude' | 'copilot' | 'gemini' | 'vscode';
+type Surface = 'claude' | 'copilot' | 'antigravity' | 'grok' | 'vscode';
 
 /**
  * Filter the universe of commands by which surface(s) the user is on.
- * For now, every command is available on claude+copilot+gemini+vscode;
+ * For now, every command is available on the current picker surfaces;
  * Codex-only stages would be omitted here, but none exist yet.
  */
 function commandsForSurfaces(surfaces: Surface[]): string[] {

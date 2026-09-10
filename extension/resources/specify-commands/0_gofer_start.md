@@ -45,7 +45,7 @@ Before spawning agents, calling tools, or loading large files:
 2. Use the cheapest capable model first.
    - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
    - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Google Antigravity (Gemini models): Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
    - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -118,8 +118,9 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 
 ## Always-On EAI Contract
 
-Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that
-prefix as activation for this contract, not as business content.
+Users may explicitly start a request with `/eai` on Claude, Copilot,
+Antigravity, Grok, or VS Code, or with `$eai` on Codex. Treat that prefix as
+activation for this contract, not as business content.
 
 1. Apply the Controlled English Contract to every Gofer-authored message and
    artifact.
@@ -179,7 +180,7 @@ Before doing stage/helper work:
    - Claude: `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`
    - Codex: `AGENTS.md`
    - Copilot: `.github/copilot-instructions.md`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - VS Code extension mirrors all six current host surfaces and keeps legacy `.gemini/**` compatibility resources healthy
 4. If the repo already has the workspace checker script, prefer running:
    - `node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json`
 5. If the workspace is missing or stale, ask exactly:
@@ -303,8 +304,9 @@ with an unrelated non-EAI stack.
    - Do not run `/gofer:eai-first-run`, `eai whoami`, tenant selection, or
      template setup for confirmed non-app work.
    - `/gofer:eai-first-run` is the cross-platform setup contract for macOS,
-     Linux, Windows, GitHub Codespaces, Claude Code, Codex, Copilot, Gemini, and
-     VS Code. It checks first, asks only when action is needed, installs the EAI
+     Linux, Windows, GitHub Codespaces, Claude Code, Codex, Copilot,
+     Google Antigravity, Grok Build, and VS Code. It checks first, asks only when
+     action is needed, installs the EAI
      CLI when approved, checks `eai update --check`, confirms login and tenant,
      runs `eai init <project-name> --skip-prompts --company-tenant
      <active-tenant-id>` when approved, verifies Gofer files, and then returns

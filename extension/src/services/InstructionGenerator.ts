@@ -5,7 +5,8 @@ import { ProjectInfo } from './ProjectDetector';
 
 /**
  * Assembles composable template fragments into instruction files
- * (AGENTS.md, CLAUDE.md, copilot-instructions.md) using detected project info.
+ * (AGENTS.md, CLAUDE.md, GEMINI.md, copilot-instructions.md) using detected
+ * project info.
  *
  * All generation is deterministic — no API keys or network access required.
  */
@@ -129,6 +130,33 @@ export class InstructionGenerator {
     }
 
     return content;
+  }
+
+  /**
+   * Generate the repository instruction bridge consumed by Google Antigravity.
+   *
+   * AGENTS.md remains the canonical project-specific instruction document. The
+   * bridge is intentionally small so the two files cannot silently diverge.
+   */
+  public generateGeminiMd(): string {
+    return `# GEMINI.md
+
+<!-- gofer:always-on-eai:start -->
+
+See @AGENTS.md for project conventions, commands, and code style.
+
+## Always-On EAI Contract
+
+Apply Gofer to every request. Preserve the user prompt. Do not add a visible
+command prefix. Select the internal route and stage. Check workspace health only
+before meaningful repo work. Use the update path only for explicit Gofer
+maintenance requests.
+
+Use the internal Gofer pipeline to select the next stage. Keep the user-facing
+conversation in business language.
+
+<!-- gofer:always-on-eai:end -->
+`;
   }
 
   // --- Private helpers ---

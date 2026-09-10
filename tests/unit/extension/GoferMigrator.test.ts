@@ -467,6 +467,7 @@ cd specs/001-feature
       await fs.mkdir(path.join(workspace, '.github/prompts'), { recursive: true });
       await fs.mkdir(path.join(workspace, '.github/instructions'), { recursive: true });
       await fs.mkdir(path.join(workspace, '.gemini/commands/gofer'), { recursive: true });
+      await fs.mkdir(path.join(workspace, '.grok/skills/eai'), { recursive: true });
       await fs.mkdir(path.join(workspace, '.system/skills/placeholder'), { recursive: true });
       await fs.mkdir(path.join(workspace, '.agents/skills/placeholder'), { recursive: true });
 
@@ -487,6 +488,11 @@ cd specs/001-feature
       await fs.writeFile(
         path.join(workspace, '.gemini/commands/gofer/placeholder.toml'),
         'description = "placeholder"',
+        'utf-8'
+      );
+      await fs.writeFile(
+        path.join(workspace, '.grok/skills/eai/SKILL.md'),
+        '---\nname: eai\n---\n# Eai',
         'utf-8'
       );
       await fs.writeFile(
@@ -525,7 +531,7 @@ cd specs/001-feature
         'utf-8'
       );
 
-      // AGENTS.md and CLAUDE.md are intentionally NOT created (missing AI instructions)
+      // AGENTS.md, CLAUDE.md, and GEMINI.md are intentionally NOT created.
 
       // Mock withProgress to immediately execute the callback
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -570,7 +576,7 @@ cd specs/001-feature
       await migrator.syncMissingResources();
 
       expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Missing AI instruction files (AGENTS.md, CLAUDE.md). Generate them?',
+        'Missing AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md). Generate them?',
         'Yes',
         'No'
       );
@@ -629,7 +635,7 @@ cd specs/001-feature
       await migrator.syncMissingResources();
 
       expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Missing AI instruction files (AGENTS.md, CLAUDE.md). Generate them?',
+        'Missing AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md). Generate them?',
         'Yes',
         'No'
       );
@@ -653,7 +659,7 @@ cd specs/001-feature
       await freshMigrator.syncMissingResources();
 
       expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Missing AI instruction files (AGENTS.md, CLAUDE.md). Generate them?',
+        'Missing AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md). Generate them?',
         'Yes',
         'No'
       );
