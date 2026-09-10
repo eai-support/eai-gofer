@@ -80,7 +80,7 @@ describe('authentication access decision contract', () => {
     expect(contract).toContain('An unavailable membership service does not grant access');
     expect(contract).toContain('Changing the sign-in provider does not widen');
     expect(contract).toMatch(/Never\s+link identities by email alone/);
-    expect(contract).toMatch(/passing source\s+tests do not prove/);
+    expect(contract.replace(/\s+/g, ' ')).toContain('passing source tests do not prove');
     expect(read('.specify/references/mvp-capability-validation.md')).toContain(reference);
   });
 
