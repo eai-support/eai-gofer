@@ -65,7 +65,10 @@ function parseArgs(argv) {
         args.featureDir = argv[++index] || '';
         break;
       case '--stage':
-        args.stage = argv[++index] ?? '';
+        if (argv[index + 1] === undefined || argv[index + 1].startsWith('--')) {
+          throw new Error('--stage requires a value before the next option.');
+        }
+        args.stage = argv[++index];
         break;
       case '--init':
         args.init = true;

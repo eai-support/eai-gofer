@@ -162,11 +162,13 @@ describe('priority audit CLI regressions', () => {
   it('rejects a missing stage value before initialization or recording', () => {
     fs.unlinkSync(path.join(dir, 'loop-contract.json'));
     const before = read('loop-ledger.jsonl');
-    const result = loop('--init', '--record', '{}', '--stage');
-    expect(result.code).toBe(1);
-    expect(result.stderr).toContain('Unknown stage');
-    expect(fs.existsSync(path.join(dir, 'loop-contract.json'))).toBe(false);
-    expect(read('loop-ledger.jsonl')).toBe(before);
+    for (const suffix of [[], ['--init']]) {
+      const result = loop('--init', '--record', '{}', '--stage', ...suffix);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('--stage requires a value');
+      expect(fs.existsSync(path.join(dir, 'loop-contract.json'))).toBe(false);
+      expect(read('loop-ledger.jsonl')).toBe(before);
+    }
   });
 
   it.each(['local-mvp', 'non-app'])(
