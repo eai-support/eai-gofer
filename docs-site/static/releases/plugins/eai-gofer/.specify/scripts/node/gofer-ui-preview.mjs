@@ -5,6 +5,8 @@ import { createWriteStream } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import net from 'node:net';
+import { once } from 'node:events';
 
 export const DEFAULT_APP_PREVIEW_PORT = 3001;
 export const DEFAULT_PREVIEW_PORTS = [DEFAULT_APP_PREVIEW_PORT, 3000, 5173, 4173, 6006, 8080, 8000];
@@ -364,7 +366,8 @@ export function buildCandidateUrls({ explicitUrl = null, command = null, ports =
   if (explicitUrl?.trim()) return [sanitizePreviewUrl(explicitUrl)];
 
   const commandPorts = extractPortsFromCommand(command ?? '');
-  const orderedPorts = [...new Set([...commandPorts, ...ports])];
+  // Do not mistake another app on a fallback port for this preview.
+  const orderedPorts = (commandPorts.length ? commandPorts : ports).slice(0, 1);
   return orderedPorts.map((port) => `http://localhost:${port}`);
 }
 
@@ -475,7 +478,7 @@ export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 
             continue;
           }
         }
-        if (response.status < 500) {
+        if (response.status >= 200 && response.status < 300) {
           return { ok: true, urlIndex: index, status: response.status };
         }
         lastError = `HTTP ${response.status} from ${url}`;
@@ -491,9 +494,39 @@ export async function waitForReachableUrl(urls, timeoutMs = 45000, intervalMs = 
   return { ok: false, urlIndex: null, status: null, error: lastError ?? 'No candidate URL responded' };
 }
 
+export async function checkPreviewPortAvailable(url) {
+  const parsed = new URL(sanitizePreviewUrl(url));
+  const port = Number(parsed.port || (parsed.protocol === 'https:' ? 443 : 80));
+  const connect = host => new Promise(resolve => {
+    const socket = net.connect({ host, port });
+    const finish = result => { socket.destroy(); resolve(result); };
+    socket.setTimeout(1000, () => finish({ ok: false, code: 'PORT_CHECK_TIMEOUT' }));
+    socket.once('connect', () => finish({ ok: false, code: 'EADDRINUSE' }));
+    socket.once('error', error => finish(['ECONNREFUSED', 'EAFNOSUPPORT', 'EADDRNOTAVAIL', 'ENETUNREACH'].includes(error.code)
+      ? { ok: true } : { ok: false, code: error.code }));
+  });
+  for (const host of ['127.0.0.1', '::1']) {
+    const result = await connect(host);
+    if (!result.ok) return result;
+  }
+  const probe = host => new Promise(resolve => {
+    const server = net.createServer();
+    server.once('error', error => resolve({ ok: false, code: error.code }));
+    server.listen({ host, port, exclusive: true }, () => server.close(() => resolve({ ok: true })));
+  });
+  // Probe both families. Refuse ambiguous failures rather than launching a runner
+  // that could terminate another app. Runners must also verify ownership themselves.
+  for (const host of ['0.0.0.0', '::']) {
+    const result = await probe(host);
+    if (!result.ok && !['EAFNOSUPPORT', 'EADDRNOTAVAIL'].includes(result.code)) return result;
+  }
+  return { ok: true };
+}
+
 async function startPreviewServer(command, workspaceRoot, logPath, pidPath) {
   await fs.mkdir(path.dirname(logPath), { recursive: true });
-  const out = createWriteStream(logPath, { flags: 'a' });
+  const out = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
+  await once(out, 'open');
   out.write(`\n\n[${new Date().toISOString()}] Starting Gofer UI preview: ${command}\n`);
 
   const child = spawn(command, {
@@ -508,6 +541,8 @@ async function startPreviewServer(command, workspaceRoot, logPath, pidPath) {
     windowsHide: true,
   });
 
+  try { await once(child, 'spawn'); }
+  finally { out.end(); }
   child.unref();
   await fs.writeFile(pidPath, `${child.pid}\n`, 'utf8');
   return { pid: child.pid, logPath, pidPath };
@@ -628,11 +663,11 @@ async function openBrowser(url, mode) {
   }
 }
 
-async function captureScreenshot(url, outputPath) {
+export async function captureScreenshot(url, outputPath, engine = null) {
   const safeUrl = sanitizePreviewUrl(url);
   let chromium;
   try {
-    ({ chromium } = await import('playwright'));
+    chromium = engine ?? (await import('playwright')).chromium;
   } catch (error) {
     return {
       ok: false,
@@ -646,8 +681,13 @@ async function captureScreenshot(url, outputPath) {
   try {
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await page.goto(safeUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    const pageErrors = [];
+    page.on('pageerror', () => pageErrors.push('Page script failed'));
+    const response = await page.goto(safeUrl, { waitUntil: 'networkidle', timeout: 30000 });
     sanitizePreviewUrl(page.url());
+    if (!response || !response.ok()) throw new Error('The preview page returned an error');
+    if (new URL(page.url()).origin !== new URL(safeUrl).origin) throw new Error('The preview moved to another app');
+    if (!(await page.locator('body').innerText()).trim() || pageErrors.length) throw new Error('The preview is empty or has a script error');
     await page.screenshot({ path: outputPath, fullPage: true });
     return { ok: true, path: outputPath };
   } catch (error) {
@@ -727,6 +767,7 @@ function buildPreviewOpenIssues({ browser, screenshotPath, status, notes }) {
   if (status === 'blocked') {
     issues.push('Preview or required business-scenario evidence is blocked; inspect the scenario report and preview log.');
   }
+  if (status === 'unverified') issues.push('Current preview checks are incomplete; do not claim readiness.');
   return issues.length > 0 ? issues.join(' ') : 'none';
 }
 
@@ -909,6 +950,7 @@ export async function runUiPreview(rawOptions) {
 
   const baseReport = {
     status: 'planned',
+    readyToShow: false,
     workspaceRoot,
     featureDir,
     command: commandInfo.command,
@@ -938,7 +980,7 @@ export async function runUiPreview(rawOptions) {
     return {
       ...baseReport,
       status:
-        (commandInfo.command || rawOptions.url) && scenarioReady ? 'ready' : 'blocked',
+        (commandInfo.command || rawOptions.url) && scenarioReady ? 'planned' : 'blocked',
       nextActions:
         (commandInfo.command || rawOptions.url) && scenarioReady
           ? ['Run without --dry-run after a UI-facing change.']
@@ -962,6 +1004,13 @@ export async function runUiPreview(rawOptions) {
 
   let server = null;
   if (!rawOptions.url) {
+    const portCheck = await checkPreviewPortAvailable(candidateUrls[0]);
+    if (!portCheck.ok) {
+      return { ...baseReport, status: 'blocked', portCheck,
+        nextActions: ['The chosen connection is in use or cannot be checked. No app was stopped and no runner was started.',
+          'Verify that the process belongs to this exact app before restarting it. Leave other or unknown apps running and ask the user.',
+          'Use --url only for an existing preview that you have confirmed belongs to this app.'] };
+    }
     server = await startPreviewServer(commandInfo.command, workspaceRoot, paths.processLogPath, paths.pidPath);
   }
 
@@ -1059,10 +1108,7 @@ export async function runUiPreview(rawOptions) {
         workspaceRoot,
         featureDir,
         selectedUrl,
-        status:
-          scenarioRun.ok || (!scenariosRequired && scenarioRun.status === 'not-run')
-            ? 'passed'
-            : 'blocked',
+        status: scenarioRun.status === 'passed' ? 'passed' : scenarioRun.status === 'skipped' ? 'skipped' : 'blocked',
         manifestPath: scenarioManifest?.path ?? null,
         scenarioCount: scenarioManifest?.scenarioCount ?? 0,
         command: scenarioCommandInfo?.command ?? null,
@@ -1081,10 +1127,8 @@ export async function runUiPreview(rawOptions) {
       !scenarioCommandInfo?.command ||
       !scenarioCommandInfo?.browserRunner ||
       !scenarioRun.ok);
-  const previewStatus =
-    browser.ok && (screenshot.ok || !rawOptions.screenshot)
-      ? 'shown'
-      : 'shown-with-open-issues';
+  const readyToShow = readiness.ok && screenshot.ok && scenarioRun.status === 'passed';
+  const previewStatus = readyToShow ? (browser.attempted && browser.ok ? 'shown' : 'verified') : 'unverified';
   const status = scenarioBlocked ? 'blocked' : previewStatus;
 
   const reviewLogPath = await appendReviewLog({
@@ -1108,6 +1152,7 @@ export async function runUiPreview(rawOptions) {
   return {
     ...baseReport,
     status,
+    readyToShow: !scenarioBlocked && readyToShow,
     selectedUrl,
     browser,
     screenshot,
@@ -1115,7 +1160,8 @@ export async function runUiPreview(rawOptions) {
     server,
     businessScenarios,
     nextActions: [
-      'Tell the user the preview URL and screenshot path.',
+      readyToShow ? 'Report the checked preview URL, evidence and behaviour tested; do not claim the whole feature is complete.'
+        : 'The preview is not verified. Explain the missing or failing checks; do not say it is ready or working.',
       scenarioBlocked
         ? 'Fix the business-scenario manifest or browser suite, then rerun this helper.'
         : 'After the next UI-facing change, rerun this helper and browser scenarios before reporting completion.',
@@ -1154,7 +1200,7 @@ async function main() {
 
     const report = await runUiPreview(options);
     printReport(report, options.json);
-    process.exitCode = report.status === 'blocked' ? 2 : 0;
+    process.exitCode = ['blocked', 'unverified'].includes(report.status) ? 2 : 0;
   } catch (error) {
     console.error(`Gofer UI preview failed: ${error.message}`);
     process.exitCode = 1;

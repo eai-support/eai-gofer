@@ -141,6 +141,27 @@ _Example of marking unclear requirements:_
 - **App stack policy**: [EAI Platform including app template first, Azure second
   | approved non-EAI exception | not applicable]
 
+## Authentication Access Decision _(when authentication enters scope)_
+
+Use `.specify/references/platform/eai-auth-access.md`. Ask the business owner
+who may use the app before changing auth code.
+
+- **Access scope**: [workspace-only (default) | platform-authenticated with
+  explicit approval | not applicable yet]
+- **Owner confirmation and rationale**: [answer and date; unanswered must not
+  widen access]
+- **Target workspace**: [safe reference; not the shared CIAM directory ID]
+- **App permissions and data isolation**: [server-side rules; wider sign-in does
+  not grant workspace data access]
+- **Sign-in method**: [EAI sign-in | client SSO through EAI; confirmed
+  separately]
+- **SSO readiness**: [verified setup route and entitlement | blocked | not
+  applicable]
+- **Account continuity and recovery**: [membership preservation, rollback,
+  emergency sign-in; no secrets]
+- **Acceptance evidence**: [member, non-member, anonymous, cross-tenant,
+  revoked, and unavailable membership checks]
+
 ## Capability Maturity & Validation Scope
 
 Record only capabilities that matter to this feature. Use one state:

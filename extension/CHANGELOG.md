@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.6] - 2026-09-10
+
+Safer app restarts, verified previews, bounded retries and clearer delivery updates
+
 ## [3.12.5] - 2026-09-08
 
 Fix desktop pipeline continuation, restore standards-compliant MCP connections, preserve permission controls, and require full repository and packaged-extension tests before release.
