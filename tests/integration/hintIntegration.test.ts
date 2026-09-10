@@ -7,30 +7,78 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as path from 'path';
+import * as os from 'os';
+import * as fsPromises from 'fs/promises';
 
 // Unmock fs module for integration tests
 vi.unmock('fs');
-vi.unmock('fs/promises');
+const { writes, writeFailures, trackWrite } = vi.hoisted(() => {
+  const writes = new Set<Promise<unknown>>();
+  const writeFailures: unknown[] = [];
+  const trackWrite = (promise: Promise<unknown>) => {
+    writes.add(promise);
+    void promise.then(
+      () => writes.delete(promise),
+      (error) => {
+        writeFailures.push(error);
+        writes.delete(promise);
+      }
+    );
+    return promise;
+  };
+  return { writes, writeFailures, trackWrite };
+});
+const drainWrites = async () => {
+  // A settled failure must not prevent chained writes from finishing.
+  while (writes.size) await Promise.allSettled([...writes]);
+  if (writeFailures.length) {
+    throw new AggregateError(writeFailures.splice(0), 'Hint audit writes failed');
+  }
+};
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs/promises')>();
+  const tracked =
+    (operation: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      trackWrite(operation(...args));
+  // Delegate to real I/O; only expose pending audit writes to test teardown.
+  return { ...actual, mkdir: tracked(actual.mkdir), appendFile: tracked(actual.appendFile) };
+});
 import * as fs from 'fs';
 
 import { HintLoader } from '../../extension/src/autonomous/HintLoader';
 import { ContextBuilder } from '../../extension/src/autonomous/ContextBuilder';
 import { MemoryManager } from '../../extension/src/autonomous/MemoryManager';
 
+const cleanupWorkspace = async (workspaceRoot: string, dispose: () => void) => {
+  const failures: unknown[] = [];
+  for (const cleanup of [
+    dispose,
+    drainWrites,
+    () => fsPromises.rm(workspaceRoot, { recursive: true }),
+  ]) {
+    try {
+      await cleanup();
+    } catch (error) {
+      failures.push(...(error instanceof AggregateError ? error.errors : [error]));
+    }
+  }
+  if (failures.length) throw new AggregateError(failures, 'Hint integration cleanup failed');
+};
+
 describe('Hint Integration Tests (T075)', () => {
-  const testWorkspaceRoot = path.join(__dirname, 'test-workspace-hint-integration');
-  const hintsDir = path.join(testWorkspaceRoot, '.specify', 'hints');
-  const memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
+  let testWorkspaceRoot: string;
+  let hintsDir: string;
+  let memoryDir: string;
 
   let hintLoader: HintLoader;
   let memoryManager: MemoryManager;
   let contextBuilder: ContextBuilder;
 
   beforeEach(() => {
-    // Clean up test workspace
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
-    }
+    testWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-hint-integration-'));
+    hintsDir = path.join(testWorkspaceRoot, '.specify', 'hints');
+    memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
 
     // Create directories
     fs.mkdirSync(hintsDir, { recursive: true });
@@ -51,13 +99,62 @@ describe('Hint Integration Tests (T075)', () => {
     contextBuilder = new ContextBuilder(testWorkspaceRoot, memoryManager, hintLoader);
   });
 
-  afterEach(() => {
-    // Clean up
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
+  afterEach(async () => {
+    await cleanupWorkspace(testWorkspaceRoot, () => contextBuilder?.dispose());
+  });
+
+  it('drains chained real audit writes before teardown', async () => {
+    const logDir = path.join(testWorkspaceRoot, '.specify', 'logs');
+    const file = path.join(logDir, 'controlled-audit.jsonl');
+    const output = '{"test":"real-write"}\n';
+    void fsPromises
+      .mkdir(logDir, { recursive: true })
+      .then(() => fsPromises.appendFile(file, output));
+    await drainWrites();
+    expect(fs.readFileSync(file, 'utf8')).toBe(output);
+    expect(writes.size).toBe(0);
+  });
+
+  it('finishes pending real writes and removes the folder before surfacing failures', async () => {
+    const workspace = fs.mkdtempSync(path.join(testWorkspaceRoot, 'cleanup-regression-'));
+    const file = path.join(workspace, 'pending-audit.jsonl');
+    const output = '{"test":"pending-write"}\n';
+    let releaseWrite!: () => void;
+    const released = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const pendingWrite = trackWrite(released.then(() => fsPromises.appendFile(file, output)));
+    const failedWrite = fsPromises.appendFile(workspace, 'Cannot append to a directory.');
+    const directoryErrorCode =
+      process.platform === 'win32' ? expect.stringMatching(/^(EISDIR|EPERM|EACCES)$/) : 'EISDIR';
+    const disposalFailure = new Error('Controlled disposal failure');
+    const dispose = vi.fn(() => {
+      throw disposalFailure;
+    });
+    let cleanupFinished = false;
+    const cleanup = cleanupWorkspace(workspace, dispose).finally(() => {
+      cleanupFinished = true;
+    });
+    const cleanupAssertion = expect(cleanup).rejects.toMatchObject({
+      errors: [disposalFailure, expect.objectContaining({ code: directoryErrorCode })],
+    });
+
+    try {
+      await expect(failedWrite).rejects.toMatchObject({ code: directoryErrorCode });
+      expect(cleanupFinished).toBe(false);
+      expect(fs.existsSync(workspace)).toBe(true);
+      expect(writes.has(pendingWrite)).toBe(true);
+    } finally {
+      releaseWrite();
+      await cleanupAssertion;
     }
 
-    hintLoader.dispose();
+    expect(dispose).toHaveBeenCalledOnce();
+    await expect(pendingWrite).resolves.toBeUndefined();
+    expect(cleanupFinished).toBe(true);
+    expect(fs.existsSync(workspace)).toBe(false);
+    expect(writes.size).toBe(0);
+    expect(writeFailures).toHaveLength(0);
   });
 
   // ==========================================================================

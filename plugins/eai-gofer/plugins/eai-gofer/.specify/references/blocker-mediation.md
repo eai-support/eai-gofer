@@ -1,5 +1,10 @@
 # Blocker Mediation
 
+Technical escalation now requires a fresh diagnosis in the ask event's
+`verification` file. Use `priority-outcome-protection.md` for its required
+fields. A real business decision needs no failed command. Existing retry
+budgets, ask-once history and permissions remain unchanged.
+
 Keep the agreed goal. Stop spending time when progress needs an answer, access
 or a change outside the current work.
 

@@ -61,6 +61,7 @@ describe('delivery checkpoint executable checks', () => {
     'issues.md',
     'validation-report.md',
     'decisions.md',
+    'priority-plan.json',
   ])('rejects changed or newly added %s', (file) => {
     expect(review('--capture').code).toBe(0);
     write(file, 'New knowledge or scope');
@@ -86,6 +87,15 @@ describe('delivery checkpoint executable checks', () => {
     expect(review().code).toBe(0);
     fs.appendFileSync(path.join(dir, 'proof.json'), '\n');
     expect(review().body.findings).toContain('CHANGED_EVIDENCE:T001');
+  });
+  it('requires the named task receipt in traceability when priority protection is active', () => {
+    complete();
+    json('priority-plan.json', { schemaVersion: 1 });
+    expect(
+      review('--capture', '--evidence-map', path.join(dir, 'map.json')).body.findings
+    ).toContain('MISSING_NAMED_TASK_RECEIPT:T001');
+    write('traceability.md', '| T001 | FR-001 | proof.json |');
+    expect(review('--capture', '--evidence-map', path.join(dir, 'map.json')).code).toBe(0);
   });
   it.each(['fail', 'blocked', 'unknown'])('rejects %s evidence', (result) => {
     complete();
@@ -124,6 +134,22 @@ describe('delivery checkpoint executable checks', () => {
     );
   });
   it('connects drift to the existing strict loop audit', () => {
+    write('decisions.md', 'D001: Check the result.');
+    json('priority-plan.json', {
+      schemaVersion: 1,
+      revision: 'one',
+      objective: 'Check the result.',
+      lastInstruction: { id: 'D001', text: 'Check the result.' },
+      criticalPath: ['T001'],
+      tasks: { T001: { dependsOn: [], allowedEditScope: [] } },
+      outcome: {
+        id: 'result',
+        statement: 'Result checked.',
+        requirements: ['FR-001'],
+        target: { environment: 'local', revision: 'fixture' },
+        receipt: 'outcome.json',
+      },
+    });
     expect(review('--capture').code).toBe(0);
     const args = [
       '--feature-dir',

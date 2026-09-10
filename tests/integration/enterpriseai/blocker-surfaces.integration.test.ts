@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -85,7 +86,31 @@ describe('blocker control preservation across surfaces', () => {
       });
       expect(opened.status).toBe(0);
       const blockerId = JSON.parse(opened.stdout).blockerId;
-      expect(run({ action: 'ask', blockerId }).status).toBe(0);
+      expect(run({ action: 'ask', blockerId }).status).toBe(1);
+      fs.writeFileSync(
+        path.join(dir, 'diagnostic-output.txt'),
+        'Controlled source fixture absent.'
+      );
+      fs.writeFileSync(
+        path.join(dir, 'diagnosis.json'),
+        JSON.stringify({
+          evidence: 'diagnostic-output.txt',
+          sha256: createHash('sha256').update('Controlled source fixture absent.').digest('hex'),
+          blockerId,
+          kind: 'diagnosis',
+          classification: 'environment',
+          checkedAt: new Date().toISOString(),
+          command: 'read controlled source fixture',
+          observed: 'Fixture source is absent.',
+          source: 'test:source',
+          selfCauseChecked: true,
+          selfCauseCheck: 'Checked the expected fixture path.',
+          authorizedRepairAvailable: false,
+          authorityCheck: 'User owns the absent source.',
+          noSafeAlternativeReason: 'Do not invent source evidence.',
+        })
+      );
+      expect(run({ action: 'ask', blockerId, verification: 'diagnosis.json' }).status).toBe(0);
       expect(run({ action: 'ask', blockerId }).status).toBe(1);
       expect(run({ action: 'attempt', blockerId, approachKey: 'retry' }).status).toBe(1);
       expect(run().status).toBe(1);

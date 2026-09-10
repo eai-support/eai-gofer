@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import { promises as fs } from 'node:fs';
+import { promises as fs, constants } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 const FILE = 'blocker-register.json';
+const MAX_EVIDENCE_BYTES = 16 * 1024 * 1024;
 const CATEGORIES = ['decision', 'access', 'external', 'capability', 'solvable', 'unknown'];
 const STATES = ['ready', 'waiting', 'blocked', 'resolved'];
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -19,11 +20,37 @@ export function blockerIdentity(value) {
   return digest(JSON.stringify([key(value.goalKey), key(value.subjectKey), key(value.conditionKey)]));
 }
 
+async function readBounded(file) {
+  const check = stat => {
+    if (!stat.isFile()) throw new Error('Evidence must be a regular file');
+    if (stat.size > MAX_EVIDENCE_BYTES) throw new Error('Evidence exceeds the 16 MiB limit');
+  };
+  check(await fs.lstat(file));
+  // Nonblocking open also handles a regular file replaced by a FIFO after lstat.
+  const handle = await fs.open(file, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+  try {
+    check(await handle.stat());
+    const chunks = [];
+    let total = 0;
+    while (true) {
+      const chunk = Buffer.alloc(Math.min(64 * 1024, MAX_EVIDENCE_BYTES - total + 1));
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
+      if (!bytesRead) return Buffer.concat(chunks, total);
+      total += bytesRead;
+      // Bound the read itself, not only the initial size of a file that can grow.
+      if (total > MAX_EVIDENCE_BYTES) throw new Error('Evidence exceeds the 16 MiB limit');
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
 async function readInside(root, relative) {
   if (!material(relative) || path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..')) throw new Error('Invalid evidence path');
   const resolved = await fs.realpath(path.resolve(root, relative));
   if (!resolved.startsWith(root + path.sep)) throw new Error('Evidence escapes the state directory');
-  return fs.readFile(resolved, 'utf8');
+  return readBounded(resolved);
 }
 
 function validateRegister(register) {
@@ -63,8 +90,13 @@ async function load(root) {
 
 async function checkProofs(root, blocker) {
   for (const proof of blocker.proofs) {
-    if (!proof || !['change', 'resolution'].includes(proof.kind) || !material(proof.hash)) throw new Error('Invalid proof record');
-    if (digest(await readInside(root, proof.file)) !== proof.hash) throw new Error('Blocker evidence changed or is missing');
+    if (!proof || !['change', 'resolution', 'diagnosis'].includes(proof.kind) || !material(proof.hash)) throw new Error('Invalid proof record');
+    const raw = await readInside(root, proof.file);
+    if (digest(raw) !== proof.hash) throw new Error('Blocker evidence changed or is missing');
+    if (proof.kind === 'diagnosis') {
+      const diagnosis = JSON.parse(raw);
+      if (digest(await readInside(root, diagnosis.evidence)) !== diagnosis.sha256) throw new Error('Diagnosis output changed or is missing');
+    }
   }
 }
 
@@ -77,6 +109,23 @@ async function acceptProof(root, blocker, id, file, kind) {
     throw new Error('New evidence for this blocker and action is required');
   }
   return { file, kind, hash, source: proof.source };
+}
+
+async function acceptDiagnosis(root, id, file) {
+  const raw = await readInside(root, file);
+  const proof = JSON.parse(raw);
+  const age = Date.now() - Date.parse(proof.checkedAt);
+  if (proof.blockerId !== id || proof.kind !== 'diagnosis' ||
+      !['product', 'tooling', 'credential', 'environment', 'self-caused'].includes(proof.classification) ||
+      !material(proof.command) || !material(proof.observed) || !material(proof.source) ||
+      !material(proof.selfCauseCheck) || proof.selfCauseChecked !== true ||
+      proof.authorizedRepairAvailable !== false || !material(proof.authorityCheck) ||
+      !(material(proof.alternativeCheck) || material(proof.noSafeAlternativeReason)) ||
+      !Number.isFinite(age) || age < -300000 || age > 86400000 ||
+      digest(await readInside(root, proof.evidence)) !== proof.sha256) {
+    throw new Error('Fresh diagnosis and authority evidence are required before technical escalation');
+  }
+  return { file, kind: 'diagnosis', hash: digest(raw), source: proof.source };
 }
 
 export async function inspectBlockers(stateDir, { taskId } = {}) {
@@ -113,7 +162,7 @@ export async function applyBlockerEvent(stateDir, event) {
           !Array.isArray(event.tasks) || event.tasks.some(t => !/^T\d+$/.test(t))) throw new Error('Blocker classification and scope are required');
       if (!b) {
         b = { goalKey: key(event.goalKey), subjectKey: key(event.subjectKey), conditionKey: key(event.conditionKey),
-          category: event.category, owner: event.owner, question: event.question, requiredChange: event.requiredChange,
+          category: event.category, needsDiagnosis: event.category !== 'decision', owner: event.owner, question: event.question, requiredChange: event.requiredChange,
           tasks: [...new Set(event.tasks)], state: waits(event.category) ? 'waiting' : 'ready', asked: false,
           attempts: [], proofs: [], history: [], epoch: 0 };
         register.blockers[id] = b;
@@ -131,6 +180,8 @@ export async function applyBlockerEvent(stateDir, event) {
       const pending = b.attempts.find(a => a.result === 'pending');
       if (event.action === 'ask') {
         if (!b.asked && !pending && b.state !== 'resolved') {
+          // A business choice needs an answer, not a contrived failing command.
+          if (b.category !== 'decision' || b.needsDiagnosis === true) b.proofs.push(await acceptDiagnosis(root, id, event.verification));
           b.asked = true;
           b.state = 'waiting';
           response.allowed = true;
@@ -161,7 +212,9 @@ export async function applyBlockerEvent(stateDir, event) {
         response.decision = b.state;
       } else if (event.action === 'classify') {
         if (pending || b.state === 'resolved' || !CATEGORIES.includes(event.category)) throw new Error('Cannot change this classification');
+        const previousCategory = b.category;
         b.category = event.category;
+        b.needsDiagnosis = b.needsDiagnosis === true || previousCategory !== 'decision' || event.category !== 'decision';
         if (waits(b.category)) b.state = 'waiting';
         // Reclassification never resets attempts or clears a waiting decision.
         response.allowed = true;
@@ -179,7 +232,7 @@ export async function applyBlockerEvent(stateDir, event) {
           const proof = await acceptProof(root, b, id, event.evidence, isResume ? 'change' : 'resolution');
           b.proofs.push(proof);
           b.state = isResume ? 'ready' : 'resolved';
-          if (isResume) { b.epoch++; b.category = event.category; }
+          if (isResume) { b.epoch++; b.category = event.category; b.needsDiagnosis = true; }
           response.allowed = true;
           response.decision = b.state;
         }
@@ -212,7 +265,7 @@ async function main() {
   }
   if (!values['state-dir'] || (values.event && values.task)) throw new Error('State directory and one action are required');
   const result = values.event
-    ? await applyBlockerEvent(values['state-dir'], JSON.parse(await fs.readFile(values.event, 'utf8')))
+    ? await applyBlockerEvent(values['state-dir'], JSON.parse(await readBounded(await fs.realpath(values.event))))
     : await inspectBlockers(values['state-dir'], { taskId: values.task });
   console.log(JSON.stringify(result, null, 2));
   if (result.allowed === false || result.status === 'blocked') process.exitCode = 1;

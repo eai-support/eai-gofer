@@ -199,7 +199,7 @@ function under(root: string, files: readonly string[]): string[] {
   return files.map((file) => `.specify/${root}/${file}`);
 }
 
-/** Exact repository-owned scaffold files supplied by a compatible runtime release. */
+/** Historical inventory retained unchanged for existing pinned release consumers. */
 export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   [
     '.specify/.gofer-version',
@@ -218,13 +218,50 @@ export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   ].sort()
 );
 
-const PORTABLE_PATHS = new Set(GOFER_PORTABLE_SCAFFOLD_PATHS);
+/** Current inventory includes the priority checks and their runtime dependencies. */
+export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [
+    ...GOFER_PORTABLE_SCAFFOLD_PATHS,
+    ...under('references', [
+      'blocker-mediation.md',
+      'business-updates-and-goal-checks.md',
+      'priority-outcome-protection.md',
+    ]),
+    ...under('scripts', [
+      'node/gofer-blocker-control.mjs',
+      'node/gofer-delivery-check.mjs',
+      'node/gofer-priority-check.mjs',
+      'node/gofer-response-check.mjs',
+    ]),
+    ...under('templates', ['priority-plan-template.json']),
+  ].sort()
+);
+
+const PORTABLE_PATHS = new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS);
+const RELEASE_INVENTORIES = new Map(
+  [GOFER_PORTABLE_SCAFFOLD_PATHS, GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS].map((paths) => [
+    createGoferScaffoldInventoryDigest(paths),
+    paths,
+  ])
+);
 
 /** Hash the sorted newline-delimited path inventory used by scaffold consumers. */
 export function createGoferScaffoldInventoryDigest(paths: readonly string[]): string {
   return createHash('sha256')
     .update(`${[...paths].sort().join('\n')}\n`)
     .digest('hex');
+}
+
+/** Select the known inventory pinned by the immutable release descriptor. */
+export function getGoferPortableScaffoldPaths(
+  goferRelease: Readonly<GoferReleaseDescriptor>
+): readonly string[] {
+  assertGoferReleaseDescriptor(goferRelease);
+  const paths = RELEASE_INVENTORIES.get(goferRelease.inventoryDigest);
+  if (!paths) {
+    throw new Error(`Gofer ${goferRelease.ref} inventory digest does not match its descriptor.`);
+  }
+  return paths;
 }
 
 /** Distinguishes release-owned scaffold files from feature and runtime state. */
@@ -249,18 +286,20 @@ export function assertPortableGoferScaffold(
   files: readonly GoferPortableFileInput[],
   goferRelease: Readonly<GoferReleaseDescriptor>
 ): void {
-  assertGoferReleaseDescriptor(goferRelease);
+  const inventory = getGoferPortableScaffoldPaths(goferRelease);
 
   const filesByPath = new Map(files.map((file) => [file.path, file]));
-  for (const path of GOFER_PORTABLE_SCAFFOLD_PATHS) {
+  for (const path of inventory) {
     if (!filesByPath.has(path)) {
       throw new Error(`Gofer ${goferRelease.ref} scaffold is missing ${path}`);
     }
   }
 
-  const inventoryDigest = createGoferScaffoldInventoryDigest(GOFER_PORTABLE_SCAFFOLD_PATHS);
-  if (inventoryDigest !== goferRelease.inventoryDigest) {
-    throw new Error(`Gofer ${goferRelease.ref} inventory digest does not match its descriptor.`);
+  const releasePaths = new Set(inventory);
+  for (const file of files) {
+    if (isPortableGoferScaffoldPath(file.path) && !releasePaths.has(file.path)) {
+      throw new Error(`Gofer ${goferRelease.ref} scaffold does not declare ${file.path}`);
+    }
   }
 
   const marker = filesByPath.get('.specify/.gofer-version');

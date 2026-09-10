@@ -22,6 +22,7 @@ description: Execute tasks from tasks.md to implement the feature
 
 - Before repeating a failed action or asking for missing input, read .specify/references/blocker-mediation.md and inspect the private blocker register with gofer-blocker-control.mjs. Reuse the same state directory and goal, subject and condition keys across stages, restarts and surfaces. Different wording, models or tools do not create a new blocker.
 - Classify the cause first. Missing user decisions, access, external dependencies and unavailable capabilities require a recorded wait. Reserve an ask event before asking; ask once, explain the business impact and required change, then stop affected work. An unanswered question is not new evidence. Do not poll or rephrase it to keep running.
+- Technical ask events require a fresh verification file under .specify/references/priority-outcome-protection.md: actual diagnosis, self-cause check and why no authorized repair is available. Business choices need no failed command. For feature tasks, use gofer-priority-check.mjs and the saved direction before switching work; this does not start delivery during maintenance or conversation.
 - For AI-solvable or unknown causes, reserve each attempt before execution. Allow one investigation and one different recovery within existing tighter budgets. Record its result even when interrupted or unsuccessful. An unfinished reservation must not launch again. Do not reset the register, change keys or switch surfaces to obtain more attempts.
 - Resume only after a real user answer or changed external evidence has been recorded and checked. The helper allows one evidence-backed resumption; exhausted limits need human review. Never invent approval or evidence. Successful model output and a running server do not resolve a blocker without the relevant check.
 - Save the blocker, unfinished tasks and next action before stopping. Continue only approved tasks that do not depend on it. Keep the original goal; update specs, plans, tasks and validation for accepted direction changes, and reopen stale checks. Do not quietly drop requirements to make progress.
@@ -137,6 +138,12 @@ certification.
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
 Before each work batch, read the current goal, specification, tasks, and latest findings. After new knowledge or an approved change, update affected feature documents and explain the effect. Never weaken acceptance criteria to match failing code or invent user approval. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
+
+**Priority And Outcome Protection**
+
+Follow `.specify/references/priority-outcome-protection.md`. Before implementing a task, record the latest material user direction in decisions.md and maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; only recorded prerequisites and approved parallel work may precede the current priority. Do not switch to unrelated work when blocked. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
+
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 <!-- gofer:business-progress:end -->
 
@@ -530,9 +537,9 @@ npm run typecheck  # or tsc --noEmit
 
 **Feedback Loop Rules**:
 
-- If tests fail → **FIX BEFORE** proceeding to next task
-- If lint errors → **FIX BEFORE** proceeding
-- If type errors → **FIX BEFORE** proceeding
+- Fix failures caused by the current task within its approved edit scope before proceeding.
+- Record unrelated test, lint or type failures separately. Do not turn them into an unlimited repair project.
+- Required release and security checks still block release. Never skip or weaken them to pass.
 - **DO NOT** mark a task complete until the feedback loop passes
 - **DO NOT** accumulate failures across tasks
 
@@ -631,21 +638,18 @@ Task: subagent_type="multi-perspective-judge", model="opus"
 
 ### If Task Fails
 
-1. Report the error with context
-2. **For sequential tasks**: Halt execution
-3. **For parallel [P] tasks**: Continue others, report failed
-4. Provide debugging suggestions
-5. Ask user how to proceed:
-   - Retry the task
-   - Skip and continue
-   - Stop implementation
+1. Record the failure and its effect on the agreed outcome.
+2. Use the priority checker to retain the next required task and its dependencies.
+3. Continue only explicitly approved independent work; never silently skip a required task.
+4. Use the bounded blocker controller. Do not repeat a question or reset its retry budget.
 
 ### If Blocked
 
-1. Identify the blocker
-2. Check if it's a missing prerequisite
-3. Suggest running earlier stage if needed
-4. Document the issue in tasks.md
+1. Inspect the actual error and verify the command, route, environment and existing access.
+2. Check whether the agent caused the failure and whether an authorized repair is within the task scope.
+3. Use one safe investigation and bounded recovery, not repeated blind attempts. Read-only logs may establish the cause without replaying a mutation.
+4. Before a technical escalation, attach current diagnosis to the blocker helper ask event. State what the user must change and why.
+5. Record the blocker in tasks.md. Keep the agreed priority; propose a scope change if a prerequisite needs broader edits.
 
 ### If Something Goes Wrong (Rollback)
 
@@ -655,10 +659,7 @@ Task: subagent_type="multi-perspective-judge", model="opus"
    git status
    git diff
    ```
-3. **Rollback options**:
-   - Single file: `git checkout HEAD -- <file>`
-   - All uncommitted: `git reset --hard HEAD`
-   - To last checkpoint: `git reset --hard <checkpoint-commit>`
+3. Preserve unrelated work. Identify the exact changes made by this task and propose a narrow, reversible repair. Never reset the checkout, discard user changes, or run a destructive rollback without explicit approval.
 4. **Document** what went wrong in tasks.md
 5. **Retry** with modified approach
 

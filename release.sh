@@ -491,6 +491,32 @@ ensure_release_base() {
     fi
 }
 
+ensure_publication_head() {
+    local expected_head="$1"
+    local actual_head
+    local remote_head
+
+    if [ "$(git branch --show-current)" != "main" ]; then
+        print_error "Publication requires the validated main checkout. No release tag was created."
+        exit 1
+    fi
+
+    print_info "Rechecking the publication commit against fetched origin/main..."
+    if ! git fetch origin refs/heads/main:refs/remotes/origin/main; then
+        print_error "Cannot verify origin/main. No release tag was created."
+        exit 1
+    fi
+    actual_head=$(git rev-parse --verify HEAD)
+    remote_head=$(git rev-parse --verify refs/remotes/origin/main)
+
+    if [ "$actual_head" != "$remote_head" ] || [ "$actual_head" != "$expected_head" ]; then
+        print_error "Publication requires HEAD to exactly match fetched origin/main and the validated commit."
+        print_error "Expected: $expected_head; HEAD: $actual_head; origin/main: $remote_head"
+        print_error "Merge the release PR, fast-forward main, and rerun release.sh. No release tag was created."
+        exit 1
+    fi
+}
+
 load_env_file() {
     local env_line
     local env_key
@@ -587,6 +613,8 @@ fi
 if [ "$RELEASE_PHASE" = "publish" ]; then
     print_info "Release mode: publish merged main"
     TAG_NAME="v$CURRENT_VERSION"
+    PUBLICATION_HEAD=$(git rev-parse --verify HEAD)
+    ensure_publication_head "$PUBLICATION_HEAD"
 
     print_info "Re-verifying eai update refresh compatibility before tagging..."
     if node scripts/verify-eai-refresh-layout.mjs 2>&1; then
@@ -612,8 +640,9 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
     fi
     ensure_no_stale_local_tag "$TAG_NAME"
 
+    ensure_publication_head "$PUBLICATION_HEAD"
     print_info "Creating release tag $TAG_NAME from merged main..."
-    git tag "$TAG_NAME"
+    git tag "$TAG_NAME" "$PUBLICATION_HEAD"
 
     print_info "Pushing tag $TAG_NAME..."
     if git push --no-verify origin "$TAG_NAME"; then
