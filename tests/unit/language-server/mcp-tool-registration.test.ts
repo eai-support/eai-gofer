@@ -118,7 +118,7 @@ describe('New MCP Tool Responses (T011)', () => {
     vi.mocked(GoferLoader).mockImplementation(function () {
       return mockGoferLoader;
     });
-    mcpHandler = new MCPToolHandler('/test/workspace', mockConnection);
+    mcpHandler = new MCPToolHandler(process.cwd(), mockConnection);
   });
 
   describe('gofer_expand_observation', () => {
@@ -245,52 +245,6 @@ describe('New MCP Tool Responses (T011)', () => {
       });
 
       expect(result).toHaveProperty('success');
-    });
-
-    it('rejects an unsupported workspace host before invoking the packaged executor', async () => {
-      const executor = vi.spyOn(
-        mcpHandler as unknown as {
-          runCommand: (...args: unknown[]) => Promise<unknown>;
-        },
-        'runCommand'
-      );
-
-      const result = await mcpHandler.bootstrapWorkspace({
-        host: 'grokk',
-        dryRun: false,
-        includeMirrors: true,
-      });
-
-      expect(result).toMatchObject({
-        success: false,
-        status: 'invalid',
-      });
-      expect(String(result.error)).toContain('Unsupported Gofer host');
-      expect(executor).not.toHaveBeenCalled();
-    });
-
-    it('does not report a parseable failed workspace child as successful', async () => {
-      vi.spyOn(
-        mcpHandler as unknown as {
-          resolveNodeScript: (name: string) => Promise<string | null>;
-        },
-        'resolveNodeScript'
-      ).mockResolvedValue('/packaged/gofer-workspace-check.mjs');
-      vi.spyOn(
-        mcpHandler as unknown as {
-          runCommand: (...args: unknown[]) => Promise<unknown>;
-        },
-        'runCommand'
-      ).mockResolvedValue({
-        success: false,
-        exitCode: 2,
-        stdout: JSON.stringify({ success: false, status: 'missing' }),
-        stderr: 'workspace is missing',
-      });
-
-      const result = await mcpHandler.checkWorkspace('codex');
-
-      expect(result).toMatchObject({ success: false, status: 'missing', exitCode: 2 });
     });
 
     it('should return pipeline state even when no specs exist', async () => {

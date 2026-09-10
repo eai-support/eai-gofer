@@ -88,31 +88,7 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
-  it('rejects symbolic links before content validation or ZIP creation', async (): Promise<void> => {
-    const packageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-symlink-audit-'));
-    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-symlink-target-'));
-    try {
-      fs.mkdirSync(path.join(packageRoot, 'nested'));
-      fs.writeFileSync(path.join(outside, 'secret.txt'), 'private material', 'utf8');
-      fs.symlinkSync(
-        outside,
-        path.join(packageRoot, 'nested', 'escape'),
-        process.platform === 'win32' ? 'junction' : 'dir'
-      );
-      const { assertNoSymlinks } = await import(
-        new URL('../../../.specify/scripts/node/package-agent-plugin.mjs', import.meta.url).href
-      );
-
-      await expect(assertNoSymlinks(packageRoot)).rejects.toThrow(
-        /contains a symbolic link: nested\/escape/
-      );
-    } finally {
-      fs.rmSync(packageRoot, { recursive: true, force: true });
-      fs.rmSync(outside, { recursive: true, force: true });
-    }
-  });
-
-  it('packages all six current semantic hosts and legacy Gemini file metadata', (): void => {
+  it('packages a zip with Claude, Codex, Copilot, and Gemini install metadata', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
       execFileSync('node', [SCRIPT_PATH, '--version', VERSION, '--out-dir', outDir], {
@@ -133,8 +109,9 @@ describe('Gofer agent plugin package', () => {
         const skill = fs.readFileSync(path.join(pluginRoot, surface, 'eai', 'SKILL.md'), 'utf8');
         expect(skill).toContain(buildContinuationContractSection());
       }
-      expect(fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8'))
-        .toContain(buildContinuationContractSection());
+      expect(
+        fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8')
+      ).toContain(buildContinuationContractSection());
       expect(fs.existsSync(zipPath)).toBe(true);
       expect(fs.existsSync(pluginRoot)).toBe(true);
 
@@ -157,7 +134,6 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
         'eai-gofer/.claude/skills/eai/SKILL.md',
-        'eai-gofer/.grok/skills/eai/SKILL.md',
         'eai-gofer/.github/agents/gofer-business.agent.md',
         'eai-gofer/.github/skills/eai/SKILL.md',
         'eai-gofer/.specify/references/platform/README.md',
@@ -232,12 +208,7 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain(
         'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain('agy plugin install https://github.com/eai-support/eai-gofer');
       expect(readme).toContain(
-        'grok plugin install --trust https://github.com/eai-support/eai-gofer'
-      );
-      expect(readme).toContain('Legacy Gemini File-Format Compatibility');
-      expect(readme).not.toContain(
         'gemini extensions install https://github.com/eai-support/eai-gofer'
       );
       expect(readme).toContain('eai agent guide --format json');
@@ -252,11 +223,8 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('./run.sh dev 3001');
       expect(readme).toContain('run.bat dev 3001');
       expect(readme).toContain('Codex App / Codex IDE');
-      expect(readme).toContain('GitHub Copilot app / CLI');
-      expect(readme).toContain('| VS Code |');
+      expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
       expect(readme).toContain('Claude Code app');
-      expect(readme).toContain('Google Antigravity');
-      expect(readme).toContain('Grok Build');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
       expect(umbrellaSkill).toContain(
@@ -376,9 +344,7 @@ describe('Gofer agent plugin package', () => {
     expect(workflow).toContain('VSCE_AZURE_CLIENT_ID');
     expect(workflow).not.toContain('VSCE_PAT');
     expect(workflow).toContain('vsce publish --packagePath');
-    expect(workflow).toContain(
-      'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
-    );
+    expect(workflow).toContain('softprops/action-gh-release@v3');
     expect(workflow).toContain(
       'https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer'
     );

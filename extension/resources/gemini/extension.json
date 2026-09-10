@@ -1,7 +1,7 @@
 {
   "name": "eai-gofer",
   "version": "3.12.5",
-  "description": "Gofer single-entry delivery command with internal pipeline routing",
+  "description": "Legacy Gemini CLI file-format compatibility for EAI Gofer",
   "license": "Apache-2.0",
   "commands": ".gemini/commands/gofer/",
   "gofer": {

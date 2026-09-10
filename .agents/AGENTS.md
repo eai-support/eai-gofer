@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-09-08T00:22:36.596Z
+Generated: 2026-09-10T07:52:58.726Z
 
 ## Public Entrypoints
 
@@ -22,10 +22,10 @@ Before each user-facing reply, check the draft against these rules:
 ## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
 
-Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai` or `$eai`.
 
 1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
-2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request for the same contract.
+2. Treat an explicit `/eai` (Claude, Copilot, Antigravity, Grok, or VS Code) or `$eai` (Codex) prefix as an idempotent request for the same contract.
 3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
 4. Keep the reply short unless the user asks for detail.
 5. Explain the business effect first.
