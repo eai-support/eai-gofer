@@ -2,7 +2,10 @@
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from
-`.specify/specs/[###-feature-name]/spec.md`
+`.specify/specs/[###-feature-name]/spec.md` and its required companion
+`test-spec.md` for every app or feature, including non-app, tooling and
+documentation-only specifications. Map documentation-only ACs to document
+checks; do not invent runtime features or tests.
 
 **Note**: This template is filled in by `/3_gofer_plan` (or legacy
 `/3_gofer_plan`). Recommended: Use `/0_gofer_start` to auto-chain the entire
@@ -53,6 +56,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 .specify/specs/[###-feature]/
 ├── goal-ledger.json      # Machine-readable goals, metrics, and re-loop triggers
 ├── spec.md              # Feature specification (/2_gofer_specify)
+├── test-spec.md         # Required for every feature: AC -> outcomes -> tests/checks
 ├── research.md          # Codebase research (/1_gofer_research)
 ├── journeys/
 │   └── base-journey.md  # AI-augmented app journey when app delivery applies
@@ -89,25 +93,18 @@ src/
 ├── cli/
 └── lib/
 
-tests/
-├── contract/
-├── integration/
-└── unit/
-
 # [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+└── src/
+    ├── models/
+    ├── services/
+    └── api/
 
 frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+└── src/
+    ├── components/
+    ├── pages/
+    └── services/
 
 # [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/
@@ -119,6 +116,103 @@ ios/ or android/
 
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
+
+### Required Test Layout And Collection Plan
+
+Keep customer tests in the customer repo, using the same repo-relative family
+paths below. Choose the families needed for the accepted behavior; do not create
+every family or put all tests into PublicAPI black-box folders.
+
+| Test family                          | Common repo-relative collection path                                             | Format to declare against the installed runner                |
+| ------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Backend unit                         | `tests/suite/unit/backend/`                                                      | [e.g. pytest `test_*.py`]                                     |
+| Frontend unit/component              | `tests/suite/unit/frontend/`                                                     | [e.g. Vitest `*.test.ts` / `*.test.tsx`]                      |
+| Integration with controlled fixtures | `tests/suite/integration/`                                                       | [runner and file pattern]                                     |
+| API contract                         | `tests/suite/contracts/api/`                                                     | [runner and file pattern]                                     |
+| App/browser end-to-end               | `tests/suite/e2e/`                                                               | [e.g. Playwright `*.spec.ts`]                                 |
+| Performance                          | `tests/suite/performance/`                                                       | [runner, file pattern and measurement budget]                 |
+| Node helper unit                     | `tests/helpers/*.test.ts`                                                        | [Node test runner and TypeScript loader]                      |
+| Deployed smoke/contract              | `tests/cross-service/{smoke,contracts}/<surface>/`                               | [runner and file pattern; choose smoke or contracts]          |
+| Direct deployed PublicAPI lifecycle  | `tests/cross-service/contracts/publicapi-blackbox/<domain>/<run>/<name>.spec.ts` | [Playwright-compatible TypeScript or explicit runner adapter] |
+
+Paths are an authoring convention, not proof of runner discovery. Existing
+customer runners, including mobile/native runners, need an explicit adapter or
+migration plan with source paths, target collection, owner and verification
+commands and a prerequisite task before claiming collection. All new executable
+tests must use the owning repo's `tests/` target family paths above; a legacy
+runner is not an exception. The adapter must collect those paths. Preserve
+existing coverage during migration. Customer checks must run without private EAI
+repos. Never transfer customer tests to `eai-testing-dev` to satisfy this
+layout.
+
+### Requirement-To-Test Execution Plan
+
+Carry stable AC/test IDs and expected outcomes from `test-spec.md`. Resolve each
+command from the owning repo's installed runner/configuration; placeholders are
+unready planning inputs, never commands claimed as verified.
+
+| AC / test IDs      | Expected outcome / exact test paths         | Group / runner and format           | Collection command / exact case IDs / source revision                     | Execution command / CI check / evidence path   |
+| ------------------ | ------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| [AC-001 / TST-001] | [observable assertion / repo-relative file] | [stable group / runner and pattern] | [exact command / named runner case IDs / exact source and test revisions] | [exact command / check name / result artifact] |
+
+Collection proof maps exact named runner case IDs to stable test IDs and the
+exact source/test revision. Compare expected and actual case identities for the
+declared collection scope. Counts are supplemental: equal counts with different
+cases fail verification. Record future proof as pending in planning-only work.
+
+| Selected group | Environment / region             | Prerequisites and resource claims                 | Worker/lane cap and timeout | Enablement wave / stop criteria                      |
+| -------------- | -------------------------------- | ------------------------------------------------- | --------------------------- | ---------------------------------------------------- |
+| [group ID]     | [local or approved target cells] | [fixtures/auth/provider limits; exclusive claims] | [bounded values]            | [reviewed pilot scope and evidence needed to expand] |
+
+Parallel execution is a required capability. Plan tasks to configure bounded
+parallel groups and prove overlapping start/end times for an independent pair,
+worker/lane identity, fixture/claim isolation and complete cleanup. Add a check
+that conflicting groups serialize. A `[P]` label or two sequential passes is not
+parallel evidence. Safe serial fallback leaves this capability unverified.
+
+Select the full affected dependency closure, deduplicate tests, and enable only
+reviewed groups gradually. Run independent selected groups in parallel within
+runner capacity and enforced resource claims. Keep dependent lifecycle phases
+and shared/conflicting fixtures serial. If isolation or claim enforcement is
+unproven, stay serial. Folder separation alone does not establish independence.
+
+Record `planned`, `written`, `collected`, `enabled`, `selected` and `executed`
+separately for each required group. Retain baseline coverage until replacement
+parity is proved. A disabled or uncollected required test is an evidence gap,
+even when enabled pilots pass. Record verdict, source/run identity, cleanup and
+timing for executed checks; compare speed only on equivalent coverage and work.
+
+During authorized implementation of feature behavior, tasks must create/update
+executable tests, verify discovery, execute required selected checks and record
+actual outcomes. Documentation-only scope uses its specified document checks.
+During specification/plan-only work, produce the companion Markdown test plan
+and leave those runtime tasks unexecuted. Planning approval is not test
+evidence.
+
+QProcess handoff does not make companion test specifications optional.
+Documentation-only delivery runs its specified document checks without creating
+runtime behavior. After bounded review retries, unresolved blocking or
+required-stage test gaps stop implementation progression. Planning-only artifact
+approval cannot override them or supply missing evidence. Only truly advisory
+findings may have an explicit scoped waiver; no waiver turns a required gate
+green.
+
+### Scope Ownership And Platform Handoff
+
+Gofer primarily owns customer app delivery. App Issues/PRs, tests and evidence
+stay in that customer repository. SDK/API consumption alone requires no internal
+Issues2025, SRP, Infra2025 or `eai-testing-dev` access or changes.
+
+Route actual internal platform work to QProcess. Its owners group affected
+multi-repo Issues, companion PRs, harness/Infra changes and SRP evidence as
+applicable, with platform specs under `.specify-pro/`. Record the published API
+dependency and handoff status in the app plan, without copying private internal
+delivery records into customer artifacts. Use a reasoned no-platform-change
+decision when no platform change is needed.
+
+| Scope / AC IDs | Owning repo and reviewer | Required tests / local Issue or PR | Platform handoff or no-change rationale                |
+| -------------- | ------------------------ | ---------------------------------- | ------------------------------------------------------ |
+| [app scope]    | [customer repo / owner]  | [paths, check names, local links]  | [published API contract / handoff status or rationale] |
 
 ## AI-Augmented App Journey
 
