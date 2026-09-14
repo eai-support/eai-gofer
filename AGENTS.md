@@ -171,7 +171,45 @@ No commands detected. Add build/test/lint scripts to your project.
 ## Testing
 
 - Write tests for new functionality before marking tasks complete
-- Run the full test suite before committing
+- Run required selected checks for the affected scope before committing; run the
+  full suite when the reviewed regression scope requires it
+
+### Specification And Test Ownership
+
+- Gofer primarily delivers customer apps; QProcess owns internal platform work.
+- Every app or feature spec created/updated through Gofer, including non-app,
+  tooling and documentation-only specs, needs companion Markdown `test-spec.md`
+  beside `spec.md` in `.specify/specs/<feature>/`, with stable AC IDs, outcomes,
+  test paths, formats, collections and exact collection/check commands.
+  Documentation-only ACs map to document checks without inventing runtime
+  features or tests. QProcess handoff preserves these required obligations.
+- Executable tests are mandatory during authorized implementation. Plan-only
+  work documents those tasks without creating runtime tests or claiming a pass.
+- Keep customer tests in the customer repo's `tests/` target families from the
+  templates. Do not copy them to `eai-testing-dev` or require private repos just
+  because the app consumes an EAI SDK/API. New tests have no legacy-path
+  exemption; unsupported discovery needs an adapter/migration task before
+  collection credit.
+- Collection proof requires exact named runner case IDs mapped to stable test
+  IDs and the exact source/test revision. Compare expected and actual identities
+  for the declared collection scope. Counts are supplemental; equal counts with
+  different cases fail verification.
+- Track planned/written/collected/enabled/selected/executed separately. Enable
+  reviewed groups gradually. Parallel execution of independent selected groups
+  is required, with bounded claims and proof of timing overlap and isolation.
+  Verify conflict serialization; serial fallback leaves parallelism unverified.
+  Disabled required tests cannot count as passed.
+- Required-stage test gaps and blocking findings fail closed after bounded
+  review retries; stop implementation progression and report the actual verdict,
+  never an unconditional pass. Human approval may accept planning-only artifacts
+  without overriding blocked gates or missing test evidence. Record explicit
+  scoped waivers only for truly advisory findings; never turn a required gate
+  green.
+- Route actual platform-impact changes to QProcess (`.specify-pro/`) and its
+  affected multi-repo Issue/PR/SRP bundle; this is not required for every app.
+- `.specify/templates/` is canonical. Keep the corresponding
+  `extension/resources/templates/` Markdown copies exact. Template-only work
+  does not regenerate nested plugins, install bundles or activate runtime gates.
 
 ## Git Workflow
 

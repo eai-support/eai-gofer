@@ -6,8 +6,9 @@ description: 'Task list template for feature implementation'
 
 **Input**: Design documents from `.specify/specs/[###-feature-name]/`
 
-**Prerequisites**: plan.md (required), spec.md (required for user stories),
-research.md, goal-ledger.json, data-model.md, contracts/
+**Prerequisites**: plan.md and spec.md (required), companion test-spec.md beside
+spec.md (required for every app or feature specification), research.md,
+goal-ledger.json, data-model.md, contracts/
 
 **Note**: This template is filled in by `/4_gofer_tasks` (or legacy
 `/4_gofer_tasks`). Recommended: Use `/0_gofer_start` to auto-chain the entire
@@ -18,8 +19,16 @@ pipeline.
 > on developer machines use the same `eai` toolchain. Standard-profile runs
 > ignore this section.
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only
-include them if explicitly requested in the feature specification.
+**Tests**: Executable tests for accepted feature behavior are mandatory during
+authorized implementation. Every created or updated app or feature
+specification, including non-app, tooling and documentation-only work, must have
+`.specify/specs/[###-feature-name]/test-spec.md` beside `spec.md`, with stable
+AC IDs, expected outcomes, exact test paths, format, collections and check
+commands. Update it with each scope change. In specification/plan-only mode,
+produce Markdown plans and leave runtime tasks open; do not create runtime tests
+or claim implemented, collected or passing tests. Documentation-only ACs map to
+document checks without inventing runtime features or tests. A QProcess handoff
+preserves the required test-specification obligation.
 
 **Priority protection**: Maintain `priority-plan.json` from its template. Record
 the latest approved direction in `decisions.md`, the ordered critical path,
@@ -31,6 +40,47 @@ to local MVP work.
 
 **Organization**: Tasks are grouped by user story to enable independent
 implementation and testing of each story.
+
+## Scope And Ownership
+
+Gofer primarily delivers customer apps. Keep customer tests, Issues/PRs and
+evidence in the owning customer repo. Never copy or push app tests to
+`eai-testing-dev`. Using EAI SDKs or published APIs creates no dependency on
+private repos, internal Issues2025, SRP or Infra2025.
+
+Route actual internal platform changes to QProcess and its `.specify-pro/`
+specifications. The internal owners group affected multi-repo Issue/PR/SRP,
+harness and Infra work only when needed. Record the public contract and handoff
+status in the app tasks; do not export private platform records. A reviewed
+no-platform-change rationale is sufficient when app code alone meets the spec.
+
+## Required Requirement-To-Test Tasks
+
+Map every in-scope AC before implementation. Keep IDs stable across spec
+updates. Assign explicit tasks to write/update tests, configure collection, run
+selected checks and record outcomes. Reusing a test requires proof that it
+covers the current outcome at the current source; naming an existing file is
+insufficient.
+
+| AC / test ID / expected outcome           | Owner repo / test path / format                | Collection or group | Collection command / exact case IDs / source revision                                      | Execution command / CI check | Write / collection / execution task IDs |
+| ----------------------------------------- | ---------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- | --------------------------------------- |
+| [AC-001 / TST-001 / observable assertion] | [owning repo / canonical path / runner format] | [stable group]      | [exact installed-runner command / named runner case IDs / exact source and test revisions] | [exact command / check name] | [task IDs]                              |
+
+Collection proof maps exact named runner case IDs to stable test IDs and the
+exact source/test revision. Compare expected and actual case identities for the
+declared collection scope. Counts are supplemental: equal counts with different
+cases fail verification.
+
+Track `planned`, `written`, `collected`, `enabled`, `selected` and `executed`
+separately, with source/run identity and verdict for execution. Planning is not
+execution. Disabled, uncollected or unexecuted required cases cannot count as
+passed; missing required evidence keeps implementation completion open.
+
+After bounded review retries, unresolved blocking or required-stage test gaps
+fail closed and stop implementation progression. Human planning-only artifact
+approval does not change the blocked verdict or provide missing evidence.
+Explicit scoped waivers apply only to truly advisory findings; they cannot turn
+a required gate green.
 
 ## App-Delivery Preconditions
 
@@ -62,7 +112,8 @@ the shared stages without app-only show-and-tell/service-fit prerequisites.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
+- **[P]**: Independent selected task; different files, no unmet dependencies,
+  nonconflicting resource claims and bounded runner/team capacity
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
@@ -71,7 +122,27 @@ the shared stages without app-only show-and-tell/service-fit prerequisites.
 - **Single project**: `src/`, `tests/` at repository root
 - **Web app**: `backend/src/`, `frontend/src/`
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+- Source examples assume a single project; use the actual source layout from
+  plan.md. All new executable tests stay in the owning repo's `tests/` target
+  family, even when source code or legacy tests use another layout.
+
+| Family                              | Canonical repo-relative target                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| Backend unit                        | `tests/suite/unit/backend/`                                                      |
+| Frontend unit/component             | `tests/suite/unit/frontend/`                                                     |
+| Integration                         | `tests/suite/integration/`                                                       |
+| API contract                        | `tests/suite/contracts/api/`                                                     |
+| App/browser end-to-end              | `tests/suite/e2e/`                                                               |
+| Performance                         | `tests/suite/performance/`                                                       |
+| Node helper unit                    | `tests/helpers/*.test.ts`                                                        |
+| Deployed smoke/contract             | `tests/cross-service/{smoke,contracts}/<surface>/`                               |
+| Direct deployed PublicAPI lifecycle | `tests/cross-service/contracts/publicapi-blackbox/<domain>/<run>/<name>.spec.ts` |
+
+Choose the family that tests the requirement; do not put every test in black-box
+folders. Declare the installed runner and filename format for each collection.
+If discovery does not support these paths, add an explicit adapter/migration
+task before collection or completion credit. A legacy runner is not permission
+to put new tests elsewhere. No private EAI repo is required to run app checks.
 
 <!--
   ============================================================================
@@ -100,6 +171,12 @@ the shared stages without app-only show-and-tell/service-fit prerequisites.
 - [ ] T001 Create project structure per implementation plan
 - [ ] T002 Initialize [language] project with [framework] dependencies
 - [ ] T003 [P] Configure linting and formatting tools
+- [ ] T004 Reconcile spec.md and companion test-spec.md: stable AC/test IDs,
+      expected outcomes, owned test paths, formats, exact runner case IDs,
+      source/test revision and exact check commands
+- [ ] T005 Configure collection for target family paths; implement the planned
+      adapter/migration when discovery is unsupported; prove the exact case
+      identities at the recorded source/test revision before claiming collection
 
 ---
 
@@ -112,25 +189,25 @@ be implemented
 
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
-- [ ] T010 Lock external/internal/hybrid package profile and package lane from
+- [ ] T006 Setup database schema and migrations framework
+- [ ] T007 [P] Implement authentication/authorization framework
+- [ ] T008 [P] Setup API routing and middleware structure
+- [ ] T009 Create base models/entities that all stories depend on
+- [ ] T010 Configure error handling and logging infrastructure
+- [ ] T011 Setup environment configuration management
+- [ ] T012 Lock external/internal/hybrid package profile and package lane from
       `ui-preview-brief.md`
-- [ ] T011 Run `eai --describe`, `eai blocks list`, `eai blocks describe <id>`,
+- [ ] T013 Run `eai --describe`, `eai blocks list`, `eai blocks describe <id>`,
       and `eai resources schema`; record block IDs, resource bindings, coupling
       status, Storybook story IDs, theme override points, and custom-block
       exceptions
-- [ ] T012 Update `goal-ledger.json` with planned requirement, task, code, and
+- [ ] T014 Update `goal-ledger.json` with planned requirement, task, code, and
       test links plus any new delivery-state promotion criteria
-- [ ] T013 Add block-porting, source-platform decoupling, and public-readiness
+- [ ] T015 Add block-porting, source-platform decoupling, and public-readiness
       work for external or hybrid package lanes
 
-**Checkpoint**: Foundation ready - user story implementation can now begin in
-parallel
+**Checkpoint**: Foundation ready - authorized independent story tasks may begin
+within the declared dependency, resource-claim and concurrency limits.
 
 ---
 
@@ -140,27 +217,32 @@ parallel
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Required Tests for User Story 1
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> During authorized implementation, write failing regression tests first for new
+> or changed behavior. Existing covered behavior must retain passing assertions.
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in
-      tests/contract/test\_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in
-      tests/integration/test\_[name].py
+- [ ] T016 [P] [US1] Add AC-linked backend unit tests for [rule] in
+      `tests/suite/unit/backend/test_[name].py`
+- [ ] T017 [P] [US1] Add AC-linked API contract tests for [endpoint] in
+      `tests/suite/contracts/api/test_[name].py`
+- [ ] T018 [P] [US1] Add AC-linked integration tests for [user journey] in
+      `tests/suite/integration/test_[name].py`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on
-      T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T019 [P] [US1] Create [Entity1] model in src/models/[entity1].py
+- [ ] T020 [P] [US1] Create [Entity2] model in src/models/[entity2].py
+- [ ] T021 [US1] Implement [Service] in src/services/[service].py (depends on
+      T019, T020)
+- [ ] T022 [US1] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T023 [US1] Add validation and error handling
+- [ ] T024 [US1] Add logging for user story 1 operations
+- [ ] T025 [US1] Verify exact test collection, enable/select required groups,
+      run declared checks and record AC outcomes and execution evidence
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and
-testable independently
+**Checkpoint**: US1 is complete only when its required AC-linked checks execute
+and pass. A plan, discovered file or disabled required test is not a pass.
 
 ---
 
@@ -170,22 +252,24 @@ testable independently
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Required Tests for User Story 2
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in
-      tests/contract/test\_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in
-      tests/integration/test\_[name].py
+- [ ] T026 [P] [US2] Add AC-linked frontend component tests in
+      `tests/suite/unit/frontend/[name].test.tsx`
+- [ ] T027 [P] [US2] Add AC-linked integration tests for [user journey] in
+      `tests/suite/integration/test_[name].py`
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T028 [P] [US2] Create [Entity] model in src/models/[entity].py
+- [ ] T029 [US2] Implement [Service] in src/services/[service].py
+- [ ] T030 [US2] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T031 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T032 [US2] Verify collection and required selected checks; record current
+      AC outcomes, cleanup and unchanged US1 regression evidence
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work
-independently
+**Checkpoint**: US1 and US2 work independently with passing required evidence
+for their current scope; unresolved required checks remain open.
 
 ---
 
@@ -195,20 +279,23 @@ independently
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Required Tests for User Story 3
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in
-      tests/contract/test\_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in
-      tests/integration/test\_[name].py
+- [ ] T033 [P] [US3] Add AC-linked API contract tests for [endpoint] in
+      `tests/suite/contracts/api/test_[name].py`
+- [ ] T034 [P] [US3] Add AC-linked browser journey tests in
+      `tests/suite/e2e/[name].spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T035 [P] [US3] Create [Entity] model in src/models/[entity].py
+- [ ] T036 [US3] Implement [Service] in src/services/[service].py
+- [ ] T037 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T038 [US3] Verify collection and required selected checks; record current
+      AC outcomes and dependency regression evidence
 
-**Checkpoint**: All user stories should now be independently functional
+**Checkpoint**: Every implemented story has passing required AC-linked evidence;
+deferred stories and their unexecuted tests remain explicitly planned.
 
 ---
 
@@ -223,9 +310,14 @@ independently
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX [P] Add required cross-cutting regression tests in
+      `tests/suite/unit/backend/` or `tests/suite/unit/frontend/`, selected by
+      scope
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX Reconcile all ACs against test-spec.md and actual collected, enabled,
+      selected and executed checks; report required evidence gaps before
+      completion
 
 ---
 
@@ -237,7 +329,8 @@ independently
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user
   stories
 - **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
+  - Independent selected stories can proceed in parallel within bounded capacity
+    and nonconflicting claims
   - Or sequentially in priority order (P1 → P2 → P3)
 - **Polish (Final Phase)**: Depends on all desired user stories being complete
 
@@ -257,30 +350,46 @@ independently
 - Keep `goal-ledger.json` current whenever a task changes the target metric,
   owner, delivery state, or re-loop trigger
 
-- Tests (if included) MUST be written and FAIL before implementation
+- Write executable tests first for new/changed behavior during authorized
+  implementation; verify expected failures before the fix and passing outcomes
+  after it. Preserve already passing tests for unchanged behavior.
 - Models before services
 - Services before endpoints
 - Core implementation before integration
 - Story complete before moving to next priority
 
-### Parallel Opportunities
+### Required Parallel Capability And Selective Enablement
 
-- All Setup tasks marked [P] can run in parallel
-- All Foundational tasks marked [P] can run in parallel (within Phase 2)
-- Once Foundational phase completes, all user stories can start in parallel (if
-  team capacity allows)
-- All tests for a user story marked [P] can run in parallel
-- Models within a story marked [P] can run in parallel
-- Different user stories can be worked on in parallel by different team members
+Parallel execution of independent selected groups is required. Add explicit
+implementation and verification tasks for bounded lanes, overlap timestamps,
+worker/lane identity, fixture/claim isolation and conflict serialization. Verify
+an independent pair with equal assertions and complete cleanup; `[P]` labels
+alone do not prove this capability. Serial fallback is safe but leaves the
+parallel requirement unverified. Plan-only work records these tasks unexecuted.
+
+- Select required groups from the affected dependency closure, not the full
+  suite by default. Keep broader scheduled/manual coverage distinct from pilot
+  evidence.
+- Enable reviewed groups gradually for their declared environment/region.
+  Passing pilots do not compensate for disabled required groups without mapped
+  baseline coverage that satisfies the same acceptance obligations.
+- Only independent selected [P] tasks/groups may run in parallel. Record lane
+  and worker caps, fixture/auth/provider limits, claims, timeouts and cleanup
+  duties.
+- Keep dependent CRUD phases and conflicting tenant/principal/resource mutations
+  serial. Use serial execution until isolation and claim enforcement are proven.
+- Retain the first product failure and cleanup result; a passing diagnostic
+  retry does not erase failed evidence. Compare speed on equivalent assertions
+  and work.
 
 ---
 
 ## Parallel Example: User Story 1
 
-```bash
-# Launch all tests for User Story 1 together (if tests requested):
-Task: "Contract test for [endpoint] in tests/contract/test_[name].py"
-Task: "Integration test for [user journey] in tests/integration/test_[name].py"
+```text
+# During authorized implementation, select independent US1 groups within limits:
+Task: "Contract test for [endpoint] in tests/suite/contracts/api/test_[name].py"
+Task: "Integration test for [user journey] in tests/suite/integration/test_[name].py"
 
 # Launch all models for User Story 1 together:
 Task: "Create [Entity1] model in src/models/[entity1].py"
@@ -322,10 +431,11 @@ With multiple developers:
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
+- [P] tasks = independent selected work within dependency, claim and capacity
+  limits
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
-- Verify tests fail before implementing
+- Verify expected regression failures before implementing new/changed behavior
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break
