@@ -29,14 +29,14 @@ async function snapshot(featureDir) {
 }
 
 async function readContractFile(featureDir, name) {
-  const target = path.join(featureDir, name);
-  const entry = await lstat(target);
-  if (!entry.isFile() || entry.isSymbolicLink() || entry.size > MAX_CONTRACT_FILE_BYTES) {
-    throw new Error('UNSAFE_CONTRACT_FILE');
-  }
-  // Do not follow a link introduced after lstat on POSIX hosts.
+  const root = await realpath(featureDir);
+  const target = path.join(root, name);
+  // Resolve before opening. A different canonical path proves a supplied link.
+  const canonical = await realpath(target);
+  if (canonical !== target) throw new Error('UNSAFE_CONTRACT_FILE');
+  // Do not follow a link introduced after canonical-path validation on POSIX.
   const flags = constants.O_RDONLY | (process.platform === 'win32' ? 0 : constants.O_NOFOLLOW);
-  const file = await open(target, flags);
+  const file = await open(canonical, flags);
   try {
     const stat = await file.stat();
     if (!stat.isFile() || stat.size > MAX_CONTRACT_FILE_BYTES) throw new Error('UNSAFE_CONTRACT_FILE');
