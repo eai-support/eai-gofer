@@ -1,18 +1,17 @@
 /**
- * Performance tests for parallel validation agent execution
+ * Simulated scheduling-pattern tests, not native agent performance evidence.
  * Tasks: T058, T059, T060
  *
- * Tests verify:
- * - T058: Parallel agent execution completes in <60s across all platforms
- * - T059: Sequential agent baseline takes 90s+ (establishes improvement)
- * - T060: Spawning overhead is <10% of total validation time
+ * Timers and resolved promises exercise only scheduling shapes. They do not
+ * launch Claude, Codex or Copilot, establish speed targets, or prove savings.
+ * Keep these unit assertions separate from real execution qualification.
  */
 
 import { describe, it, expect } from 'vitest';
 
-describe('Validation Parallel Performance (US-3)', () => {
-  describe('T058: Parallel Agent Execution (<60s)', () => {
-    it('should complete parallel validation in <60s for Claude CLI', async () => {
+describe('Simulated validation scheduling patterns (US-3, not native hosts)', () => {
+  describe('T058: Parallel scheduling simulation', () => {
+    it('collects six simulated Claude-role results', async () => {
       // Mock parallel agent execution using Task tool
       // Spawn 6 agents concurrently: correctness, security, performance,
       // test-quality, integration, standards
@@ -47,7 +46,7 @@ describe('Validation Parallel Performance (US-3)', () => {
       expect(duration).toBeLessThan(1000); // Mock should be fast
     });
 
-    it('should complete parallel validation in <60s for Codex CLI (6 terminals)', async () => {
+    it('collects six simulated Codex-terminal results', async () => {
       // Mock Codex CLI parallel execution with 6 separate terminal sessions
       const startTime = Date.now();
 
@@ -73,7 +72,7 @@ describe('Validation Parallel Performance (US-3)', () => {
       expect(duration).toBeLessThan(1000); // Mock verification
     });
 
-    it('should complete parallel validation in <60s for Copilot 2026+', async () => {
+    it('collects six simulated Copilot-role results', async () => {
       // Mock Copilot Chat multi-agent delegation (when available)
       const startTime = Date.now();
 
@@ -94,8 +93,8 @@ describe('Validation Parallel Performance (US-3)', () => {
     });
   });
 
-  describe('T059: Sequential Agent Baseline (90s+)', () => {
-    it('should take 90s+ for sequential validation (establishes improvement)', async () => {
+  describe('T059: Sequential timer simulation', () => {
+    it('waits for six sequential synthetic timers', async () => {
       // Mock sequential agent execution (pre-2026 Copilot pattern)
       const startTime = Date.now();
 
@@ -127,8 +126,8 @@ describe('Validation Parallel Performance (US-3)', () => {
     });
   });
 
-  describe('T060: Spawning Overhead (<10%)', () => {
-    it('should have <10% overhead for Task tool spawning (Claude CLI)', async () => {
+  describe('T060: Promise overhead relative to synthetic timers', () => {
+    it('bounds simulated Task promise overhead, not Claude startup', async () => {
       // Mock spawning overhead measurement
       const spawnStartTime = Date.now();
 
@@ -148,7 +147,7 @@ describe('Validation Parallel Performance (US-3)', () => {
       expect(overheadPercent).toBeLessThan(10);
     });
 
-    it('should have <10% overhead for terminal spawning (Codex CLI)', async () => {
+    it('bounds simulated terminal promise overhead, not Codex startup', async () => {
       // Mock terminal session spawning overhead
       const spawnStartTime = Date.now();
 
@@ -170,8 +169,8 @@ describe('Validation Parallel Performance (US-3)', () => {
     });
   });
 
-  describe('Performance Regression Detection', () => {
-    it('should detect if parallel execution regresses to sequential speed', async () => {
+  describe('Synthetic timer regression detection', () => {
+    it('checks the synthetic parallel timer pattern', async () => {
       // This test would fail if parallel execution starts taking 90s+
       const startTime = Date.now();
 

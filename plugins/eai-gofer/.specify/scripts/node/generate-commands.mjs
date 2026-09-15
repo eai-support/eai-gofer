@@ -1200,6 +1200,7 @@ export function buildContinuationContractSection() {
 9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
 10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
 ${buildBlockerMediationContract()}
+${buildVerifiedSpecialistContract()}
 <!-- gofer:continuation:end -->`;
 }
 
@@ -1217,11 +1218,25 @@ export function buildBlockerMediationContract() {
 - Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.`;
 }
 
+export function buildVerifiedSpecialistContract() {
+  return `
+
+## Verified Specialist Execution
+
+Use .specify/references/verified-agent-execution.md before specialist delegation in any app or non-app stage. The shared agent-catalog.json retains specialist responsibilities. Resolve roles with gofer-agent-catalog.mjs; obtain tools and models from the current host, never from another provider's examples. Keep internal roles out of the public command picker.
+
+Preserve every required review. Provider-specific Task/model examples describe intent, not portable commands or proof of support. Run independent work together only when dependencies, permission boundaries, scope and budgets allow it. Otherwise serialize supported work. A required independent review remains unverified if separate execution is unavailable; never relabel self-review as independent.
+
+The experimental gofer-verified-execution.mjs controller accepts trusted adapters, not worker-supplied commands. It checks current priority, bounds calls and attempts, records required checks, and rejects stale results. Its local process tests do not qualify native model execution. Do not activate an unqualified host adapter or bypass existing blocker, permission, outcome or release gates. Preserve normal safe Gofer work and explain the limitation.
+`;
+}
+
 export function injectContinuationContract(content) {
   const section = buildContinuationContractSection();
   const pattern = /## Continuation And Stop Contract\n<!-- gofer:continuation:start -->[\s\S]*?<!-- gofer:continuation:end -->/;
-  if (pattern.test(content)) return content.replace(pattern, section);
-  return insertSectionAfterTitle(content, section);
+  const cleaned = content.replace(/(<!-- gofer:continuation:end -->)\n+## Verified Specialist Execution\n[\s\S]*?(?=\n## |$)/g, '$1');
+  if (pattern.test(cleaned)) return cleaned.replace(pattern, section);
+  return insertSectionAfterTitle(cleaned, section);
 }
 
 function injectTokenCostPolicy(content) {

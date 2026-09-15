@@ -35,35 +35,36 @@ export class TaskQueue {
   }
 
   private topologicalSort(tasks: Task[]): Task[] {
-    const taskMap = new Map(tasks.map((t) => [t.id, t]));
+    const taskMap = new Map(tasks.map((t) => [this.taskKey(t.specId, t.id), t]));
     const visited = new Set<string>();
     const visiting = new Set<string>();
     const sorted: Task[] = [];
 
-    const visit = (taskId: string): void => {
-      if (visited.has(taskId)) {
+    const visit = (specId: string, taskId: string): void => {
+      const key = this.taskKey(specId, taskId);
+      if (visited.has(key)) {
         return;
       }
-      if (visiting.has(taskId)) {
-        throw new Error(`Circular dependency detected involving task ${taskId}`);
+      if (visiting.has(key)) {
+        throw new Error(`Circular dependency detected involving task ${taskId} in spec ${specId}`);
       }
 
-      visiting.add(taskId);
-      const task = taskMap.get(taskId);
+      visiting.add(key);
+      const task = taskMap.get(key);
 
       if (task) {
         for (const depId of task.dependencies) {
-          visit(depId);
+          visit(task.specId, depId);
         }
-        visited.add(taskId);
+        visited.add(key);
         sorted.push(task);
       }
 
-      visiting.delete(taskId);
+      visiting.delete(key);
     };
 
     for (const task of tasks) {
-      visit(task.id);
+      visit(task.specId, task.id);
     }
 
     return sorted;
@@ -71,8 +72,12 @@ export class TaskQueue {
 
   private areDependenciesSatisfied(task: Task): boolean {
     return task.dependencies.every((depId) => {
-      const dep = this.queue.find((t) => t.id === depId);
+      const dep = this.queue.find((t) => t.specId === task.specId && t.id === depId);
       return dep?.status === 'completed';
     });
+  }
+
+  private taskKey(specId: string, taskId: string): string {
+    return JSON.stringify([specId, taskId]);
   }
 }

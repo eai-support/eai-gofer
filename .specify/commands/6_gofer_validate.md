@@ -47,6 +47,16 @@ description:
 - Save the blocker, unfinished tasks and next action before stopping. Continue only approved tasks that do not depend on it. Keep the original goal; update specs, plans, tasks and validation for accepted direction changes, and reopen stale checks. Do not quietly drop requirements to make progress.
 - Use node .specify/scripts/node/gofer-blocker-control.mjs --state-dir <private-state-directory> --event <private-event.json> before controlled actions; inspect with --state-dir alone, or add --task T001 for an independent task. A denied action, invalid record or missing helper means stop and explain the limitation, not bypass it. Use the installed plugin script path if no repo scaffold exists. Conversation-only work uses a private session state directory and does not require app setup or feature files.
 - Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.
+
+
+## Verified Specialist Execution
+
+Use .specify/references/verified-agent-execution.md before specialist delegation in any app or non-app stage. The shared agent-catalog.json retains specialist responsibilities. Resolve roles with gofer-agent-catalog.mjs; obtain tools and models from the current host, never from another provider's examples. Keep internal roles out of the public command picker.
+
+Preserve every required review. Provider-specific Task/model examples describe intent, not portable commands or proof of support. Run independent work together only when dependencies, permission boundaries, scope and budgets allow it. Otherwise serialize supported work. A required independent review remains unverified if separate execution is unavailable; never relabel self-review as independent.
+
+The experimental gofer-verified-execution.mjs controller accepts trusted adapters, not worker-supplied commands. It checks current priority, bounds calls and attempts, records required checks, and rejects stale results. Its local process tests do not qualify native model execution. Do not activate an unqualified host adapter or bypass existing blocker, permission, outcome or release gates. Preserve normal safe Gofer work and explain the limitation.
+
 <!-- gofer:continuation:end -->
 
 ## MVP Capability-Based Validation
@@ -484,10 +494,18 @@ points before Category 11 is added).
 
 ## Step 2: Spawn 6 Specialist Validation Agents
 
-**CRITICAL**: You **MUST** launch all 6 agents **in parallel** using the Task
-tool. Do NOT perform validation work inline in the main context. The main
-context should only orchestrate, score the rubric, and review agent outputs.
-Each agent receives the feature context and returns structured findings.
+Complete all six specialist reviews through separate qualified executions.
+Use `.specify/references/verified-agent-execution.md` to resolve roles for the
+current host. Schedule independent reviews within its verified capacity and
+permissions; serialize them when necessary. A missing independent execution
+remains unverified, not a successful inline substitute. The main context
+coordinates reviews and checks evidence. The Task/model examples below are
+Claude-specific illustrations, not portable invocation commands.
+
+Before a review starts, run `gofer-host-capability.mjs` and resolve the role
+through `gofer-agent-catalog.mjs`. Record the actual host, model, permissions,
+separate execution evidence, read-only boundary, checks, and receipt. Missing
+evidence means the review is unverified.
 
 ### Agent 1: Correctness Validator
 
@@ -712,7 +730,7 @@ Record these into `CHANGE_MANIFEST` for the Phase B prompts.
 
 ## Step 2.6: Spawn 5 Blast-Radius Analysis Agents
 
-Launch all 5 agents **in parallel** using the Task tool. Pass the
+Complete all five reviews using qualified host tools and bounded concurrency. Pass the
 `CHANGE_MANIFEST` from Step 2.5 into each prompt so agents see the same ground
 truth.
 
