@@ -40,7 +40,7 @@ vi.mock('vscode', () => ({
   },
 }));
 
-vi.mock('../../../extension/node_modules/vscode-languageclient/node.js', () => ({
+const languageClientModule = vi.hoisted(() => ({
   TransportKind: { ipc: 1 },
   LanguageClient: class MockLanguageClient {
     constructor(
@@ -68,6 +68,12 @@ vi.mock('../../../extension/node_modules/vscode-languageclient/node.js', () => (
     }
   },
 }));
+
+vi.mock(
+  '../../../extension/node_modules/vscode-languageclient/node.js',
+  () => languageClientModule
+);
+vi.mock('../../../node_modules/vscode-languageclient/node.js', () => languageClientModule);
 
 import { GoferLSPClient } from '../../../extension/src/lspClient';
 
