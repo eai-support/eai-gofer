@@ -724,6 +724,11 @@ Complete all three reviews through separate qualified executions. Follow
 and available models, with bounded concurrency or sequential independent
 reviews. Do not replace a required independent review with inline self-review.
 
+Run `gofer-host-capability.mjs` before dispatch. Create each assignment through
+`gofer-agent-catalog.mjs` with its exact revision, scope, checks, host model,
+and evidence target. A role prompt, model picker label, or answer does not prove
+separate execution or read-only review access.
+
 **Agent 1**: engineer-review (sonnet) — cross-check spec↔plan↔implementation
 alignment
 

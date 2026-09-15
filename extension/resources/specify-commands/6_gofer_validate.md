@@ -502,6 +502,11 @@ remains unverified, not a successful inline substitute. The main context
 coordinates reviews and checks evidence. The Task/model examples below are
 Claude-specific illustrations, not portable invocation commands.
 
+Before a review starts, run `gofer-host-capability.mjs` and resolve the role
+through `gofer-agent-catalog.mjs`. Record the actual host, model, permissions,
+separate execution evidence, read-only boundary, checks, and receipt. Missing
+evidence means the review is unverified.
+
 ### Agent 1: Correctness Validator
 
 ```

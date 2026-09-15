@@ -52,15 +52,17 @@ Keep EAI app setup, tenant access, MVP scope, preview, and release rules intact.
 
 Before assigning a specialist:
 
-1. Identify the current surface and its installed version.
-2. Read the role's responsibilities from the shared catalogue.
-3. Verify available models and tools from the actual host.
-4. Check allowed read/write scope and independent execution support.
-5. Give the worker its task, current requirement revision and acceptance checks.
+1. Run `gofer-host-capability.mjs --host <current-host> --json`. This probes
+   only the local executable. It does not discover models or qualify isolation.
+2. Identify the current surface and its installed version.
+3. Read the role's responsibilities from the shared catalogue.
+4. Verify available models and tools from the actual host.
+5. Check allowed read/write scope and independent execution support.
+6. Give the worker its task, current requirement revision and acceptance checks.
    The catalogue requires `requiredChecks` and binds that list into the assignment
    proof. A missing list or proof for a different list cannot authorize dispatch.
-6. Give reviewers requirements and evidence, not the builder's reasoning history.
-7. Record actual execution identity, limitations and results.
+7. Give reviewers requirements and evidence, not the builder's reasoning history.
+8. Record actual execution identity, limitations and results.
 
 Never create model identifiers from examples or bypass host permissions.
 Native controls enforce isolation. A prompt or capability JSON file cannot.
@@ -112,9 +114,11 @@ The controller and catalogue have deterministic test coverage. Local process
 tests are a separate category. Neither category qualifies Claude, Codex,
 Copilot, VS Code, Grok or Antigravity native delegation.
 
-Native adapters, read-isolation qualification, cancellation of remote work,
-restart reconciliation and matched product benchmarks remain release gates.
-Keep this implementation in draft until the applicable gates pass. Normal
+The shared protocol now provides host discovery and assignment binding. Native
+adapters, read-isolation qualification, cancellation of remote work, restart
+reconciliation and matched product benchmarks remain host-specific release
+gates. Keep an affected feature in draft until its applicable gates pass.
+Normal
 safe Gofer use remains available; unavailable specialist work stays unverified.
 
 ## Evidence Classes

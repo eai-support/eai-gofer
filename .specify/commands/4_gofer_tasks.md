@@ -476,6 +476,11 @@ Complete these three independent reviews using qualified host tools. Follow
 dependencies, permissions and limits. The Task/model examples are not portable
 commands. Sequential independent reviews preserve the same obligations:
 
+Before dispatch, run `gofer-host-capability.mjs` for the current host. Build a
+role assignment with `gofer-agent-catalog.mjs`. Bind the requirement revision,
+scope, required checks, selected host model, and evidence target. Use native
+delegation only when the host reports the model and required permissions.
+
 **Agent 1**: engineer-review (sonnet) — cross-check spec↔plan↔tasks alignment
 
 ```
