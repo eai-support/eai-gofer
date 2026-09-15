@@ -778,6 +778,17 @@ else
     exit 1
 fi
 
+# Build the portable Claude/Codex/Copilot plugin bundle before syncing extension
+# resources. Packaging stamps versioned manifests in the canonical plugin
+# surfaces, and those exact stamps must be present in the VSIX built below.
+print_info "Packaging Claude/Codex/Copilot agent plugin..."
+if npm run gofer:package-plugin -- --version "$NEW_VERSION" --sync-repo 2>&1; then
+    print_success "Agent plugin bundle packaged"
+else
+    print_error "Failed to package the agent plugin bundle"
+    exit 1
+fi
+
 # Sync extension/resources/ from canonical sources BEFORE packaging the VSIX.
 # Without this, edits to .claude/commands/, .github/prompts/, .specify/
 # never reach end users — the installer ships from extension/resources/.
@@ -866,16 +877,6 @@ else
 fi
 
 run_release_check "Packaged Gofer MCP and LSP protocol tests" npm run test:packaged-protocol -- --vsix "./eai-gofer-$NEW_VERSION.vsix"
-
-# Build the portable Claude/Codex/Copilot plugin bundle that will be mirrored
-# to the same public GitHub Pages release host as the VSIX.
-print_info "Packaging Claude/Codex/Copilot agent plugin..."
-if npm run gofer:package-plugin -- --version "$NEW_VERSION" --sync-repo 2>&1; then
-    print_success "Agent plugin bundle packaged"
-else
-    print_error "Failed to package the agent plugin bundle"
-    exit 1
-fi
 
 # Validate VSIX native-module posture. Gofer no longer packages native PTY
 # modules, so the safest public artifact is one with no native build byproducts.
