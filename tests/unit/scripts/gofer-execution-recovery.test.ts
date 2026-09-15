@@ -9,6 +9,7 @@ import { inspectExecutionRecovery } from '../../../.specify/scripts/node/gofer-e
 
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 async function fixture() {
@@ -76,37 +77,42 @@ describe('Read-only interrupted execution reconciliation', () => {
     await f.save();
     expect((await inspectExecutionRecovery(f.options)).reasons).toContain('INVALID_CHECK_HISTORY');
   });
-  it('does not start another receipt verifier after the inspection deadline', async () => {
-    const f = await fixture();
-    f.events[0].requiredChecks.T002 = ['acceptance'];
-    for (const [task, call] of [
-      ['T001', 1],
-      ['T002', 2],
-    ] as const) {
-      if (task === 'T002')
+  it.each([false, true])(
+    'does not start another receipt verifier after timeout (fixed wall clock: %s)',
+    async (fixedClock) => {
+      const f = await fixture();
+      f.events[0].requiredChecks.T002 = ['acceptance'];
+      for (const [task, call] of [
+        ['T001', 1],
+        ['T002', 2],
+      ] as const) {
+        if (task === 'T002')
+          f.events.push(
+            f.event({ event: 'attempt_reserved', task, attempt: 1 }),
+            f.event({ event: 'call_reserved', task, method: 'execute', call })
+          );
         f.events.push(
-          f.event({ event: 'attempt_reserved', task, attempt: 1 }),
-          f.event({ event: 'call_reserved', task, method: 'execute', call })
+          f.event({
+            event: 'check',
+            task,
+            attempt: 1,
+            check: 'acceptance',
+            passed: true,
+            inputRevision: 'i',
+            receipt: 'c',
+          }),
+          f.event({ event: 'verified', task, inputRevision: 'i', receipt: 'r' })
         );
-      f.events.push(
-        f.event({
-          event: 'check',
-          task,
-          attempt: 1,
-          check: 'acceptance',
-          passed: true,
-          inputRevision: 'i',
-          receipt: 'c',
-        }),
-        f.event({ event: 'verified', task, inputRevision: 'i', receipt: 'r' })
-      );
+      }
+      await f.save();
+      if (fixedClock) vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+      f.options.verifyReceipt.mockImplementation(() => new Promise(() => {}));
+      const report = await inspectExecutionRecovery({ ...f.options, timeoutMs: 50 });
+      expect(f.options.verifyReceipt).toHaveBeenCalledOnce();
+      expect(report.reusableTasks).toEqual([]);
+      expect(report.reasons).toContain('INSPECTION_DEADLINE_EXHAUSTED');
     }
-    await f.save();
-    f.options.verifyReceipt.mockImplementation(() => new Promise(() => {}));
-    const report = await inspectExecutionRecovery({ ...f.options, timeoutMs: 50 });
-    expect(f.options.verifyReceipt).toHaveBeenCalledOnce();
-    expect(report.reusableTasks).toEqual([]);
-  });
+  );
   it('keeps consumed limits and never replays uncertain work', async () => {
     const f = await fixture();
     const before = await readFile(f.journal, 'utf8');

@@ -31,12 +31,13 @@ async function readJournal(root) {
 export async function inspectExecutionRecovery({ featureDir, verifyReceipt, inspectWorkers, timeoutMs = 2000 }) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 10000) throw new Error('INVALID_INSPECTION_LIMIT');
   let inspectionDeadline = Date.now() + timeoutMs;
+  let inspectionTimedOut = false;
   const bounded = async callback => {
-    if (Date.now() >= inspectionDeadline) throw new Error('INSPECTION_TIMEOUT');
+    if (inspectionTimedOut || Date.now() >= inspectionDeadline) throw new Error('INSPECTION_TIMEOUT');
     let timer;
     try { return await Promise.race([
-      Promise.resolve().then(() => { if (Date.now() >= inspectionDeadline) throw new Error('INSPECTION_TIMEOUT'); return callback(); }),
-      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('INSPECTION_TIMEOUT')), Math.max(0, inspectionDeadline - Date.now())); }),
+      Promise.resolve().then(() => { if (inspectionTimedOut || Date.now() >= inspectionDeadline) throw new Error('INSPECTION_TIMEOUT'); return callback(); }),
+      new Promise((_, reject) => { timer = setTimeout(() => { inspectionTimedOut = true; reject(new Error('INSPECTION_TIMEOUT')); }, Math.max(0, inspectionDeadline - Date.now())); }),
     ]); } finally { clearTimeout(timer); }
   };
   const root = await realpath(featureDir);
@@ -130,7 +131,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   if (typeof verifyReceipt !== 'function') reasons.push('RECEIPT_VERIFIER_REQUIRED');
   if (!reasons.length) {
     for (const [task, event] of receipts) {
-      if (Date.now() >= inspectionDeadline) { reasons.push('INSPECTION_DEADLINE_EXHAUSTED'); break; }
+      if (inspectionTimedOut || Date.now() >= inspectionDeadline) { reasons.push('INSPECTION_DEADLINE_EXHAUSTED'); break; }
       try {
         const result = await bounded(() => verifyReceipt({ taskId: task, revision: first.revision,
           inputRevision: event.inputRevision, receipt: event.receipt, journalHash }));
@@ -147,7 +148,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
     for (const task of report.reusableTasks) uncertain.add(task);
     report.reusableTasks = [];
   }
-  if (Date.now() >= inspectionDeadline) {
+  if (inspectionTimedOut || Date.now() >= inspectionDeadline) {
     reasons.push('INSPECTION_DEADLINE_EXHAUSTED');
     for (const task of report.reusableTasks) uncertain.add(task);
     report.reusableTasks = [];
