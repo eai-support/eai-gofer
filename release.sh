@@ -877,6 +877,11 @@ else
     exit 1
 fi
 
+# Packaging stamps versioned manifests in the canonical plugin surfaces.
+# Refresh extension resources again so the validation gate sees those stamps.
+run_release_check "Post-package extension resource sync" \
+    node .specify/scripts/node/sync-extension-resources.mjs
+
 # Validate VSIX native-module posture. Gofer no longer packages native PTY
 # modules, so the safest public artifact is one with no native build byproducts.
 print_info "Validating VSIX native dependency posture..."
