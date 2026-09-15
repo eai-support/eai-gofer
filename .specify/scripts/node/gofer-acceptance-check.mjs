@@ -121,7 +121,21 @@ export function createAcceptanceChecker({ workspaceRoot, evidenceDir, commands,
       command: { program: command.program, args: command.args }, evidenceKind: 'local-command', nativeModelProof: false };
     const receipt = path.join(evidenceRoot, `${taskId}-${randomUUID()}.json`);
     const file = await open(receipt, 'wx', 0o600);
-    try { await file.writeFile(JSON.stringify(record, null, 2)); await file.sync(); } finally { await file.close(); }
+    try {
+      await file.writeFile(JSON.stringify(record, null, 2));
+      await file.sync();
+      // Cancellation can arrive while evidence is being persisted. Rewrite the
+      // receipt so a successful result can never survive that cancellation.
+      if (signal?.aborted) {
+        record.exitCode = 1;
+        record.reason = 'cancelled';
+        const body = JSON.stringify(record, null, 2);
+        await file.truncate(0);
+        await file.write(body, 0, 'utf8');
+        await file.truncate(Buffer.byteLength(body));
+        await file.sync();
+      }
+    } finally { await file.close(); }
     // Keep raw command output in the private receipt, not in the model context.
     return { taskId, revision, inputRevision, check: checkId, executed: result.executed,
       exitCode: result.exitCode, reason: result.reason, receipt, cleanupVerified, evidenceKind: 'local-command', nativeModelProof: false };

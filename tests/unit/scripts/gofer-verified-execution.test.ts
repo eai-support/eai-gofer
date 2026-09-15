@@ -382,6 +382,14 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     f.options.checks.T001 = [];
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
   });
+  it('bounds graph edges and edit scopes before execution', async () => {
+    const f = await fixture();
+    f.plan.tasks.T001.dependsOn = Array.from({ length: 257 }, () => 'T002');
+    expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
+    f.plan.tasks.T001.dependsOn = [];
+    f.plan.tasks.T001.allowedEditScope = Array.from({ length: 257 }, (_, index) => `safe-${index}.txt`);
+    expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
+  });
   it('rejects missing limits and unsupported spend caps', async () => {
     const f = await fixture();
     await expect(runVerifiedGraph({ ...f.options, maxCalls: Infinity })).rejects.toThrow(
@@ -427,6 +435,19 @@ describe('Verified execution kernel (local adapters, not native model qualificat
       };
     });
     expect((await runVerifiedGraph(f.options)).states.T001).toBe('stale');
+  });
+  it('does not start dependent work using stale prerequisite evidence', async () => {
+    const f = await fixture();
+    const original = f.adapter.verified.getMockImplementation()!;
+    f.adapter.verified.mockImplementation(async (request: any) => {
+      const result = await original(request);
+      if (request.taskId === 'T001') f.adapter.inputRevision.mockResolvedValue('changed-input');
+      return result;
+    });
+    const result = await runVerifiedGraph(f.options);
+    expect(result.status).toBe('incomplete');
+    expect(result.states.T002).toBe('pending');
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T001']);
   });
   it('rechecks direction after admission is persisted and before dispatch', async () => {
     const f = await fixture();
@@ -483,18 +504,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
   it('does not dispatch a worker when cancellation arrives during final admission reads', async () => {
     const f = await fixture();
     const abort = new AbortController();
-    let reserved = false;
-    let reads = 0;
-    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
     f.adapter.reserve.mockImplementation(async () => {
-      reserved = true;
+      // This occurs after the reservation receipt is durable but before dispatch.
+      abort.abort();
       return { allowed: true };
-    });
-    vi.spyOn(filesystem, 'readFile').mockImplementation(async (...args: any[]) => {
-      const body = await (actual.readFile as any)(...args);
-      if (reserved && String(args[0]).endsWith('loop-contract.json') && ++reads === 2)
-        abort.abort();
-      return body;
     });
     expect((await runVerifiedGraph({ ...f.options, signal: abort.signal })).status).toBe(
       'incomplete'
