@@ -14,6 +14,7 @@ export class AutonomousOrchestrator {
   private specLoader: SpecLoader;
   private taskQueue: TaskQueue;
   private isRunning = false;
+  private runActive = false;
   private ipcPath: string;
 
   constructor(specsDir: string) {
@@ -26,26 +27,38 @@ export class AutonomousOrchestrator {
   }
 
   async start(): Promise<void> {
+    // A stopped run must finish its outstanding I/O before another run starts.
+    if (this.runActive) {
+      return;
+    }
+    this.runActive = true;
     this.isRunning = true;
-    logger.info({ event: 'orchestrator_started', context: {} });
-
-    // Ensure IPC dir exists
-    await fs.mkdir(path.dirname(this.ipcPath), { recursive: true });
-
-    const specs = await this.specLoader.loadAllSpecs();
-    const allTasks = specs.flatMap((s) => s.tasks);
-    await this.taskQueue.buildQueue(allTasks);
-
-    while (this.isRunning) {
-      const task = this.taskQueue.getNextTask();
-      if (!task) {
-        break;
+    try {
+      logger.info({ event: 'orchestrator_started', context: {} });
+      await fs.mkdir(path.dirname(this.ipcPath), { recursive: true });
+      if (!this.isRunning) {
+        return;
       }
 
-      await this.executeTask(task);
-    }
+      const specs = await this.specLoader.loadAllSpecs();
+      if (!this.isRunning) {
+        return;
+      }
+      await this.taskQueue.buildQueue(specs.flatMap((s) => s.tasks));
+      if (!this.isRunning) {
+        return;
+      }
 
-    logger.info({ event: 'orchestrator_stopped', context: {} });
+      const task = this.taskQueue.getNextTask();
+      if (task) {
+        // The root only requests help. Do not poll or advance unrelated work.
+        await this.executeTask(task);
+      }
+    } finally {
+      this.isRunning = false;
+      this.runActive = false;
+      logger.info({ event: 'orchestrator_stopped', context: {} });
+    }
   }
 
   stop(): void {
@@ -53,34 +66,19 @@ export class AutonomousOrchestrator {
   }
 
   async executeTask(task: Task): Promise<void> {
-    logger.info({ event: 'task_started', taskId: task.id, specId: task.specId, context: {} });
+    if (task.status !== 'pending') {
+      return;
+    }
 
-    task.status = 'in_progress';
-    task.startedAt = new Date().toISOString();
-    await this.specLoader.updateTaskStatus(task.specId, task.id, task.status);
-
-    // IPC: Signal we need help
+    // IPC delivery is not execution or verification evidence. Leave the task
+    // unchanged until a trusted execution and required-check path exists.
     await this.signalNeedHelp(task);
-
-    // Wait for "human" (Claude Agent) input via Stdin
-    // In a real implementation this would process the input.
-    // For this test loop, we simulation waiting for a bit or just proceed.
-    // If we block on stdin, the non-interactive test (without extension) might hang.
-    // But verify the test spawns it detached and doesn't interact.
-
-    // For now, keep the auto-completion logic to satisfy existing basic tests
-    // but add the IPC signal so the NEW test works.
-
-    // task.status = 'completed';
-    // task.completedAt = new Date().toISOString();
-    // await this.specLoader.updateTaskStatus(task.specId, task.id, task.status);
-
-    // Actually, complete it for the workflow test to pass
-    task.status = 'completed';
-    task.completedAt = new Date().toISOString();
-    await this.specLoader.updateTaskStatus(task.specId, task.id, task.status);
-
-    logger.info({ event: 'task_completed', taskId: task.id, context: {} });
+    logger.info({
+      event: 'task_awaiting_input',
+      taskId: task.id,
+      specId: task.specId,
+      context: {},
+    });
   }
 
   private async signalNeedHelp(task: Task): Promise<void> {

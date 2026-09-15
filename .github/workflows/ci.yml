@@ -38,6 +38,9 @@ jobs:
       - name: TypeScript Type Check
         run: npm run typecheck
 
+      - name: Verified harness regression checks without retries
+        run: npm run test:verified-harness
+
       - name: Verify Generated Commands in Sync
         run: |
           # Generate commands for Codex/Copilot from Claude templates and sync .agents mirror

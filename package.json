@@ -38,6 +38,7 @@
     "test:e2e": "npm --prefix extension test",
     "test:e2e:playwright": "playwright test",
     "test:performance": "vitest run tests/performance --reporter=verbose",
+    "test:verified-harness": "vitest run tests/unit/scripts/gofer-verified-execution.test.ts tests/unit/scripts/gofer-agent-catalog.test.ts tests/unit/scripts/verified-harness-surfaces.test.ts tests/integration/autonomous/TaskExecutionFlow.integration.test.ts tests/unit/orchestrator --retry 0",
     "test:coverage": "vitest run --coverage",
     "test:coverage-report": "vitest run --coverage --reporter=verbose",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:performance",

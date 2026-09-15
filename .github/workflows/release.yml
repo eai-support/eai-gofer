@@ -116,6 +116,9 @@ jobs:
       - name: Run Gofer Typecheck
         run: npm run typecheck
 
+      - name: Verify bounded harness behavior without retries
+        run: npm run test:verified-harness
+
       - name: Run Gofer Unit Tests
         run: npm run test:unit
         env:

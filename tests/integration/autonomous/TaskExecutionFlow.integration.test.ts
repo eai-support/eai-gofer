@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { AutonomousOrchestrator } from '../../../src/orchestrator/AutonomousOrchestrator_new';
 import { SpecLoader } from '../../../src/orchestrator/SpecLoader';
 
@@ -55,7 +58,7 @@ Verify task execution updates tasks.md as work completes.
     expect(spec.tasks.map((task) => task.status)).toEqual(['pending', 'pending', 'completed']);
   });
 
-  it('marks pending tasks complete when the orchestrator runs from a .specify path', async () => {
+  it('leaves tasks unchecked and stops at the first help request from a .specify path', async () => {
     await writeSpec(`# Tasks
 
 - [ ] T001 First task
@@ -65,17 +68,19 @@ Verify task execution updates tasks.md as work completes.
     await orchestrator.start();
 
     const updatedTasks = await fs.readFile(path.join(specsDir, specId, 'tasks.md'), 'utf-8');
-    expect(updatedTasks).toContain('- [x] #T001 First task');
-    expect(updatedTasks).toContain('- [x] #T002 Second task');
+    expect(updatedTasks).toContain('- [ ] T001 First task');
+    expect(updatedTasks).toContain('- [ ] #T002 Second task');
+    expect(updatedTasks).not.toContain('[x]');
 
     const ipcStatus = JSON.parse(
       await fs.readFile(path.join(specifyDir, 'ipc', 'status.json'), 'utf-8')
     ) as { state?: string; last_output?: string };
     expect(ipcStatus.state).toBe('awaiting_input');
-    expect(ipcStatus.last_output).toContain('Task T002');
+    expect(ipcStatus.last_output).toContain('Task T001');
+    expect(ipcStatus.last_output).toContain(`spec ${specId}`);
   });
 
-  it('preserves completed tasks and updates remaining pending tasks when given a specs path', async () => {
+  it('preserves completed tasks and leaves remaining work unchecked from a specs path', async () => {
     await writeSpec(`# Tasks
 
 - [x] #T001 Already done
@@ -86,6 +91,57 @@ Verify task execution updates tasks.md as work completes.
 
     const updatedTasks = await fs.readFile(path.join(specsDir, specId, 'tasks.md'), 'utf-8');
     expect(updatedTasks).toContain('- [x] #T001 Already done');
-    expect(updatedTasks).toContain('- [x] #T002 Remaining work');
+    expect(updatedTasks).toContain('- [ ] T002 Remaining work');
+  });
+
+  it('does not advance another feature with the same task ID on repeated starts', async () => {
+    await writeSpec('- [ ] T001 First feature work');
+    const secondSpecId = '002-task-flow';
+    const secondDir = path.join(specsDir, secondSpecId);
+    await fs.mkdir(secondDir);
+    await fs.writeFile(
+      path.join(secondDir, 'spec.md'),
+      `---\nid: ${secondSpecId}\ntitle: Second feature\nstatus: draft\n---\n`
+    );
+    await fs.writeFile(path.join(secondDir, 'tasks.md'), '- [ ] T001 Second feature work');
+
+    const orchestrator = new AutonomousOrchestrator(workspaceDir);
+    await orchestrator.start();
+    const firstStatus = await fs.readFile(path.join(specifyDir, 'ipc', 'status.json'), 'utf-8');
+    await orchestrator.start();
+    const secondStatus = await fs.readFile(path.join(specifyDir, 'ipc', 'status.json'), 'utf-8');
+
+    expect(JSON.parse(firstStatus).last_output).toContain(`spec ${specId}`);
+    expect(JSON.parse(secondStatus).last_output).toBe(JSON.parse(firstStatus).last_output);
+    expect(await fs.readFile(path.join(specsDir, specId, 'tasks.md'), 'utf-8')).toBe(
+      '- [ ] T001 First feature work'
+    );
+    expect(await fs.readFile(path.join(secondDir, 'tasks.md'), 'utf-8')).toBe(
+      '- [ ] T001 Second feature work'
+    );
+  });
+
+  it('exits the real root entrypoint with help pending and no completion claim', async () => {
+    const tasks = '- [ ] T001 First task\n- [ ] T002 Unrelated task';
+    await writeSpec(tasks);
+    const { stdout } = await promisify(execFile)(
+      process.execPath,
+      [
+        '--import',
+        import.meta.resolve('tsx'),
+        fileURLToPath(new URL('../../../src/index.ts', import.meta.url)),
+      ],
+      {
+        cwd: workspaceDir,
+        env: { ...process.env, SPEC_DIR: specsDir, WORKSPACE_DIR: workspaceDir },
+        timeout: 5000,
+      }
+    );
+
+    expect(stdout).not.toContain('task_completed');
+    expect(await fs.readFile(path.join(specsDir, specId, 'tasks.md'), 'utf-8')).toBe(tasks);
+    const ipc = JSON.parse(await fs.readFile(path.join(specifyDir, 'ipc', 'status.json'), 'utf-8'));
+    expect(ipc.state).toBe('awaiting_input');
+    expect(ipc.last_output).toContain(`Task T001 from spec ${specId}`);
   });
 });
