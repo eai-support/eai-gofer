@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.8] - 2026-09-15
+
+Preserve current AI surfaces and release hardening
+
 ## [3.12.7] - 2026-09-10
 
 Keep delivery on the agreed priority, verify blockers and outcomes, preserve
