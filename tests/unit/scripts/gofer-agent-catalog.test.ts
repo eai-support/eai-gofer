@@ -18,6 +18,7 @@ let resolveAssignment: (request: Record<string, unknown>, options?: Record<strin
 const request = (overrides: Record<string, unknown> = {}) => ({
   role: 'engineer-review', stage: '5_gofer_implement', task: 'T042: Review the agreed changes',
   revision: 'abcdef1234567890', scope: ['src', 'tests'], surface: 'codex',
+  requiredChecks: ['acceptance', 'security'],
   availableModels: ['caller/model-a', 'caller/model-b'], model: 'caller/model-a',
   ...overrides,
 });
@@ -153,6 +154,8 @@ describe('neutral assignment resolution', () => {
     expect(assignment.roleContent).not.toContain('model: sonnet');
     expect(assignment.roleContent).toMatch(/provider-specific examples[\s\S]*non-authoritative/i);
     expect(assignment.scope).toEqual(['src', 'tests']);
+    expect(assignment.requiredChecks).toEqual(['acceptance', 'security']);
+    expect(assignment.binding.requiredChecks).toEqual(['acceptance', 'security']);
   });
 
   it('does not infer a model from role metadata or available model order', async () => {
@@ -183,6 +186,10 @@ describe('neutral assignment resolution', () => {
     ['stage', 'unknown-stage'], ['stage', ''], ['stage', 5],
     ['task', ' '], ['task', null], ['task', 'bad\u0000task'],
     ['revision', ''], ['revision', 'bad revision'], ['revision', '../HEAD'],
+    ['requiredChecks', undefined], ['requiredChecks', []], ['requiredChecks', ['']],
+    ['requiredChecks', 'acceptance'], ['requiredChecks', ['a', 'a']],
+    ['requiredChecks', Array.from({length: 257}, (_, i) => `check-${i}`)],
+    ['requiredChecks', ['x'.repeat(1025)]],
     ['scope', []], ['scope', 'src'], ['scope', ['../src']], ['scope', ['/tmp']],
     ['scope', ['src/../tests']], ['scope', ['C:\\repo']], ['scope', ['src\\file']],
     ['scope', ['src', 'src']], ['scope', ['src//file']], ['scope', ['src/*']],
@@ -226,7 +233,7 @@ describe('neutral assignment resolution', () => {
     expect((await resolveAssignment({ ...input, mode: 'baseline' }, { verifyNativeProof: verifier })).independent).toBe(false);
   });
 
-  it.each(['role', 'stage', 'task', 'revision', 'scope', 'surface', 'model', 'contentSha256'])('rejects stale native proof binding: %s', async field => {
+  it.each(['role', 'stage', 'task', 'revision', 'scope', 'surface', 'model', 'contentSha256', 'requiredChecks'])('rejects stale native proof binding: %s', async field => {
     const input = await proofRequest();
     (input.nativeProof as any).binding[field] = field === 'scope' ? ['other'] : 'other';
     const verifier = vi.fn(() => true);
@@ -274,6 +281,8 @@ describe('neutral assignment resolution', () => {
     const before = structuredClone(input);
     const result = await resolveAssignment(input);
     result.scope.push('unapproved');
+    result.requiredChecks.push('unapproved');
+    expect(result.binding.requiredChecks).toEqual(['acceptance', 'security']);
     expect(input).toEqual(before);
     const catalogue = await readCatalogue();
     catalogue.roles[0].content = 'tampered';

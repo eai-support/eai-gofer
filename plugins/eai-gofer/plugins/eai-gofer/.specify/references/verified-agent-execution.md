@@ -57,6 +57,8 @@ Before assigning a specialist:
 3. Verify available models and tools from the actual host.
 4. Check allowed read/write scope and independent execution support.
 5. Give the worker its task, current requirement revision and acceptance checks.
+   The catalogue requires `requiredChecks` and binds that list into the assignment
+   proof. A missing list or proof for a different list cannot authorize dispatch.
 6. Give reviewers requirements and evidence, not the builder's reasoning history.
 7. Record actual execution identity, limitations and results.
 

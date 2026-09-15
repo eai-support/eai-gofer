@@ -29,6 +29,7 @@ const assignment = await resolveAssignment({
   task: 'T042: Review the agreed changes',
   revision: 'abcdef1234567890',
   scope: ['src', 'tests'],
+  requiredChecks: ['acceptance', 'security'],
   surface: 'codex',
   availableModels: ['caller/model-a'],
   model: 'caller/model-a',
@@ -40,6 +41,8 @@ const assignment = await resolveAssignment({
   Stage suitability and controller routing are deliberately not imposed here.
 - `task` is a non-empty ID or one-line description. `revision` is a caller-owned
   revision token, not proof that Git or the filesystem is at that revision.
+- `requiredChecks` is mandatory: 1-256 unique non-empty check IDs, each at most
+  1,024 characters. Missing or changed checks invalidate an assignment's proof.
 - `scope` is a non-empty array of distinct, normalized repository-relative
   literal paths. `.` explicitly means the whole workspace. Traversal, absolute
   paths, backslashes, and wildcard paths are rejected. Scope is not an access
@@ -74,7 +77,7 @@ select models, grant permissions, authorize dispatch or prove independence.
 ## Native Proof Boundary
 
 `nativeProof` must have `kind: 'native-proof'`, a `binding` identical to the
-resolved assignment (role, stage, task, revision, scope, surface, selected model,
+resolved assignment (role, stage, task, revision, scope, required checks, surface, selected model,
 and content hash), a non-empty `evidence` reference array, and boolean
 `independentReadIsolation` / `independentExecution` fields. Scope array order
 is part of the exact binding. Missing or changed binding values fail closed.

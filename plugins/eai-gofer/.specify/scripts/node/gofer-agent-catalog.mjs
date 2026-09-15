@@ -175,7 +175,7 @@ function proofMatches(proof, binding) {
  * This helper checks assignment binding only; it cannot authenticate host logs.
  *
  * @param {{role: string, stage: string, task: string, revision: string,
- * scope: string[], surface: string, availableModels: string[], model?: string,
+ * scope: string[], requiredChecks: string[], surface: string, availableModels: string[], model?: string,
  * mode?: 'baseline'|'independent', capabilities?: {independentReadIsolation?: boolean,
  * independentExecution?: boolean}, nativeProof?: object}} request
  * @param {{root?: string, verifyNativeProof?: (proof: object, binding: object) => boolean|Promise<boolean>}} [options]
@@ -195,6 +195,10 @@ export async function resolveAssignment(request, options = {}) {
   const revision = text(input.revision, 'revision', 200);
   requireValue(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(revision) && !revision.includes('..'), 'invalid revision token');
   const scope = validateScope(input.scope);
+  requireValue(Array.isArray(input.requiredChecks) && input.requiredChecks.length <= 256,
+    'requiredChecks must contain at most 256 entries');
+  const requiredChecks = [...stringList(input.requiredChecks, 'requiredChecks')];
+  for (const check of requiredChecks) text(check, 'requiredChecks', 1024);
   const surfaceId = text(input.surface, 'surface', 100);
   stringList(input.availableModels, 'availableModels', true);
   const model = input.model === undefined ? null : text(input.model, 'model', 200);
@@ -210,7 +214,7 @@ export async function resolveAssignment(request, options = {}) {
   requireValue(catalogue.stages.includes(stage), `unknown stage: ${stage}`);
   const surface = catalogue.surfaces.find(entry => entry.id === surfaceId);
   requireValue(surface, `unknown surface: ${surfaceId}`);
-  const binding = { role: roleId, stage, task, revision, scope, surface: surfaceId, model, contentSha256: role.contentSha256 };
+  const binding = { role: roleId, stage, task, revision, scope, requiredChecks, surface: surfaceId, model, contentSha256: role.contentSha256 };
   const limitations = [];
   let verified = false;
   if (input.nativeProof !== undefined) {
