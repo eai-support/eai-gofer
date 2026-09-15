@@ -49,14 +49,14 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface               | Clean entry point             | Integration                                                                       |
-| --------------------- | ----------------------------- | --------------------------------------------------------------------------------- |
-| Claude Code           | `/eai` or `/eai-update`       | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`    |
-| Codex App / Codex IDE | `eai` or `eai-update` skill   | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`           |
-| GitHub Copilot        | `/eai` or `/eai-update`       | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/` |
-| Google Antigravity    | `/eai` or `/eai-update`       | Installed `agy` plugin, `.agents/skills/`, and `~/.gemini/GEMINI.md`              |
-| Grok Build            | `/eai` or `/eai-update`       | Installed plugin `skills/eai/SKILL.md` and optional repo mirror `.grok/skills/`   |
-| VS Code               | `/eai` or `/eai-update`       | `EnterpriseAI.gofer`, `.github/` customizations, and `.vscode/mcp.json`           |
+| Surface               | Clean entry point           | Integration                                                                       |
+| --------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| Claude Code           | `/eai` or `/eai-update`     | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`    |
+| Codex App / Codex IDE | `eai` or `eai-update` skill | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`           |
+| GitHub Copilot        | `/eai` or `/eai-update`     | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/` |
+| Google Antigravity    | `/eai` or `/eai-update`     | Installed `agy` plugin, `.agents/skills/`, and `~/.gemini/GEMINI.md`              |
+| Grok Build            | `/eai` or `/eai-update`     | Installed plugin `skills/eai/SKILL.md` and optional repo mirror `.grok/skills/`   |
+| VS Code               | `/eai` or `/eai-update`     | `EnterpriseAI.gofer`, `.github/` customizations, and `.vscode/mcp.json`           |
 
 The UX rule is: users start with `eai`; `eai-update` is the only support
 command. Gofer keeps numbered stages and helpers as internal contracts under
@@ -157,8 +157,9 @@ Default posture:
 - Codex/OpenAI: GPT mini for simple coding, GPT nano only for mechanical
   locate/classify/summarize work, GPT-5.3-Codex or flagship GPT for hard
   tool-heavy coding and arbitration.
-- Google Antigravity (Gemini models): Flash-Lite for cheap large-context scanning, Flash for normal
-  synthesis, Pro for hard large-context architecture/research gates.
+- Google Antigravity (Gemini models): Flash-Lite for cheap large-context
+  scanning, Flash for normal synthesis, Pro for hard large-context
+  architecture/research gates.
 - Copilot: `Auto` for simple/default work; ask before selecting a paid/high-tier
   picker model for hard review.
 
@@ -378,7 +379,10 @@ npm run gofer:package-plugin -- --sync-repo
 - Security guidance: [SECURITY.md](./SECURITY.md)
 - Contribution guidance: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Support policy: [SUPPORT.md](./SUPPORT.md)
-- Desktop pauses and continuation: [Troubleshooting guide](./docs/desktop-continuation.md)
+- Desktop pauses and continuation:
+  [Troubleshooting guide](./docs/desktop-continuation.md)
+- App access and company sign-in:
+  [Workspace access and SSO](./docs/app-access-and-sso.md)
 
 Roadmap-fit issues may also receive an automation-generated draft intake PR so a
 human reviewer can scope the work before implementation starts.
