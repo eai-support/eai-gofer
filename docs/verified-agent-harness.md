@@ -47,6 +47,11 @@ outcome gate or a required security check.
 
 ## Current Limit
 
+The current implementation also runs real local acceptance checks, passes failures
+into repair attempts and pauses work waiting for a business answer. Recovery inspection
+keeps the original record and identifies uncertain work without repeating it.
+The comparison report keeps failed trials and unknown costs visible.
+
 This PR provides an experimental controller and shared role resolution, not
 universal native execution. The controller requires trusted host adapters.
 Their isolation, remote cancellation, restart recovery and six-surface

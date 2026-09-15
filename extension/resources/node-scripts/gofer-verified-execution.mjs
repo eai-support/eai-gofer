@@ -6,6 +6,7 @@ import { open, readFile, realpath, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
+import { inspectBlockers } from './gofer-blocker-control.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -58,7 +59,7 @@ export function validateWorkGraph(plan, checks) {
     if (!/^T\d+$/.test(id) || !task || !Array.isArray(task.dependsOn) ||
         task.dependsOn.some(dep => !ids.includes(dep)) || !Array.isArray(task.allowedEditScope) ||
         task.allowedEditScope.some(scope => !text(scope) || /(^\/|\/\/|\\|:|\0|[*?\[\]]|(^|\/)\.\.?($|\/))/.test(scope)) ||
-        !Array.isArray(checks[id]) || !checks[id].length || checks[id].some(c => !text(c)) ||
+        !Array.isArray(checks[id]) || !checks[id].length || checks[id].length > 256 || checks[id].some(c => !text(c) || c.length > 1024) ||
         new Set(checks[id]).size !== checks[id].length) throw new Error('INVALID_WORK_ORDER');
     for (const dep of task.dependsOn) visit(dep, new Set([...active, id]));
     visited.add(id);
@@ -143,6 +144,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   async function invoke(method, request) {
     await current();
+    const blockers = await inspectBlockers(root, { taskId: request.taskId });
+    if (blockers.blockers.some(b => b.state !== 'ready')) throw new Error('RECORDED_BLOCKER_WAIT');
     if (calls >= maxCalls) throw new Error('CALL_LIMIT');
     // Reserve globally before yielding, so parallel calls cannot overdraw.
     calls++;
@@ -165,9 +168,12 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
     const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId] };
+    let previousChecks = [];
     try {
       while (attempts[taskId] < loop.maxIterations) {
         await current();
+        const blockers = await inspectBlockers(root, { taskId });
+        if (blockers.blockers.some(b => b.state !== 'ready')) throw new Error('RECORDED_BLOCKER_WAIT');
         const priority = await reviewPriority(root, { task: taskId });
         if (priority.status !== 'pass') throw new Error('PRIORITY_BLOCKED');
         await canonicalScopes(workspaceRoot, task.allowedEditScope);
@@ -177,7 +183,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         const reservation = await invoke('reserve', { ...request, attempt });
         if (reservation?.allowed !== true) throw new Error('BLOCKER_OR_BUDGET_DENIED');
         states[taskId] = 'running';
-        const result = await invoke('execute', { ...request, attempt });
+        // Repair sees measured failures, never just "try again" or prior reasoning.
+        const result = await invoke('execute', { ...request, attempt, previousChecks: freeze(structuredClone(previousChecks)) });
         await current();
         if (!result || !Array.isArray(result.changedFiles) || result.changedFiles.some(f => !text(f))) throw new Error('INVALID_WORKER_RESULT');
         const scope = await reviewPriority(root, { task: taskId, changedFiles: result.changedFiles, workspaceRoot });
@@ -186,6 +193,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         if (!text(inputRevision)) throw new Error('INPUT_REVISION_REQUIRED');
         states[taskId] = 'awaiting-check';
         let passed = true;
+        previousChecks = [];
         for (const check of checks[taskId]) {
           const evidence = await invoke('check', { ...request, attempt, check, inputRevision });
           await current();
@@ -194,6 +202,12 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
             evidence.exitCode === 0 && evidence.executed === true && text(evidence.receipt);
           await record({ event: 'check', task: taskId, attempt, check, inputRevision,
             passed: valid, receipt: text(evidence?.receipt) ? evidence.receipt : null });
+          if (evidence?.cleanupVerified === false) {
+            controller.abort(new Error('CLEANUP_RECONCILIATION_REQUIRED'));
+            throw controller.signal.reason;
+          }
+          previousChecks.push({ check, passed: valid, inputRevision,
+            receipt: text(evidence?.receipt) ? evidence.receipt : null });
           passed &&= valid;
         }
         if (await invoke('inputRevision', request) !== inputRevision) throw new Error('STALE_INPUT');
@@ -201,6 +215,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
           await current();
           const assertCurrent = async () => {
             await current();
+            const blockers = await inspectBlockers(root, { taskId });
+            if (blockers.blockers.some(b => b.state !== 'ready')) throw new Error('RECORDED_BLOCKER_WAIT');
             if (await invoke('inputRevision', request) !== inputRevision) throw new Error('STALE_INPUT');
             await current();
           };
@@ -220,12 +236,13 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
       throw new Error('ATTEMPT_LIMIT');
     } catch (error) {
       const reason = controller.signal.aborted ? controller.signal.reason.message : error.message;
-      states[taskId] = reason.startsWith('STALE') ? 'stale' : controller.signal.aborted ? 'cancelled' : 'blocked';
+      states[taskId] = reason.startsWith('STALE') ? 'stale' : reason === 'CLEANUP_RECONCILIATION_REQUIRED' ? 'blocked' : controller.signal.aborted ? 'cancelled' : 'blocked';
       await record({ event: states[taskId], task: taskId, reason, reconciliationRequired: true }).catch(() => {});
     }
   }
   try {
-    await record({ event: 'started', maxCalls, maxConcurrent, deadlineMs, baselineTasks: [...previouslyComplete] });
+    await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations,
+      requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
     while (!controller.signal.aborted) {
       const pending = ids.filter(id => states[id] === 'pending');
       if (!pending.length) break;

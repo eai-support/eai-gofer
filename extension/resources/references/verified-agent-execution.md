@@ -1,5 +1,38 @@
 # Verified Agent Execution
 
+## Real Checks, Repair And Recovery
+
+`createAcceptanceChecker` in `gofer-acceptance-check.mjs` runs reviewed absolute
+programs with argument arrays, not shell command strings or worker-supplied commands.
+The trusted host supplies the current input revision. Checks fail on changed inputs,
+nonzero exit, timeout, cancellation or excess output. Private receipts contain bounded
+output; repair prompts receive receipt references and failed check IDs, not raw logs.
+This helper is not a sandbox. Reviewed commands retain their normal operating-system
+permissions and inherited environment. Do not use it to run untrusted programs.
+Successful checks also require a trusted `verifyCleanup` callback with a matching
+process ID, start time and evidence receipt for the complete owned process tree.
+A closed parent alone is insufficient. Missing proof prevents a passing result.
+The bounded drain path can stop waiting without proving escaped children stopped;
+the report keeps cleanup unverified. No containment adapter is qualified here.
+
+The kernel consults the existing blocker register before each attempt. Waiting or
+blocked work does not dispatch another worker or repeat the unanswered question.
+Ready repair work still needs the trusted reservation adapter and its existing limits.
+
+`inspectExecutionRecovery` in `gofer-execution-recovery.mjs` inspects the original
+journal without changing it. It preserves consumed limits and requires trusted worker
+and receipt checks. It never authorizes resume or replays uncertain side effects.
+An interrupted atomic commit or remote worker still requires host reconciliation.
+This is a checked snapshot, not an atomic authorization to reuse state. The host must
+revalidate inputs and blockers within its atomic commit before changing task status.
+Older journals without check/attempt/concurrency metadata remain blocked for explicit
+reconciliation; their records are never deleted or treated as a new run.
+
+`gofer-execution-metrics.mjs` compares matched baseline and candidate trials. Include
+failed, blocked and timed-out trials, every worker/reviewer/retry, and missing usage.
+Unknown values stay null. The reporter does not authenticate native labels or declare
+a product speed improvement. Actual native qualification remains required.
+
 ## Business Summary
 
 Keep the agreed outcome. Use specialist help when it improves the work.

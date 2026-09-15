@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { applyBlockerEvent } from '../../../.specify/scripts/node/gofer-blocker-control.mjs';
+import { createAcceptanceChecker } from '../../../.specify/scripts/node/gofer-acceptance-check.mjs';
 import {
   runVerifiedGraph,
   validateWorkGraph,
@@ -99,6 +101,111 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('retains all scope protection by aborting the run after unresolved cleanup', async () => {
+    const f = await fixture({ parallel: true, conflict: true });
+    f.adapter.check.mockImplementation(async (r: any) => ({
+      ...r,
+      executed: true,
+      exitCode: 1,
+      cleanupVerified: false,
+      receipt: 'unresolved-process',
+    }));
+    const result = await runVerifiedGraph(f.options);
+    expect(result.status).toBe('incomplete');
+    expect(result.states).toEqual({ T001: 'blocked', T002: 'pending' });
+    expect(f.adapter.execute.mock.calls.map(([r]: any) => r.taskId)).toEqual(['T001']);
+  });
+  it('never retries or runs another check when child cleanup is unverified', async () => {
+    const f = await fixture();
+    f.options.checks.T001.push('second');
+    f.adapter.check.mockImplementation(async (r: any) => ({
+      ...r,
+      executed: true,
+      exitCode: 1,
+      cleanupVerified: false,
+      receipt: 'unresolved-process',
+    }));
+    const result = await runVerifiedGraph(f.options);
+    expect(result.attempts.T001).toBe(1);
+    expect(f.adapter.execute).toHaveBeenCalledOnce();
+    expect(f.adapter.check).toHaveBeenCalledOnce();
+    expect(result.states.T001).toBe('blocked');
+  });
+  it('feeds real failing acceptance evidence into a bounded repair', async () => {
+    const f = await fixture();
+    f.adapter.check = createAcceptanceChecker({
+      workspaceRoot: f.root,
+      evidenceDir: path.join(f.root, 'evidence'),
+      getInputRevision: f.adapter.inputRevision,
+      verifyCleanup: async (r: any) => ({
+        ...r,
+        allStopped: true,
+        receipt: 'fixture-process-check',
+      }),
+      commands: {
+        acceptance: {
+          program: process.execPath,
+          args: ['-e', 'const fs=require("fs"); process.exit(fs.existsSync("fixed.txt") ? 0 : 1)'],
+        },
+      },
+    });
+    f.adapter.execute.mockImplementation(async (r: any) => {
+      if (r.attempt === 2) {
+        expect(r.previousChecks).toHaveLength(1);
+        expect(r.previousChecks[0].passed).toBe(false);
+        const receipt = JSON.parse(await readFile(r.previousChecks[0].receipt, 'utf8'));
+        expect(receipt.executed).toBe(true);
+        expect(receipt.exitCode).toBe(1);
+        await writeFile(path.join(f.root, 'fixed.txt'), 'fixture state, not native output');
+      }
+      return { changedFiles: [] };
+    });
+    const result = await runVerifiedGraph(f.options);
+    expect(result.status).toBe('verified');
+    expect(result.attempts.T001).toBe(2);
+  });
+  it('does not redispatch affected work while a business answer is pending', async () => {
+    const f = await fixture();
+    await applyBlockerEvent(f.root, {
+      action: 'open',
+      goalKey: 'feature',
+      subjectKey: 'decision',
+      conditionKey: 'storage-choice',
+      category: 'decision',
+      owner: 'user',
+      question: 'Which approved choice?',
+      requiredChange: 'User decision',
+      tasks: ['T001'],
+    });
+    expect((await runVerifiedGraph(f.options)).states.T001).toBe('blocked');
+    expect(f.adapter.reserve).not.toHaveBeenCalled();
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it.each(['reserve', 'check'])(
+    'stops when a business blocker arrives during %s',
+    async (method) => {
+      const f = await fixture();
+      const original = f.adapter[method].getMockImplementation()!;
+      f.adapter[method].mockImplementation(async (request: any) => {
+        await applyBlockerEvent(f.root, {
+          action: 'open',
+          goalKey: 'feature',
+          subjectKey: 'decision',
+          conditionKey: 'late-decision',
+          category: 'decision',
+          owner: 'user',
+          question: 'Which choice?',
+          requiredChange: 'User decision',
+          tasks: ['T001'],
+        });
+        return original(request);
+      });
+      const result = await runVerifiedGraph(f.options);
+      expect(result.states.T001).toBe('blocked');
+      expect(f.adapter.verified).not.toHaveBeenCalled();
+      if (method === 'reserve') expect(f.adapter.execute).not.toHaveBeenCalled();
+    }
+  );
   it('waits for verified prerequisites and never claims feature completion', async () => {
     const f = await fixture();
     const result = await runVerifiedGraph(f.options);
