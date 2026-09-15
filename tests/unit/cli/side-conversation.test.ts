@@ -9,7 +9,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const FILE_PATH = path.resolve(__dirname, '../../../.specify/commands/gofer_side.md');
-const EXPECTED_SURFACES = [
+// Generator/file-format targets, not the six-host semantic contract.
+const EXPECTED_OUTPUT_TARGETS = [
   'agents-skills',
   'claude',
   'claude-mirror',
@@ -45,7 +46,7 @@ describe('gofer_side control command (T133 / FR-013)', () => {
     const { frontmatter } = await parseStageCommand(FILE_PATH);
     const surfaces = frontmatter.surfaces as string[];
     const sorted = [...surfaces].sort();
-    expect(sorted).toEqual([...EXPECTED_SURFACES].sort());
+    expect(sorted).toEqual([...EXPECTED_OUTPUT_TARGETS].sort());
   });
 
   it('frontmatter category is "control"', async () => {

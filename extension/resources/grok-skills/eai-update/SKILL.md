@@ -10,15 +10,39 @@ Host: Grok Build
 
 ## Update EAI Gofer
 
-Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+Use this command to install or update EAI Gofer for the current AI coding app. This command works without an EAI project, a Gofer scaffold, or EAI sign-in.
 
-## What To Do
+## Update Contract
 
-1. Add EAI Gofer to the repository from a supported host.
-2. Open that repository in Grok Build.
-3. Use the repository `eai` skill to continue work.
+1. Do not run workspace checks, `eai init`, `eai whoami`, or pipeline stages.
+2. Use `grok` as the current semantic host.
+3. Check the current host first:
+   `node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host grok --json`
+4. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
+5. State whether EAI Gofer is installed and whether the host command is available.
+6. Explain the planned user-level change and ask for approval before any install or update command.
+7. After approval, run one of these commands from the bundled helper:
+   - Install: `node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host grok --execute --json`
+   - Update: `node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host grok --execute --json`
+8. After an actual install or update, the helper archives stale Gofer command and skill entries. It adds a small managed always-on instruction for Claude, Codex, Copilot, Antigravity, and VS Code. For Grok, it verifies the installed plugin's `skills/eai/SKILL.md` always-on contract instead of inventing a separate global instruction file. It keeps the current `eai` and `eai-update` entries. For Codex, a clean official local marketplace on `main` fast-forwards safely. A dirty, non-main, or unrecognised local marketplace remains unchanged and reports that its plugin update is incomplete while it still refreshes the always-on instruction. If the Codex marketplace source is unknown, it stops without changes.
+9. Run only the selected host by default. Use `--host all` only when the user explicitly asks to install or update every detected host.
+10. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
 
-Do not run `gofer-surface-update.mjs --host grok`. That host is not supported by the updater.
+## Supported Hosts
+
+- Claude Code: refresh the marketplace and plugin, then run `/reload-plugins`.
+- Codex: refresh a confirmed Git marketplace and apply the plugin, then start a new task or restart Codex. A clean official local `main` checkout fast-forwards and applies the plugin. Other local checkouts keep their work unchanged, refresh the always-on instruction, and report what needs attention. An unknown source stops the update to protect local work.
+- GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
+- Google Antigravity: install or reinstall the repository plugin with `agy`, then start a new Antigravity session.
+- Grok Build: install or update the repository plugin with `grok`, then start a new Grok Build session.
+- VS Code: install or update `EnterpriseAI.gofer`, then run **Developer: Reload Window**.
+
+## Limits
+
+- This command updates user-level plugins and extensions. It archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned `.specify/` scaffold.
+- For a repository scaffold, use `/eai add or refresh the Gofer scaffold for this repo` after the host update.
+- Gemini files remain only for legacy file-format compatibility. Gemini is not a current updater host.
+- Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
 
 **Blocker Mediation**
 

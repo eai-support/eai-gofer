@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..');
-const hosts = ['claude', 'codex', 'copilot', 'gemini', 'vscode'];
+const hosts = ['claude', 'codex', 'copilot', 'antigravity', 'grok', 'vscode'];
 
 function parseArgs(argv) {
   const versionIndex = argv.indexOf('--version');
@@ -73,6 +73,16 @@ async function verifyInstructions() {
     }
 
     for (const host of hosts) {
+      if (host === 'grok') {
+        const content = await fs.readFile(
+          path.join(repoRoot, 'plugins/eai-gofer/.grok/skills/eai/SKILL.md'),
+          'utf8'
+        );
+        if (!content.includes('gofer:always-on-eai:start')) {
+          throw new Error('Always-on EAI contract is missing for grok.');
+        }
+        continue;
+      }
       const targetPath = updater.getAlwaysOnInstructionPath(host, {
         home,
         platform: 'linux',

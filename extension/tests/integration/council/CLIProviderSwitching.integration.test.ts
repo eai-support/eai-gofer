@@ -105,7 +105,7 @@ describe('CLI Provider Switching Integration Tests (R8)', () => {
       expect(provider.name).toBe('Codex CLI');
     });
 
-    it('should fall back to CLI-capable provider when Copilot is configured', async () => {
+    it('normalizes a stale non-CLI Copilot backend setting to auto', async () => {
       const vscode = await import('vscode');
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string, defaultValue?: any) => {
@@ -123,7 +123,7 @@ describe('CLI Provider Switching Integration Tests (R8)', () => {
       expect(provider.id).toBe('claude-cli');
     });
 
-    it('should fall back to CLI-capable provider when Gemini is configured', async () => {
+    it('normalizes a legacy Gemini backend setting to auto', async () => {
       const vscode = await import('vscode');
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string, defaultValue?: any) => {
@@ -427,7 +427,7 @@ describe('CLI Provider Switching Integration Tests (R8)', () => {
         compatible: false,
         version: null,
         errorMessage: 'CLI not found in PATH',
-        installInstructions: 'Install via: npm install -g @anthropic-ai/claude-cli',
+        installInstructions: 'Install Claude Code CLI from https://code.claude.com/docs/en/setup',
         authInstructions: null,
         cliType: 'claude',
       });

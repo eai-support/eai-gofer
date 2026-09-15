@@ -8,14 +8,14 @@ source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
 
 ## Executive Summary
 
-| Attribute                | Value                                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| **Service Name**         | Gofer                                                                                                      |
-| **Primary Capability**   | One-command EAI delivery pipeline with UI-first app delivery and multi-platform AI assistant support       |
-| **Primary Users**        | Business and delivery teams using Claude Code, GitHub Copilot, OpenAI Codex, Gemini CLI, or VS Code        |
-| **Data Sensitivity**     | Low - stores specifications, plans, and code artifacts locally in repository workspace                     |
-| **Current Status**       | Active Development (v3.7.24) - production-ready with public plugin and VSIX distribution                   |
-| **Last Material Change** | 2026-07-17 - one-command `/eai` user experience, public release refresh, and Admin Portal contract support |
+| Attribute                | Value                                                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Service Name**         | Gofer                                                                                                            |
+| **Primary Capability**   | One-command EAI delivery pipeline with UI-first app delivery and multi-platform AI assistant support             |
+| **Primary Users**        | Business and delivery teams using Claude Code, Codex, GitHub Copilot, Google Antigravity, Grok Build, or VS Code |
+| **Data Sensitivity**     | Low - stores specifications, plans, and code artifacts locally in repository workspace                           |
+| **Current Status**       | Active Development (v3.7.24) - production-ready with public plugin and VSIX distribution                         |
+| **Last Material Change** | 2026-07-17 - one-command `/eai` user experience, public release refresh, and Admin Portal contract support       |
 
 ## Service Identity
 
@@ -41,9 +41,9 @@ host entrypoints, and a dual-protocol architecture (LSP + MCP). It provides:
    directly to read specs, execute tasks, validate code, and manage context
 2. **Specification Framework** - Structured `.specify/` directory format for
    feature specs, plans, and tasks
-3. **Multi-Platform CLI Support** - One public `eai` entrypoint for Claude Code,
-   GitHub Copilot Chat, OpenAI Codex, and Gemini CLI, backed by internal stage
-   contracts
+3. **Multi-Platform Host Support** - One public `eai` entrypoint for Claude
+   Code, Codex, GitHub Copilot, Google Antigravity, Grok Build, and VS Code,
+   backed by internal stage contracts
 4. **Autonomous Execution** - Optional orchestrator that drives Claude Code
    through full implementation cycles with Haiku-based decision making
 5. **Adaptive Context Compaction (ACC)** - 5-stage progressive context
@@ -243,8 +243,8 @@ gofer/
    - Creates `.specify/` folder structure
 
 3. **Configure AI CLI access**
-   - Run the provider login command for your chosen tool, such as `claude login`
-     or `codex login`
+   - Run the provider login command for your chosen tool, such as
+     `claude auth login` or `codex login`
    - Optionally set `gofer.defaultCLI`, `gofer.claudeCodeCommand`, or
      `gofer.codexCommand` in VS Code settings
 
@@ -257,7 +257,8 @@ gofer/
    - In Claude Code: `/eai Add user authentication`
    - In GitHub Copilot: `#eai Add user authentication`
    - In OpenAI Codex: `$eai Add user authentication`
-   - In Gemini CLI: `/eai Add user authentication`
+   - In Google Antigravity: `$eai Add user authentication`
+   - In Grok Build: `Use the installed EAI skill. Add user authentication.`
    - Gofer checks the repo and EAI readiness, then routes the internal pipeline
      without asking the user to run numbered stage commands
 
@@ -268,14 +269,16 @@ gofer/
 - **Claude Code** - Full feature support with 29 MCP tools
 - **GitHub Copilot Chat** - Core features + 2026+ enhancements
 - **OpenAI Codex CLI** - Full feature support via skill system
-- **Gemini CLI** - Command files with namespace support
-- **Auto-detection** - `gofer.defaultCLI` setting (`auto`, `claude`, `copilot`,
-  `codex`, `gemini`)
+- **Google Antigravity** - Shared `.agents/skills/` plugin skills and `agy`
+- **Grok Build** - Installed plugin skills under `skills/eai/`
+- **VS Code** - Marketplace extension and repo-local GitHub customizations
+- **Legacy Gemini format** - `.gemini/` command files remain for compatibility
 
 ### CLI Innovations (v3.0+)
 
 - **Source-of-Truth Generator** - Single canonical
-  `.specify/commands/<stage>.md` emits to 4 CLI surfaces
+  `.specify/commands/<stage>.md` emits the six semantic host entrypoints and
+  their required file-format mirrors
 - **Visual Artifacts** - 10 persona-pack templates (Impact Canvas, C4, ERD,
   Heatmaps)
 - **7 Visual Writer Agents** - Specialized agents for each diagram type
@@ -324,11 +327,12 @@ gofer/
 
 - **Memory Panel Filter** - Toggle to hide system-generated memories
 - **Cross-Platform Command Parity** - one public `eai` entrypoint across Claude,
-  Copilot, Codex, and Gemini, with internal stage parity retained
+  Codex, Copilot, Antigravity, Grok, and VS Code, with internal stage parity
+  retained
 - **Parallel Validation** - 6 validation agents run concurrently
 - **Codex Budget Doctor** - `npm run gofer:codex-doctor` diagnostic tool
-- **Plugin Manifests** - `.claude-plugin/`, `.gemini/`, `codex-config.toml`
-  support
+- **Plugin Manifests** - `.claude-plugin/`, `.codex-plugin/`, `.github/plugin/`,
+  and Grok skill support; `.gemini/` remains a legacy format mirror
 - **AI Usage Panel** - Real-time token usage and cost tracking via provider
   billing APIs
 - **Resource Diagnostics** - Lightweight performance snapshots (5min intervals,
@@ -373,12 +377,14 @@ No database required - all data is file-based for Git-friendly version control.
 | ------------------------- | ---------- | ------------------------------------------------------------ | ----------- |
 | **VS Code Extension API** | Platform   | Extension host, commands, views, language server protocol    | Required    |
 | **Claude Code CLI**       | Upstream   | Claude routes from `.specify/memory/gofer-model-policy.yaml` | Optional    |
-| **Gemini CLI**            | Upstream   | Gemini routes from the Gofer model policy                    | Optional    |
+| **Google Antigravity**    | Upstream   | Google-host session and Gemini model routes                  | Optional    |
 | **OpenAI Codex CLI**      | Upstream   | Codex/OpenAI routes from the Gofer model policy              | Optional    |
 | **Claude Code CLI**       | Downstream | Primary consumer of MCP tools (23 tools)                     | Primary     |
 | **GitHub Copilot**        | Downstream | Consumer of prompt files (`.github/prompts/`)                | Core        |
 | **OpenAI Codex CLI**      | Downstream | Consumer of skill files (`.agents/skills/`)                  | Core        |
-| **Gemini CLI**            | Downstream | Consumer of command files (`.gemini/commands/gofer/`)        | Core        |
+| **Google Antigravity**    | Downstream | Consumer of shared agent skills (`.agents/skills/`)          | Core        |
+| **Grok Build**            | Downstream | Consumer of installed plugin skill (`skills/eai/SKILL.md`)   | Core        |
+| **Gemini legacy format**  | Downstream | Compatibility reader for `.gemini/commands/gofer/`           | Legacy      |
 
 ### Secondary Integrations
 

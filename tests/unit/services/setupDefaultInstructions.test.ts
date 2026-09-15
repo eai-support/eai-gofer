@@ -14,7 +14,7 @@ describe('setupDefaultInstructions integration', () => {
     vi.resetAllMocks();
   });
 
-  it('creates all 3 files when none exist (T032)', async () => {
+  it('creates all 4 host instruction files when none exist (T032)', async () => {
     const written: Record<string, string> = {};
 
     vi.mocked(FileUtils.exists).mockResolvedValue(false);
@@ -31,9 +31,8 @@ describe('setupDefaultInstructions integration', () => {
 
     // Import the modules dynamically to use mocked FileUtils
     const { ProjectDetector } = await import('../../../extension/src/services/ProjectDetector');
-    const { InstructionGenerator } = await import(
-      '../../../extension/src/services/InstructionGenerator'
-    );
+    const { InstructionGenerator } =
+      await import('../../../extension/src/services/InstructionGenerator');
 
     const path = await import('path');
     const templatesPath = path.join(
@@ -61,15 +60,22 @@ describe('setupDefaultInstructions integration', () => {
       await FileUtils.writeTextFile(claudePath, await generator.generateClaudeMd(projectInfo));
     }
 
+    const geminiPath = path.join(workspacePath, 'GEMINI.md');
+    if (!(await FileUtils.exists(geminiPath))) {
+      await FileUtils.writeTextFile(geminiPath, generator.generateGeminiMd());
+    }
+
     const copilotPath = path.join(workspacePath, '.github', 'copilot-instructions.md');
     if (!(await FileUtils.exists(copilotPath))) {
       await FileUtils.writeTextFile(copilotPath, await generator.generateCopilotMd(projectInfo));
     }
 
-    expect(Object.keys(written)).toHaveLength(3);
+    expect(Object.keys(written)).toHaveLength(4);
     expect(written[agentsPath]).toContain('# AGENTS.md');
     expect(written[claudePath]).toContain('# CLAUDE.md');
     expect(written[claudePath]).toContain('@AGENTS.md');
+    expect(written[geminiPath]).toContain('@AGENTS.md');
+    expect(written[geminiPath]).toContain('gofer:always-on-eai:start');
     expect(written[copilotPath]).toContain('# Copilot Instructions');
 
     // CLAUDE.md should be concise (under 80 lines)
@@ -96,9 +102,8 @@ describe('setupDefaultInstructions integration', () => {
     vi.mocked(FileUtils.ensureDirectory).mockResolvedValue();
 
     const { ProjectDetector } = await import('../../../extension/src/services/ProjectDetector');
-    const { InstructionGenerator } = await import(
-      '../../../extension/src/services/InstructionGenerator'
-    );
+    const { InstructionGenerator } =
+      await import('../../../extension/src/services/InstructionGenerator');
 
     const path = await import('path');
     const templatesPath = path.join(
@@ -126,6 +131,11 @@ describe('setupDefaultInstructions integration', () => {
       await FileUtils.writeTextFile(claudePath, await generator.generateClaudeMd(projectInfo));
     }
 
+    const geminiPath = path.join(workspacePath, 'GEMINI.md');
+    if (!(await FileUtils.exists(geminiPath))) {
+      await FileUtils.writeTextFile(geminiPath, generator.generateGeminiMd());
+    }
+
     const copilotPath = path.join(workspacePath, '.github', 'copilot-instructions.md');
     if (!(await FileUtils.exists(copilotPath))) {
       await FileUtils.writeTextFile(copilotPath, await generator.generateCopilotMd(projectInfo));
@@ -133,8 +143,9 @@ describe('setupDefaultInstructions integration', () => {
 
     // CLAUDE.md should NOT have been written (it existed)
     expect(written[claudePath]).toBeUndefined();
-    // But AGENTS.md and copilot should have been written
+    // But AGENTS.md, GEMINI.md, and Copilot instructions should have been written
     expect(written[agentsPath]).toBeDefined();
+    expect(written[geminiPath]).toBeDefined();
     expect(written[copilotPath]).toBeDefined();
   });
 });

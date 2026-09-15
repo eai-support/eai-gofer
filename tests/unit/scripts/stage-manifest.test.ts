@@ -230,6 +230,7 @@ describe('stage-manifest (T061)', () => {
       'github-prompts',
       'agents-skills',
       'system-skills',
+      'grok-skills',
     ]);
 
     for (const stage of stages) {

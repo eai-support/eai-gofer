@@ -221,7 +221,7 @@ describe('CLI Provider Switching Integration', () => {
         compatible: false,
         version: undefined,
         errorMessage: 'CLI command not found',
-        installInstructions: 'npm install -g @anthropic/claude-code',
+        installInstructions: 'https://code.claude.com/docs/en/setup',
       });
 
       // Setup: Set invalid command
@@ -246,7 +246,7 @@ describe('CLI Provider Switching Integration', () => {
         compatible: false,
         version: undefined,
         errorMessage: 'CLI not found',
-        installInstructions: 'npm install -g @openai/codex-cli',
+        installInstructions: 'https://learn.chatgpt.com/docs/codex/cli',
       });
 
       // Setup: Set CLI command that doesn't exist

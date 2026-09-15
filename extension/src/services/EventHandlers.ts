@@ -19,6 +19,7 @@ import type { WorkspaceContextProvider } from '../autonomous/WorkspaceContextPro
 import type { HookBridgeWatcher } from '../autonomous/HookBridgeWatcher';
 import type { ScopeGuard } from '../autonomous/ScopeGuard';
 import type { ResearchChunker } from '../autonomous/ResearchChunker';
+import { normalizeAutonomousCLIProvider } from '../config/semanticHosts';
 
 /**
  * Dependencies required by event handlers
@@ -305,7 +306,9 @@ export class EventHandlers {
       factory.clearProviders();
 
       const config = vscode.workspace.getConfiguration('gofer');
-      const providerType = config.get<string>('cliProvider', 'auto');
+      const providerType = normalizeAutonomousCLIProvider(
+        config.get<string>('cliProvider', 'auto')
+      );
 
       this.logger.info('EventHandlers', 'CLI provider setting changed', {
         provider: providerType,

@@ -12,6 +12,7 @@ import type { ProviderId } from '../council/types';
 import type { CLIUsageAdapter, UsageEntry } from './cli/CLIUsageAdapter';
 import { ClaudeCodeUsageAdapter } from './ClaudeCodeUsageAdapter';
 import { getCodexAdapter } from './CodexUsageAdapter';
+import { normalizeAutonomousCLIProvider } from '../config/semanticHosts';
 
 /**
  * Wrapper to adapt ClaudeCodeUsageAdapter to CLIUsageAdapter interface
@@ -118,24 +119,10 @@ export class UsageAdapterFactory {
   getCurrentAdapter(): CLIUsageAdapter | null {
     const vscode = require('vscode');
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get('cliProvider', 'auto') as
-      | 'claude'
-      | 'codex'
-      | 'copilot'
-      | 'gemini'
-      | 'auto';
+    const preference = normalizeAutonomousCLIProvider(config.get('cliProvider', 'auto'));
 
     const providerId =
-      preference === 'auto'
-        ? 'claude-cli'
-        : preference === 'claude' || preference === 'codex'
-          ? (`${preference}-cli` as CLIProviderId)
-          : null;
-
-    if (!providerId) {
-      // Copilot/Gemini selections do not have CLI usage adapters.
-      return null;
-    }
+      preference === 'auto' ? 'claude-cli' : (`${preference}-cli` as CLIProviderId);
 
     try {
       return this.createUsageAdapter(providerId);

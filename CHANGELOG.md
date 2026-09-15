@@ -9,6 +9,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Standardized the current Gofer host contract on exactly Claude, Codex,
+  Copilot, Google Antigravity, Grok Build, and VS Code. Existing automation that
+  supplies `--host gemini` is mapped silently to `antigravity`; Gemini remains
+  only as a legacy file-format and input compatibility name.
+
 ### Documentation
 
 - Trimmed the root and extension READMEs plus the VS Code configuration guide to

@@ -1,3 +1,5 @@
+import { type SemanticHost, normalizeSemanticHost } from './semanticHosts';
+
 export type GoferTaskTier = 'simple' | 'mechanical' | 'medium' | 'hard' | 'arbiter';
 
 export interface ModelRoute {
@@ -22,12 +24,7 @@ export interface GoferModelPolicy {
   version: number;
   lastVerified: string;
   profile: 'balanced';
-  surfaces: {
-    claude: HostModelPolicy;
-    codex: HostModelPolicy;
-    gemini: HostModelPolicy;
-    copilot: HostModelPolicy;
-  };
+  surfaces: Record<SemanticHost, HostModelPolicy>;
 }
 
 export const GOFER_MODEL_POLICY_PATH = '.specify/memory/gofer-model-policy.yaml';
@@ -54,7 +51,8 @@ export const DEFAULT_GOFER_MODEL_POLICY: GoferModelPolicy = {
         model: 'claude-opus-4-8',
         claudeCodeAlias: 'opus',
         contextWindowTokens: 1_000_000,
-        useFor: 'hardest bugs, security review, architecture arbitration, release-critical validation',
+        useFor:
+          'hardest bugs, security review, architecture arbitration, release-critical validation',
       },
     },
     codex: {
@@ -89,7 +87,22 @@ export const DEFAULT_GOFER_MODEL_POLICY: GoferModelPolicy = {
         useFor: 'broad frontier reasoning, complex architecture, final arbitration',
       },
     },
-    gemini: {
+    copilot: {
+      simple: {
+        model: 'Auto',
+        useFor: 'default Copilot Chat, routine coding, completion, and quick fixes',
+      },
+      medium: {
+        model: 'Auto',
+        useFor: 'normal Gofer stage prompts and workspace questions',
+      },
+      hard: {
+        model: 'Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro',
+        useFor: 'explicit hard review, security, architecture, or release gates',
+      },
+      note: 'Copilot model availability depends on plan, organization policy, client, and feature surface.',
+    },
+    antigravity: {
       simple: {
         model: 'gemini-3.1-flash-lite',
         contextWindowTokens: 1_000_000,
@@ -111,29 +124,45 @@ export const DEFAULT_GOFER_MODEL_POLICY: GoferModelPolicy = {
         useFor: 'fast tool/coding workflows when account pricing makes it worthwhile',
       },
     },
-    copilot: {
+    grok: {
+      simple: {
+        model: 'Provider default',
+        useFor: 'quick Grok Build questions, summaries, and low-risk edits',
+      },
+      medium: {
+        model: 'Provider default',
+        useFor: 'normal Gofer stage prompts and implementation work',
+      },
+      hard: {
+        model: 'Best available in picker',
+        useFor: 'explicit hard review, architecture, security, and release validation',
+      },
+      note: 'Grok model availability depends on account, client, and provider policy.',
+    },
+    vscode: {
       simple: {
         model: 'Auto',
-        useFor: 'default Copilot Chat, routine coding, completion, and quick fixes',
+        useFor: 'quick editor questions, completion, and low-risk fixes',
       },
       medium: {
         model: 'Auto',
-        useFor: 'normal Gofer stage prompts and workspace questions',
+        useFor: 'normal Gofer stage prompts in the VS Code host',
       },
       hard: {
-        model: 'Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro',
-        useFor: 'explicit hard review, security, architecture, or release gates',
+        model: 'Best available in picker',
+        useFor: 'explicit hard review, architecture, security, and release validation',
       },
-      note: 'Copilot model availability depends on plan, organization policy, client, and feature surface.',
+      note: 'VS Code model availability depends on installed extensions and organization policy.',
     },
   },
 };
 
-export function getDefaultModelRoute(
-  surface: keyof GoferModelPolicy['surfaces'],
-  tier: GoferTaskTier
-): ModelRoute {
-  const hostPolicy = DEFAULT_GOFER_MODEL_POLICY.surfaces[surface];
+export function getDefaultModelRoute(surface: SemanticHost, tier: GoferTaskTier): ModelRoute {
+  const normalizedSurface = normalizeSemanticHost(surface);
+  if (normalizedSurface === 'auto') {
+    throw new Error(`Unknown semantic host: ${String(surface)}`);
+  }
+  const hostPolicy = DEFAULT_GOFER_MODEL_POLICY.surfaces[normalizedSurface];
   const route = hostPolicy[tier] ?? hostPolicy.medium;
   return route;
 }

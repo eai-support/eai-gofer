@@ -5,6 +5,6 @@ No valid Claude CLI login session was found.
 Please authenticate using the provider CLI:
 
 1. Run the login command:
-   claude login
+   claude auth login
 
 For more information, visit: https://docs.anthropic.com/claude-code

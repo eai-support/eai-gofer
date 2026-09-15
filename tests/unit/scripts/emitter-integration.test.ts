@@ -64,6 +64,7 @@ surfaces:
   - github-prompts
   - agents-skills
   - system-skills
+  - grok-skills
   - gemini
 ---
 
@@ -92,6 +93,7 @@ surfaces:
   - github-prompts
   - agents-skills
   - system-skills
+  - grok-skills
   - gemini
 ---
 
@@ -202,7 +204,7 @@ describe('generate-commands emitters (integration)', () => {
       '--root',
       tmpRoot,
       '--surfaces',
-      'claude,claude-mirror,copilot,github-prompts,agents-skills,system-skills,gemini,agents-md,codex-config',
+      'claude,claude-mirror,copilot,github-prompts,agents-skills,system-skills,grok-skills,gemini,agents-md,codex-config',
     ]);
 
     // Assign dummy emitters for the describe blocks below — actual verification
@@ -264,6 +266,7 @@ describe('generate-commands emitters (integration)', () => {
         'github-prompts',
         'agents-skills',
         'system-skills',
+        'grok-skills',
         'gemini',
         'codex',
       ];
@@ -332,10 +335,11 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(path.join(promptsPath, '1_gofer_research.prompt.md'))).toBe(false);
     });
 
-    it('emits only public Codex skills', async () => {
+    it('emits the shared Codex and Antigravity public skills', async () => {
       const skillsPath = path.join(tmpRoot, '.agents', 'skills');
       const content = await readFile(path.join(skillsPath, 'eai', 'SKILL.md'));
       expect(content).toContain('name: eai');
+      expect(content).toContain('Host: Codex and Google Antigravity');
       expect(content).toContain('## User-Facing Contract');
       expect(await fileExists(path.join(skillsPath, 'gofer', 'SKILL.md'))).toBe(false);
       expect(await fileExists(path.join(skillsPath, '1_gofer_research', 'SKILL.md'))).toBe(false);
@@ -348,6 +352,25 @@ describe('generate-commands emitters (integration)', () => {
       expect(await fileExists(path.join(skillsPath, 'eai', 'SKILL.md'))).toBe(true);
       expect(await fileExists(path.join(skillsPath, '1_gofer_research', 'SKILL.md'))).toBe(false);
     });
+
+    it('emits the Grok plugin skill with its always-on contract', async () => {
+      const skillPath = path.join(tmpRoot, '.grok', 'skills', 'eai', 'SKILL.md');
+      const content = await readFile(skillPath);
+      expect(content).toContain('Host: Grok Build');
+      expect(content).toContain('Apply this contract to every request');
+      expect(content).toContain('gofer:always-on-eai:start');
+      expect(await fileExists(path.join(tmpRoot, '.grok', 'skills', 'gofer'))).toBe(false);
+    });
+
+    it('marks the Gemini command as legacy compatibility, not a current host', async () => {
+      const content = await readFile(
+        path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai-update.md')
+      );
+      expect(content).toContain('Legacy Gemini File-Format Compatibility');
+      expect(content).toContain('Gemini is not a current Gofer host');
+      expect(content).toContain('hidden compatibility alias');
+      expect(content).toContain('claude, codex, copilot, antigravity, grok, vscode');
+    });
   });
 
   describe('surface parity (T043)', () => {
@@ -359,6 +382,7 @@ describe('generate-commands emitters (integration)', () => {
         path.join(tmpRoot, '.github', 'prompts', 'eai.prompt.md'),
         path.join(tmpRoot, '.agents', 'skills', 'eai', 'SKILL.md'),
         path.join(tmpRoot, '.system', 'skills', 'eai', 'SKILL.md'),
+        path.join(tmpRoot, '.grok', 'skills', 'eai', 'SKILL.md'),
         path.join(tmpRoot, '.gemini', 'commands', 'gofer', 'eai.toml'),
       ];
 

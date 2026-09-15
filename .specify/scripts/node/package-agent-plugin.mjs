@@ -1269,6 +1269,7 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     '.claude/skills',
     '.claude-plugin/hooks',
     '.gemini',
+    '.grok',
     'AGENTS.md',
     'LICENSE',
     'NOTICE',

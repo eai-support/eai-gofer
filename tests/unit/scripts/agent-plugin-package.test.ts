@@ -109,8 +109,9 @@ describe('Gofer agent plugin package', () => {
         const skill = fs.readFileSync(path.join(pluginRoot, surface, 'eai', 'SKILL.md'), 'utf8');
         expect(skill).toContain(buildContinuationContractSection());
       }
-      expect(fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8'))
-        .toContain(buildContinuationContractSection());
+      expect(
+        fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8')
+      ).toContain(buildContinuationContractSection());
       expect(fs.existsSync(zipPath)).toBe(true);
       expect(fs.existsSync(pluginRoot)).toBe(true);
 

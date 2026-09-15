@@ -62,17 +62,10 @@ export class CLIHealthChecker {
       result.version = version;
       result.available = true;
 
-      // 2. Check version compatibility
-      const minVersion = cliType === 'claude' ? '1.0.0' : '2.0.0';
-      result.compatible = this.compareVersion(version, minVersion);
-
-      if (!result.compatible) {
-        result.errorMessage = `${cliType} version ${version} is below minimum ${minVersion}`;
-        result.installInstructions = `Upgrade ${cliType}: npm update -g ${
-          cliType === 'claude' ? '@anthropic/claude-code' : '@openai/codex-cli'
-        }`;
-        return result;
-      }
+      // Both providers publish rolling native installers and Codex uses a
+      // supported 0.x version line. Availability and command capability are
+      // authoritative; do not invent a numeric minimum the provider does not.
+      result.compatible = true;
 
       // 3. Check authentication
       result.authenticated = await this.checkAuthentication(cliType, cliCommand);
@@ -144,20 +137,8 @@ export class CLIHealthChecker {
     cliType: 'claude' | 'codex',
     cliCommand: string
   ): Promise<boolean> {
-    try {
-      const { stdout } = await execFile(cliCommand, ['--help'], {
-        timeout: CLI_HEALTH_CHECK_TIMEOUT_MS,
-      });
-
-      // Gofer no longer treats provider API-key environment variables as the
-      // public setup path. The host CLI owns authentication through its login
-      // or session mechanism; a functioning help command is the safest cheap
-      // preflight we can run without sending a prompt.
-      return stdout.length > 0;
-    } catch {
-      // Auth check failed
-      return false;
-    }
+    const args = cliType === 'claude' ? ['auth', 'status'] : ['login', 'status'];
+    return this.supportsSubcommand(cliCommand, args);
   }
 
   /**
@@ -169,9 +150,9 @@ export class CLIHealthChecker {
    */
   static getInstallInstructions(cliType: 'claude' | 'codex'): string {
     if (cliType === 'claude') {
-      return 'Install Claude Code CLI: npm install -g @anthropic/claude-code';
+      return 'Install Claude Code CLI from https://code.claude.com/docs/en/setup';
     }
-    return 'Install Codex CLI: npm install -g @openai/codex-cli';
+    return 'Install Codex CLI from https://learn.chatgpt.com/docs/codex/cli';
   }
 
   /**
@@ -183,7 +164,7 @@ export class CLIHealthChecker {
    */
   static getAuthInstructions(cliType: 'claude' | 'codex'): string {
     if (cliType === 'claude') {
-      return 'Run: claude login';
+      return 'Run: claude auth login';
     }
     return 'Run: codex login';
   }

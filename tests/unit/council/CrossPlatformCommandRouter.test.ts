@@ -95,7 +95,7 @@ Body`);
 
     expect(result.platform).toBe('copilot');
     expect(result.filePath).toContain('.github/prompts/1_gofer_research.prompt.md');
-    expect(result.syntax).toBe('#1_gofer_research');
+    expect(result.syntax).toBe('/1_gofer_research');
   });
 
   it('falls back by priority Claude > Codex > Copilot when auto', async () => {
@@ -164,11 +164,15 @@ Body`);
     );
   });
 
-  it('formats Gemini helper syntax without double-prefixing gofer names', () => {
+  it('formats every current semantic host with its native invocation prefix', () => {
     const router = new CrossPlatformCommandRouter(workspacePath);
 
-    expect(router.getCommandSyntax('1_gofer_research', 'gemini')).toBe('/gofer:1_gofer_research');
-    expect(router.getCommandSyntax('gofer:diagnose', 'gemini')).toBe('/gofer:diagnose');
+    expect(router.getCommandSyntax('eai', 'claude')).toBe('/eai');
+    expect(router.getCommandSyntax('eai', 'codex')).toBe('$eai');
+    expect(router.getCommandSyntax('eai', 'copilot')).toBe('/eai');
+    expect(router.getCommandSyntax('eai', 'antigravity')).toBe('/eai');
+    expect(router.getCommandSyntax('eai', 'grok')).toBe('/eai');
+    expect(router.getCommandSyntax('eai', 'vscode')).toBe('/eai');
   });
 
   it('rejects path traversal command names (T046)', async () => {

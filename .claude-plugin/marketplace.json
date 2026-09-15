@@ -22,15 +22,7 @@
       "repository": "https://github.com/eai-support/eai-gofer",
       "license": "Apache-2.0",
       "category": "Coding",
-      "tags": [
-        "eai-gofer",
-        "gofer",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "spec-driven-development"
-      ]
+      "tags": ["eai-gofer", "gofer", "claude", "codex", "copilot", "gemini", "spec-driven-development"]
     }
   ]
 }

@@ -1,12 +1,12 @@
 /**
  * Platform Detector for Cross-Platform Command Parity
- * Feature 028: Detects which AI platform is active (Claude CLI, Copilot Chat,
- * Codex CLI, or Gemini CLI command files)
+ * Feature 028: Detects which current semantic AI host is active.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigManager } from '../config';
+import { CURRENT_SEMANTIC_HOSTS } from '../config/semanticHosts';
 import { PlatformType, PlatformDetectionContext } from './types/CrossPlatformTypes';
 
 /**
@@ -14,7 +14,7 @@ import { PlatformType, PlatformDetectionContext } from './types/CrossPlatformTyp
  *
  * Detection priority:
  * 1. User setting (gofer.defaultCLI) if explicitly set
- * 2. Directory presence (.claude/commands/, .github/prompts/, .agents/skills/, .gemini/commands/gofer/)
+ * 2. Current host resource presence
  * 3. Execution context (VSCode extension host)
  * 4. Fallback to 'auto'
  */
@@ -75,8 +75,12 @@ export class PlatformDetector {
         return this.hasDirectory('.github/prompts');
       case 'codex':
         return this.hasAnyDirectory(['.agents/skills', '.system/skills']);
-      case 'gemini':
-        return this.hasDirectory('.gemini/commands/gofer');
+      case 'antigravity':
+        return this.hasAnyDirectory(['.agents/skills', '.gemini/commands/gofer']);
+      case 'grok':
+        return this.hasDirectory('.grok/skills');
+      case 'vscode':
+        return true;
       default:
         return false;
     }
@@ -97,21 +101,14 @@ export class PlatformDetector {
     }
 
     // Auto-detect based on directory presence
-    // Priority: Claude > Codex > Gemini > Copilot (based on feature completeness)
-    if (this.isPlatformAvailable('claude')) {
-      return 'claude';
+    for (const host of CURRENT_SEMANTIC_HOSTS) {
+      if (host !== 'vscode' && this.isPlatformAvailable(host)) {
+        return host;
+      }
     }
-    if (this.isPlatformAvailable('codex')) {
-      return 'codex';
-    }
-    if (this.isPlatformAvailable('gemini')) {
-      return 'gemini';
-    }
-    if (this.isPlatformAvailable('copilot')) {
-      return 'copilot';
-    }
-
-    return 'auto';
+    // This class only runs inside the VS Code extension host, so VS Code is the
+    // final concrete surface when no repository-owned provider resources exist.
+    return 'vscode';
   }
 
   /**
@@ -127,7 +124,12 @@ export class PlatformDetector {
     const hasClaudeDirectory = this.hasDirectory('.claude/commands');
     const hasCopilotDirectory = this.hasDirectory('.github/prompts');
     const hasCodexDirectory = this.hasAnyDirectory(['.agents/skills', '.system/skills']);
-    const hasGeminiDirectory = this.hasDirectory('.gemini/commands/gofer');
+    const hasAntigravityDirectory = this.hasAnyDirectory([
+      '.agents/skills',
+      '.gemini/commands/gofer',
+    ]);
+    const hasGrokDirectory = this.hasDirectory('.grok/skills');
+    const hasVSCodeSurface = true;
 
     // Determine platform
     let platform: PlatformType | 'auto' = 'auto';
@@ -141,18 +143,22 @@ export class PlatformDetector {
       detectionMethod = 'user-setting';
       isExplicit = true;
     } else {
-      // Auto-detect based on directory presence
-      detectionMethod = 'directory-check';
+      // Auto-detect based on directory presence, then use the active extension
+      // host as the final concrete fallback.
       isAutoDetected = true;
 
-      if (hasClaudeDirectory) {
-        platform = 'claude';
-      } else if (hasCodexDirectory) {
-        platform = 'codex';
-      } else if (hasGeminiDirectory) {
-        platform = 'gemini';
-      } else if (hasCopilotDirectory) {
-        platform = 'copilot';
+      const directoryPlatform = CURRENT_SEMANTIC_HOSTS.find(
+        (host) => host !== 'vscode' && this.isPlatformAvailable(host)
+      );
+      if (directoryPlatform) {
+        platform = directoryPlatform;
+        detectionMethod = 'directory-check';
+      } else if (hasVSCodeSurface) {
+        platform = 'vscode';
+        detectionMethod = 'execution-context';
+      } else {
+        platform = 'auto';
+        detectionMethod = 'fallback';
       }
     }
 
@@ -164,7 +170,9 @@ export class PlatformDetector {
       hasClaudeDirectory,
       hasCopilotDirectory,
       hasCodexDirectory,
-      hasGeminiDirectory,
+      hasAntigravityDirectory,
+      hasGrokDirectory,
+      hasVSCodeSurface,
       detectedAt: new Date(),
       detectionMethod,
     };

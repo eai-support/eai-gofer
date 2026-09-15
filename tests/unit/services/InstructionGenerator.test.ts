@@ -235,7 +235,7 @@ describe('InstructionGenerator', () => {
       expect(content).toContain('TypeScript');
       expect(content).toContain('React');
       expect(content).toContain('Gofer');
-      expect(content).toContain('#eai');
+      expect(content).toContain('/eai');
       expect(content).not.toContain('#gofer');
       expect(content).not.toContain('Run `/0_gofer_start`');
     });

@@ -4,19 +4,24 @@ All notable changes to the Gofer extension will be documented in this file.
 
 ## [3.12.7] - 2026-09-10
 
-Keep delivery on the agreed priority, verify blockers and outcomes, preserve headless compatibility, and guard release publication.
+Keep delivery on the agreed priority, verify blockers and outcomes, preserve
+headless compatibility, and guard release publication.
 
 ## [3.12.6] - 2026-09-10
 
-Safer app restarts, verified previews, bounded retries and clearer delivery updates
+Safer app restarts, verified previews, bounded retries and clearer delivery
+updates
 
 ## [3.12.5] - 2026-09-08
 
-Fix desktop pipeline continuation, restore standards-compliant MCP connections, preserve permission controls, and require full repository and packaged-extension tests before release.
+Fix desktop pipeline continuation, restore standards-compliant MCP connections,
+preserve permission controls, and require full repository and packaged-extension
+tests before release.
 
 ## [3.12.4] - 2026-09-05
 
-Allow normal Visual Studio Marketplace indexing before release verification fails
+Allow normal Visual Studio Marketplace indexing before release verification
+fails
 
 ## [3.12.3] - 2026-09-05
 
