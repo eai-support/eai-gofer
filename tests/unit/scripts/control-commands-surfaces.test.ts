@@ -3,7 +3,7 @@ import path from 'path';
 import { existsSync } from 'fs';
 import {
   CONTROL_COMMANDS,
-  CROSS_CLI_SURFACES,
+  GENERATED_OUTPUT_TARGETS,
   getGeneratedCommandFileStem,
 } from '../../helpers/goferCommandSet';
 
@@ -48,10 +48,10 @@ describe('control commands — surfaces and category', () => {
 
         // Same set, no extras, no missing
         const sortedActual = [...surfaces].sort();
-        const sortedExpected = [...CROSS_CLI_SURFACES].sort();
+        const sortedExpected = [...GENERATED_OUTPUT_TARGETS].sort();
         expect(sortedActual).toEqual(sortedExpected);
 
-        expect(surfaces.length).toBe(CROSS_CLI_SURFACES.length);
+        expect(surfaces.length).toBe(GENERATED_OUTPUT_TARGETS.length);
       });
 
       it('has category=control', async () => {

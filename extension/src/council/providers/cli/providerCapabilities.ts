@@ -13,8 +13,8 @@ import type { ProviderId } from '../../types';
 /**
  * Check if a provider supports MCP (Model Context Protocol) servers
  *
- * MCP servers are Claude-specific features that enable extended capabilities
- * through external integrations.
+ * MCP servers enable extended capabilities through external integrations in
+ * both Claude Code and Codex CLI.
  *
  * @param providerId - The provider to check
  * @returns true if MCP servers are supported, false otherwise
@@ -24,13 +24,12 @@ import type { ProviderId } from '../../types';
  * if (supportsMCPServers('claude-cli')) {
  *   // Activate MCP server integration
  * } else {
- *   // Show notification: "MCP servers require Claude CLI"
+ *   // Show notification with the current MCP-capable CLI choices
  * }
  * ```
  */
 export function supportsMCPServers(providerId: ProviderId): boolean {
-  // Only Claude CLI supports MCP servers
-  return providerId === 'claude-cli';
+  return providerId === 'claude-cli' || providerId === 'codex-cli';
 }
 
 /**
@@ -69,9 +68,9 @@ export function getUnsupportedFeatureMessage(
 ): string {
   if (feature === 'mcp') {
     return (
-      `MCP servers require Claude CLI. ` +
+      `MCP servers require Claude Code or Codex CLI. ` +
       `Currently using: ${currentProvider}. ` +
-      `Switch to Claude CLI in settings to enable MCP servers.`
+      `Switch to Claude Code or Codex CLI in settings to enable MCP servers.`
     );
   } else if (feature === 'web-search') {
     return (
@@ -96,7 +95,7 @@ export const PROVIDER_CAPABILITIES = {
     fileOperations: true,
   },
   'codex-cli': {
-    mcpServers: false,
+    mcpServers: true,
     webSearch: true,
     streaming: true,
     conversationHistory: true,

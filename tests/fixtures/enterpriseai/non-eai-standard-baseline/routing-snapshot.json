@@ -1,7 +1,7 @@
 {
   "claudeSyntax": "/eai",
-  "copilotSyntax": "#eai",
-  "codexSyntax": "/eai",
+  "copilotSyntax": "/eai",
+  "codexSyntax": "$eai",
   "sameClaudePathAcrossProfiles": true,
   "standardProfileMatched": true
 }

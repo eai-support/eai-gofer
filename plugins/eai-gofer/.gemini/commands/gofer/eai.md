@@ -1,6 +1,8 @@
 # Eai
 
-Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit `/eai`, `$eai`, or `#eai` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+> Legacy compatibility: this generated Gemini file remains for existing repositories only. Gemini is not a current Gofer host. Use Google Antigravity and `agy` for the current Google surface.
+
+Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. Use `/eai` on Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` on Codex. The prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -50,10 +52,10 @@ Before technical escalation, attach fresh diagnosis through the blocker helper's
 ## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
 
-Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai`, `$eai`, or `#eai`.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai` or `$eai`.
 
 1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
-2. Treat an explicit `/eai`, `$eai`, or `#eai` prefix as an idempotent request for the same contract.
+2. Treat an explicit `/eai` (Claude, Copilot, Antigravity, Grok, or VS Code) or `$eai` (Codex) prefix as an idempotent request for the same contract.
 3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
 4. Keep the reply short unless the user asks for detail.
 5. Explain the business effect first.
@@ -65,10 +67,12 @@ Apply this contract to every request after Gofer is installed for this repo or A
 
 ## Workspace Preflight
 
+
+
 1. Resolve the repository root.
-2. Run `node .specify/scripts/node/gofer-workspace-check.mjs --host gemini --json` when available.
+2. Run `node .specify/scripts/node/gofer-workspace-check.mjs --host antigravity --json` when available.
 3. If the repo is missing or stale, ask exactly: **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-4. If the user says yes, run `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host gemini --include-mirrors`, then resume this command.
+4. If the user says yes, run `node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host antigravity --include-mirrors`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
 ## Local Settings Cleanup Contract

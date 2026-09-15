@@ -18,11 +18,19 @@ import {
 export class GoferLSPClient {
   private client: LanguageClient | undefined;
   private outputChannel: vscode.LogOutputChannel;
+  private restartingForWorkspaceTrust = false;
 
   constructor(private context: vscode.ExtensionContext) {
     this.outputChannel = vscode.window.createOutputChannel('Gofer Language Server', {
       log: true,
     });
+
+    // VS Code reloads the extension host when trust is revoked. A grant can happen
+    // while this extension is already active, so restart the server to give it the
+    // new decision through immutable LSP initialization options.
+    this.context.subscriptions.push(
+      vscode.workspace.onDidGrantWorkspaceTrust(() => this.restartAfterWorkspaceTrustGrant())
+    );
   }
 
   async start(): Promise<void> {
@@ -85,6 +93,10 @@ export class GoferLSPClient {
 
     // Client options
     const clientOptions: LanguageClientOptions = {
+      // The server fails closed unless the VS Code trust decision is passed explicitly.
+      initializationOptions: {
+        workspaceTrusted: vscode.workspace.isTrusted === true,
+      },
       // Register the server for Markdown documents in .specify/
       documentSelector: [
         {
@@ -112,14 +124,21 @@ export class GoferLSPClient {
     // Start the client (also starts the server) with timeout
     try {
       const startPromise = this.client.start();
+      let startTimeout: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(
+        startTimeout = setTimeout(
           () => reject(new Error('Language Server start timed out after 10 seconds')),
           10000
         );
       });
 
-      await Promise.race([startPromise, timeoutPromise]);
+      try {
+        await Promise.race([startPromise, timeoutPromise]);
+      } finally {
+        if (startTimeout) {
+          clearTimeout(startTimeout);
+        }
+      }
       this.outputChannel.appendLine('Gofer Language Server started successfully');
 
       // Register notification handlers
@@ -136,9 +155,32 @@ export class GoferLSPClient {
   }
 
   async stop(): Promise<void> {
-    if (this.client) {
-      await this.client.stop();
+    const client = this.client;
+    if (client) {
+      // Clear the live reference first so requests fail closed while shutdown is in progress.
+      this.client = undefined;
+      await client.stop();
       this.outputChannel.appendLine('Gofer Language Server stopped');
+    }
+  }
+
+  private async restartAfterWorkspaceTrustGrant(): Promise<void> {
+    if (vscode.workspace.isTrusted !== true || !this.client || this.restartingForWorkspaceTrust) {
+      return;
+    }
+
+    this.restartingForWorkspaceTrust = true;
+    try {
+      this.outputChannel.appendLine('Workspace trust granted; restarting Gofer Language Server');
+      await this.stop();
+      await this.start();
+    } catch (error) {
+      const errorType = error instanceof Error ? error.name : 'UnknownError';
+      this.outputChannel.appendLine(
+        `Failed to restart Gofer Language Server after trust grant (${errorType})`
+      );
+    } finally {
+      this.restartingForWorkspaceTrust = false;
     }
   }
 

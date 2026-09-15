@@ -70,7 +70,7 @@ Before spawning agents, calling tools, or loading large files:
 2. Use the cheapest capable model first.
    - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
    - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Google Antigravity (Gemini models): Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
    - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
 3. Keep raw tool output out of the main conversation context. Save stable findings to `.specify/specs/{feature}/context-bundle.md`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -169,8 +169,9 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 
 Detect and report:
 
-- Host: Claude Code, Codex, GitHub Copilot, Gemini, VS Code, GitHub Codespaces,
-  or unknown.
+- Host: Claude Code, Codex, GitHub Copilot, Google Antigravity, Grok Build,
+  VS Code, or unknown.
+- Execution environment: local or GitHub Codespaces.
 - OS: macOS, Linux, Windows, or Codespaces Linux.
 - Shell: bash/zsh, PowerShell, cmd, or unknown.
 - Workspace root: current folder, opened editor workspace, Codespace checkout,
@@ -537,7 +538,7 @@ Make sure the active host is working in the initialized EAI app folder:
   the active Codex workspace if the host cannot switch automatically.
 - Claude Code: show the absolute folder path and ask the user to attach/open it
   if the host cannot switch automatically.
-- Gemini/Copilot in VS Code: ensure the VS Code workspace is the initialized app
+- Antigravity/Copilot in VS Code: ensure the VS Code workspace is the initialized app
   folder before starting Gofer.
 - GitHub Codespaces: keep the current Codespace workspace unless the project was
   created in a subfolder; then `cd` into it and report the path.
@@ -595,8 +596,8 @@ ready, tell the user to start:
 /gofer <what you want to build>
 ```
 
-Use `/eai`, `#gofer`, `#eai`, `$gofer`, or `$eai` where that
-syntax fits the host. If `/gofer` or `/eai` is still unknown after the
+Use `/eai` on Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` on
+Codex. If `/gofer`, `/eai`, or `$eai` is still unknown after the
 plugin is installed and the repo is bootstrapped, explain that the host has not
 loaded the Gofer plugin or repo commands yet. Give the host-specific
 install/update command from the Gofer README, then retry after the host reloads.

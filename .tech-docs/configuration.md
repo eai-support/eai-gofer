@@ -33,16 +33,16 @@ is controlled by the client, plan, and organization policy.
 
 ### CLI Authentication
 
-Gofer no longer stores provider API keys in VS Code settings. Claude, Codex,
-Copilot, and Gemini should use each tool's normal login/session state. For CLIs
-that support environment fallback, set those variables in your shell or secret
-manager, not in repository files.
+Gofer no longer stores provider API keys in VS Code settings. Provider tools
+should use their normal login/session state. Google Antigravity is the current
+Google host. For CLIs that support environment fallback, set those variables in
+your shell or secret manager, not in repository files.
 
 **Security Notes:**
 
 - Never commit API keys, tokens, or credentials to version control.
-- Prefer `claude login`, `codex login`, Gemini CLI login, and Copilot account
-  state over direct provider SDK/API-key configuration.
+- Prefer `claude auth login`, `codex login`, and provider-owned app or CLI
+  sessions over direct SDK/API-key configuration.
 - Gofer usage panels read local CLI usage artifacts and logs; they do not use
   Gofer-managed provider credentials.
 
@@ -52,8 +52,13 @@ manager, not in repository files.
 | ----------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------ |
 | `gofer.workflowProfile` | enum    | `"standard"` | Public baseline workflow. Use `enterpriseai` only for older workflow contracts during migration. |
 | `gofer.autoInitialize`  | boolean | `false`      | Auto-initialize `.specify/` on workspace open                                                    |
-| `gofer.preferredAI`     | enum    | `"ask"`      | Preferred AI assistant: `ask`, `claude`, `copilot`, `codex`, `gemini`                            |
-| `gofer.defaultCLI`      | enum    | `"auto"`     | Default CLI surface: `auto`, `claude`, `copilot`, `codex`, `gemini`                              |
+| `gofer.preferredAI`     | enum    | `"ask"`      | Preferred send-task route: `ask`, `claude`, or `copilot`                                         |
+| `gofer.defaultCLI`      | enum    | `"auto"`     | Semantic host: `auto`, `claude`, `codex`, `copilot`, `antigravity`, `grok`, or `vscode`          |
+
+Retired or unknown persisted `gofer.defaultCLI` values reset to `auto`; they are
+not reassigned to a different provider or account. The hidden
+`gemini`-to-`antigravity` alias exists only at explicit legacy updater,
+workspace-bootstrap, and MCP migration input boundaries.
 
 ### AI Usage and Billing
 
@@ -64,12 +69,12 @@ manager, not in repository files.
 
 ### CLI and Workflow Selection
 
-| Setting                   | Type   | Default     | Description                                                                         |
-| ------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------- |
-| `gofer.cliProvider`       | enum   | `"auto"`    | AI CLI provider for autonomous mode: `claude`, `codex`, `copilot`, `gemini`, `auto` |
-| `gofer.claudeCodeCommand` | string | `"claude"`  | Command or path used when Gofer invokes the Claude Code CLI                         |
-| `gofer.codexCommand`      | string | `"codex"`   | Custom path to the Codex CLI executable                                             |
-| `gofer.markdownViewer`    | enum   | `"preview"` | Markdown viewer integration to open when clicking files                             |
+| Setting                   | Type   | Default     | Description                                                 |
+| ------------------------- | ------ | ----------- | ----------------------------------------------------------- |
+| `gofer.cliProvider`       | enum   | `"auto"`    | Autonomous CLI backend: `claude`, `codex`, or `auto`        |
+| `gofer.claudeCodeCommand` | string | `"claude"`  | Command or path used when Gofer invokes the Claude Code CLI |
+| `gofer.codexCommand`      | string | `"codex"`   | Custom path to the Codex CLI executable                     |
+| `gofer.markdownViewer`    | enum   | `"preview"` | Markdown viewer integration to open when clicking files     |
 
 ### Context and Memory
 
@@ -167,7 +172,7 @@ budget_override: 5.0 # Override global budget for this spec
 ### Where to Store Provider Credentials
 
 1. **Recommended:** Provider CLI login/session state
-   - Run each provider's login command, for example `claude login` or
+   - Run each provider's login command, for example `claude auth login` or
      `codex login`.
    - Let the provider CLI manage credentials outside the repository.
 
@@ -210,7 +215,7 @@ budget_override: 5.0 # Override global budget for this spec
 ### Issue: CLI Provider Not Authenticated
 
 - **Cause:** Provider CLI is not logged in or its environment is missing.
-- **Fix:** Run the provider login command, for example `claude login` or
+- **Fix:** Run the provider login command, for example `claude auth login` or
   `codex login`.
 - **Verify:** Check extension output: `View` → `Output` → Select "Gofer"
 

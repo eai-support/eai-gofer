@@ -189,6 +189,9 @@ describe('Release Verification', () => {
       const syncResourcesIndex = RELEASE_SCRIPT.indexOf(
         'node .specify/scripts/node/sync-extension-resources.mjs 2>&1'
       );
+      const agentPackageIndex = RELEASE_SCRIPT.indexOf(
+        'npm run gofer:package-plugin -- --version "$NEW_VERSION" --sync-repo 2>&1'
+      );
       const eaiRefreshLayoutIndex = RELEASE_SCRIPT.indexOf(
         'npm run gofer:eai-refresh-layout:check 2>&1'
       );
@@ -206,7 +209,8 @@ describe('Release Verification', () => {
 
       expect(goferGenerateIndex).toBeGreaterThan(-1);
       expect(generateCommandsIndex).toBeGreaterThan(goferGenerateIndex);
-      expect(syncResourcesIndex).toBeGreaterThan(generateCommandsIndex);
+      expect(agentPackageIndex).toBeGreaterThan(generateCommandsIndex);
+      expect(syncResourcesIndex).toBeGreaterThan(agentPackageIndex);
       expect(eaiRefreshLayoutIndex).toBeGreaterThan(syncResourcesIndex);
       expect(compileIndex).toBeGreaterThan(eaiRefreshLayoutIndex);
       expect(packageIndex).toBeGreaterThan(compileIndex);
@@ -261,9 +265,7 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain(
         'run_release_check "Gofer all-surface release contract" npm run gofer:surface-release:check -- --version "$version"'
       );
-      expect(RELEASE_SCRIPT).toContain(
-        'run_release_check "Gofer full Vitest suite" npm test'
-      );
+      expect(RELEASE_SCRIPT).toContain('run_release_check "Gofer full Vitest suite" npm test');
       expect(RELEASE_SCRIPT).toContain(
         'run_release_check "Language Server production build" npm --prefix language-server run build'
       );

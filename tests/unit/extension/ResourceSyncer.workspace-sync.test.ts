@@ -7,6 +7,9 @@ import * as vscode from 'vscode';
 import { cleanupTestWorkspace, createTestWorkspace } from '../../helpers/workspace';
 import { Logger } from '../../../extension/src/services/Logger';
 import { ResourceSyncer } from '../../../extension/src/services/migration/ResourceSyncer';
+import { UpgradeService } from '../../../extension/src/services/migration/UpgradeService';
+import type { VersionDetector } from '../../../extension/src/services/migration/VersionDetector';
+import { InstructionGenerator } from '../../../extension/src/services/InstructionGenerator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,6 +141,127 @@ describe('ResourceSyncer workspace sync', () => {
     expect(await pathExists(canonicalCommandPath)).toBe(true);
   });
 
+  it('provisions Grok skills and the Antigravity GEMINI.md instruction bridge from VSIX resources', async (): Promise<void> => {
+    await syncer.setupGrokSkills();
+    await syncer.setupDefaultInstructions();
+
+    const grokSkillPath = path.join(workspace, '.grok', 'skills', 'eai', 'SKILL.md');
+    const geminiPath = path.join(workspace, 'GEMINI.md');
+
+    expect(await fs.readFile(grokSkillPath, 'utf8')).toContain('Host: Grok Build');
+    expect(await fs.readFile(geminiPath, 'utf8')).toContain('See @AGENTS.md');
+    expect(await fs.readFile(geminiPath, 'utf8')).toContain('gofer:always-on-eai:start');
+  });
+
+  it('refreshes only the bounded Gofer section in an existing GEMINI.md', async (): Promise<void> => {
+    const geminiPath = path.join(workspace, 'GEMINI.md');
+    const customPrefix = '# Team Antigravity instructions\n\nKeep this project-specific rule.\n\n';
+    const customSuffix = '\n\n## Team Notes\n\nKeep this note too.\n';
+    await fs.writeFile(
+      geminiPath,
+      `${customPrefix}<!-- gofer:always-on-eai:start -->\n\nstale managed text\n\n` +
+        `<!-- gofer:always-on-eai:end -->${customSuffix}`,
+      'utf8'
+    );
+
+    await syncer.setupDefaultInstructions();
+
+    const refreshed = await fs.readFile(geminiPath, 'utf8');
+    expect(refreshed.startsWith(customPrefix)).toBe(true);
+    expect(refreshed.endsWith(customSuffix)).toBe(true);
+    expect(refreshed).not.toContain('stale managed text');
+    expect(refreshed).toContain('See @AGENTS.md');
+    expect(refreshed).toContain('Apply Gofer to every request');
+    expect(refreshed.match(/gofer:always-on-eai:start/g)).toHaveLength(1);
+    expect(refreshed.match(/gofer:always-on-eai:end/g)).toHaveLength(1);
+  });
+
+  it('adds a bounded Gofer section without replacing unrelated GEMINI.md content', async (): Promise<void> => {
+    const geminiPath = path.join(workspace, 'GEMINI.md');
+    const customContent = '# Existing Antigravity instructions\n\nNever replace this content.\n';
+    await fs.writeFile(geminiPath, customContent, 'utf8');
+
+    await syncer.setupDefaultInstructions();
+
+    const refreshed = await fs.readFile(geminiPath, 'utf8');
+    expect(refreshed).toContain(customContent.trim());
+    expect(refreshed).toContain('## Always-On EAI Contract');
+    expect(refreshed).toContain('gofer:always-on-eai:start');
+  });
+
+  it('rejects malformed managed markers without changing GEMINI.md', async (): Promise<void> => {
+    const geminiPath = path.join(workspace, 'GEMINI.md');
+    const malformed =
+      '# Existing instructions\n\n<!-- gofer:always-on-eai:start -->\nunterminated\n';
+    await fs.writeFile(geminiPath, malformed, 'utf8');
+
+    await expect(syncer.setupDefaultInstructions()).rejects.toThrow(/malformed.*markers/i);
+    expect(await fs.readFile(geminiPath, 'utf8')).toBe(malformed);
+  });
+
+  it('refuses to refresh GEMINI.md through a symlink', async (): Promise<void> => {
+    const geminiPath = path.join(workspace, 'GEMINI.md');
+    const outsidePath = `${workspace}-outside-gemini.md`;
+    const outsideContent = '# Outside instructions\n';
+
+    try {
+      await fs.writeFile(outsidePath, outsideContent, 'utf8');
+      try {
+        await fs.symlink(outsidePath, geminiPath, 'file');
+      } catch (error) {
+        console.warn('Skipping GEMINI.md symlink-protection test:', error);
+        return;
+      }
+
+      await expect(syncer.setupDefaultInstructions()).rejects.toThrow(/symlinked managed file/i);
+      expect(await fs.readFile(outsidePath, 'utf8')).toBe(outsideContent);
+    } finally {
+      await fs.rm(outsidePath, { force: true });
+    }
+  });
+
+  it('completes a real packaged-resource upgrade in an empty workspace before recording its version', async (): Promise<void> => {
+    await fs.rm(path.join(workspace, '.specify'), { recursive: true, force: true });
+    (vscode.window as unknown as { withProgress: ReturnType<typeof vi.fn> }).withProgress = vi.fn(
+      async (_options, callback) => callback({ report: vi.fn() })
+    );
+    const versionDetector = {
+      detectFormat: vi.fn().mockResolvedValue('none'),
+    } as unknown as VersionDetector;
+    const upgradeService = new UpgradeService(new Logger(), versionDetector);
+
+    expect(await pathExists(path.join(workspace, '.specify', '.gofer-version'))).toBe(false);
+    await upgradeService.upgrade(workspace, syncer, { skipConfirmation: true });
+
+    expect(
+      await fs.readFile(path.join(workspace, '.grok', 'skills', 'eai', 'SKILL.md'), 'utf8')
+    ).toContain('Host: Grok Build');
+    expect(await fs.readFile(path.join(workspace, 'GEMINI.md'), 'utf8')).toContain(
+      'gofer:always-on-eai:start'
+    );
+    expect(await fs.readFile(path.join(workspace, '.specify', '.gofer-version'), 'utf8')).toBe(
+      '0.0.0-test'
+    );
+  });
+
+  it('propagates required instruction generation failures instead of reporting false success', async (): Promise<void> => {
+    const failure = new Error('required Antigravity instruction failed');
+    const generatorFailure = vi
+      .spyOn(InstructionGenerator.prototype, 'generateGeminiMd')
+      .mockImplementation(() => {
+        throw failure;
+      });
+
+    try {
+      await expect(syncer.setupDefaultInstructions()).rejects.toBe(failure);
+      expect(await pathExists(path.join(workspace, '.github', 'copilot-instructions.md'))).toBe(
+        false
+      );
+    } finally {
+      generatorFailure.mockRestore();
+    }
+  });
+
   it('archives legacy command entrypoints instead of deleting custom files', async (): Promise<void> => {
     const legacyPromptPath = path.join(
       workspace,
@@ -171,6 +295,8 @@ describe('ResourceSyncer workspace sync', () => {
       ['.system/skills/1_gofer_research/SKILL.md', '# Custom stale research skill\n'],
       ['.gemini/commands/gofer/gofer.toml', 'prompt = "{{include: ./gofer.md}}"\n'],
       ['.gemini/commands/gofer/1_gofer_research.md', '# Custom stale Gemini command\n'],
+      ['.grok/skills/gofer/SKILL.md', '# Custom stale Grok alias\n'],
+      ['.grok/skills/1_gofer_research/SKILL.md', '# Custom stale Grok stage\n'],
     ]);
 
     for (const [relativePath, content] of staleFiles) {
@@ -182,6 +308,7 @@ describe('ResourceSyncer workspace sync', () => {
     await syncer.setupClaudeCommands();
     await syncer.setupCopilotPrompts();
     await syncer.setupGeminiCommands();
+    await syncer.setupGrokSkills();
 
     for (const relativePath of staleFiles.keys()) {
       expect(await pathExists(path.join(workspace, relativePath)), relativePath).toBe(false);
@@ -189,6 +316,7 @@ describe('ResourceSyncer workspace sync', () => {
     expect(await pathExists(path.join(workspace, '.claude/commands/eai.md'))).toBe(true);
     expect(await pathExists(path.join(workspace, '.github/prompts/eai.prompt.md'))).toBe(true);
     expect(await pathExists(path.join(workspace, '.gemini/commands/gofer/eai.toml'))).toBe(true);
+    expect(await pathExists(path.join(workspace, '.grok/skills/eai/SKILL.md'))).toBe(true);
 
     const archiveRoot = path.join(workspace, '.specify', 'logs', 'legacy-command-backups');
     const archivedFiles = await findFiles(archiveRoot);

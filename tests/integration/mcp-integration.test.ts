@@ -90,7 +90,7 @@ describe('MCP Integration (T084)', () => {
   });
 
   describe('Provider-neutral MCP Initialization', () => {
-    it.each(['codex', 'copilot', 'gemini', 'claude', 'auto'])(
+    it.each(['claude', 'codex', 'copilot', 'antigravity', 'grok', 'vscode', 'auto'])(
       'should write MCP setup when defaultCLI is "%s"',
       async (provider) => {
         mockConfig['defaultCLI'] = provider;

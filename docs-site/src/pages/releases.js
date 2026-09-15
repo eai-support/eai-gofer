@@ -28,8 +28,14 @@ function buildButtons(release) {
   if (assets.copilot?.marketplace_url) {
     buttons.push({ label: 'Open Copilot Marketplace', href: assets.copilot.marketplace_url });
   }
-  if (assets.gemini?.manifest_url) {
-    buttons.push({ label: 'Open Gemini Manifest', href: assets.gemini.manifest_url });
+  const antigravityAsset = assets.antigravity || assets.gemini;
+  if (antigravityAsset?.manifest_url) {
+    buttons.push({
+      label: assets.antigravity
+        ? 'Open Antigravity Manifest'
+        : 'Open Antigravity Legacy Compatibility Manifest',
+      href: antigravityAsset.manifest_url,
+    });
   }
   return buttons;
 }
@@ -112,13 +118,14 @@ export default function Releases() {
           <p>
             <strong>Agent surfaces:</strong> use the public GitHub repo{' '}
             <code>https://github.com/eai-support/eai-gofer</code> as the install source for Claude,
-            Codex, Copilot, and Gemini. Use the release card here for VSIX and downloadable zip
-            artifacts.
+            Codex, Copilot, Google Antigravity, and Grok. Use the release card here for the VS Code
+            VSIX and downloadable zip artifacts.
           </p>
           <p>
-            After install, start or continue work with <code>/eai ...</code>, <code>#eai ...</code>,
-            or <code>$eai ...</code> depending on the host. Gofer runs the design, build, and
-            validation pipeline for you; numbered stage commands are internal routing contracts.
+            After install, start or continue work with <code>/eai ...</code> on Claude, Copilot,
+            Antigravity, Grok, or VS Code, and <code>$eai ...</code> on Codex. Gofer runs the
+            design, build, and validation pipeline for you; numbered stage commands are internal
+            routing contracts.
           </p>
         </div>
       </main>

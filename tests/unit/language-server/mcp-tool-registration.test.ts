@@ -118,7 +118,7 @@ describe('New MCP Tool Responses (T011)', () => {
     vi.mocked(GoferLoader).mockImplementation(function () {
       return mockGoferLoader;
     });
-    mcpHandler = new MCPToolHandler('/test/workspace', mockConnection);
+    mcpHandler = new MCPToolHandler(process.cwd(), mockConnection);
   });
 
   describe('gofer_expand_observation', () => {

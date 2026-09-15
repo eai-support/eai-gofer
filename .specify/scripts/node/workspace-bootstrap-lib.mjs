@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 import { promises as fs } from 'fs';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { SUPPORTED_HOSTS } from './gofer-surface-update.mjs';
 import { parseStageCommand } from './parse-stage-command.mjs';
 
 export const GOFER_VERSION_FILE = path.join('.specify', '.gofer-version');
@@ -50,6 +52,8 @@ const LEGACY_MANAGED_PATHS = [
 const RETIRED_PUBLIC_ENTRYPOINT_STEMS = ['gofer'];
 const LEGACY_MANAGED_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 
+export const WORKSPACE_HOSTS = SUPPORTED_HOSTS;
+
 export const HOST_POLICIES = {
   auto: { required: [] },
   claude: {
@@ -61,9 +65,19 @@ export const HOST_POLICIES = {
   copilot: {
     required: [path.join('.github', 'copilot-instructions.md')],
   },
-  gemini: {
-    required: ['GEMINI.md'],
+  antigravity: {
+    required: ['AGENTS.md', 'GEMINI.md'],
   },
+  grok: {
+    required: ['AGENTS.md'],
+  },
+  vscode: {
+    required: [path.join('.github', 'copilot-instructions.md')],
+  },
+};
+
+const LEGACY_HOST_ALIASES = {
+  gemini: 'antigravity',
 };
 
 const WORKSPACE_MARKERS = [
@@ -169,8 +183,19 @@ function createEmptyProjectInfo(workspaceRoot) {
 }
 
 export function normalizeHost(host = 'auto') {
-  const normalized = String(host || 'auto').trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(HOST_POLICIES, normalized) ? normalized : 'auto';
+  const normalized = host == null ? 'auto' : String(host).trim().toLowerCase();
+  if (normalized === '' || normalized === 'auto') {
+    return 'auto';
+  }
+  if (Object.prototype.hasOwnProperty.call(LEGACY_HOST_ALIASES, normalized)) {
+    return LEGACY_HOST_ALIASES[normalized];
+  }
+  if (Object.prototype.hasOwnProperty.call(HOST_POLICIES, normalized)) {
+    return normalized;
+  }
+  throw new Error(
+    `Unsupported Gofer host. Expected auto or one of: ${WORKSPACE_HOSTS.join(', ')}.`
+  );
 }
 
 export function scriptRootFromUrl(scriptUrl) {
@@ -194,35 +219,354 @@ export async function pathExists(targetPath) {
   }
 }
 
+async function lstatIfExists(targetPath) {
+  try {
+    return await fs.lstat(targetPath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function resolveConfinedWorkspacePath(workspaceRoot, relativePath) {
+  const resolvedRoot = path.resolve(workspaceRoot);
+  if (path.isAbsolute(relativePath)) {
+    throw new Error('Unsafe Gofer workspace path: absolute managed paths are not allowed.');
+  }
+
+  const targetPath = path.resolve(resolvedRoot, relativePath);
+  const relativeTarget = path.relative(resolvedRoot, targetPath);
+  if (
+    relativeTarget === '..' ||
+    relativeTarget.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeTarget)
+  ) {
+    throw new Error('Unsafe Gofer workspace path: managed paths must stay inside the workspace.');
+  }
+
+  return { resolvedRoot, targetPath, relativeTarget };
+}
+
+async function assertSafeWorkspaceRoot(workspaceRoot) {
+  const resolvedRoot = path.resolve(workspaceRoot);
+  const rootStat = await lstatIfExists(resolvedRoot);
+  if (!rootStat) {
+    throw new Error('Unsafe Gofer workspace path: the workspace root does not exist.');
+  }
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error(
+      'Unsafe Gofer workspace path: the workspace root must be a real directory, not a symbolic link.'
+    );
+  }
+  return resolvedRoot;
+}
+
+async function inspectWorkspacePath(
+  workspaceRoot,
+  relativePath,
+  { leafType = 'any', allowMissing = true } = {}
+) {
+  const { resolvedRoot, targetPath, relativeTarget } = resolveConfinedWorkspacePath(
+    workspaceRoot,
+    relativePath
+  );
+  await assertSafeWorkspaceRoot(resolvedRoot);
+
+  if (relativeTarget === '') {
+    return {
+      exists: true,
+      path: resolvedRoot,
+      stat: await fs.lstat(resolvedRoot),
+      relativeTarget,
+    };
+  }
+
+  const components = relativeTarget.split(path.sep).filter(Boolean);
+  let currentPath = resolvedRoot;
+  let leafStat = null;
+  for (let index = 0; index < components.length; index += 1) {
+    currentPath = path.join(currentPath, components[index]);
+    const currentStat = await lstatIfExists(currentPath);
+    if (!currentStat) {
+      if (!allowMissing) {
+        throw new Error('Unsafe Gofer workspace path: a required managed path is missing.');
+      }
+      return { exists: false, path: targetPath, stat: null, relativeTarget };
+    }
+    if (currentStat.isSymbolicLink()) {
+      throw new Error(
+        'Unsafe Gofer workspace path: symbolic links are not allowed in managed paths.'
+      );
+    }
+
+    const isLeaf = index === components.length - 1;
+    if (isLeaf) {
+      leafStat = currentStat;
+    }
+    if (!isLeaf && !currentStat.isDirectory()) {
+      throw new Error(
+        'Unsafe Gofer workspace path: every managed parent component must be a directory.'
+      );
+    }
+    if (isLeaf && leafType === 'directory' && !currentStat.isDirectory()) {
+      throw new Error('Unsafe Gofer workspace path: the managed path must be a directory.');
+    }
+    if (isLeaf && leafType === 'file' && !currentStat.isFile()) {
+      throw new Error('Unsafe Gofer workspace path: the managed path must be a regular file.');
+    }
+    if (
+      isLeaf &&
+      leafType === 'any' &&
+      !currentStat.isDirectory() &&
+      !currentStat.isFile()
+    ) {
+      throw new Error(
+        'Unsafe Gofer workspace path: managed paths must be regular files or directories.'
+      );
+    }
+  }
+
+  return {
+    exists: true,
+    path: targetPath,
+    stat: leafStat,
+    relativeTarget,
+  };
+}
+
+async function ensureSafeWorkspaceDirectory(workspaceRoot, relativePath, dryRun) {
+  const { resolvedRoot, targetPath, relativeTarget } = resolveConfinedWorkspacePath(
+    workspaceRoot,
+    relativePath
+  );
+  await assertSafeWorkspaceRoot(resolvedRoot);
+  if (relativeTarget === '') {
+    return targetPath;
+  }
+
+  const components = relativeTarget.split(path.sep).filter(Boolean);
+  let currentPath = resolvedRoot;
+  for (const component of components) {
+    currentPath = path.join(currentPath, component);
+    let currentStat = await lstatIfExists(currentPath);
+    if (!currentStat) {
+      if (dryRun) {
+        return targetPath;
+      }
+      try {
+        await fs.mkdir(currentPath);
+      } catch (error) {
+        if (error?.code !== 'EEXIST') {
+          throw error;
+        }
+      }
+      currentStat = await lstatIfExists(currentPath);
+    }
+    if (!currentStat || currentStat.isSymbolicLink() || !currentStat.isDirectory()) {
+      throw new Error(
+        'Unsafe Gofer workspace path: every managed directory component must be a real directory; symbolic links are not allowed.'
+      );
+    }
+  }
+
+  return targetPath;
+}
+
+function directoryIdentityMatches(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.isDirectory() &&
+    right.isDirectory()
+  );
+}
+
+async function openValidatedDirectory(directoryPath) {
+  const initialStat = await fs.lstat(directoryPath);
+  let handle = null;
+  try {
+    handle = await fs.open(directoryPath, 'r');
+  } catch (error) {
+    if (
+      process.platform !== 'win32' ||
+      !['EACCES', 'EISDIR', 'EPERM'].includes(String(error?.code))
+    ) {
+      throw error;
+    }
+  }
+  const validation = { handle, initialStat };
+  await assertDirectoryMatchesPath(validation, directoryPath);
+  return validation;
+}
+
+async function assertDirectoryMatchesPath(validation, directoryPath) {
+  const [openedStat, pathStat] = await Promise.all([
+    validation.handle ? validation.handle.stat() : validation.initialStat,
+    fs.lstat(directoryPath),
+  ]);
+  if (pathStat.isSymbolicLink() || !directoryIdentityMatches(openedStat, pathStat)) {
+    throw new Error(
+      'Unsafe Gofer workspace path: a managed parent directory changed during validation.'
+    );
+  }
+}
+
+async function writeWorkspaceFile(workspaceRoot, relativePath, content, dryRun, mode = null) {
+  const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (dryRun) {
+    return;
+  }
+
+  const parentRelativePath = path.dirname(target.relativeTarget);
+  const normalizedParent = parentRelativePath === '.' ? '' : parentRelativePath;
+  const parentPath = await ensureSafeWorkspaceDirectory(
+    workspaceRoot,
+    normalizedParent,
+    false
+  );
+  const existingMode = target.exists ? target.stat.mode & 0o777 : 0o666;
+  const temporaryName = `.gofer-write-${process.pid}-${randomUUID()}.tmp`;
+  const temporaryRelativePath = path.join(normalizedParent, temporaryName);
+  const temporaryPath = path.join(parentPath, temporaryName);
+  let temporaryHandle;
+  let parentValidation;
+
+  try {
+    parentValidation = await openValidatedDirectory(parentPath);
+    await inspectWorkspacePath(workspaceRoot, temporaryRelativePath, {
+      leafType: 'file',
+      allowMissing: true,
+    });
+    temporaryHandle = await fs.open(temporaryPath, 'wx', mode ?? existingMode);
+    await temporaryHandle.writeFile(content);
+    await temporaryHandle.sync();
+    await temporaryHandle.close();
+    temporaryHandle = null;
+
+    await inspectWorkspacePath(workspaceRoot, normalizedParent, {
+      leafType: 'directory',
+      allowMissing: false,
+    });
+    await assertDirectoryMatchesPath(parentValidation, parentPath);
+    await inspectWorkspacePath(workspaceRoot, relativePath, {
+      leafType: 'file',
+      allowMissing: true,
+    });
+    await fs.rename(temporaryPath, target.path);
+    await assertDirectoryMatchesPath(parentValidation, parentPath);
+    await inspectWorkspacePath(workspaceRoot, relativePath, {
+      leafType: 'file',
+      allowMissing: false,
+    });
+  } finally {
+    if (temporaryHandle) {
+      await temporaryHandle.close().catch(() => {});
+    }
+    if (parentValidation) {
+      try {
+        await assertDirectoryMatchesPath(parentValidation, parentPath);
+        await fs.rm(temporaryPath, { force: true });
+      } catch {
+        // If the parent identity changed, do not risk deleting through its replacement.
+      }
+    }
+    if (parentValidation?.handle) {
+      await parentValidation.handle.close().catch(() => {});
+    }
+  }
+}
+
 function buildArchiveStamp() {
   return `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
 }
 
-async function movePathPreservingAcrossDevices(sourcePath, targetPath) {
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  try {
-    await fs.rename(sourcePath, targetPath);
-  } catch (error) {
-    if (error?.code !== 'EXDEV') {
-      throw error;
-    }
-
-    await fs.cp(sourcePath, targetPath, {
-      recursive: true,
-      force: true,
-      dereference: false,
-    });
-    await fs.rm(sourcePath, { recursive: true, force: true });
-  }
-}
-
 async function archiveLegacyManagedPath(workspaceRoot, relativePath, archiveStamp, dryRun) {
   const archiveRelativePath = path.join(LEGACY_MANAGED_ARCHIVE_ROOT, archiveStamp, relativePath);
+  const source = await inspectWorkspacePath(workspaceRoot, relativePath, {
+    leafType: 'any',
+    allowMissing: false,
+  });
+  const archiveTarget = await inspectWorkspacePath(workspaceRoot, archiveRelativePath, {
+    leafType: 'any',
+    allowMissing: true,
+  });
+  if (archiveTarget.exists) {
+    throw new Error('Unsafe Gofer archive path: the managed archive target already exists.');
+  }
+
   if (!dryRun) {
-    await movePathPreservingAcrossDevices(
-      path.join(workspaceRoot, relativePath),
-      path.join(workspaceRoot, archiveRelativePath)
+    const archiveParent = path.dirname(archiveRelativePath);
+    const archiveParentPath = await ensureSafeWorkspaceDirectory(
+      workspaceRoot,
+      archiveParent,
+      false
     );
+    const sourceParentPath = resolveConfinedWorkspacePath(
+      workspaceRoot,
+      path.dirname(relativePath)
+    ).targetPath;
+    const sourceParentValidation = await openValidatedDirectory(sourceParentPath);
+    const archiveParentValidation = await openValidatedDirectory(archiveParentPath);
+    try {
+      await assertDirectoryMatchesPath(sourceParentValidation, sourceParentPath);
+      await assertDirectoryMatchesPath(archiveParentValidation, archiveParentPath);
+      const currentSource = await inspectWorkspacePath(workspaceRoot, relativePath, {
+        leafType: 'any',
+        allowMissing: false,
+      });
+      if (
+        currentSource.stat.dev !== source.stat.dev ||
+        currentSource.stat.ino !== source.stat.ino ||
+        currentSource.stat.isDirectory() !== source.stat.isDirectory() ||
+        currentSource.stat.isFile() !== source.stat.isFile()
+      ) {
+        throw new Error(
+          'Unsafe Gofer archive path: the legacy path changed during validation.'
+        );
+      }
+      const currentArchiveTarget = await inspectWorkspacePath(
+        workspaceRoot,
+        archiveRelativePath,
+        { leafType: 'any', allowMissing: true }
+      );
+      if (currentArchiveTarget.exists) {
+        throw new Error('Unsafe Gofer archive path: the managed archive target already exists.');
+      }
+      await fs.rename(source.path, archiveTarget.path);
+      await assertDirectoryMatchesPath(sourceParentValidation, sourceParentPath);
+      await assertDirectoryMatchesPath(archiveParentValidation, archiveParentPath);
+    } catch (error) {
+      if (error?.code === 'EXDEV') {
+        throw new Error(
+          'Unsafe Gofer archive path: cross-device legacy archives are not supported.'
+        );
+      }
+      throw error;
+    } finally {
+      if (sourceParentValidation.handle) {
+        await sourceParentValidation.handle.close().catch(() => {});
+      }
+      if (archiveParentValidation.handle) {
+        await archiveParentValidation.handle.close().catch(() => {});
+      }
+    }
+    const archived = await inspectWorkspacePath(workspaceRoot, archiveRelativePath, {
+      leafType: 'any',
+      allowMissing: false,
+    });
+    if (
+      archived.stat.dev !== source.stat.dev ||
+      archived.stat.ino !== source.stat.ino ||
+      archived.stat.isDirectory() !== source.stat.isDirectory() ||
+      archived.stat.isFile() !== source.stat.isFile()
+    ) {
+      throw new Error('Unsafe Gofer archive path: the archived path failed identity validation.');
+    }
   }
 
   return archiveRelativePath;
@@ -256,8 +600,11 @@ async function removeLegacyManagedPaths(workspaceRoot, dryRun, stages = []) {
   );
 
   for (const relativePath of legacyPaths) {
-    const targetPath = path.join(workspaceRoot, relativePath);
-    if (!(await pathExists(targetPath))) {
+    const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
+      leafType: 'any',
+      allowMissing: true,
+    });
+    if (!target.exists) {
       continue;
     }
 
@@ -622,10 +969,10 @@ function buildAlwaysOnEaiSection() {
   return `## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
 
-Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\` or \`$eai\`.
 
 1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
-2. Treat an explicit \`/eai\`, \`$eai\`, or \`#eai\` prefix as an idempotent request for the same contract.
+2. Treat an explicit \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, as an idempotent request for the same contract.
 3. Apply Gofer's Controlled English and business-first response rules.
 4. Select the internal pipeline stage. Do not make the user select a stage.
 5. Check workspace health before meaningful repo work, tool use, or a pipeline stage. Do not repeat setup on every message.
@@ -714,7 +1061,7 @@ ${buildCodeStyleSection(projectInfo)}
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/eai\` to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+This project uses Gofer for spec-driven development. Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 Each feature should carry a bounded loop contract:
 
@@ -778,7 +1125,7 @@ ${buildAlwaysOnEaiSection()}
 
 ## Gofer Pipeline
 
-Run \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
+Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
 
 For each active feature, keep \`loop-contract.json\`, \`loop-ledger.jsonl\`, and
 \`loop-audit-report.md\` in the feature directory. The loop contract bounds
@@ -805,7 +1152,7 @@ ${buildAlwaysOnEaiSection()}
 
 This project uses Gofer for spec-driven development. Run \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
 
-Use \`#eai\` in Copilot-style prompts. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 ${eaiSection}
 
@@ -829,21 +1176,25 @@ ${buildCodeStyleSection(projectInfo)}
 }
 
 export async function readManagedVersion(workspaceRoot) {
-  try {
-    const content = await fs.readFile(path.join(workspaceRoot, GOFER_VERSION_FILE), 'utf8');
-    return content.split('\n')[0]?.trim() || null;
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
+  const target = await inspectWorkspacePath(workspaceRoot, GOFER_VERSION_FILE, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (!target.exists) {
+    return null;
   }
+  const content = await fs.readFile(target.path, 'utf8');
+  return content.split('\n')[0]?.trim() || null;
 }
 
 async function collectMissingPaths(workspaceRoot, relativePaths) {
   const missing = [];
   for (const relativePath of relativePaths) {
-    if (!(await pathExists(path.join(workspaceRoot, relativePath)))) {
+    const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
+      leafType: 'any',
+      allowMissing: true,
+    });
+    if (!target.exists) {
       missing.push(relativePath);
     }
   }
@@ -856,6 +1207,7 @@ export async function checkWorkspaceState({
   sourceRoot,
 }) {
   const normalizedHost = normalizeHost(host);
+  await assertSafeWorkspaceRoot(workspaceRoot);
   const expectedVersion = await detectGoferVersion(sourceRoot);
   const actualVersion = await readManagedVersion(workspaceRoot);
   const missingCore = await collectMissingPaths(workspaceRoot, CORE_SENTINELS);
@@ -898,43 +1250,101 @@ export async function checkWorkspaceState({
   };
 }
 
-async function ensureDir(targetPath, dryRun) {
-  if (!dryRun) {
-    await fs.mkdir(targetPath, { recursive: true });
-  }
+async function ensureDir(workspaceRoot, relativePath, dryRun) {
+  await ensureSafeWorkspaceDirectory(workspaceRoot, relativePath, dryRun);
 }
 
-async function copyDirectory(sourcePath, targetPath, dryRun) {
-  if (!(await pathExists(sourcePath))) {
-    return false;
-  }
-  if (dryRun) {
-    return true;
-  }
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.cp(sourcePath, targetPath, { recursive: true, force: true, dereference: false });
-  return true;
+function sourceIdentityMatches(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.size === right.size &&
+    left.mtimeMs === right.mtimeMs &&
+    left.isFile() === right.isFile()
+  );
 }
 
-async function writeFileIfMissing(filePath, content, dryRun) {
-  if (await pathExists(filePath)) {
-    return false;
+async function readStableSourceFile(sourcePath) {
+  const before = await fs.lstat(sourcePath);
+  if (before.isSymbolicLink() || !before.isFile()) {
+    throw new Error('Unsafe Gofer source path: copied entries must be regular files.');
   }
-  if (!dryRun) {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, content, 'utf8');
-  }
-  return true;
-}
 
-async function ensureAlwaysOnEaiSection(filePath, fallbackContent, dryRun) {
-  let existing = '';
+  const handle = await fs.open(sourcePath, 'r');
   try {
-    existing = await fs.readFile(filePath, 'utf8');
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
+    const opened = await handle.stat();
+    if (!sourceIdentityMatches(before, opened)) {
+      throw new Error('Unsafe Gofer source path: a copied file changed during validation.');
     }
+    const content = await handle.readFile();
+    const after = await fs.lstat(sourcePath);
+    if (!sourceIdentityMatches(opened, after)) {
+      throw new Error('Unsafe Gofer source path: a copied file changed during validation.');
+    }
+    return { content, mode: opened.mode & 0o777 };
+  } finally {
+    await handle.close();
+  }
+}
+
+async function copyDirectory(sourcePath, workspaceRoot, targetRelativePath, dryRun) {
+  const sourceStat = await lstatIfExists(sourcePath);
+  if (!sourceStat) {
+    return false;
+  }
+  if (sourceStat.isSymbolicLink() || !sourceStat.isDirectory()) {
+    throw new Error('Unsafe Gofer source path: copied roots must be real directories.');
+  }
+
+  await ensureSafeWorkspaceDirectory(workspaceRoot, targetRelativePath, dryRun);
+  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+  for (const entry of entries) {
+    const sourceEntryPath = path.join(sourcePath, entry.name);
+    const targetEntryRelativePath = path.join(targetRelativePath, entry.name);
+    const entryStat = await fs.lstat(sourceEntryPath);
+    if (entryStat.isSymbolicLink()) {
+      throw new Error('Unsafe Gofer source path: symbolic links are not copied.');
+    }
+    if (entryStat.isDirectory()) {
+      await copyDirectory(sourceEntryPath, workspaceRoot, targetEntryRelativePath, dryRun);
+    } else if (entryStat.isFile()) {
+      const sourceFile = await readStableSourceFile(sourceEntryPath);
+      await writeWorkspaceFile(
+        workspaceRoot,
+        targetEntryRelativePath,
+        sourceFile.content,
+        dryRun,
+        sourceFile.mode
+      );
+    } else {
+      throw new Error(
+        'Unsafe Gofer source path: only regular files and directories may be copied.'
+      );
+    }
+  }
+  return true;
+}
+
+async function writeFileIfMissing(workspaceRoot, relativePath, content, dryRun) {
+  const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (target.exists) {
+    return false;
+  }
+  await writeWorkspaceFile(workspaceRoot, relativePath, content, dryRun);
+  return true;
+}
+
+async function ensureAlwaysOnEaiSection(workspaceRoot, relativePath, fallbackContent, dryRun) {
+  let existing = '';
+  const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (target.exists) {
+    existing = await fs.readFile(target.path, 'utf8');
   }
 
   const section = buildAlwaysOnEaiSection();
@@ -952,7 +1362,7 @@ async function ensureAlwaysOnEaiSection(filePath, fallbackContent, dryRun) {
     return false;
   }
 
-  await writeTextFile(filePath, updated, dryRun);
+  await writeTextFile(workspaceRoot, relativePath, updated, dryRun);
   return true;
 }
 
@@ -967,15 +1377,12 @@ Use the internal Gofer pipeline to select the next stage. Keep the user-facing
 conversation in business language.\n`;
 }
 
-async function writeTextFile(filePath, content, dryRun) {
-  if (!dryRun) {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, content, 'utf8');
-  }
+async function writeTextFile(workspaceRoot, relativePath, content, dryRun) {
+  await writeWorkspaceFile(workspaceRoot, relativePath, content, dryRun);
 }
 
 async function writeModelPolicyIfMissing(workspaceRoot, sourceRoot, dryRun) {
-  const targetPath = path.join(workspaceRoot, '.specify', 'memory', 'gofer-model-policy.yaml');
+  const targetRelativePath = path.join('.specify', 'memory', 'gofer-model-policy.yaml');
 
   let template = '';
   try {
@@ -990,18 +1397,18 @@ async function writeModelPolicyIfMissing(workspaceRoot, sourceRoot, dryRun) {
     throw error;
   }
 
-  return writeFileIfMissing(targetPath, template, dryRun);
+  return writeFileIfMissing(workspaceRoot, targetRelativePath, template, dryRun);
 }
 
 async function mergeGitignore(workspaceRoot, dryRun) {
-  const gitignorePath = path.join(workspaceRoot, '.gitignore');
+  const gitignoreRelativePath = '.gitignore';
   let existing = '';
-  try {
-    existing = await fs.readFile(gitignorePath, 'utf8');
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
-    }
+  const gitignoreTarget = await inspectWorkspacePath(workspaceRoot, gitignoreRelativePath, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (gitignoreTarget.exists) {
+    existing = await fs.readFile(gitignoreTarget.path, 'utf8');
   }
 
   const missingEntries = GOFER_GITIGNORE_ENTRIES.filter((entry) => !existing.includes(entry));
@@ -1020,7 +1427,7 @@ async function mergeGitignore(workspaceRoot, dryRun) {
     updated += `${entry}\n`;
   }
 
-  await writeTextFile(gitignorePath, updated, dryRun);
+  await writeTextFile(workspaceRoot, gitignoreRelativePath, updated, dryRun);
   return true;
 }
 
@@ -1046,7 +1453,7 @@ Run the unified Gofer pipeline with one public command:
 /eai Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`/eai\`, \`#eai\`, or \`$eai\` where that syntax fits the host. Gofer routes internally through \`.specify/commands/*.md\` contracts.
+Use \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex. Gofer routes internally through \`.specify/commands/*.md\` contracts.
 
 Artifacts are stored in \`.specify/specs/{feature}/\`.
 
@@ -1114,13 +1521,19 @@ function getMirrorCopyCandidates() {
 }
 
 async function installClaudeHooksSettings(workspaceRoot, dryRun) {
-  const settingsPath = path.join(workspaceRoot, '.claude', 'settings.json');
+  const settingsRelativePath = path.join('.claude', 'settings.json');
   let settings = {};
-  try {
-    settings = JSON.parse(await fs.readFile(settingsPath, 'utf8'));
-  } catch (error) {
-    if (error?.code !== 'ENOENT' && !(error instanceof SyntaxError)) {
-      throw error;
+  const settingsTarget = await inspectWorkspacePath(workspaceRoot, settingsRelativePath, {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (settingsTarget.exists) {
+    try {
+      settings = JSON.parse(await fs.readFile(settingsTarget.path, 'utf8'));
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
     }
   }
 
@@ -1129,7 +1542,12 @@ async function installClaudeHooksSettings(workspaceRoot, dryRun) {
     ...CLAUDE_HOOKS_CONFIG,
   };
 
-  await writeTextFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, dryRun);
+  await writeTextFile(
+    workspaceRoot,
+    settingsRelativePath,
+    `${JSON.stringify(settings, null, 2)}\n`,
+    dryRun
+  );
 }
 
 export async function bootstrapWorkspace({
@@ -1140,6 +1558,7 @@ export async function bootstrapWorkspace({
   includeMirrors = false,
 }) {
   const normalizedHost = normalizeHost(host);
+  await assertSafeWorkspaceRoot(workspaceRoot);
   const projectInfo = await detectProjectInfo(workspaceRoot);
   const stages = await loadStageMetadata(sourceRoot);
   const version = await detectGoferVersion(sourceRoot);
@@ -1151,7 +1570,7 @@ export async function bootstrapWorkspace({
     path.join('.specify', 'logs'),
   ];
   for (const relativeDir of coreDirs) {
-    await ensureDir(path.join(workspaceRoot, relativeDir), dryRun);
+    await ensureDir(workspaceRoot, relativeDir, dryRun);
     changed.push(relativeDir);
   }
 
@@ -1169,7 +1588,8 @@ export async function bootstrapWorkspace({
   for (const relativePath of coreCopies) {
     const copied = await copyDirectory(
       await resolveSourcePath(sourceRoot, relativePath),
-      path.join(workspaceRoot, relativePath),
+      workspaceRoot,
+      relativePath,
       dryRun
     );
     if (copied) {
@@ -1181,28 +1601,46 @@ export async function bootstrapWorkspace({
     changed.push(path.join('.specify', 'memory', 'gofer-model-policy.yaml'));
   }
 
-  await writeTextFile(
-    path.join(workspaceRoot, GOFER_VERSION_FILE),
-    `${version}\n`,
-    dryRun
-  );
+  await writeTextFile(workspaceRoot, GOFER_VERSION_FILE, `${version}\n`, dryRun);
   changed.push(GOFER_VERSION_FILE);
 
-  if (await writeFileIfMissing(path.join(workspaceRoot, '.specify', 'README.md'), buildSpecifyReadme(), dryRun)) {
+  if (
+    await writeFileIfMissing(
+      workspaceRoot,
+      path.join('.specify', 'README.md'),
+      buildSpecifyReadme(),
+      dryRun
+    )
+  ) {
     changed.push(path.join('.specify', 'README.md'));
   }
 
-  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'AGENTS.md'), buildAgentsMd(projectInfo, stages), dryRun)) {
+  if (
+    await ensureAlwaysOnEaiSection(
+      workspaceRoot,
+      'AGENTS.md',
+      buildAgentsMd(projectInfo, stages),
+      dryRun
+    )
+  ) {
     changed.push('AGENTS.md');
   }
 
-  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'CLAUDE.md'), buildClaudeMd(projectInfo), dryRun)) {
+  if (
+    await ensureAlwaysOnEaiSection(
+      workspaceRoot,
+      'CLAUDE.md',
+      buildClaudeMd(projectInfo),
+      dryRun
+    )
+  ) {
     changed.push('CLAUDE.md');
   }
 
   if (
     await ensureAlwaysOnEaiSection(
-      path.join(workspaceRoot, '.github', 'copilot-instructions.md'),
+      workspaceRoot,
+      path.join('.github', 'copilot-instructions.md'),
       buildCopilotInstructions(projectInfo),
       dryRun
     )
@@ -1210,7 +1648,14 @@ export async function bootstrapWorkspace({
     changed.push(path.join('.github', 'copilot-instructions.md'));
   }
 
-  if (await ensureAlwaysOnEaiSection(path.join(workspaceRoot, 'GEMINI.md'), buildGeminiMd(projectInfo), dryRun)) {
+  if (
+    await ensureAlwaysOnEaiSection(
+      workspaceRoot,
+      'GEMINI.md',
+      buildGeminiMd(projectInfo),
+      dryRun
+    )
+  ) {
     changed.push('GEMINI.md');
   }
 
@@ -1223,7 +1668,8 @@ export async function bootstrapWorkspace({
     for (const candidate of getMirrorCopyCandidates(sourceRoot)) {
       const copied = await copyDirectory(
         await resolveSourcePath(sourceRoot, candidate.sourceRelativePath),
-        path.join(workspaceRoot, candidate.target),
+        workspaceRoot,
+        candidate.target,
         dryRun
       );
       if (copied) {

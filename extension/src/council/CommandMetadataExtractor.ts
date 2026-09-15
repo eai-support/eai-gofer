@@ -6,16 +6,18 @@
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as yaml from 'js-yaml';
+import { SEMANTIC_HOST_INVOCATION_PREFIX } from '../config/semanticHosts';
 import { PlatformType, CommandMetadata, CommandInvocationSyntax } from './types/CrossPlatformTypes';
 
 /**
  * Extracts command metadata from platform-specific files
  *
- * Supports:
+ * Supports current semantic hosts through their native file formats:
  * - Claude CLI (.claude/commands)
  * - Copilot Chat (.github/prompts)
  * - Codex CLI (.agents/skills, with .system/skills legacy fallback)
- * - Gemini CLI (.gemini/commands/gofer)
+ * - Antigravity (current skills, plus legacy `.gemini/**` compatibility input)
+ * - Grok Build skills and VS Code prompts through the shared skill/prompt parsers
  */
 export class CommandMetadataExtractor {
   /**
@@ -110,8 +112,7 @@ export class CommandMetadataExtractor {
    * Extract metadata from a Codex CLI skill file (async version)
    */
   public async extractFromCodexSkill(filePath: string): Promise<CommandMetadata> {
-    const content = await fsPromises.readFile(filePath, 'utf8');
-    return this.parseCodexSkillContent(content, filePath);
+    return this.extractFromSkill(filePath, 'codex');
   }
 
   /**
@@ -119,11 +120,35 @@ export class CommandMetadataExtractor {
    * Note: Prefer async version when possible to avoid blocking event loop
    */
   public extractFromCodexSkillSync(filePath: string): CommandMetadata {
-    const content = fs.readFileSync(filePath, 'utf8');
-    return this.parseCodexSkillContent(content, filePath);
+    return this.extractFromSkillSync(filePath, 'codex');
   }
 
-  private parseCodexSkillContent(content: string, filePath: string): CommandMetadata {
+  /**
+   * Extract metadata from a current markdown skill while retaining the semantic
+   * host that owns that skill surface.
+   */
+  public async extractFromSkill(
+    filePath: string,
+    platform: 'codex' | 'antigravity' | 'grok'
+  ): Promise<CommandMetadata> {
+    const content = await fsPromises.readFile(filePath, 'utf8');
+    return this.parseCodexSkillContent(content, filePath, platform);
+  }
+
+  /** Synchronous counterpart used by filesystem-backed command discovery. */
+  public extractFromSkillSync(
+    filePath: string,
+    platform: 'codex' | 'antigravity' | 'grok'
+  ): CommandMetadata {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return this.parseCodexSkillContent(content, filePath, platform);
+  }
+
+  private parseCodexSkillContent(
+    content: string,
+    filePath: string,
+    platform: 'codex' | 'antigravity' | 'grok'
+  ): CommandMetadata {
     const { frontmatter, body } = this.parseMarkdownWithFrontmatter(content);
 
     const rawName = (frontmatter.name as string) || 'unknown';
@@ -142,19 +167,20 @@ export class CommandMetadataExtractor {
     return {
       name,
       description,
-      platform: 'codex',
+      platform,
       filePath,
       frontmatter,
       content: body,
       supportsAutoChain,
       supportsParallelAgents,
-      invocationSyntax: this.getInvocationSyntax('codex', name),
+      invocationSyntax: this.getInvocationSyntax(platform, name),
       extractedAt: new Date(),
     };
   }
 
   /**
-   * Extract metadata from a Gemini CLI command TOML file (async version)
+   * Extract metadata from a legacy Gemini-format command TOML file. The
+   * semantic host exposed to callers is always Antigravity.
    */
   public async extractFromGeminiCommand(filePath: string): Promise<CommandMetadata> {
     const content = await fsPromises.readFile(filePath, 'utf8');
@@ -162,7 +188,7 @@ export class CommandMetadataExtractor {
   }
 
   /**
-   * Extract metadata from a Gemini CLI command TOML file (sync version)
+   * Extract metadata from a legacy Gemini-format command TOML file (sync version)
    * Note: Prefer async version when possible to avoid blocking event loop
    */
   public extractFromGeminiCommandSync(filePath: string): CommandMetadata {
@@ -188,13 +214,13 @@ export class CommandMetadataExtractor {
     return {
       name,
       description,
-      platform: 'gemini',
+      platform: 'antigravity',
       filePath,
       frontmatter,
       content,
       supportsAutoChain,
       supportsParallelAgents,
-      invocationSyntax: this.getInvocationSyntax('gemini', name),
+      invocationSyntax: this.getInvocationSyntax('antigravity', name),
       extractedAt: new Date(),
     };
   }
@@ -203,14 +229,8 @@ export class CommandMetadataExtractor {
    * Validate command invocation syntax for a platform
    */
   public validateInvocationSyntax(invocation: string, platform: PlatformType): boolean {
-    const syntaxPatterns: Record<PlatformType, RegExp> = {
-      claude: /^\/[^\s]+(?:\s+.*)?$/,
-      copilot: /^#[^\s]+(?:\s+.*)?$/,
-      codex: /^\/[^\s]+(?:\s+.*)?$/,
-      gemini: /^\/gofer:[^\s]+(?:\s+.*)?$/,
-    };
-
-    return syntaxPatterns[platform].test(invocation);
+    const escapedPrefix = SEMANTIC_HOST_INVOCATION_PREFIX[platform] === '$' ? '\\$' : '/';
+    return new RegExp(`^${escapedPrefix}[^\\s]+(?:\\s+.*)?$`).test(invocation);
   }
 
   /**
@@ -304,51 +324,15 @@ export class CommandMetadataExtractor {
     platform: PlatformType,
     commandName: string
   ): CommandInvocationSyntax {
-    if (platform === 'claude') {
-      return {
-        platform: 'claude',
-        prefix: '/',
-        example: '/' + commandName,
-        pattern: '^/' + commandName + '(\\s+.*)?$',
-        supportsArguments: true,
-        argumentFormat: 'space-separated after command',
-      };
-    }
-
-    if (platform === 'copilot') {
-      return {
-        platform: 'copilot',
-        prefix: '#',
-        example: '#' + commandName,
-        pattern: '^#' + commandName + '(\\s+.*)?$',
-        supportsArguments: true,
-        argumentFormat: 'space-separated after command',
-      };
-    }
-
-    if (platform === 'codex') {
-      return {
-        platform: 'codex',
-        prefix: '/',
-        example: '/' + commandName,
-        pattern: '^/' + commandName + '(\\s+.*)?$',
-        supportsArguments: true,
-        argumentFormat: 'space-separated after command',
-      };
-    }
-
-    if (platform === 'gemini') {
-      const geminiCommand = commandName.startsWith('gofer:') ? commandName : `gofer:${commandName}`;
-      return {
-        platform: 'gemini',
-        prefix: '/gofer:',
-        example: '/' + geminiCommand,
-        pattern: '^/' + geminiCommand + '(\\s+.*)?$',
-        supportsArguments: true,
-        argumentFormat: 'space-separated after command',
-      };
-    }
-
-    throw new Error('Unknown platform: ' + platform);
+    const prefix = SEMANTIC_HOST_INVOCATION_PREFIX[platform];
+    const patternPrefix = prefix === '$' ? '\\$' : prefix;
+    return {
+      platform,
+      prefix,
+      example: prefix + commandName,
+      pattern: '^' + patternPrefix + commandName + '(\\s+.*)?$',
+      supportsArguments: true,
+      argumentFormat: 'space-separated after command',
+    };
   }
 }

@@ -1,13 +1,14 @@
 /**
  * Cross-Platform Command Parity Types
- * Feature 028: Enable complete feature parity across Claude CLI, Codex CLI,
- * GitHub Copilot Chat, and Gemini CLI command files.
+ * Feature 028: Enable complete feature parity across the current AI host surfaces.
  */
+
+import type { SemanticHost } from '../../config/semanticHosts';
 
 /**
  * Supported AI platforms for Gofer commands
  */
-export type PlatformType = 'claude' | 'copilot' | 'codex' | 'gemini';
+export type PlatformType = SemanticHost;
 
 /**
  * Platform detection context information
@@ -49,9 +50,16 @@ export interface PlatformDetectionContext {
   hasCodexDirectory: boolean;
 
   /**
-   * Gemini command directory exists (.gemini/commands/gofer/)
+   * Google Antigravity skill directory exists. A legacy .gemini command
+   * directory also counts while a workspace is being migrated.
    */
-  hasGeminiDirectory: boolean;
+  hasAntigravityDirectory: boolean;
+
+  /** Grok skill directory exists (.grok/skills/). */
+  hasGrokDirectory: boolean;
+
+  /** VS Code is available as the active extension host surface. */
+  hasVSCodeSurface: boolean;
 
   /**
    * Timestamp when detection was performed
@@ -129,7 +137,7 @@ export interface CommandInvocationSyntax {
   platform: PlatformType;
 
   /**
-   * Command prefix (Claude: "/", Copilot: "#", Codex: "/", Gemini: "/gofer:")
+   * Command prefix (Codex: "$"; current slash-command hosts: "/")
    */
   prefix: string;
 
@@ -179,7 +187,8 @@ export interface CommandMapping {
   codexPath?: string;
 
   /**
-   * Gemini CLI command file path
+   * Legacy Gemini-format compatibility command file path. This is an on-disk
+   * format identifier, not a current semantic host.
    */
   geminiPath?: string;
 

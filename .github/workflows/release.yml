@@ -147,6 +147,12 @@ jobs:
         env:
           CI: true
 
+      - name: Package Agent Plugin
+        run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
+
+      - name: Sync Extension Resources
+        run: node .specify/scripts/node/sync-extension-resources.mjs
+
       - name: Build Components
         run: |
           npm run build
@@ -159,9 +165,6 @@ jobs:
 
       - name: Test packaged MCP and LSP runtime
         run: npm run test:packaged-protocol -- --vsix "extension/eai-gofer-${{ steps.version.outputs.version }}.vsix"
-
-      - name: Package Agent Plugin
-        run: npm run gofer:package-plugin -- --version "${{ steps.version.outputs.version }}" --sync-repo
 
       - name: Verify All-Surface Release Contract
         run: npm run gofer:surface-release:check -- --version "${{ steps.version.outputs.version }}"

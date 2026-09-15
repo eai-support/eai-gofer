@@ -15,6 +15,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { validateDescriptions } from './canonical-descriptions.mjs';
+import { SUPPORTED_HOSTS } from './gofer-surface-update.mjs';
 import { parseStageCommand } from './parse-stage-command.mjs';
 
 // ---------------------------------------------------------------------------
@@ -68,7 +69,7 @@ const SURFACE_WORKSPACE_HOSTS = {
   'github-prompts': 'copilot',
   'github-agents': 'copilot',
   'github-skills': 'copilot',
-  'agents-skills': 'codex',
+  'agents-skills': 'codex-or-antigravity',
   'system-skills': 'codex',
   'grok-skills': 'grok',
   'gemini': 'gemini',
@@ -102,7 +103,8 @@ const LEGACY_STAGE_STEMS = new Map([
  * Returns true if the given stage should be excluded from the given surface.
  * Gofer keeps this function for older tests/imports, but no stages are
  * excluded by name anymore. Surface availability is controlled by stage
- * frontmatter so Claude, Copilot, Codex, and Gemini stay in parity.
+ * frontmatter so all current semantic hosts and the legacy Gemini file format
+ * stay in parity.
  *
  * @param {string} stageName
  * @param {string} surface
@@ -152,7 +154,7 @@ function buildGeminiExtensionManifest(version) {
   return {
     name: 'eai-gofer',
     version,
-    description: 'Gofer single-entry delivery command with internal pipeline routing',
+    description: 'Legacy Gemini CLI file-format compatibility for EAI Gofer',
     license: 'Apache-2.0',
     commands: '.gemini/commands/gofer/',
     gofer: {
@@ -271,10 +273,10 @@ function buildAlwaysEaiSection() {
   return `## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
 
-Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\` or \`$eai\`.
 
 1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
-2. Treat an explicit \`/eai\`, \`$eai\`, or \`#eai\` prefix as an idempotent request for the same contract.
+2. Treat an explicit \`/eai\` (Claude, Copilot, Antigravity, Grok, or VS Code) or \`$eai\` (Codex) prefix as an idempotent request for the same contract.
 3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
 4. Keep the reply short unless the user asks for detail.
 5. Explain the business effect first.
@@ -388,9 +390,20 @@ function buildPublicEntrypointMarkdown(entry, stages, host) {
     return buildEaiUpdateEntrypointMarkdown(host);
   }
 
+  const legacyCompatibilityNotice =
+    host === 'gemini'
+      ? '> Legacy compatibility: this generated Gemini file remains for existing repositories only. Gemini is not a current Gofer host. Use Google Antigravity and `agy` for the current Google surface.\n\n'
+      : '';
+  const sharedAgentsHost = host === 'codex-or-antigravity';
+  const workspaceHost =
+    sharedAgentsHost ? '<current-host>' : host === 'gemini' ? 'antigravity' : host;
+  const workspaceHostSelection = sharedAgentsHost
+    ? 'This skill is shared by Codex and Google Antigravity. Replace `<current-host>` with `codex` in Codex or `antigravity` in Antigravity.'
+    : '';
+
   return `# ${entry.title}
 
-Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. An explicit \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+${legacyCompatibilityNotice}Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. Use \`/${entry.name}\` on Claude, Copilot, Antigravity, Grok, or VS Code, and \`$${entry.name}\` on Codex. The prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -422,10 +435,12 @@ ${buildAlwaysEaiSection()}
 
 ## Workspace Preflight
 
+${workspaceHostSelection}
+
 1. Resolve the repository root.
-2. Run \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\` when available.
+2. Run \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${workspaceHost} --json\` when available.
 3. If the repo is missing or stale, ask exactly: **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${host} --include-mirrors\`, then resume this command.
+4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${workspaceHost} --include-mirrors\`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
 ${buildLocalSettingsCleanupContractSection()}
@@ -492,21 +507,27 @@ ${buildInternalStageList(stages)}
 }
 
 function buildEaiUpdateEntrypointMarkdown(host) {
-  if (host === 'grok') {
-    return `## Update EAI Gofer
+  if (host === 'gemini') {
+    return `## Legacy Gemini File-Format Compatibility
 
-Grok Build has no supported user-level plugin installer or updater. This command cannot install or update EAI Gofer on this host.
+This file remains only so existing Gemini CLI repositories can read the generated Gofer command format. Gemini is not a current Gofer host. Google Antigravity and its \`agy\` CLI are the current Google surface.
 
 ## What To Do
 
-1. Add EAI Gofer to the repository from a supported host.
-2. Open that repository in Grok Build.
-3. Use the repository \`eai\` skill to continue work.
+1. Install or update EAI Gofer from Google Antigravity with \`agy plugin install https://github.com/eai-support/eai-gofer\`.
+2. Use \`--host antigravity\` with \`gofer-surface-update.mjs\`.
+3. Start a new Antigravity session after installation.
 
-Do not run \`gofer-surface-update.mjs --host grok\`. That host is not supported by the updater.
+Existing automation that passes \`--host gemini\` is mapped to \`antigravity\` as a hidden compatibility alias. New commands and documentation must use \`antigravity\`. The updater reports exactly these current hosts: ${SUPPORTED_HOSTS.join(', ')}.
 ${buildBlockerMediationContract()}
 `;
   }
+
+  const sharedAgentsHost = host === 'codex-or-antigravity';
+  const selectedHost = sharedAgentsHost ? '<current-host>' : host;
+  const hostSelection = sharedAgentsHost
+    ? '2. This skill is shared by Codex and Google Antigravity. Set `<current-host>` to `codex` in Codex or `antigravity` in the `agy` CLI.'
+    : `2. Use \`${host}\` as the current semantic host.`;
 
   return `## Update EAI Gofer
 
@@ -515,31 +536,33 @@ Use this command to install or update EAI Gofer for the current AI coding app. T
 ## Update Contract
 
 1. Do not run workspace checks, \`eai init\`, \`eai whoami\`, or pipeline stages.
-2. Check the current host first:
-   \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${host} --json\`
-3. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
-4. State whether EAI Gofer is installed and whether the host command is available.
-5. Explain the planned user-level change and ask for approval before any install or update command.
-6. After approval, run one of these commands from the bundled helper:
-   - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${host} --execute --json\`
-   - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${host} --execute --json\`
-7. After an actual install or update, the helper archives stale Gofer command and skill entries. It also adds a small managed always-on instruction to the selected host. It keeps the current \`eai\` and \`eai-update\` entries. For Codex, a clean official local marketplace on \`main\` fast-forwards safely. A dirty, non-main, or unrecognised local marketplace remains unchanged and reports that its plugin update is incomplete while it still refreshes the always-on instruction. If the Codex marketplace source is unknown, it stops without changes.
-8. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
-9. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
+${hostSelection}
+3. Check the current host first:
+   \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${selectedHost} --json\`
+4. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
+5. State whether EAI Gofer is installed and whether the host command is available.
+6. Explain the planned user-level change and ask for approval before any install or update command.
+7. After approval, run one of these commands from the bundled helper:
+   - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${selectedHost} --execute --json\`
+   - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${selectedHost} --execute --json\`
+8. After an actual install or update, the helper archives stale Gofer command and skill entries. It adds a small managed always-on instruction for Claude, Codex, Copilot, Antigravity, and VS Code. For Grok, it verifies the installed plugin's \`skills/eai/SKILL.md\` always-on contract instead of inventing a separate global instruction file. It keeps the current \`eai\` and \`eai-update\` entries. For Codex, a clean official local marketplace on \`main\` fast-forwards safely. A dirty, non-main, or unrecognised local marketplace remains unchanged and reports that its plugin update is incomplete while it still refreshes the always-on instruction. If the Codex marketplace source is unknown, it stops without changes.
+9. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
+10. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
 
 ## Supported Hosts
 
 - Claude Code: refresh the marketplace and plugin, then run \`/reload-plugins\`.
 - Codex: refresh a confirmed Git marketplace and apply the plugin, then start a new task or restart Codex. A clean official local \`main\` checkout fast-forwards and applies the plugin. Other local checkouts keep their work unchanged, refresh the always-on instruction, and report what needs attention. An unknown source stops the update to protect local work.
 - GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
-- Gemini CLI: update the extension, then start a new Gemini CLI session.
+- Google Antigravity: install or reinstall the repository plugin with \`agy\`, then start a new Antigravity session.
+- Grok Build: install or update the repository plugin with \`grok\`, then start a new Grok Build session.
 - VS Code: install or update \`EnterpriseAI.gofer\`, then run **Developer: Reload Window**.
 
 ## Limits
 
 - This command updates user-level plugins and extensions. It archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
 - For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
-- Grok Build has no supported user-level plugin installer. Use its repository skill path after Gofer is added to that repository.
+- Gemini files remain only for legacy file-format compatibility. Gemini is not a current updater host.
 - Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
 ${buildBlockerMediationContract()}
 `;
@@ -908,7 +931,9 @@ Before doing stage/helper work:
    - Claude: \`AGENTS.md\`, \`CLAUDE.md\`, \`.claude/settings.json\`
    - Codex: \`AGENTS.md\`
    - Copilot: \`.github/copilot-instructions.md\`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - Google Antigravity: \`AGENTS.md\`, \`GEMINI.md\`
+   - Grok Build: \`AGENTS.md\`; its installed plugin provides \`skills/eai/SKILL.md\`
+   - VS Code: \`.github/copilot-instructions.md\`; the extension manages its packaged resource mirrors
 4. If the repo already has the workspace checker script, prefer running:
    - \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\`
 5. If the workspace is missing or stale, ask exactly:
@@ -967,7 +992,7 @@ Before spawning agents, calling tools, or loading large files:
 2. Use the cheapest capable model first.
    - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
    - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
+   - Google Antigravity (Gemini models): Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
    - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
 3. Keep raw tool output out of the main conversation context. Save stable findings to \`.specify/specs/{feature}/context-bundle.md\`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -1542,7 +1567,7 @@ async function emitAgentsSkills(stages, root, dryRun) {
       entry,
       version,
       stages,
-      'Codex',
+      'Codex and Google Antigravity',
       SURFACE_WORKSPACE_HOSTS['agents-skills']
     );
 
@@ -1774,7 +1799,7 @@ async function emitGemini(stages, root, dryRun) {
 
 /**
  * T067 — agents-md emitter
- * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Gemini/Codex.
+ * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Codex/Antigravity.
  * Includes all stages emitted to portable agent surfaces.
  *
  * @param {Array} stages

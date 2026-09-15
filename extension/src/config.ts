@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
 import packageJson from '../package.json';
+import {
+  type AutonomousCLIProvider,
+  type SemanticHost,
+  type SemanticHostSelection,
+  SEMANTIC_HOST_DISPLAY_NAMES,
+  normalizeAutonomousCLIProvider,
+  normalizeSemanticHost,
+} from './config/semanticHosts';
 
 /**
  * Extension configuration constants and settings management
@@ -188,21 +196,17 @@ export class ConfigManager {
   /**
    * Get preferred CLI provider setting (T009)
    */
-  public getPreferredCLIProvider(): 'claude' | 'codex' | 'copilot' | 'gemini' | 'auto' {
-    return this.config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      CONFIG_KEYS.cliProvider.replace('gofer.', ''),
-      DEFAULTS.cliProvider
+  public getPreferredCLIProvider(): AutonomousCLIProvider {
+    return normalizeAutonomousCLIProvider(
+      this.config.get<string>(CONFIG_KEYS.cliProvider.replace('gofer.', ''), DEFAULTS.cliProvider)
     );
   }
 
   /**
    * Get default CLI for Gofer command routing (T004)
    */
-  public getDefaultCLI(): 'claude' | 'copilot' | 'codex' | 'gemini' | 'auto' {
-    return this.config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      DEFAULTS.defaultCLI
-    );
+  public getDefaultCLI(): SemanticHostSelection {
+    return normalizeSemanticHost(this.config.get<string>('defaultCLI', DEFAULTS.defaultCLI));
   }
 
   /**
@@ -221,16 +225,8 @@ export class ConfigManager {
    * @param platform Platform identifier
    * @returns Display name (e.g., "Claude Code", "GitHub Copilot Chat")
    */
-  public getCLIDisplayName(platform: 'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'): string {
-    const displayNames: Record<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto', string> = {
-      claude: 'Claude Code',
-      copilot: 'GitHub Copilot Chat',
-      codex: 'OpenAI Codex CLI',
-      gemini: 'Google Gemini CLI',
-      auto: 'Auto-Detect',
-    };
-
-    return displayNames[platform];
+  public getCLIDisplayName(platform: SemanticHostSelection): string {
+    return platform === 'auto' ? 'Auto-Detect' : SEMANTIC_HOST_DISPLAY_NAMES[platform];
   }
 
   /**
@@ -240,18 +236,17 @@ export class ConfigManager {
    * @param workspacePath Workspace root path
    * @returns True if platform directory exists
    */
-  public isPlatformEnabled(
-    platform: 'claude' | 'copilot' | 'codex' | 'gemini',
-    workspacePath: string
-  ): boolean {
+  public isPlatformEnabled(platform: SemanticHost, workspacePath: string): boolean {
     const fs = require('fs');
     const path = require('path');
 
-    const platformPaths: Record<'claude' | 'copilot' | 'codex' | 'gemini', string> = {
+    const platformPaths: Record<SemanticHost, string> = {
       claude: path.join(workspacePath, '.claude', 'commands'),
       copilot: path.join(workspacePath, '.github', 'prompts'),
-      codex: path.join(workspacePath, '.system', 'skills'),
-      gemini: path.join(workspacePath, '.gemini', 'commands', 'gofer'),
+      codex: path.join(workspacePath, '.agents', 'skills'),
+      antigravity: path.join(workspacePath, '.agents', 'skills'),
+      grok: path.join(workspacePath, '.grok', 'skills'),
+      vscode: path.join(workspacePath, '.github', 'prompts'),
     };
 
     try {

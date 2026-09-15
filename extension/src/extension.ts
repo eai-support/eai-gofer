@@ -54,6 +54,11 @@ import {
   type CommandDependencies,
 } from './services';
 import { Logger as LegacyLogger } from './utils/logger';
+import { normalizeAutonomousCLIProvider, normalizeSemanticHost } from './config/semanticHosts';
+import {
+  buildSelectedSemanticHostStatus,
+  resolveSemanticHostEvidence,
+} from './services/SemanticHostEvidence';
 
 /**
  * Gofer Extension
@@ -101,17 +106,14 @@ async function resolveCopilotAvailability(
     supportsSubcommand(cliCommand: string, args: string[]): Promise<boolean>;
   }
 ): Promise<CopilotAvailabilityContext> {
-  const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-    'defaultCLI',
-    'auto'
-  );
+  const defaultCLI = normalizeSemanticHost(config.get<string>('defaultCLI', 'auto'));
   const preferredAI = config.get<'ask' | 'claude' | 'copilot'>('preferredAI', 'ask');
   const viaExtension =
     vscode.extensions.getExtension('GitHub.copilot') !== undefined ||
     vscode.extensions.getExtension('GitHub.copilot-chat') !== undefined;
   const viaDefaultCLI = defaultCLI === 'copilot';
   const viaPreferredAI = preferredAI === 'copilot';
-  const shouldCheckCopilotCli = !viaDefaultCLI && !viaPreferredAI && !viaExtension;
+  const shouldCheckCopilotCli = !viaExtension;
   const viaCliBinary =
     shouldCheckCopilotCli && (await cliHealthChecker.detectVersion('copilot')) !== null;
   const viaGitHubCliSubcommand =
@@ -120,8 +122,9 @@ async function resolveCopilotAvailability(
       : false;
 
   return {
-    available:
-      viaDefaultCLI || viaPreferredAI || viaExtension || viaCliBinary || viaGitHubCliSubcommand,
+    // Configuration records selection, not availability. Only an executable or
+    // installed extension is sufficient evidence for health and status claims.
+    available: viaExtension || viaCliBinary || viaGitHubCliSubcommand,
     viaDefaultCLI,
     viaPreferredAI,
     viaExtension,
@@ -136,8 +139,7 @@ async function showOptionalToolPrompt(workspacePath: string): Promise<void> {
     await installer.promptForRecommendedTools(workspacePath);
   } catch (error) {
     logger?.warn('Extension', 'Failed to show optional tool prompt', {
-      workspacePath,
-      error: error instanceof Error ? error.message : String(error),
+      errorType: error instanceof Error ? error.name : 'UnknownError',
     });
   }
 }
@@ -654,6 +656,11 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
   const { CrossPlatformCommandRouter } = await import('./council/CrossPlatformCommandRouter');
   const crossPlatformCommandRouter = new CrossPlatformCommandRouter(workspacePath);
   state.crossPlatformCommandRouter = crossPlatformCommandRouter;
+  context.subscriptions.push(
+    crossPlatformCommandRouter.watchDirectories(() => {
+      logger?.debug('Extension', 'Cross-platform command cache cleared after surface change');
+    })
+  );
 
   // Register settings watcher for gofer.defaultCLI changes (clears router cache on change)
   context.subscriptions.push(
@@ -696,22 +703,16 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
   try {
     const { CLIHealthChecker } = await import('./council/providers/cli/CLIHealthChecker');
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      'cliProvider',
-      'auto'
-    );
-    const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
+    const preference = normalizeAutonomousCLIProvider(config.get<string>('cliProvider', 'auto'));
+    const defaultCLI = normalizeSemanticHost(config.get<string>('defaultCLI', 'auto'));
     const copilotAvailability = await resolveCopilotAvailability(config, CLIHealthChecker);
 
-    if (preference === 'copilot' || preference === 'gemini') {
-      logger?.debug(
-        'Extension',
-        `Skipping autonomous CLI health check for gofer.cliProvider=${preference}`
-      );
-    } else if (preference === 'auto' && (defaultCLI === 'copilot' || defaultCLI === 'gemini')) {
+    if (
+      preference === 'auto' &&
+      defaultCLI !== 'auto' &&
+      defaultCLI !== 'claude' &&
+      defaultCLI !== 'codex'
+    ) {
       logger?.debug(
         'Extension',
         `Skipping autonomous CLI health check for gofer.defaultCLI=${defaultCLI}`
@@ -737,8 +738,8 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
             // Neither CLI is available - show comprehensive error
             const message =
               'No CLI provider found for autonomous mode. Install one:\n' +
-              '• Claude Code CLI: npm install -g @anthropic/claude-code\n' +
-              '• Codex CLI: npm install -g @openai/codex-cli';
+              '• Claude Code CLI: https://code.claude.com/docs/en/setup\n' +
+              '• Codex CLI: https://learn.chatgpt.com/docs/codex/cli';
 
             vscode.window
               .showWarningMessage(message, 'View Settings', 'Install Guide')
@@ -819,14 +820,8 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
   // T035: Show persistent provider status in status bar (US3: Settings UI shows ✓/✗ status)
   try {
     const config = vscode.workspace.getConfiguration('gofer');
-    const preference = config.get<'claude' | 'codex' | 'copilot' | 'gemini' | 'auto'>(
-      'cliProvider',
-      'auto'
-    );
-    const defaultCLI = config.get<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'>(
-      'defaultCLI',
-      'auto'
-    );
+    const preference = normalizeAutonomousCLIProvider(config.get<string>('cliProvider', 'auto'));
+    const defaultCLI = normalizeSemanticHost(config.get<string>('defaultCLI', 'auto'));
     const { CLIHealthChecker } = await import('./council/providers/cli/CLIHealthChecker');
     const copilotAvailability = await resolveCopilotAvailability(config, CLIHealthChecker);
 
@@ -834,13 +829,7 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
     let statusText = 'No CLI';
     let statusTooltip = 'No AI CLI provider found. Open settings to configure.';
 
-    if (preference === 'copilot' || preference === 'gemini') {
-      statusIcon = '$(check)';
-      statusText = preference === 'copilot' ? 'Copilot' : 'Gemini';
-      statusTooltip =
-        `${statusText} selected for command routing. ` +
-        'Autonomous mode uses Claude/Codex fallback when required.';
-    } else if (preference !== 'auto') {
+    if (preference !== 'auto') {
       const cmd = config.get<string>(
         preference === 'claude' ? 'claudeCodeCommand' : 'codexCommand',
         preference
@@ -855,12 +844,18 @@ async function initializeForWorkspace(context: vscode.ExtensionContext): Promise
         statusText = preference === 'claude' ? 'Claude' : 'Codex';
         statusTooltip = `${statusText} CLI found but not authenticated`;
       }
-    } else if (defaultCLI === 'copilot' || defaultCLI === 'gemini') {
-      statusIcon = '$(check)';
-      statusText = defaultCLI === 'copilot' ? 'Copilot' : 'Gemini';
-      statusTooltip =
-        `${statusText} selected via gofer.defaultCLI. ` +
-        'Autonomous mode uses Claude/Codex fallback when required.';
+    } else if (defaultCLI !== 'auto' && defaultCLI !== 'claude' && defaultCLI !== 'codex') {
+      const evidence = await resolveSemanticHostEvidence(defaultCLI, workspacePath, {
+        detectVersion: (command) => CLIHealthChecker.detectVersion(command),
+        supportsSubcommand: (command, args) => CLIHealthChecker.supportsSubcommand(command, args),
+        extensionInstalled: (extensionId) =>
+          vscode.extensions.getExtension(extensionId) !== undefined,
+        isVSCodeExtensionHost: true,
+      });
+      const selectedStatus = buildSelectedSemanticHostStatus(defaultCLI, evidence);
+      statusIcon = selectedStatus.icon;
+      statusText = selectedStatus.text;
+      statusTooltip = selectedStatus.tooltip;
     } else {
       const claudeCmd = config.get<string>('claudeCodeCommand', 'claude');
       const claudeResult = await CLIHealthChecker.check('claude', claudeCmd);
@@ -934,7 +929,7 @@ async function runPublicGoferEntrypoint(label: 'Gofer' | 'Eai'): Promise<void> {
   }
 
   vscode.window.showInformationMessage(
-    `${label} is ready. In your AI app, run /gofer or /eai. Use #gofer or #eai in Copilot and $gofer or $eai in hosts that use dollar-prefixed skills.`
+    `${label} is ready. Run /eai in Claude, Copilot, Antigravity, Grok, or VS Code; run $eai in Codex.`
   );
 }
 
@@ -1028,7 +1023,7 @@ function registerGlobalCommands(context: vscode.ExtensionContext): void {
         await installer.promptForToolSelection(workspacePath);
       } catch (error) {
         vscode.window.showErrorMessage(
-          `Failed to launch optional tools installer: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to launch optional tools installer${error instanceof Error ? ` (${error.name})` : ''}.`
         );
       }
     })
