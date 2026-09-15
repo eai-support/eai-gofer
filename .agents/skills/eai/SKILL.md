@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.12.7
+Version: 3.12.8
 Host: Codex and Google Antigravity
 
 # Eai
