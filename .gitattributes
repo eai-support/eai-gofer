@@ -1,0 +1,2 @@
+# Keep portable Node scripts readable by native Node and the test module loader.
+*.mjs text eol=lf

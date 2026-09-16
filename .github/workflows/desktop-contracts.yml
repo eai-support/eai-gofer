@@ -46,6 +46,10 @@ jobs:
         run: npm ci --prefix language-server
       - name: Test actual MCP and LSP processes
         run: npm run test:mcp-protocol
+      - name: Install portable harness test dependencies
+        run: npm ci
+      - name: Test portable acceptance, recovery and metrics without retries
+        run: npx vitest run tests/unit/scripts/gofer-acceptance-check.test.ts tests/unit/scripts/gofer-execution-recovery.test.ts tests/unit/scripts/gofer-execution-metrics.test.ts --retry 0
 
   packaged-runtime:
     name: Packaged desktop runtime
