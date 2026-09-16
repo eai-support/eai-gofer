@@ -58,8 +58,10 @@ right mini-loop automatically.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **AC-001**: **Given** [initial state], **When** [action], **Then**
+   [observable expected outcome]
+2. **AC-002**: **Given** [boundary or invalid input], **When** [action],
+   **Then** [expected denial/error and unchanged state]
 
 ---
 
@@ -73,7 +75,8 @@ right mini-loop automatically.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **AC-003**: **Given** [initial state], **When** [action], **Then**
+   [observable expected outcome]
 
 ---
 
@@ -87,7 +90,8 @@ right mini-loop automatically.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **AC-004**: **Given** [initial state], **When** [action], **Then**
+   [observable expected outcome]
 
 ---
 
@@ -132,6 +136,84 @@ _Example of marking unclear requirements:_
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
+
+## Scope And Test Ownership _(mandatory)_
+
+Gofer primarily delivers customer apps. Keep the app specification, companion
+test specification, executable tests and test evidence in the customer repo.
+Using an EAI SDK or published API does not require access to private platform
+repos. Never copy or push customer tests into `eai-testing-dev`.
+
+Internal `eai-stack`, `Infra2025` and `eai-testing-dev` work belongs to
+QProcess. Route actual platform-impact changes there with the affected
+multi-repo Issue/PR/SRP bundle and platform specs under `.specify-pro/`. Do not
+require that internal bundle for every customer app. Customer-facing evidence
+stops at published API contracts; keep private platform implementation and
+delivery records in the internal process.
+
+| Scope           | Owner / repository                                     | Required test work                           | Handoff or no-platform-change rationale                    |
+| --------------- | ------------------------------------------------------ | -------------------------------------------- | ---------------------------------------------------------- |
+| Customer app    | [customer repo and owner]                              | [app behavior and published API consumption] | [local Issue/PR, if used]                                  |
+| Platform impact | [internal owner only if platform changes are required] | [affected platform contracts]                | [QProcess handoff, or reason no platform change is needed] |
+
+## Companion Test Specification _(mandatory for every app or feature spec creation/update)_
+
+Create or update `.specify/specs/[###-feature-name]/test-spec.md` with every app
+or feature specification change, including non-app, tooling and
+documentation-only work. Documentation-only ACs map to document checks, without
+inventing runtime features or tests. A QProcess handoff preserves required test
+obligations. Preserve stable `AC-001`-style acceptance IDs and test IDs; do not
+renumber unchanged requirements. Map every in-scope AC to observable expected
+outcomes and applicable test/check cases, including relevant failure paths. Keep
+this table, the companion document, plan, tasks and traceability aligned.
+
+| AC / requirement / story | Test ID and expected outcome                                                      | Owner repo / repo-relative test path                            | Family / runner / file format              | Collection or group / collection command / check command                   |
+| ------------------------ | --------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| AC-001 / FR-001 / US1    | TST-001: [exact result and independent persisted-state readback where applicable] | [customer repo] / `tests/suite/contracts/api/test_[feature].py` | [API contract / installed runner / Python] | [stable group ID / exact discovery command / exact execution and CI check] |
+| AC-002 / FR-002 / US1    | TST-002: [exact error/denial and unchanged protected state]                       | [customer repo] / `tests/suite/unit/backend/test_[feature].py`  | [backend unit / installed runner / Python] | [stable group ID / exact discovery command / exact execution and CI check] |
+
+The companion document must also define:
+
+- Preconditions, fixtures, principal/tenant boundaries where applicable,
+  independent assertions, and cleanup or restoration after failure.
+- The appropriate test family and format for each case. Use the common
+  repo-relative layout in `plan.md`; a shared layout does not mean a shared
+  repo. Reserve PublicAPI black-box folders for direct deployed API lifecycle
+  tests.
+- All new executable tests live under the owning repo's `tests/` in the target
+  family path. Existing legacy locations do not exempt new tests from this rule.
+- The installed runner, collection rules, exact collection/check commands, exact
+  named runner case IDs mapped to stable test IDs, the exact source/test
+  revision and evidence location. Compare expected and actual case identities
+  for the declared collection scope. Counts are supplemental; equal counts with
+  different cases fail verification. For a different existing customer
+  runner/layout, specify an adapter or migration before claiming that the common
+  paths are collected. Add that work as an explicit prerequisite task; an
+  adapter must collect the new target paths, not waive them. No private-repo
+  dependency is permitted.
+- Required groups for each change, environment/region applicability, gradual
+  enablement, dependencies, resource claims and bounded parallelism. Select the
+  affected dependency closure; do not default every change to the full suite.
+- Parallel execution of independent selected groups is a required capability.
+  Define acceptance criteria and implementation tasks proving actual timing
+  overlap, fixture/claim isolation and bounded lanes, plus serialization of
+  conflicts. Until that proof exists, use safe serial execution and leave the
+  parallel requirement unverified; do not claim it from `[P]` markers alone.
+- Separate facts for `planned`, `written`, `collected`, `enabled`, `selected`
+  and `executed`, with run identity and verdict. Written files or green
+  unrelated groups do not prove execution. Disabled required tests cannot count
+  as passed.
+
+Executable tests are mandatory during authorized implementation of accepted
+feature behavior; documentation-only work uses its specified document checks. A
+specification/plan-only request creates or updates Markdown test plans, leaves
+implementation tasks open, and creates no runtime tests. Completion of that
+planning scope does not claim implemented behavior or passing tests.
+
+Unresolved blocking or required-stage test gaps fail closed after bounded review
+retries. Planning-only artifact approval does not override those gaps or provide
+missing test evidence. An explicit scoped waiver may cover only truly advisory
+findings, never turn a required gate green.
 
 ## Application Classification & Journey
 

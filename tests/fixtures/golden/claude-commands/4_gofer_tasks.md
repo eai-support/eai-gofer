@@ -29,6 +29,84 @@ description: Generate actionable task breakdown from implementation plan
 - Use node .specify/scripts/node/gofer-blocker-control.mjs --state-dir <private-state-directory> --event <private-event.json> before controlled actions; inspect with --state-dir alone, or add --task T001 for an independent task. A denied action, invalid record or missing helper means stop and explain the limitation, not bypass it. Use the installed plugin script path if no repo scaffold exists. Conversation-only work uses a private session state directory and does not require app setup or feature files.
 - Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.
 <!-- gofer:continuation:end -->
+## Scope And Required Test Authoring
+
+This stage authors the work; it does not itself authorize implementation.
+Preserve specification/plan-only scope through every step, approval response
+and continuation rule below. Do not create executable tests, run generators
+outside the requested scope, or start the next stage when only command/template
+Markdown edits are authorized. Keep future implementation tasks open and do not
+claim runtime completion from a reviewed plan.
+
+Gofer primarily delivers customer apps. Every app or feature spec created or
+updated through Gofer, including non-app, tooling and documentation-only specs,
+must have companion Markdown `test-spec.md` beside `spec.md` under
+`.specify/specs/{feature}/`. Keep `spec.md`, `test-spec.md`, `plan.md`, `tasks.md`
+and traceability aligned after every accepted scope change. Stable AC IDs map to
+expected outcomes, test IDs, owning repo-relative paths, runner/file formats,
+collections, exact discovery/check commands and required implementation tasks.
+
+Executable tests are mandatory during authorized implementation of accepted
+feature behavior, without a separate request for tests. Documentation-only
+specs map their ACs to document checks; do not invent runtime features or tests.
+Track `planned`, `written`,
+`collected`, `enabled`, `selected` and `executed` separately. Disabled required
+tests cannot count as passed. Actual outcomes and source/run identity are needed
+for execution credit; the presence of a folder or task is not evidence.
+
+Customer tests remain in the customer repo. No customer tests are copied or
+pushed to `eai-testing-dev`; ordinary EAI SDK/API consumption requires no private
+repo dependency or internal Issues2025/SRP/Infra2025 bundle. Route actual
+platform-impact work to QProcess (`.specify-pro/`) and its affected multi-repo
+Issue/PR/SRP grouping. Keep customer artifacts at the published API boundary.
+
+### Required Collections And Discovery
+
+All new executable tests must use the owning repo's `tests/` target family:
+
+| Family | Repo-relative target |
+| ------ | ------------------- |
+| Backend unit | `tests/suite/unit/backend/` |
+| Frontend unit/component | `tests/suite/unit/frontend/` |
+| Integration | `tests/suite/integration/` |
+| API contract | `tests/suite/contracts/api/` |
+| App/browser end-to-end | `tests/suite/e2e/` |
+| Performance | `tests/suite/performance/` |
+| Node helper unit | `tests/helpers/*.test.ts` |
+| Deployed smoke/contract | `tests/cross-service/{smoke,contracts}/<surface>/` |
+| Direct deployed PublicAPI lifecycle | `tests/cross-service/contracts/publicapi-blackbox/<domain>/<run>/<name>.spec.ts` |
+
+Choose the family for the behavior, not the black-box folder for every test.
+For unsupported discovery, create an explicit adapter/migration prerequisite
+task with owner, target paths, commands and expected discovered cases. The
+adapter must collect the canonical new paths; legacy layouts are not an escape.
+Resolve commands from the customer's installed runner/configuration. Do not
+depend on private EAI code to collect or execute app tests.
+
+Collection proof must list exact named runner case IDs mapped to stable test IDs
+and bind that inventory to the exact source/test revision. Compare expected and
+actual case identities for the declared collection scope. Counts are supplemental:
+equal counts with different cases fail collection verification. A planning-only
+inventory specifies this proof but does not claim collection has occurred.
+
+### Required Parallel Test Capability
+
+Parallel execution of independent selected test groups is a delivery requirement.
+Plan implementation and verification tasks for bounded runner lanes, group
+selection and fixture/resource isolation. Select the affected dependency closure
+and enable reviewed groups gradually; do not use the full suite for every change.
+
+Define a representative independent pair and require evidence of overlapping
+start/end times, worker/lane identities, separate fixtures or safe shared-read
+access, nonconflicting claims, equal assertions and complete cleanup. Verify
+that conflicting groups and dependent CRUD phases serialize. A `[P]` marker,
+separate directories or two successful sequential runs do not prove parallelism.
+
+Record worker/lane caps, auth/provider limits, claim enforcement, timeouts and
+stop conditions. Until isolation is proven, execute safely in serial and report
+the parallel requirement as unverified. A particular selection with no independent
+pair may remain serial; it does not by itself prove the required capability.
+Plan-only work specifies this evidence but neither runs tests nor claims it exists.
 
 ## MVP Capability-Based Validation
 
@@ -207,11 +285,15 @@ This command expects in `.specify/specs/{feature}/`:
 
 - `research.md` - Codebase analysis (from /1_gofer_research)
 - `spec.md` - Feature specification (from /2_gofer_specify)
+- `test-spec.md` - Required companion for every app or feature: stable AC/test IDs, outcomes, paths,
+  runner/formats, collections, commands and parallel/isolation evidence plan
 - `plan.md` - Implementation plan (from /3_gofer_plan)
 - `goal-ledger.json` - Goal and re-loop contract (from /1 and /2)
 - `loop-contract.json` - Bounded evaluation and stop-condition contract (from /1 and /3)
 
-If missing, prompt user to run the prerequisite stage.
+Resolve missing planning inputs within authorized scope before generating tasks.
+For every app or feature, create or update a missing/stale `test-spec.md` as Markdown and
+reconcile spec/plan/tasks; do not silently omit test tasks or start implementation.
 
 ---
 
@@ -224,6 +306,13 @@ unfilled spec template. If the helper reports `spec.md` as missing, empty, or
 infer tasks from `plan.md` alone because acceptance criteria and protected
 boundaries live in the spec.
 
+For every app or feature, separately read `test-spec.md` and verify every in-scope AC has an
+expected outcome, test/collection target and required write/collect/execute task
+plan. The existing prerequisite helper is not claimed to enforce this companion
+contract. Missing discovery support needs an adapter task, not collection credit.
+For documentation-only scope, map ACs to named document checks and their evidence,
+not invented runtime behavior. QProcess handoff preserves these test obligations.
+
 ## Outline
 
 1. Context health check
@@ -235,8 +324,9 @@ boundaries live in the spec.
 7. Approval gate
 8. Output: `tasks.md`, `traceability.md`, `issues.md`,
    `working-backwards-prfaq.md`, `prfaq-history/04-tasks.md`, and
-   `stakeholder-review-index.md`; for app delivery, tasks must also preserve
-   and update `build-map.md`
+   `stakeholder-review-index.md`; preserve and update `spec.md`, `test-spec.md`
+   and `plan.md` for every feature to keep acceptance, required checks and
+   applicable parallel execution aligned; also update `build-map.md` for app delivery
 
 ---
 
@@ -266,8 +356,9 @@ Task generation dispatches agents — keep main context lightweight.
 
    Parse JSON for FEATURE_DIR, AVAILABLE_DOCS
 
-2. **Scan available documents** (do NOT load full content — agents read
-   directly):
+2. **Read required authoring inputs** before delegating: `spec.md`, required companion
+   `test-spec.md`, `plan.md`, existing `tasks.md` and the canonical task template.
+   Scan other available documents for relevant references:
    - Note feature name from FEATURE_DIR
    - Note which optional docs exist: data-model.md, contracts/, quickstart.md
    - Note whether `loop-contract.json` exists. If missing, initialize it with
@@ -293,6 +384,7 @@ Feature directory: {FEATURE_DIR}
 Read these files for full context:
 - {FEATURE_DIR}/plan.md — Implementation phases, architecture, file structure
 - {FEATURE_DIR}/spec.md — User stories with priorities and acceptance criteria
+- {FEATURE_DIR}/test-spec.md — Required feature AC/test IDs, outcomes, paths, formats, exact runner case IDs/source revisions, commands and applicable parallel/isolation proof plan
 - {FEATURE_DIR}/data-model.md — Entity definitions (read if exists)
 - {FEATURE_DIR}/contracts/ — API contracts (read all .md files if exists)
 - {FEATURE_DIR}/research.md — Technology decisions (read if exists)
@@ -311,7 +403,7 @@ Task Format (REQUIRED for every task):
 - [ ] [TaskID] [P?] [Story?] Description with exact file path
 Where:
 - TaskID: Sequential (T001, T002...)
-- [P]: Only if parallelizable with other tasks in same phase
+- [P]: Only for independent selected work with proven prerequisites, nonconflicting claims and bounded capacity
 - [Story]: [US1], [US2] etc. for user story phases only
 - Description: Clear action with the exact file path to create/modify
 
@@ -321,32 +413,42 @@ Each phase MUST include:
 - Verification checklist at the end
 
 Include these sections:
-1. YAML frontmatter: feature, spec, plan, status: ready, created (ISO date)
+1. YAML frontmatter: feature, spec, test_spec, plan, status: draft, created (ISO date)
 2. Overview: Total tasks, parallel opportunities, user story count
 3. Dependencies: Mermaid graph showing phase dependencies
 4. All phases with tasks
-5. Parallel Execution Guide: Which [P] tasks can run concurrently
+5. Required Parallel Execution Plan: Selected independent groups, lane/worker caps, fixture/claim isolation, overlap evidence and serialization checks for conflicting groups
 6. Implementation Strategy: MVP first, incremental delivery, polish last
 7. Loop Evidence Tasks:
    - Task(s) to run each loop-contract eval command at the right phase boundary
    - Task(s) to append `loop-ledger.jsonl` records after each check-repair cycle
    - Task(s) to stop and escalate if maxIterations or stop conditions trigger
+8. Required Test Tasks: For each stable AC, name expected outcomes, canonical customer-local test paths, runner/file format, collection and exact discovery/check commands. Assign write/update, adapter if needed, collect, select/enable and execute/evidence tasks. Keep planned/written/collected/enabled/selected/executed distinct.
+9. Scope Ownership: Customer app work stays in its repo. Only actual platform impact routes to QProcess and the affected multi-repo Issue/PR/SRP bundle; no private-repo dependency for SDK/API consumption.
 
 Validation checks before writing:
 - Every plan phase has at least one task (GAP-02)
 - Every plan task item has a corresponding task
 - Every acceptance criterion maps to at least one task (GAP-03)
+- Every in-scope app or feature AC maps to required test/check tasks and expected outcomes from test-spec.md; documentation-only ACs use document checks, not invented runtime tests
+- Collection proof requires exact runner case IDs and source/test revision; equal counts with different cases fail
+- Unsupported runner discovery has an explicit adapter/migration prerequisite; new tests use the canonical target family paths
+- Required parallel capability has implementation and verification tasks proving overlap and isolation for an independent pair, plus conflict serialization
+- Selected groups cover the affected dependency closure; disabled required groups remain evidence gaps unless equivalent mapped baseline coverage satisfies the obligation
 - Every data model entity has implementing tasks
 - Every API contract endpoint has implementing tasks
 - Every loop-contract eval command maps to at least one task or verification
   checklist item
 - Every implementation phase explains what ledger evidence will be recorded
 - Task file paths match plan.md File Structure section
-- For CLI-driven platform mutations, task order must reflect authoritative
+- For actual platform changes, route to QProcess; its task order must reflect authoritative
   store setup before orchestrator writes, orchestrator writes before CLI
   consumption, and platform persistence before local mirror patching.
 
-Write the complete task breakdown to {FEATURE_DIR}/tasks.md.
+Write the complete task breakdown to {FEATURE_DIR}/tasks.md. Reconcile accepted
+changes in spec.md, test-spec.md and plan.md. During plan-only scope, author only
+the permitted documents, leave runtime tasks open and do not execute generators,
+tests or implementation stages outside that scope.
 
 Return a structured summary:
 - Total task count
@@ -367,6 +469,7 @@ Feature directory: {FEATURE_DIR}
 
 Read these files:
 - {FEATURE_DIR}/spec.md — User stories, acceptance criteria, functional requirements
+- {FEATURE_DIR}/test-spec.md — Feature AC/test IDs, expected outcomes, exact runner case IDs/source revisions, canonical collections, commands and applicable parallel/isolation requirements
 - {FEATURE_DIR}/plan.md — Implementation phases, components
 - {FEATURE_DIR}/goal-ledger.json — goals, metrics, delivery states, re-loop triggers
 - {FEATURE_DIR}/loop-contract.json — loop eval commands, max iterations, stop conditions, and escalation rules
@@ -383,7 +486,12 @@ Generate {FEATURE_DIR}/traceability.md with:
    | Requirement ID | Goal ID | Plan Phase | Task IDs | Planned Code | Planned Tests | Status |
 
 3. Acceptance Criteria Detail:
-   | ID | Criterion | Task(s) | Planned Code | Planned Tests | Phase |
+   | AC / test ID | Expected outcome | Owner repo / canonical test path / format | Collection / exact runner case IDs / source-test revision / discovery and check commands | Write / adapter / execution task IDs | Phase |
+
+   Record planned/written/collected/enabled/selected/executed separately; only
+   actual execution evidence may support a runtime verdict. Plan coverage is not
+   executed test coverage. Verify parallel overlap/isolation and conflict
+   serialization tasks, not merely the presence of [P] labels.
 
 4. Plan Phase Coverage:
    | Phase | Task Count | Coverage % |
@@ -406,7 +514,7 @@ Generate {FEATURE_DIR}/traceability.md with:
    - Loop eval commands: N/N covered
    - Data Entities: N/N covered
    - API Endpoints: N/N covered
-   - Status: VALIDATION PASSED or VALIDATION FAILED
+   - Status: PLANNING COVERAGE PASSED or PLANNING COVERAGE FAILED; never runtime test completion
 
 Return: overall coverage percentages and any MISSING items"
 ```
@@ -424,13 +532,18 @@ After both agents complete:
    - File paths reference real locations in the codebase
    - Phase dependencies make sense
    - Every user story phase is independently testable
-   - Parallel markers [P] are correct (no dependency conflicts)
+   - Required parallel groups have bounds, overlap/isolation proof tasks and
+     conflict-serialization checks; [P] markers alone are insufficient
+   - Each AC has required test tasks, correct customer-local collection paths,
+     runner formats and actual command definitions or a named discovery blocker
 
 2. **Review traceability.md** — Check from Agent 2:
-   - If VALIDATION FAILED: identify which coverage gaps exist
+   - If PLANNING COVERAGE FAILED: identify which coverage gaps exist
    - Add missing tasks for uncovered acceptance criteria
    - Add missing tasks for uncovered plan phases
    - Add missing planned code/test targets for uncovered requirements
+   - Reconcile spec.md, test-spec.md and plan.md when task changes affect accepted
+     outcomes, ownership, collection or parallel requirements
    - Re-run Agent 2 if tasks.md was modified
 
 3. **Fix coverage gaps** — Max 3 correction iterations
@@ -450,7 +563,7 @@ catch misalignment early.
 
 ```
 Task: subagent_type="engineer-review", model="sonnet"
-Prompt: "Review alignment between spec.md, plan.md, and tasks.md in {FEATURE_DIR}.
+Prompt: "Review alignment between spec.md, test-spec.md, plan.md, and tasks.md in {FEATURE_DIR}.
 Find every gap, inconsistency, and misalignment. Report Red/Yellow/Gray findings."
 ```
 
@@ -460,6 +573,8 @@ Find every gap, inconsistency, and misalignment. Report Red/Yellow/Gray findings
 Task: subagent_type="codebase-analyzer", model="sonnet"
 Prompt: "Verify that the tasks at {FEATURE_DIR}/tasks.md reference correct
 file paths and follow existing codebase patterns from {FEATURE_DIR}/research.md.
+New executable tests must use the canonical owning-repo tests/ family. Require
+an explicit adapter/migration task for unsupported discovery, not a legacy-path waiver.
 Report Red/Yellow/Gray findings."
 ```
 
@@ -470,17 +585,35 @@ coverage
 Task: subagent_type="validation-correctness", model="sonnet"
 Prompt: "Verify that every acceptance criterion in {FEATURE_DIR}/spec.md
 is covered by at least one task in {FEATURE_DIR}/tasks.md.
+For every app or feature, require per-AC test/check tasks, expected outcomes,
+exact runner case IDs and source/test revision, collection/check commands and
+applicable bounded parallel overlap/isolation evidence tasks from test-spec.md.
+Documentation-only ACs map to document checks without invented runtime features.
+Planning-only work must not claim runtime tests executed.
 Report Red/Yellow/Gray findings with coverage gaps."
 ```
 
 **After agents return:**
 
 1. Classify findings: Red (blocking) / Yellow (should fix) / Gray
-   (informational)
-2. If NO Red or Yellow findings → PASS → proceed to approval gate
-3. If Red or Yellow findings exist: a. Fix findings directly in tasks.md (Red
-   first, then Yellow) b. Increment cycle counter c. If cycle <= 5 → re-run
-   review agents d. If cycle > 5 → log remaining findings, proceed with warnings
+   (informational). Missing required acceptance, test-spec mappings, collection
+   proof or test evidence due at the current stage is blocking regardless of
+   its initial color. Do not relabel a required gap as advisory.
+2. Fix findings within the authorized scope and re-review, for at most five
+   review cycles in total. Record finding IDs, owners and the proof needed.
+   Runtime evidence planned for later authorized implementation remains pending;
+   it is not required to approve a complete planning artifact.
+3. If any blocking finding or required-stage gap remains after the bounded
+   retries, report `BLOCKED` and stop progression to implementation. Retry
+   exhaustion, warnings or human approval cannot turn that gate green.
+4. A truly advisory finding may have an explicit scoped waiver recording its
+   ID, rationale, approver, scope and expiry/review condition. Such a waiver
+   cannot cover a blocking finding or replace required test evidence.
+5. Report `PASSED` for the current review only when all requirements due at
+   that stage are satisfied and remaining advisory findings have an explicit
+   disposition. A human may approve planning-only artifacts with recorded gaps,
+   but keep the blocked verdict and implementation stop. Planning approval
+   never claims passing runtime tests or feature completion.
 
 ---
 
@@ -529,13 +662,20 @@ Include rollback notes in the task document's "Implementation Strategy" section.
 
 ## Step 6: Generate GitHub Issues
 
-Run the issues generator:
+When issue generation is within the authorized scope, run the issues generator:
 
 ```bash
 node .specify/scripts/node/generate-issues.js "$FEATURE_DIR"
 ```
 
 This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
+Review it against `.specify/templates/issues-template.md`: customer ownership,
+stable AC/test IDs, required test tasks, canonical paths, commands and conditional
+QProcess handoff. Require companion test-spec.md for every app or feature,
+including documentation-only scope, exact case IDs plus source/test revision
+for collection proof, and fail-closed required-stage gates. Do not assume the
+generator enforces the updated contract.
+When only editing command/template Markdown, do not run the generator.
 
 ### 6.5 Update Working Backwards PR/FAQ Delivery Plan
 
@@ -545,7 +685,7 @@ Before the approval gate:
    - Add Delivery / Operations FAQ content from `tasks.md`,
      `traceability.md`, `issues.md`, dependencies, phase ordering, launch
      gates, rollback/support notes, and loop eval tasks.
-   - Update Evidence Links for `tasks.md`, `traceability.md`,
+   - Update Evidence Links for `test-spec.md`, `tasks.md`, `traceability.md`,
      `loop-contract.json`, and `issues.md`.
 2. Write `{FEATURE_DIR}/prfaq-history/04-tasks.md` as an immutable snapshot.
 3. Update `{FEATURE_DIR}/stakeholder-review-index.md`.
@@ -569,6 +709,10 @@ engineering reviews and task validation still apply.
 Otherwise, pause for the required approval. Missing, ambiguous, rejected or
 revoked approval is not authorization. Preserve user-requested review gates,
 protected boundaries and all security, cost, deployment and destructive gates.
+Tasks must be reviewed before implementation begins. Artifact approval does not
+authorize implementation unless it covers the tasks and every required current-stage
+gate has passed. In plan-only scope, report the reviewed documents and open runtime
+tasks; do not request or infer automatic implementation from planning approval.
 
 ### 7.1 Update Task Status
 
@@ -578,6 +722,7 @@ Only when authorization is outstanding, set the frontmatter status to `review`:
 ---
 feature: [Feature Name]
 spec: spec.md
+test_spec: test-spec.md
 plan: plan.md
 status: review # Changed from 'draft' to 'review'
 created: [ISO date]
@@ -602,9 +747,12 @@ summary and request the specific outstanding approval:
     - US2 (P2): [N] tasks
     - ...
   - Parallel opportunities: [N] tasks
+  - Required parallel capability: [selected groups, bounds, overlap/isolation proof tasks]
+  - Required AC-linked tests: [N], with collection/check commands and owners
   - MVP scope: Phase 1-3 (Setup + Foundation + US1)
 
   Files created:
+  - {FEATURE_DIR}/spec.md, test-spec.md and plan.md (reconciled for every feature)
   - {FEATURE_DIR}/tasks.md
   - {FEATURE_DIR}/traceability.md
   - {FEATURE_DIR}/build-map.md (updated for app delivery)
@@ -625,7 +773,9 @@ summary and request the specific outstanding approval:
   4. Scope boundaries are appropriate
 
   Reply with:
-  - "approved" or "lgtm" to proceed to implementation
+  - "approved" or "lgtm" to approve the presented scope; implementation proceeds
+    only when that scope includes authorized implementation and the required
+    current-stage review gate has passed
   - "modify [feedback]" to request changes
   - "stop" to halt the pipeline
 
@@ -636,8 +786,8 @@ summary and request the specific outstanding approval:
 
 | Response                    | Action                                                       |
 | --------------------------- | ------------------------------------------------------------ |
-| `approved` / `lgtm` / `yes` | Record approval for the presented scope, then read the implementation contract |
-| `modify [feedback]`         | Update tasks based on feedback, re-present for approval      |
+ | `approved` / `lgtm` / `yes` | Record artifact approval and scope without changing the review verdict; continue only if implementation is authorized and all required current-stage gates pass; otherwise stop with gaps/runtime tasks open |
+ | `modify [feedback]`         | Update affected spec/test-spec/plan/tasks mappings, re-review changed obligations, then re-present the actual gate verdict for approval |
 | `stop`                      | Halt pipeline, document reason in tasks.md                   |
 
 ### 7.4 Record Approval
@@ -650,36 +800,51 @@ approval evidence and recheck it after scope changes.
 
 For a newly received explicit approval, update frontmatter using the actual
 user response and timestamp:
+Artifact approval does not override a blocked engineering review or supply missing
+test evidence; record these states separately.
 
 ```yaml
 ---
 feature: [Feature Name]
 spec: spec.md
+test_spec: test-spec.md
 plan: plan.md
 status: approved
 approvedBy: '[user]'
 approvedAt: '[ISO timestamp]'
+approvalScope: '[planning-only or authorized implementation scope]'
+engineeringReview: '[actual current-stage verdict: passed or blocked]'
+implementationReadiness: '[ready, blocked or pending authorization/evidence]'
 created: [ISO date]
 ---
 ```
 
 ---
 
-## Step 8: Continue to Implementation
+## Step 8: Scope-Aware Continuation
 
 After required reviews pass and either existing scope approval covers the
 tasks or the outstanding approval is received:
+Report the actual review and approval states; never print an unconditional pass:
 
 ```
-✓ Tasks APPROVED: {FEATURE_DIR}/tasks.md
-
-Engineering Review: PASSED (cycle [N] of 5)
+Tasks: {FEATURE_DIR}/tasks.md
+Artifact approval: [actual decision and approved scope]
+Engineering review: [actual PASSED or BLOCKED verdict] (cycle [N] of 5)
+Required gaps: [none or exact finding IDs and missing evidence]
+Implementation: [authorized and ready | blocked | not authorized]
 ```
 
-Read and follow `.specify/commands/5_gofer_implement.md` in the same conversation
-under the Continuation And Stop Contract. Do not pause merely because tasks
-are ready, and do not ask the user to invoke a numbered command. Any remaining
-gate must be reported with Progress, Stop reason and Next action.
+Only when implementation is authorized and all required current-stage gates
+have passed, read and follow `.specify/commands/5_gofer_implement.md` in the
+same conversation, using the available native tools and existing approval scope.
+Unresolved blocking or
+required-stage gaps stop continuation, including after human approval or an
+advisory waiver. Do not repeat an
+already satisfied approval gate. For specification/plan-only scope, stop after
+the requested documents are complete. Leave executable-test and parallel-run
+verification tasks open; do not call the next stage, run runtime tests or claim
+implementation completion. Editing this command does not execute its pipeline.
 
 ---
 
@@ -776,7 +941,8 @@ evidence:
   accessibility/theming contracts, consumer smoke tests, and unsupported
   custom-block exceptions.
 - For **non-app work**, keep the shared numbered stages but skip these
-  preview/show-and-tell/service-fit prerequisites.
+  preview/show-and-tell/service-fit prerequisites. Companion test-spec.md and
+  required per-AC checks still apply.
 
 ### EnterpriseAI Contract, Reuse, and Red/Green Tasks
 
@@ -859,6 +1025,10 @@ evidence:
 
 ### CLI-Driven Platform State Ordering
 
+Internal platform changes belong to QProcess and its affected repo owners.
+This ordering describes that handoff when such changes are required; it does not
+authorize Gofer to edit private services or require them for ordinary app API use.
+
 When a command-line workflow is expected to update platform state, `tasks.md`
 MUST order work like this unless the plan proves a different authoritative
 dependency:
@@ -891,11 +1061,23 @@ Logs to: `.specify/logs/pipeline.jsonl`
 
 ## Key Rules
 
-- Use absolute paths for all file references
+- Use owning-repo-relative paths in task/test specifications and customer artifacts;
+  resolve local tool paths at execution without exporting personal absolute paths
 - Every task must have a file path
 - Tasks must be specific enough for LLM execution
 - Each user story phase must be independently testable
-- Tests are OPTIONAL - only include if specified in requirements
+- Every app or feature spec, including tooling and documentation-only work,
+  requires companion test-spec.md and per-AC test/check tasks; document-only ACs
+  use document checks without inventing runtime features
+- Collection proof requires exact named runner case IDs and source/test revision,
+  not counts alone; equal counts with different cases fail verification
+- Required-stage or blocking gaps fail closed after bounded review retries;
+  planning approval and scoped advisory waivers never override required evidence
+- Parallel execution of independent selected groups is required; plan bounded
+  capacity and evidence of actual overlap, isolation and conflict serialization
+- Keep spec.md, test-spec.md, plan.md and tasks.md aligned after every scope change
+- Plan-only work does not create runtime tests, execute the generator outside
+  scope, auto-chain implementation or claim passing runtime evidence
 - Log stage completion for observability tracking
 
 ## Local Settings Cleanup Contract
