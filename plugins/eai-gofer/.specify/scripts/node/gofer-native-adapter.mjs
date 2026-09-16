@@ -9,9 +9,11 @@ import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-cap
 
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
+const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+  !['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR'].includes(key)));
 
 async function git(directory, args) {
-  return execFileAsync('git', ['-C', directory, ...args], { encoding: 'utf8' });
+  return execFileAsync('git', ['-C', directory, ...args], { encoding: 'utf8', env: gitEnvironment });
 }
 
 export async function createVerifiedWorktree({ workspaceRoot, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
@@ -59,28 +61,35 @@ export async function invokeLedgerBoundNative({ request, capabilityReceipt, capa
   const invocation = await start(Object.freeze({ ...request, capabilityReceiptHash: receiptHash }));
   if (!text(invocation?.invocationId) || typeof invocation.wait !== 'function' || typeof invocation.cancel !== 'function' ||
       typeof invocation.inspect !== 'function') throw new Error('NATIVE_INVOCATION_REQUIRED');
-  let cancelled = false;
-  const cancel = async () => {
-    if (cancelled) return;
-    cancelled = true;
-    await invocation.cancel();
-    const state = await invocation.inspect();
-    if (state?.invocationId !== invocation.invocationId || state?.cancelled !== true || !text(state?.receipt)) {
-      throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+  let cancelPromise;
+  const cancel = () => {
+    if (!cancelPromise) {
+      cancelPromise = (async () => {
+        await invocation.cancel();
+        const state = await invocation.inspect();
+        if (state?.invocationId !== invocation.invocationId || state?.cancelled !== true || !text(state?.receipt)) {
+          throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+        }
+      })();
     }
+    return cancelPromise;
   };
   if (signal?.aborted) await cancel();
-  const listener = () => { void cancel(); };
+  const listener = () => { cancel().catch(() => {}); };
   signal?.addEventListener('abort', listener, { once: true });
   try {
     const result = await invocation.wait();
     if (signal?.aborted) await cancel();
-    if (cancelled) throw new Error('NATIVE_INVOCATION_CANCELLED');
+    if (cancelPromise) {
+      await cancelPromise;
+      throw new Error('NATIVE_INVOCATION_CANCELLED');
+    }
     if (result?.invocationId !== invocation.invocationId || result?.capabilityReceiptHash !== receiptHash || !text(result?.receipt)) {
       throw new Error('NATIVE_INVOCATION_UNVERIFIED');
     }
     return Object.freeze({ ...result, capabilityReceiptHash: receiptHash, isolation: authority.isolation });
   } finally {
     signal?.removeEventListener('abort', listener);
+    if (cancelPromise) await cancelPromise;
   }
 }

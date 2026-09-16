@@ -121,6 +121,66 @@ describe('native adapter primitives', () => {
     ).rejects.toThrow('NATIVE_INVOCATION_CANCELLED');
   });
 
+  it('waits for a mid-flight cancellation before returning', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'id',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-18T00:00:00.000Z',
+      hostVersion: 'codex',
+      models: [{ id: 'live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree',
+      provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+      signingKey: keys.privateKey,
+    });
+    const controller = new AbortController();
+    let releaseCancellation: () => void;
+    const cancellation = new Promise<void>((resolve) => {
+      releaseCancellation = resolve;
+    });
+    const outcome = invokeLedgerBoundNative({
+      signal: controller.signal,
+      request: {
+        objectiveRevision: 'r1',
+        allowedWriteScope: ['src/'],
+        leaseId: 'lease',
+        budgetReservation: 'budget',
+        approvalReceipt: 'approval',
+      },
+      capabilityReceipt: receipt,
+      capabilityPublicKey: keys.publicKey,
+      assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+      start: async () => ({
+        invocationId: 'run-1',
+        cancel: async () => cancellation,
+        inspect: async () => ({ invocationId: 'run-1', cancelled: true, receipt: 'cancelled' }),
+        wait: async () => {
+          controller.abort();
+          return { invocationId: 'run-1', receipt: 'finished' };
+        },
+      }),
+    });
+    let settled = false;
+    void outcome.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    releaseCancellation!();
+    await expect(outcome).rejects.toThrow('NATIVE_INVOCATION_CANCELLED');
+  });
+
   it('refuses a native invocation with an unauthenticated capability receipt', async () => {
     const keys = generateKeyPairSync('ed25519');
     const receipt = createCapabilityReceipt({
