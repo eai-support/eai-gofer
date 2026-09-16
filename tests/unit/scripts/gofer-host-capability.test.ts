@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { HOSTS, HOST_ALIASES, createCapabilityReceipt, inspectHost, selectLiveModel } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 
 describe('Gofer host capability discovery', () => {
@@ -6,6 +7,14 @@ describe('Gofer host capability discovery', () => {
     await expect(inspectHost('auto')).resolves.toMatchObject({
       status: 'host-name-required', models: [], modelDiscovery: 'host-runtime-required',
     });
+  });
+
+  it('runs the CLI when invoked with the documented relative script path', () => {
+    const result = spawnSync(process.execPath, [
+      '.specify/scripts/node/gofer-host-capability.mjs', '--host', 'auto', '--json',
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ status: 'host-name-required' });
   });
 
   it('records only an executable probe, not model or isolation qualification', async () => {

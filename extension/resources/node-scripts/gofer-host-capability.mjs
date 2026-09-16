@@ -4,6 +4,8 @@
  * selects a model or launches an agent because those controls are host-owned.
  */
 import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export const HOSTS = Object.freeze({
   antigravity: { program: 'agy', args: ['--version'] },
@@ -138,6 +140,6 @@ async function main(args) {
   process.stdout.write(`${JSON.stringify(await inspectHost(args[1]))}\n`);
 }
 
-if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main(process.argv.slice(2)).catch(error => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }
