@@ -3,7 +3,7 @@
  * commands or capability declarations received from a worker or a document.
  */
 import { constants } from 'node:fs';
-import { open, readFile, realpath, lstat } from 'node:fs/promises';
+import { open, readFile, realpath, lstat, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
@@ -66,7 +66,7 @@ async function canonicalScopes(workspace, scopes) {
 }
 
 export function validateWorkGraph(plan, checks) {
-  if (plan?.schemaVersion !== 1 || !text(plan.revision) || !plan.tasks ||
+  if (![1, 2].includes(plan?.schemaVersion) || !text(plan.revision) || !plan.tasks ||
       !Array.isArray(plan.criticalPath) || !plan.criticalPath.length) throw new Error('INVALID_GRAPH');
   const ids = Object.keys(plan.tasks);
   if (!ids.length || ids.length > 1000 || new Set(plan.criticalPath).size !== plan.criticalPath.length ||
@@ -119,7 +119,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   const journalName = 'verified-execution.jsonl';
   if (!positive(maxCalls) || !positive(maxConcurrent) || maxConcurrent > 8 ||
       !Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) throw new Error('FINITE_LIMITS_REQUIRED');
-  for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'verified']) {
+  for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
     if (typeof adapter?.[method] !== 'function') throw new Error(`TRUSTED_ADAPTER_REQUIRED:${method}`);
   }
   const root = await realpath(featureDir);
@@ -156,6 +156,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   });
   let calls = 0;
   let write = Promise.resolve();
+  let checkpointWrite = Promise.resolve();
+  let checkpointSequence = 0;
   const record = event => {
     write = write.then(async () => { await file.writeFile(`${JSON.stringify({ schemaVersion: 1, revision, time: new Date().toISOString(), ...event })}\n`); await file.sync(); })
       .catch(() => { controller.abort(new Error('JOURNAL_FAILURE')); throw new Error('JOURNAL_FAILURE'); });
@@ -165,6 +167,26 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     if (Date.now() >= deadlineMs && !controller.signal.aborted) controller.abort(new Error('DEADLINE'));
     if (controller.signal.aborted) throw controller.signal.reason;
   };
+  // The checkpoint contains only current graph state plus the latest delta.
+  // It avoids replaying the entire append-only ledger during operator recovery.
+  async function checkpoint(event, taskId = null) {
+    // Serialize snapshots so concurrent tasks cannot race the replacement file.
+    checkpointWrite = checkpointWrite.then(async () => {
+      const payload = JSON.stringify({ schemaVersion: 1, revision, updatedAt: new Date().toISOString(),
+        delta: { event, taskId }, states, attempts, calls,
+        verifiedInputs: Object.fromEntries(verifiedInputs) });
+      const target = path.join(root, 'verified-execution.checkpoint.json');
+      const temporary = `${target}.${process.pid}.${++checkpointSequence}.tmp`;
+      try {
+        await writeFile(temporary, payload, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        await rename(temporary, target);
+      } catch {
+        controller.abort(new Error('CHECKPOINT_UNAVAILABLE'));
+        throw controller.signal.reason;
+      }
+    });
+    return checkpointWrite;
+  }
   async function current() {
     abortCheck();
     if (await executionRevision(root) !== revision) {
@@ -213,9 +235,17 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         // Connect to the caller's stable blocker register; denied repairs stop.
         const reservation = await invoke('reserve', { ...request, attempt });
         if (reservation?.allowed !== true) throw new Error('BLOCKER_OR_BUDGET_DENIED');
+        const lease = await invoke('lease', { ...request, attempt });
+        const leaseExpiry = Date.parse(lease?.expiresAt);
+        if (!text(lease?.leaseId) || !Number.isFinite(leaseExpiry) || leaseExpiry <= Date.now()) {
+          throw new Error('TASK_LEASE_REQUIRED');
+        }
+        await record({ event: 'lease_granted', task: taskId, attempt, leaseId: lease.leaseId, expiresAt: lease.expiresAt });
         states[taskId] = 'running';
+        await checkpoint('running', taskId);
         // Repair sees measured failures, never just "try again" or prior reasoning.
-        const result = await invoke('execute', { ...request, attempt, previousChecks: freeze(structuredClone(previousChecks)) });
+        const leasedRequest = { ...request, attempt, leaseId: lease.leaseId, leaseExpiresAt: lease.expiresAt };
+        const result = await invoke('execute', { ...leasedRequest, previousChecks: freeze(structuredClone(previousChecks)) });
         await current();
         if (!result || !Array.isArray(result.changedFiles) || result.changedFiles.some(f => !text(f))) throw new Error('INVALID_WORKER_RESULT');
         const scope = await reviewPriority(root, { task: taskId, changedFiles: result.changedFiles, workspaceRoot });
@@ -228,7 +258,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         for (const check of checks[taskId]) {
           let evidence;
           try {
-            evidence = await invoke('check', { ...request, attempt, check, inputRevision });
+            evidence = await invoke('check', { ...leasedRequest, check, inputRevision });
           } catch {
             // A failed check can leave local or remote work in an unknown state.
             controller.abort(new Error('CHECK_RECONCILIATION_REQUIRED'));
@@ -260,7 +290,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
           };
           await assertCurrent();
           // The trusted adapter must compare-and-set, not unconditionally tick tasks.
-          const commit = await invoke('verified', { ...request, inputRevision, assertCurrent });
+          const commit = await invoke('verified', { ...leasedRequest, inputRevision, assertCurrent });
           if (commit?.committed !== true || commit.taskId !== taskId || commit.revision !== revision ||
               commit.inputRevision !== inputRevision || !text(commit.receipt)) throw new Error('COMMIT_RECONCILIATION_REQUIRED');
           await assertCurrent();
@@ -268,6 +298,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
           states[taskId] = 'verified';
           verifiedInputs.set(taskId, inputRevision);
           await record({ event: 'verified', task: taskId, inputRevision, receipt: commit.receipt });
+          await checkpoint('verified', taskId);
           return;
         }
         await record({ event: 'repair_required', task: taskId, attempt });
@@ -277,11 +308,13 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
       const reason = controller.signal.aborted ? controller.signal.reason.message : error.message;
       states[taskId] = reason.startsWith('STALE') ? 'stale' : reason === 'CLEANUP_RECONCILIATION_REQUIRED' ? 'blocked' : controller.signal.aborted ? 'cancelled' : 'blocked';
       await record({ event: states[taskId], task: taskId, reason, reconciliationRequired: true }).catch(() => {});
+      await checkpoint(states[taskId], taskId).catch(() => {});
     }
   }
   try {
     await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations,
       requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
+    await checkpoint('started');
     const active = new Map();
     while (!controller.signal.aborted) {
       let scheduled = false;
@@ -314,17 +347,27 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
       }
       if (!scheduled) break;
     }
+    // Cancellation stops new scheduling, but active work may still be draining
+    // its journal and checkpoint operations. Do not close the runtime ledger
+    // or return while a sibling can still write into the feature directory.
+    if (active.size) await Promise.allSettled([...active.values()]);
     const verified = ids.filter(id => states[id] === 'verified');
     const status = !controller.signal.aborted && ids.every(id => states[id] === 'verified') ? 'verified' : 'incomplete';
     // Task verification is not the feature/release outcome gate.
     const result = { status, states, verified, calls, attempts, revision, cost: null,
       nativeQualification: 'not-established', featureComplete: false };
     await record({ event: 'finished', ...result });
+    await checkpoint('finished');
     return result;
   } finally {
     controller.abort(new Error('RUN_CLOSED'));
     clearTimeout(timer);
     signal?.removeEventListener('abort', cancel);
-    try { await write; } finally { await file.close(); }
+    // A journal failure must still drain checkpoint writes before callers or
+    // tests can remove the feature directory. Preserve the journal failure
+    // while ensuring no asynchronous checkpoint writer survives teardown.
+    try { await write; } finally {
+      try { await checkpointWrite; } finally { await file.close(); }
+    }
   }
 }

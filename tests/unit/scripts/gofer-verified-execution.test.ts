@@ -66,6 +66,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(root, name), body);
   const adapter = {
     reserve: vi.fn(async () => ({ allowed: true })),
+    lease: vi.fn(async () => ({ leaseId: 'fixture-lease', expiresAt: new Date(Date.now() + 5000).toISOString() })),
     execute: vi.fn(async () => ({ changedFiles: [] })),
     inputRevision: vi.fn(async () => 'input-1'),
     check: vi.fn(async (request: any) => ({
@@ -213,6 +214,19 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     expect(result.featureComplete).toBe(false);
     expect(result.cost).toBeNull();
     expect(f.adapter.execute.mock.calls.map(([r]: any) => r.taskId)).toEqual(['T001', 'T002']);
+  });
+  it('does not execute a task without a finite, unexpired lease and writes a delta checkpoint', async () => {
+    const f = await fixture();
+    f.adapter.lease.mockResolvedValueOnce({ leaseId: 'expired', expiresAt: new Date(Date.now() - 1).toISOString() });
+    const blocked = await runVerifiedGraph(f.options);
+    expect(blocked.states.T001).toBe('blocked');
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+    await rm(path.join(f.root, 'verified-execution.jsonl'));
+    const fresh = await fixture();
+    const result = await runVerifiedGraph(fresh.options);
+    expect(result.status).toBe('verified');
+    expect(JSON.parse(await readFile(path.join(fresh.root, 'verified-execution.checkpoint.json'), 'utf8')))
+      .toMatchObject({ revision: result.revision, delta: { event: 'finished' }, states: { T001: 'verified', T002: 'verified' } });
   });
   it('does not accept a good worker answer when acceptance fails', async () => {
     const f = await fixture();
@@ -382,6 +396,13 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     f.options.checks.T001 = [];
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
   });
+  it('accepts the goal-led priority-plan schema that the priority checker supports', async () => {
+    const f = await fixture();
+    f.plan.schemaVersion = 2;
+    f.plan.decisionPolicy = { mode: 'goal-led', askOnlyFor: ['missing authority'] };
+    await writeFile(path.join(f.root, 'priority-plan.json'), JSON.stringify(f.plan));
+    expect((await runVerifiedGraph(f.options)).status).toBe('verified');
+  });
   it('bounds graph edges and edit scopes before execution', async () => {
     const f = await fixture();
     f.plan.tasks.T001.dependsOn = Array.from({ length: 257 }, () => 'T002');
@@ -486,7 +507,9 @@ describe('Verified execution kernel (local adapters, not native model qualificat
         const sync = handle.sync.bind(handle);
         const close = handle.close.bind(handle);
         handle.sync = async () => {
-          if (++writes > 8) throw new Error('disk failure');
+          // Lease grants add durable records before dispatch. Fail only after
+          // both independently scheduled workers have observed cancellation.
+          if (++writes > 12) throw new Error('disk failure');
           await sync();
         };
         handle.close = async () => {

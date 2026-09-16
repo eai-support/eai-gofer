@@ -5,8 +5,8 @@
  */
 import { spawn } from 'node:child_process';
 
-const HOSTS = Object.freeze({
-  antigravity: { program: 'antigravity', args: ['--version'] },
+export const HOSTS = Object.freeze({
+  antigravity: { program: 'agy', args: ['--version'] },
   claude: { program: 'claude', args: ['--version'] },
   codex: { program: 'codex', args: ['--version'] },
   copilot: { program: 'copilot', args: ['--version'] },
@@ -14,12 +14,61 @@ const HOSTS = Object.freeze({
   vscode: { program: 'code', args: ['--version'] },
 });
 
+// Generated and legacy surfaces use these names. Keep alias resolution here so
+// a command surface cannot silently select a different host.
+export const HOST_ALIASES = Object.freeze({
+  'claude-code': 'claude',
+  'openai-codex': 'codex',
+  'github-copilot': 'copilot',
+  'visual-studio-code': 'vscode',
+  gemini: 'antigravity',
+  xai: 'grok',
+});
+
 function fail(message) { throw new Error(`Host capability: ${message}`); }
 
 function hostName(value) {
   if (value === 'auto') return null;
-  if (!Object.hasOwn(HOSTS, value)) fail(`unsupported host: ${value}`);
-  return value;
+  const canonical = HOST_ALIASES[value] ?? value;
+  if (!Object.hasOwn(HOSTS, canonical)) fail(`unsupported host: ${value}`);
+  return canonical;
+}
+
+const safeModel = value => value && typeof value.id === 'string' && value.id.trim() &&
+  (value.reasoningEfforts === undefined || (Array.isArray(value.reasoningEfforts) &&
+    value.reasoningEfforts.every(item => typeof item === 'string' && item.trim())));
+const parseTime = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Date.parse(value) : null;
+
+/**
+ * A capability receipt is created by a host-specific evaluator after it reads
+ * the active host runtime. It is model availability evidence only: it does not
+ * claim execution, isolation, permission, or a selected model.
+ */
+export function createCapabilityReceipt({ host, evaluatorVersion, evaluatedAt, expiresAt, models, evaluationId }) {
+  const canonical = hostName(host);
+  if (!canonical || typeof evaluatorVersion !== 'string' || !evaluatorVersion.trim() ||
+      !Array.isArray(models) || !models.every(safeModel) ||
+      new Set(models.map(model => model.id)).size !== models.length ||
+      typeof evaluationId !== 'string' || !evaluationId.trim() ||
+      parseTime(evaluatedAt) === null || parseTime(expiresAt) === null || parseTime(expiresAt) <= parseTime(evaluatedAt)) {
+    fail('invalid capability receipt');
+  }
+  return Object.freeze({ schemaVersion: 1, host: canonical, evaluator: 'host-runtime', evaluatorVersion,
+    evaluationId, evaluatedAt, expiresAt, models: models.map(model => ({ ...model })),
+    execution: 'unqualified', isolation: 'unqualified', toolPermissions: 'unqualified' });
+}
+
+export function selectLiveModel(receipt, { host, modelId, now = Date.now() }) {
+  const canonical = hostName(host);
+  if (!receipt || receipt.schemaVersion !== 1 || receipt.host !== canonical ||
+      receipt.evaluator !== 'host-runtime' || parseTime(receipt.evaluatedAt) === null ||
+      parseTime(receipt.expiresAt) === null || parseTime(receipt.expiresAt) <= now ||
+      !Array.isArray(receipt.models) || !receipt.models.every(safeModel) ||
+      typeof modelId !== 'string' || !modelId.trim()) fail('live model capability is unavailable');
+  const model = receipt.models.find(item => item.id === modelId);
+  if (!model) fail('model is not present in the current host receipt');
+  return Object.freeze({ host: canonical, model: { ...model }, evaluationId: receipt.evaluationId,
+    receiptVersion: receipt.schemaVersion, expiresAt: receipt.expiresAt });
 }
 
 async function runProgram({ program, args }) {
@@ -55,6 +104,7 @@ export async function inspectHost(host, { run = runProgram } = {}) {
     return {
       schemaVersion: 1,
       host: null,
+      aliases: HOST_ALIASES,
       status: 'host-name-required',
       models: [],
       modelDiscovery: 'host-runtime-required',
@@ -66,6 +116,7 @@ export async function inspectHost(host, { run = runProgram } = {}) {
   return {
     schemaVersion: 1,
     host: id,
+    aliases: Object.fromEntries(Object.entries(HOST_ALIASES).filter(([, canonical]) => canonical === id)),
     status: probe?.ok === true ? 'available' : 'unavailable',
     executable: HOSTS[id].program,
     version: typeof probe?.version === 'string' ? probe.version : null,

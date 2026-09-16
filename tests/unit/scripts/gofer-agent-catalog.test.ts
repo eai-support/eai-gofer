@@ -243,6 +243,16 @@ describe('neutral assignment resolution', () => {
     expect(verifier).not.toHaveBeenCalled();
   });
 
+  it('rejects a native proof that binds extra fields outside the assignment', async () => {
+    const input = await proofRequest();
+    (input.nativeProof as any).binding.extraAuthority = 'never accepted';
+    const verifier = vi.fn(async () => true);
+    const assignment = await resolveAssignment(input, { verifyNativeProof: verifier });
+    expect(verifier).not.toHaveBeenCalled();
+    expect(assignment.qualification.evidenceKind).toBe('unqualified');
+    expect(assignment.dispatchAllowed).toBe(false);
+  });
+
   it.each([
     () => false, () => 'true', () => { throw new Error('Host unavailable'); },
   ])('fails closed when the trusted verifier does not return true', async verifier => {
