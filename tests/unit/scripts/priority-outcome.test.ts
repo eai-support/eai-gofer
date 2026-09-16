@@ -81,6 +81,19 @@ function receipt() {
   });
 }
 describe('priority and outcome protection', () => {
+  it('ships new priority plans with the required goal-led decision policy', () => {
+    const template = JSON.parse(
+      fs.readFileSync(path.join(root, '.specify/templates/priority-plan-template.json'), 'utf8')
+    );
+    expect(template).toMatchObject({
+      schemaVersion: 2,
+      decisionPolicy: {
+        mode: 'goal-led',
+        askOnlyFor: ['goal-change', 'irreversible-action', 'missing-authority'],
+      },
+    });
+  });
+
   it('selects a prerequisite without adding auth or deployment gates', async () => {
     expect(await review({ task: 'T003' })).toMatchObject({
       status: 'pass',
