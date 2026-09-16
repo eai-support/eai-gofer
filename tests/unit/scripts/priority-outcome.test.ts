@@ -26,10 +26,14 @@ beforeEach(() => {
   write('decisions.md', 'D001: Prove the local draft.\nD002: Notes can run alongside build.');
   write('traceability.md', '| FR-001 | T002 | outcome.json |');
   write('priority-plan.json', {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 'direction-1',
     objective: 'Prove local draft save.',
     lastInstruction: { id: 'D001', text: 'Prove the local draft.' },
+    decisionPolicy: {
+      mode: 'goal-led',
+      askOnlyFor: ['goal-change', 'irreversible-action', 'missing-authority'],
+    },
     criticalPath: ['T001', 'T002'],
     tasks: {
       T001: { dependsOn: ['T003'], allowedEditScope: ['src/'] },
@@ -41,6 +45,7 @@ beforeEach(() => {
         parallelFor: 'T001',
         reason: 'Independent notes.',
         decisionId: 'D002',
+        decisionOwner: 'gofer',
       },
     },
     outcome: {
@@ -85,7 +90,24 @@ describe('priority and outcome protection', () => {
     expect((await review({ task: 'T001' })).status).toBe('fail');
   });
   it('allows recorded independent parallel work', async () => {
-    expect((await review({ task: 'T004', changedFiles: ['docs/result.md'] })).status).toBe('pass');
+    const result = await review({ task: 'T004', changedFiles: ['docs/result.md'] });
+    expect(result.status).toBe('pass');
+    expect(result.decisionPolicy).toBe('goal-led');
+  });
+  it('requires a declared goal-led policy for new priority plans', async () => {
+    const p = plan();
+    delete p.decisionPolicy;
+    write('priority-plan.json', p);
+    expect((await review()).findings).toContain('PRIORITY_CHECK_INVALID:INVALID_INPUT_OR_EVIDENCE');
+  });
+  it('accepts a Gofer-owned parallel decision and rejects an unknown owner', async () => {
+    const p = plan();
+    p.tasks.T004.decisionOwner = 'gofer';
+    write('priority-plan.json', p);
+    expect((await review({ task: 'T004' })).status).toBe('pass');
+    p.tasks.T004.decisionOwner = 'unknown';
+    write('priority-plan.json', p);
+    expect((await review({ task: 'T004' })).status).toBe('fail');
   });
   it('requires prerequisites even for an approved parallel task', async () => {
     const p = plan();

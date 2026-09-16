@@ -26,9 +26,9 @@ description: Generate actionable task breakdown from implementation plan
 
 1. Preserve the requested scope and mode, including read-only, plan-only, research-only and MVP work. Keep the full applicable pipeline, stage functions, artifacts, reviews and validation; do not expand an MVP into an unapproved release.
 2. After a stage's required evidence is complete, read and follow the next internal file in .specify/commands/ in the same conversation. Do not require a numbered command or a host-specific skill dispatcher. Optional helpers remain optional; maintenance and control commands do not start delivery work.
-3. After explicit business-specification approval, continue routine planning, tasks, implementation and validation within that approved scope. Record the approval source and scope; missing or ambiguous approval is not approval. A proposal or generated status is not user consent.
-4. Preserve any explicit plan/task approval requirement unless it is already satisfied by recorded user approval covering that work. Rejected, revoked, changed or unclear approval requires a pause. Never invent approvedBy, approvedAt or a new approval event when reusing an existing approval.
-5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. Business approval does not authorize publishing, spending, external changes or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
+3. Treat the stated business goal as authority for ordinary planning, task ordering, design, diagnosis, repair, testing, and reversible repository changes within scope. Record material Gofer decisions with their reason and effect. Do not ask the user to choose implementation details that Gofer can safely decide.
+4. Ask only when the goal is unclear or changes, the action is irreversible or destructive, it changes security or access, it creates external cost or commitment, it changes production or public exposure, it requires missing authority or credentials, or it conflicts with an explicit user constraint. Record the exact reason before asking. missing or ambiguous approval is not approval when an approval boundary applies. Rejected, revoked, changed or unclear authority requires a pause.
+5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. A business goal does not authorize publishing, spending, external changes, or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
 6. A tool proposal is not execution. If host consent is required, wait for it. After the tool result or approved proposal returns, inspect the result and resume the next authorized action within approved scope; do not end with only a plan or a proposed tool call. A denied tool or unavailable capability must not be bypassed through another host or CLI.
 7. Use the current agent's available native tools. Optional Gofer/MCP tools are conveniences, not prerequisites. If the current agent lacks a required capability, report that limitation and the safe next action; do not pretend a handoff button transfers control automatically.
 8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
@@ -164,11 +164,11 @@ certification.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
-Before each work batch, read the current goal, specification, tasks, and latest findings. After new knowledge or an approved change, update affected feature documents and explain the effect. Never weaken acceptance criteria to match failing code or invent user approval. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
+Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
 
 **Priority And Outcome Protection**
 
-Follow `.specify/references/priority-outcome-protection.md`. Before implementing a task, record the latest material user direction in decisions.md and maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; only recorded prerequisites and approved parallel work may precede the current priority. Do not switch to unrelated work when blocked. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
+Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
 Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
@@ -574,7 +574,7 @@ This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
 
 ### 6.5 Update Working Backwards PR/FAQ Delivery Plan
 
-Before the approval gate:
+Before implementation:
 
 1. Update `{FEATURE_DIR}/working-backwards-prfaq.md`.
    - Add Delivery / Operations FAQ content from `tasks.md`,
@@ -588,26 +588,30 @@ Before the approval gate:
      sequencing or scope boundaries.
    - Add Delivery review ask for dependencies, protected files, MVP scope,
      parallel work, release gates, and rollback/support plan.
-4. Preserve the task authorization check, reusing approval only when it covers
-   the current work. The PR/FAQ and review index summarize what is ready;
-   `tasks.md` remains the implementation authority.
+4. Record the delivery decision, task scope and any approval boundary. The
+   PR/FAQ and review index summarize what is ready; `tasks.md` remains the
+   implementation authority.
 
 ---
 
-## Step 7: Approval Gate
+## Step 7: Decision And Approval Boundaries
 
-If the approved business scope already covers these tasks and no outstanding
-explicit plan/task approval or material-change gate applies, record that
-approval basis and continue without asking for another approval. Required
-engineering reviews and task validation still apply.
+The stated business goal authorizes normal task sequencing, implementation
+planning, safe repairs, testing and reversible repository work. Record the
+Gofer decision and its scope, then continue without asking the user to approve
+routine delivery work. Required engineering reviews and task validation still
+apply.
 
-Otherwise, pause for the required approval. Missing, ambiguous, rejected or
-revoked approval is not authorization. Preserve user-requested review gates,
-protected boundaries and all security, cost, deployment and destructive gates.
+Pause only when the goal is unclear or changed, or when the work is
+irreversible, destructive, security or access changing, externally costly,
+production or publicly exposed, or requires missing authority, credentials or
+host permission. Missing, ambiguous, rejected or revoked approval is not
+authorization when one of these approval boundaries applies. Preserve explicit
+user review gates and protected boundaries.
 
 ### 7.1 Update Task Status
 
-Only when authorization is outstanding, set the frontmatter status to `review`:
+Only when an approval boundary is outstanding, set the frontmatter status to `review`:
 
 ```yaml
 ---
@@ -619,11 +623,11 @@ created: [ISO date]
 ---
 ```
 
-### 7.2 Present for Approval
+### 7.2 Present An Exception For Decision
 
-If authorization is already covered, summarize progress, skip the approval
-question and response wait, and proceed to 7.4. Otherwise display the task
-summary and request the specific outstanding approval:
+For normal delivery work, summarize the recorded Gofer decision and proceed to
+implementation. Otherwise display the task summary and request only the
+specific exception decision that Gofer cannot safely make:
 
 ```
 ════════════════════════════════════════════════════════════════
@@ -650,38 +654,37 @@ summary and request the specific outstanding approval:
   - {FEATURE_DIR}/stakeholder-review-index.md
 
 ════════════════════════════════════════════════════════════════
-  APPROVAL REQUIRED BEFORE IMPLEMENTATION
+  DECISION REQUIRED BEFORE THIS ACTION
 ════════════════════════════════════════════════════════════════
 
-  Please review tasks.md and confirm:
-  1. Task breakdown is complete and accurate
-  2. Protected files list is correct
-  3. Phase dependencies make sense
-  4. Scope boundaries are appropriate
+  This action needs a decision because: [exact approval boundary]
 
   Reply with:
-  - "approved" or "lgtm" to proceed to implementation
-  - "modify [feedback]" to request changes
+  - "approved" or "lgtm" to authorize this exception
+  - "modify [feedback]" to change the direction
   - "stop" to halt the pipeline
 
 ════════════════════════════════════════════════════════════════
 ```
 
-### 7.3 Handle Approval Response
+### 7.3 Handle Exception Response
 
 | Response                    | Action                                                       |
 | --------------------------- | ------------------------------------------------------------ |
-| `approved` / `lgtm` / `yes` | Record approval for the presented scope, then read the implementation contract |
-| `modify [feedback]`         | Update tasks based on feedback, re-present for approval      |
+| `approved` / `lgtm` / `yes` | Record approval for the exception, then read the implementation contract |
+| `modify [feedback]`         | Update tasks and direction, then reassess the exception      |
 | `stop`                      | Halt pipeline, document reason in tasks.md                   |
 
-### 7.4 Record Approval
+### 7.4 Record Decision Or Approval
 
-When reusing an existing approval, record `approvalBasis` with the original
+For normal delivery work, record `decisionId`, the delivery reason and the
+covered scope. Set task status to `approved` after required reviews and checks
+pass. Do not fabricate user approval, approver or timestamp. Recheck the
+decision after a material scope change.
+
+When an approval boundary applies, record `approvalBasis` with the original
 approval source and covered scope. Set task status to `approved` only after
-checking that basis and all outstanding gates. Do not fabricate a fresh user
-approval, approver or timestamp. Preserve any existing explicit plan/task
-approval evidence and recheck it after scope changes.
+checking that basis and all outstanding gates.
 
 For a newly received explicit approval, update frontmatter using the actual
 user response and timestamp:

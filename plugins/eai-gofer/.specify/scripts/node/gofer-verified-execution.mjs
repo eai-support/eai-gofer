@@ -2,6 +2,7 @@
  * Host-neutral execution kernel. Adapters are trusted application code, never
  * commands or capability declarations received from a worker or a document.
  */
+import { constants } from 'node:fs';
 import { open, readFile, realpath, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -9,6 +10,7 @@ import { reviewPriority } from './gofer-priority-check.mjs';
 import { inspectBlockers } from './gofer-blocker-control.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
+const MAX_CONTRACT_FILE_BYTES = 1024 * 1024;
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const text = value => typeof value === 'string' && value.trim().length > 0;
 
@@ -20,10 +22,28 @@ async function snapshot(featureDir) {
   const hash = createHash('sha256');
   const files = {};
   for (const file of contractFiles) {
-    files[file] = await readFile(path.join(featureDir, file), 'utf8');
+    files[file] = await readContractFile(featureDir, file);
     hash.update(file).update(files[file]);
   }
   return { files, revision: hash.digest('hex') };
+}
+
+async function readContractFile(featureDir, name) {
+  const root = await realpath(featureDir);
+  const target = path.join(root, name);
+  // Resolve before opening. A different canonical path proves a supplied link.
+  const canonical = await realpath(target);
+  if (canonical !== target) throw new Error('UNSAFE_CONTRACT_FILE');
+  // Do not follow a link introduced after canonical-path validation on POSIX.
+  const flags = constants.O_RDONLY | (process.platform === 'win32' ? 0 : constants.O_NOFOLLOW);
+  const file = await open(canonical, flags);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size > MAX_CONTRACT_FILE_BYTES) throw new Error('UNSAFE_CONTRACT_FILE');
+    return await file.readFile({ encoding: 'utf8' });
+  } finally {
+    await file.close();
+  }
 }
 
 function freeze(value) {
@@ -51,20 +71,30 @@ export function validateWorkGraph(plan, checks) {
   const ids = Object.keys(plan.tasks);
   if (!ids.length || ids.length > 1000 || new Set(plan.criticalPath).size !== plan.criticalPath.length ||
       plan.criticalPath.some(id => !ids.includes(id))) throw new Error('INVALID_GRAPH');
-  const visited = new Set();
-  function visit(id, active = new Set()) {
-    if (active.has(id)) throw new Error('CYCLIC_GRAPH');
-    if (visited.has(id)) return;
+  let edgeCount = 0;
+  let scopeCount = 0;
+  for (const id of ids) {
     const task = plan.tasks[id];
     if (!/^T\d+$/.test(id) || !task || !Array.isArray(task.dependsOn) ||
-        task.dependsOn.some(dep => !ids.includes(dep)) || !Array.isArray(task.allowedEditScope) ||
+        task.dependsOn.length > 256 || task.dependsOn.some(dep => !ids.includes(dep)) || !Array.isArray(task.allowedEditScope) ||
+        task.allowedEditScope.length > 256 ||
         task.allowedEditScope.some(scope => !text(scope) || /(^\/|\/\/|\\|:|\0|[*?\[\]]|(^|\/)\.\.?($|\/))/.test(scope)) ||
         !Array.isArray(checks[id]) || !checks[id].length || checks[id].length > 256 || checks[id].some(c => !text(c) || c.length > 1024) ||
         new Set(checks[id]).size !== checks[id].length) throw new Error('INVALID_WORK_ORDER');
-    for (const dep of task.dependsOn) visit(dep, new Set([...active, id]));
-    visited.add(id);
+    edgeCount += task.dependsOn.length;
+    scopeCount += task.allowedEditScope.length;
+    if (edgeCount > 10000 || scopeCount > 10000) throw new Error('INVALID_WORK_ORDER');
   }
-  ids.forEach(id => visit(id));
+  const states = new Map(ids.map(id => [id, 0]));
+  const visit = id => {
+    const state = states.get(id);
+    if (state === 1) throw new Error('CYCLIC_GRAPH');
+    if (state === 2) return;
+    states.set(id, 1);
+    for (const dependency of plan.tasks[id].dependsOn) visit(dependency);
+    states.set(id, 2);
+  };
+  ids.forEach(visit);
   return ids;
 }
 
@@ -114,6 +144,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   for (const id of ids) scopes[id] = await canonicalScopes(workspaceRoot, plan.tasks[id].allowedEditScope);
   const states = Object.fromEntries(ids.map(id => [id, 'pending']));
   const attempts = Object.fromEntries(ids.map(id => [id, 0]));
+  const verifiedInputs = new Map();
   const controller = new AbortController();
   const cancel = () => controller.abort(new Error('CANCELLED'));
   if (signal?.aborted) cancel();
@@ -195,7 +226,14 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         let passed = true;
         previousChecks = [];
         for (const check of checks[taskId]) {
-          const evidence = await invoke('check', { ...request, attempt, check, inputRevision });
+          let evidence;
+          try {
+            evidence = await invoke('check', { ...request, attempt, check, inputRevision });
+          } catch {
+            // A failed check can leave local or remote work in an unknown state.
+            controller.abort(new Error('CHECK_RECONCILIATION_REQUIRED'));
+            throw controller.signal.reason;
+          }
           await current();
           const valid = evidence?.taskId === taskId && evidence.revision === revision &&
             evidence.inputRevision === inputRevision && evidence.check === check &&
@@ -228,6 +266,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
           await assertCurrent();
           await current();
           states[taskId] = 'verified';
+          verifiedInputs.set(taskId, inputRevision);
           await record({ event: 'verified', task: taskId, inputRevision, receipt: commit.receipt });
           return;
         }
@@ -243,19 +282,37 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   try {
     await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations,
       requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
+    const active = new Map();
     while (!controller.signal.aborted) {
-      const pending = ids.filter(id => states[id] === 'pending');
-      if (!pending.length) break;
-      const batch = [];
-      for (const id of pending) {
+      let scheduled = false;
+      for (const id of ids) {
+        if (active.size === maxConcurrent || states[id] !== 'pending') continue;
         if (!plan.tasks[id].dependsOn.every(dep => states[dep] === 'verified')) continue;
+        if ([...active.keys()].some(other => overlaps(scopes[id], scopes[other]))) continue;
+        for (const dependency of plan.tasks[id].dependsOn) {
+          const expected = verifiedInputs.get(dependency);
+          const currentInput = await invoke('inputRevision', {
+            taskId: dependency,
+            revision,
+            allowedEditScope: plan.tasks[dependency].allowedEditScope,
+            requiredChecks: checks[dependency],
+          });
+          if (currentInput !== expected) {
+            controller.abort(new Error('STALE_PREREQUISITE_EVIDENCE'));
+            break;
+          }
+        }
+        if (controller.signal.aborted) break;
         if ((await reviewPriority(root, { task: id })).status !== 'pass') continue;
-        if (batch.some(other => overlaps(scopes[id], scopes[other]))) continue;
-        batch.push(id);
-        if (batch.length === maxConcurrent) break;
+        active.set(id, runTask(id).then(() => id));
+        scheduled = true;
       }
-      if (!batch.length) break;
-      await Promise.all(batch.map(runTask));
+      if (active.size) {
+        const completed = await Promise.race(active.values());
+        active.delete(completed);
+        continue;
+      }
+      if (!scheduled) break;
     }
     const verified = ids.filter(id => states[id] === 'verified');
     const status = !controller.signal.aborted && ids.every(id => states[id] === 'verified') ? 'verified' : 'incomplete';

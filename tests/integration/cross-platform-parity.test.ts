@@ -127,11 +127,11 @@ describe('Cross-Platform Feature Parity', () => {
       expect(content).toContain('in the same conversation');
       expect(content).toContain('Progress, Stop reason and Next action');
       expect(content).toContain('missing or ambiguous approval is not approval');
-      expect(content).toContain('explicit plan/task approval requirement');
+      expect(content).toContain('ordinary planning, task ordering, design, diagnosis, repair, testing');
       expect(content).toContain(
         'Pause for material scope, security, cost, deployment, destructive'
       );
-      expect(content).toContain('Business approval does not authorize publishing');
+      expect(content).toContain('A business goal does not authorize publishing');
       expect(content).toContain('A tool proposal is not execution');
       expect(content).toContain('If host consent is required, wait for it');
     }
@@ -172,22 +172,22 @@ describe('Cross-Platform Feature Parity', () => {
       );
     });
 
-    it('checks business approval and reuses only task authorization already covered', () => {
+    it('uses the stated goal for routine delivery and asks only for exceptions', () => {
       expect(compact(readInternalContract('2_gofer_specify'))).toContain(
-        'Before continuing to planning, verify approval of the business specification and its scope'
+        'The stated business goal authorizes normal planning from this specification'
       );
       const tasks = compact(readInternalContract('4_gofer_tasks'));
       expect(tasks).toContain(
-        'If the approved business scope already covers these tasks and no outstanding explicit plan/task approval or material-change gate applies'
+        'The stated business goal authorizes normal task sequencing, implementation planning, safe repairs, testing and reversible repository work'
       );
-      expect(tasks).toContain('Otherwise, pause for the required approval');
+      expect(tasks).toContain('Record the Gofer decision and its scope');
       expect(tasks).toContain(
-        'Missing, ambiguous, rejected or revoked approval is not authorization'
+        'Missing, ambiguous, rejected or revoked approval is not authorization when one of these approval boundaries applies'
       );
       expect(tasks).toContain(
-        'record `approvalBasis` with the original approval source and covered scope'
+        'For normal delivery work, record `decisionId`, the delivery reason and the covered scope'
       );
-      expect(tasks).toContain('Do not fabricate a fresh user approval, approver or timestamp');
+      expect(tasks).toContain('Do not fabricate user approval, approver or timestamp');
     });
 
     it('keeps validation terminal only when the requested evidence passes', () => {

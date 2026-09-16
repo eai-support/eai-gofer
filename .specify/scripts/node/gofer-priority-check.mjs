@@ -78,6 +78,7 @@ export async function reviewPriority(featureDir, { task, changedFiles = [], work
   const findings = [];
   let nextTask = null;
   let lastInstruction = null;
+  let decisionPolicy = 'legacy-recorded-direction';
   try {
     const root = await realpath(featureDir);
     const raw = await read(root, 'priority-plan.json');
@@ -91,11 +92,16 @@ export async function reviewPriority(featureDir, { task, changedFiles = [], work
       if (tasks.has(match[2])) throw new Error('Duplicate task');
       tasks.set(match[2], match[1].toLowerCase() === 'x');
     }
-    if (plan.schemaVersion !== 1 || !text(plan.objective) || !text(plan.revision) ||
+    if (![1, 2].includes(plan.schemaVersion) || !text(plan.objective) || !text(plan.revision) ||
         !Array.isArray(plan.criticalPath) || !plan.criticalPath.length ||
         new Set(plan.criticalPath).size !== plan.criticalPath.length ||
         plan.criticalPath.some(id => !taskId(id) || !tasks.has(id)) ||
         !plan.tasks || typeof plan.tasks !== 'object' || Array.isArray(plan.tasks)) throw new Error('Invalid priority plan');
+    if (plan.schemaVersion === 2 && (!plan.decisionPolicy ||
+        plan.decisionPolicy.mode !== 'goal-led' ||
+        !Array.isArray(plan.decisionPolicy.askOnlyFor) ||
+        !plan.decisionPolicy.askOnlyFor.length)) throw new Error('Invalid goal-led decision policy');
+    decisionPolicy = plan.decisionPolicy?.mode ?? decisionPolicy;
     lastInstruction = plan.lastInstruction;
     if (!text(lastInstruction?.id) || !text(lastInstruction?.text) ||
         !decisions.includes(lastInstruction.id) || !decisions.includes(lastInstruction.text)) throw new Error('Latest direction is not recorded in decisions.md');
@@ -105,7 +111,8 @@ export async function reviewPriority(featureDir, { task, changedFiles = [], work
           item.dependsOn.some(dep => !tasks.has(dep)) || !Array.isArray(item.allowedEditScope) ||
           item.allowedEditScope.some(scope => !relative(scope))) throw new Error('Invalid task dependencies or edit scope');
       if (item.parallelFor !== undefined && (!plan.criticalPath.includes(item.parallelFor) ||
-          !text(item.reason) || !text(item.decisionId) || !decisions.includes(item.decisionId))) throw new Error('Parallel work needs a recorded decision');
+          !text(item.reason) || !text(item.decisionId) || !decisions.includes(item.decisionId) ||
+          (item.decisionOwner !== undefined && !['gofer', 'user'].includes(item.decisionOwner)))) throw new Error('Parallel work needs a recorded decision');
     }
     if (tasks.size > MAX_TASKS || Object.values(plan.tasks).reduce((n, item) => n + item.dependsOn.length, 0) > MAX_EDGES) throw new CheckError('TASK_GRAPH_LIMIT');
     const visited = new Set();
@@ -176,6 +183,7 @@ export async function reviewPriority(featureDir, { task, changedFiles = [], work
     }
   } catch (error) { findings.push(`PRIORITY_CHECK_INVALID:${error instanceof CheckError ? error.message : 'INVALID_INPUT_OR_EVIDENCE'}`); }
   return { status: findings.length ? 'fail' : 'pass', findings, nextTask, lastInstruction,
+    decisionPolicy,
     outcomeStatus: finish ? (findings.length ? 'unverified' : 'verified_record') : 'not_checked',
     coverage: 'Recorded direction, scope and evidence integrity only. Does not intercept host tools, authenticate approval or independently prove deployment.' };
 }

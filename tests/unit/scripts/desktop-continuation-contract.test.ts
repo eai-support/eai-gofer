@@ -27,7 +27,7 @@ describe('desktop continuation contract', () => {
       'same conversation',
       'tool proposal is not execution',
       'missing or ambiguous approval is not approval',
-      'explicit plan/task approval',
+      'ordinary planning, task ordering, design, diagnosis, repair, testing',
       'material scope',
       'protected files',
       'budget, context and retry limits',
@@ -37,17 +37,15 @@ describe('desktop continuation contract', () => {
       expect(contract).toContain(text);
   });
 
-  it('requires business approval before planning and reuses covered task approval', () => {
+  it('uses the stated goal for routine planning and reserves approval for exceptions', () => {
     expect(read('.specify/commands/2_gofer_specify.md')).toContain(
-      'Before continuing to planning, verify approval'
+      'The stated business goal authorizes normal planning'
     );
     const tasks = read('.specify/commands/4_gofer_tasks.md');
-    expect(tasks).toContain('If the approved business scope already covers these tasks');
+    expect(tasks).toContain('Gofer decision and its scope');
+    expect(tasks).toContain('continue without asking the user to approve');
+    expect(tasks).toContain('Pause only when the goal is unclear or changed');
     expect(tasks).toContain('approvalBasis');
-    expect(tasks).not.toContain(
-      'Tasks MUST be reviewed and approved before implementation begins.'
-    );
-    expect(tasks).toContain('Otherwise, pause for the required approval');
   });
 
   it('keeps internal file targets, optional problem validation and terminal validation', () => {
