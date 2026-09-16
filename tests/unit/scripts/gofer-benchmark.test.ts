@@ -125,4 +125,21 @@ describe('Gofer benchmark contract', () => {
       ])
     );
   });
+
+  it('rejects missing model binding and impossible reliability', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async ({ run }: any) => ({ costUsd: run, durationMs: run, receipt: `r-${run}` }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_RESULT');
+    expect(() =>
+      gateBenchmark(
+        { status: 'pass', reliability: 1.1, costUsd: 1, durationMs: 1 },
+        { status: 'pass', reliability: 1, costUsd: 1, durationMs: 1 }
+      )
+    ).toThrow('INVALID_BENCHMARK_GATE');
+  });
 });

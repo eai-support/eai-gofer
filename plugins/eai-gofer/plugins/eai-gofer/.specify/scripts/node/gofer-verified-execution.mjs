@@ -238,24 +238,27 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         await canonicalScopes(workspaceRoot, task.allowedEditScope);
         const attempt = ++attempts[taskId];
         await record({ event: 'attempt_reserved', task: taskId, attempt });
-        const authority = await ledger.authorize({ ...request, attempt });
-        if (authority?.allowed !== true || authority.taskId !== taskId || authority.revision !== revision ||
-            authority.capabilityReceiptHash !== receiptHash || !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
-        await record({ event: 'ledger_authorized', task: taskId, attempt, receipt: authority.receipt,
-          capabilityReceiptHash: receiptHash });
-        // Connect to the caller's stable blocker register; denied repairs stop.
         const reservation = await invoke('reserve', { ...request, attempt });
-        if (reservation?.allowed !== true) throw new Error('BLOCKER_OR_BUDGET_DENIED');
+        if (reservation?.allowed !== true || !text(reservation.budgetReservation)) throw new Error('BLOCKER_OR_BUDGET_DENIED');
         const lease = await invoke('lease', { ...request, attempt });
         const leaseExpiry = Date.parse(lease?.expiresAt);
         if (!text(lease?.leaseId) || !Number.isFinite(leaseExpiry) || leaseExpiry <= Date.now()) {
           throw new Error('TASK_LEASE_REQUIRED');
         }
         await record({ event: 'lease_granted', task: taskId, attempt, leaseId: lease.leaseId, expiresAt: lease.expiresAt });
+        const leasedRequest = { ...request, attempt, budgetReservation: reservation.budgetReservation,
+          leaseId: lease.leaseId, leaseExpiresAt: lease.expiresAt };
+        const authority = await ledger.authorize(leasedRequest);
+        if (authority?.allowed !== true || authority.taskId !== taskId || authority.revision !== revision ||
+            authority.attempt !== attempt || authority.capabilityReceiptHash !== receiptHash ||
+            authority.budgetReservation !== reservation.budgetReservation || authority.leaseId !== lease.leaseId ||
+            authority.leaseExpiresAt !== lease.expiresAt || authority.allowedEditScope?.join('\0') !== request.allowedEditScope.join('\0') ||
+            authority.requiredChecks?.join('\0') !== request.requiredChecks.join('\0') || !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+        await record({ event: 'ledger_authorized', task: taskId, attempt, leaseId: lease.leaseId,
+          budgetReservation: reservation.budgetReservation, receipt: authority.receipt, capabilityReceiptHash: receiptHash });
         states[taskId] = 'running';
         await checkpoint('running', taskId);
         // Repair sees measured failures, never just "try again" or prior reasoning.
-        const leasedRequest = { ...request, attempt, leaseId: lease.leaseId, leaseExpiresAt: lease.expiresAt };
         const result = await invoke('execute', { ...leasedRequest, previousChecks: freeze(structuredClone(previousChecks)) });
         await current();
         if (!result || !Array.isArray(result.changedFiles) || result.changedFiles.some(f => !text(f))) throw new Error('INVALID_WORKER_RESULT');

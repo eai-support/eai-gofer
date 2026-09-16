@@ -3,10 +3,11 @@
 import { createHash } from 'node:crypto';
 
 const positive = value => Number.isFinite(value) && value >= 0;
+const reliability = value => Number.isFinite(value) && value >= 0 && value <= 1;
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const validCase = item => item && text(item.id) && item.heldOut === true;
-const validExecution = result => result && positive(result.costUsd) && positive(result.durationMs) && text(result.receipt);
+const validExecution = result => result && text(result.modelId) && positive(result.costUsd) && positive(result.durationMs) && text(result.receipt);
 const validVerifiedRun = result => validExecution(result) && result.functionalVerified === true && text(result.verifierReceipt) && text(result.verifierId) && text(result.inputHash);
 
 export async function runBenchmark({ cases, execute, verify, repetitions = 3, provenance } = {}) {
@@ -38,14 +39,15 @@ export async function runBenchmark({ cases, execute, verify, repetitions = 3, pr
 
 export function ablateBenchmark(reports) {
   if (!Array.isArray(reports) || reports.length < 2 || reports.some(report => !report || !text(report.provenance?.harnessId) ||
-      !text(report.provenance?.modelId) || !Number.isFinite(report.reliability) || !positive(report.costUsd) || !positive(report.durationMs))) throw new Error('INVALID_ABLATION_REPORT');
+      !text(report.provenance?.modelId) || !reliability(report.reliability) || !positive(report.costUsd) || !positive(report.durationMs) ||
+      !['pass', 'fail'].includes(report.status))) throw new Error('INVALID_ABLATION_REPORT');
   return Object.freeze(reports.map(report => Object.freeze({ harnessId: report.provenance.harnessId, modelId: report.provenance.modelId,
     reliability: report.reliability, costUsd: report.costUsd, durationMs: report.durationMs, status: report.status })));
 }
 
 export function gateBenchmark(candidate, baseline, { minReliability = 1, maxCostIncreasePct = 0.1, maxDurationIncreasePct = 0.1 } = {}) {
   if (!candidate || !baseline || !positive(candidate.costUsd) || !positive(candidate.durationMs) || !positive(baseline.costUsd) ||
-      !positive(baseline.durationMs) || !Number.isFinite(candidate.reliability) || !Number.isFinite(baseline.reliability) ||
+      !positive(baseline.durationMs) || !reliability(candidate.reliability) || !reliability(baseline.reliability) ||
       ![minReliability, maxCostIncreasePct, maxDurationIncreasePct].every(positive)) throw new Error('INVALID_BENCHMARK_GATE');
   const findings = [];
   if (candidate.status !== 'pass' || candidate.reliability < minReliability) findings.push('FUNCTIONAL_RELIABILITY_REGRESSION');

@@ -68,7 +68,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
   };
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(root, name), body);
   const adapter = {
-    reserve: vi.fn(async () => ({ allowed: true })),
+    reserve: vi.fn(async () => ({ allowed: true, budgetReservation: 'fixture-budget' })),
     lease: vi.fn(async () => ({
       leaseId: 'fixture-lease',
       expiresAt: new Date(Date.now() + 5000).toISOString(),
@@ -108,11 +108,9 @@ async function fixture({ parallel = false, conflict = false } = {}) {
     signingKey: keys.privateKey,
   });
   const ledger = {
-    authorize: vi.fn(async ({ taskId, revision, capabilityReceiptHash }: any) => ({
+    authorize: vi.fn(async (request: any) => ({
       allowed: true,
-      taskId,
-      revision,
-      capabilityReceiptHash,
+      ...request,
       receipt: 'fixture-ledger-authority',
     })),
     authorizeCommit: vi.fn(
@@ -286,6 +284,15 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     expect(result.featureComplete).toBe(false);
     expect(result.cost).toBeNull();
     expect(f.adapter.execute.mock.calls.map(([r]: any) => r.taskId)).toEqual(['T001', 'T002']);
+    expect(f.options.ledger.authorize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attempt: 1,
+        budgetReservation: 'fixture-budget',
+        leaseId: 'fixture-lease',
+        allowedEditScope: ['a.txt'],
+        requiredChecks: ['acceptance'],
+      })
+    );
   });
   it('does not execute a task without a finite, unexpired lease and writes a delta checkpoint', async () => {
     const f = await fixture();
