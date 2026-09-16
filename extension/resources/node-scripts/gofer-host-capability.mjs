@@ -4,6 +4,7 @@
  * selects a model or launches an agent because those controls are host-owned.
  */
 import { spawn } from 'node:child_process';
+import { createHash, randomUUID, sign, verify } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -14,6 +15,14 @@ export const HOSTS = Object.freeze({
   copilot: { program: 'copilot', args: ['--version'] },
   grok: { program: 'grok', args: ['--version'] },
   vscode: { program: 'code', args: ['--version'] },
+});
+
+// Only commands observed in the host's own help or command output appear here.
+// A host without a model-discovery command remains unqualified; it is never
+// given a static fallback model list.
+export const HOST_MODEL_DISCOVERY = Object.freeze({
+  antigravity: { program: 'agy', args: ['models'] },
+  grok: { program: 'grok', args: ['models'] },
 });
 
 // Generated and legacy surfaces use these names. Keep alias resolution here so
@@ -40,37 +49,136 @@ const safeModel = value => value && typeof value.id === 'string' && value.id.tri
   (value.reasoningEfforts === undefined || (Array.isArray(value.reasoningEfforts) &&
     value.reasoningEfforts.every(item => typeof item === 'string' && item.trim())));
 const parseTime = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Date.parse(value) : null;
+const text = value => typeof value === 'string' && value.trim().length > 0;
+
+function modelsFromAntigravity(output) {
+  return output.split(/\r?\n/).map(line => line.trim()).filter(Boolean).flatMap(line => {
+    const [id] = line.split(/\t+/);
+    if (!/^[a-z0-9][a-z0-9._-]*$/i.test(id ?? '')) return [];
+    const effort = id.match(/-(low|medium|high)$/i)?.[1]?.toLowerCase();
+    return [{ id, reasoningEfforts: effort ? [effort] : [] }];
+  });
+}
+
+function modelsFromGrok(output) {
+  return output.split(/\r?\n/).flatMap(line => {
+    const match = line.match(/^\s*(?:\*|-)?\s*([a-z0-9][a-z0-9._-]*)\b/i);
+    return match && /^grok-/i.test(match[1]) ? [{ id: match[1], reasoningEfforts: [] }] : [];
+  });
+}
+
+const MODEL_PARSERS = Object.freeze({ antigravity: modelsFromAntigravity, grok: modelsFromGrok });
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key =>
+    `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
+function unsignedReceipt(receipt) {
+  const { signature, ...payload } = receipt;
+  return payload;
+}
+
+export function capabilityReceiptHash(receipt) {
+  return createHash('sha256').update(canonicalJson(unsignedReceipt(receipt))).digest('hex');
+}
+
+export function verifyCapabilityReceipt(receipt, { publicKey, now = Date.now(), host, requiredCapabilities = {} } = {}) {
+  const canonical = host === undefined ? receipt?.host : hostName(host);
+  const required = requiredCapabilities ?? {};
+  if (!receipt || receipt.schemaVersion !== 2 || receipt.host !== canonical ||
+      !text(receipt.evaluatorVersion) || !text(receipt.evaluationId) || !text(receipt.hostVersion) ||
+      parseTime(receipt.evaluatedAt) === null || parseTime(receipt.expiresAt) === null ||
+      parseTime(receipt.expiresAt) <= now || !Array.isArray(receipt.models) || !receipt.models.every(safeModel) ||
+      new Set(receipt.models.map(model => model.id)).size !== receipt.models.length ||
+      !Array.isArray(receipt.reasoningCapabilities) || !receipt.reasoningCapabilities.every(text) ||
+      !Array.isArray(receipt.toolCapabilities) || !receipt.toolCapabilities.every(text) ||
+      !Array.isArray(receipt.grantedPermissions) || !receipt.grantedPermissions.every(text) ||
+      !text(receipt.isolationClass) || !receipt.provenance || !text(receipt.provenance.evaluator) ||
+      !text(receipt.provenance.source) || !text(receipt.provenance.keyId) ||
+      receipt.signature?.algorithm !== 'ed25519' || receipt.signature.keyId !== receipt.provenance.keyId ||
+      !text(receipt.signature.value) || !publicKey) return false;
+  if (!verify(null, Buffer.from(canonicalJson(unsignedReceipt(receipt))), publicKey,
+    Buffer.from(receipt.signature.value, 'base64url'))) return false;
+  for (const [field, expected] of Object.entries(required)) {
+    const values = receipt[field];
+    if (Array.isArray(expected) && (!Array.isArray(values) || expected.some(value => !values.includes(value)))) return false;
+    if (typeof expected === 'string' && values !== expected) return false;
+  }
+  return true;
+}
 
 /**
  * A capability receipt is created by a host-specific evaluator after it reads
  * the active host runtime. It is model availability evidence only: it does not
  * claim execution, isolation, permission, or a selected model.
  */
-export function createCapabilityReceipt({ host, evaluatorVersion, evaluatedAt, expiresAt, models, evaluationId }) {
+export function createCapabilityReceipt({ host, evaluatorVersion, evaluatedAt, expiresAt, models, evaluationId,
+  hostVersion, reasoningCapabilities = [], toolCapabilities = [], grantedPermissions = [], isolationClass,
+  provenance, signingKey }) {
   const canonical = hostName(host);
   if (!canonical || typeof evaluatorVersion !== 'string' || !evaluatorVersion.trim() ||
       !Array.isArray(models) || !models.every(safeModel) ||
       new Set(models.map(model => model.id)).size !== models.length ||
       typeof evaluationId !== 'string' || !evaluationId.trim() ||
+      !text(hostVersion) || !Array.isArray(reasoningCapabilities) || !reasoningCapabilities.every(text) ||
+      !Array.isArray(toolCapabilities) || !toolCapabilities.every(text) || !Array.isArray(grantedPermissions) ||
+      !grantedPermissions.every(text) || !text(isolationClass) || !provenance || !text(provenance.evaluator) ||
+      !text(provenance.source) || !text(provenance.keyId) || !signingKey ||
       parseTime(evaluatedAt) === null || parseTime(expiresAt) === null || parseTime(expiresAt) <= parseTime(evaluatedAt)) {
     fail('invalid capability receipt');
   }
-  return Object.freeze({ schemaVersion: 1, host: canonical, evaluator: 'host-runtime', evaluatorVersion,
-    evaluationId, evaluatedAt, expiresAt, models: models.map(model => ({ ...model })),
-    execution: 'unqualified', isolation: 'unqualified', toolPermissions: 'unqualified' });
+  const receipt = { schemaVersion: 2, host: canonical, evaluatorVersion, evaluationId, evaluatedAt, expiresAt,
+    hostVersion, models: models.map(model => ({ ...model })), reasoningCapabilities: [...reasoningCapabilities],
+    toolCapabilities: [...toolCapabilities], grantedPermissions: [...grantedPermissions], isolationClass,
+    provenance: { ...provenance } };
+  const signature = sign(null, Buffer.from(canonicalJson(receipt)), signingKey).toString('base64url');
+  return Object.freeze({ ...receipt, signature: { algorithm: 'ed25519', keyId: provenance.keyId, value: signature } });
 }
 
-export function selectLiveModel(receipt, { host, modelId, now = Date.now() }) {
+export function selectLiveModel(receipt, { host, modelId, now = Date.now(), publicKey, requiredCapabilities } = {}) {
   const canonical = hostName(host);
-  if (!receipt || receipt.schemaVersion !== 1 || receipt.host !== canonical ||
-      receipt.evaluator !== 'host-runtime' || parseTime(receipt.evaluatedAt) === null ||
-      parseTime(receipt.expiresAt) === null || parseTime(receipt.expiresAt) <= now ||
-      !Array.isArray(receipt.models) || !receipt.models.every(safeModel) ||
+  if (!verifyCapabilityReceipt(receipt, { publicKey, now, host: canonical, requiredCapabilities }) ||
       typeof modelId !== 'string' || !modelId.trim()) fail('live model capability is unavailable');
   const model = receipt.models.find(item => item.id === modelId);
   if (!model) fail('model is not present in the current host receipt');
   return Object.freeze({ host: canonical, model: { ...model }, evaluationId: receipt.evaluationId,
-    receiptVersion: receipt.schemaVersion, expiresAt: receipt.expiresAt });
+    receiptVersion: receipt.schemaVersion, receiptHash: capabilityReceiptHash(receipt), expiresAt: receipt.expiresAt });
+}
+
+/**
+ * Issue a receipt from native host output plus a trusted host integration's
+ * session inspection. The worker cannot supply this inspection or signature.
+ * Where a CLI has no model-list command, its native host integration must
+ * supply the session model list; there is no static fallback.
+ */
+export async function evaluateNativeHost(host, { signingKey, keyId, runtime, run = runProgram,
+  now = () => new Date(), ttlMs = 5 * 60 * 1000, evaluatorVersion = '2.0.0' } = {}) {
+  const canonical = hostName(host);
+  const discovery = HOST_MODEL_DISCOVERY[canonical];
+  if (!canonical || !signingKey || !text(keyId) || !Number.isFinite(ttlMs) || ttlMs <= 0 ||
+      typeof runtime?.inspect !== 'function') fail('native capability evaluator is unavailable');
+  const [versionProbe, modelProbe, session] = await Promise.all([
+    run(HOSTS[canonical]), discovery ? run(discovery) : Promise.resolve(null), runtime.inspect({ host: canonical }),
+  ]);
+  const models = discovery && modelProbe?.ok === true ? MODEL_PARSERS[canonical](modelProbe.version ?? '') : session?.models;
+  if (versionProbe?.ok !== true || !text(versionProbe.version) || !models.length || !session ||
+      !Array.isArray(models) || !models.every(safeModel) ||
+      !Array.isArray(session.reasoningCapabilities) || !Array.isArray(session.toolCapabilities) ||
+      !Array.isArray(session.grantedPermissions) || !text(session.isolationClass) || !text(session.source)) {
+    fail('native capability evidence is incomplete');
+  }
+  const evaluatedAt = now();
+  if (!(evaluatedAt instanceof Date) || !Number.isFinite(evaluatedAt.getTime())) fail('native evaluator clock is invalid');
+  const sourceHash = createHash('sha256').update(`${versionProbe.version}\n${modelProbe?.version ?? canonicalJson(models)}\n${session.source}`).digest('hex');
+  return createCapabilityReceipt({ host: canonical, evaluatorVersion, evaluationId: randomUUID(),
+    evaluatedAt: evaluatedAt.toISOString(), expiresAt: new Date(evaluatedAt.getTime() + ttlMs).toISOString(),
+    hostVersion: versionProbe.version, models, reasoningCapabilities: session.reasoningCapabilities,
+    toolCapabilities: session.toolCapabilities, grantedPermissions: session.grantedPermissions,
+    isolationClass: session.isolationClass, provenance: { evaluator: 'gofer-native-host-evaluator',
+      source: `${discovery ? `${discovery.program} ${discovery.args.join(' ')}` : 'native-host-session'} sha256:${sourceHash}`, keyId }, signingKey });
 }
 
 async function runProgram({ program, args }) {

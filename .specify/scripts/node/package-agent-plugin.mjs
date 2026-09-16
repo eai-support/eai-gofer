@@ -156,7 +156,7 @@ function buildCodexManifest(version, stages, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -170,7 +170,8 @@ function buildCodexManifest(version, stages, paths = {}) {
       'codex',
       'claude',
       'copilot',
-      'gemini',
+      'antigravity',
+      'gemini-legacy',
       'spec-driven-development',
     ],
     skills: paths.skills ?? './skills/',
@@ -199,7 +200,7 @@ function buildGeminiManifest(version, paths = {}) {
   return {
     name: PLUGIN_NAME,
     version,
-    description: 'Gofer single-entry delivery command with internal pipeline routing',
+    description: 'Legacy Gemini CLI file-format compatibility for EAI Gofer',
     license: 'Apache-2.0',
     commands: paths.commands ?? '.gemini/commands/gofer/',
     gofer: {
@@ -219,7 +220,7 @@ function buildPluginManifest(version, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Gemini, Codex, Copilot, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -233,7 +234,8 @@ function buildPluginManifest(version, paths = {}) {
       'claude-code',
       'codex',
       'copilot',
-      'gemini',
+      'antigravity',
+      'gemini-legacy',
       'spec-driven-development',
     ],
     skills: paths.skills ?? `./${UMBRELLA_SKILLS_DIR}/`,
@@ -269,7 +271,7 @@ function buildBundleMarketplace(version) {
     },
     metadata: {
       description:
-        'Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.',
+        'Public Gofer bundle for Claude Code, Codex, Copilot, and Google Antigravity workflows. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -292,7 +294,8 @@ function buildBundleMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
+          'gemini-legacy',
           'spec-driven-development',
         ],
       },
@@ -309,7 +312,7 @@ function buildRepoMarketplace(version) {
     },
     metadata: {
       description:
-        'Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.',
+        'Install the Gofer repo marketplace for Claude Code, Codex, Copilot CLI, or Google Antigravity from the public GitHub repository. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -333,7 +336,8 @@ function buildRepoMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
+          'gemini-legacy',
           'spec-driven-development',
         ],
       },
@@ -598,7 +602,7 @@ ${buildEaiPlatformDecisionSection()}
 
 ## Token And Cost Policy
 
-- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.
+- Treat \`.specify/memory/gofer-model-policy.yaml\` as advisory capability, cost, and quality constraints. A fresh signed host receipt and independently verified benchmark evidence select the model. Run the internal bootstrap contract if it is missing.
 - Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.
 - Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.
 - Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -622,7 +626,7 @@ The public release feed is available at:
 ${PUBLIC_SITE_URL}/releases.json
 \`\`\`
 
-Gemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.
+Legacy Gemini file-format users can copy the bundled \`.gemini/\` directory into an existing repository. New installations use Google Antigravity and \`agy\`.
 `;
 }
 
@@ -647,7 +651,7 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 7. Update only the current host unless the user explicitly asks for \`--host all\`.
 8. Complete the host reload step from the helper result before saying the update is ready.
 
-Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
+Current hosts are \`claude\`, \`codex\`, \`copilot\`, \`antigravity\`, \`grok\`, and \`vscode\`. Gemini is a legacy alias only.
 
 This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
 ${buildBlockerMediationContract()}
@@ -835,11 +839,11 @@ function buildPluginReadmeBase(version) {
 
 Version: ${version}
 
-This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
+This package is the portable Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code workflow layer for Gofer. Gemini files remain only for legacy compatibility. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
 ## Public Sources
 
-Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, and Gemini CLI:
+Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, Google Antigravity, Grok, and VS Code:
 
 \`\`\`text
 ${REPOSITORY_URL}
@@ -881,7 +885,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\` |
 | GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\` |
 | Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
-| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\` |
+| Legacy Gemini file format | Existing compatibility command only | \`.gemini/\`, \`.specify/scripts/\` |
 | Grok Build | Ask Grok to use the EAI skill | \`.grok/skills/\`, \`.specify/scripts/\` |
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
@@ -950,7 +954,7 @@ Optional helpers like problem validation, save, branding, tests, stakeholder com
 | Claude Code | \`claude plugin marketplace add ${REPOSITORY_URL} --scope user --sparse .claude-plugin --sparse plugins/eai-gofer\` then \`claude plugin install eai-gofer@eai-gofer --scope user\` | Unzip to \`~/plugins/eai-gofer\`, then \`claude plugin marketplace add ~/plugins/eai-gofer --scope user\` |
 | Codex | \`codex plugin marketplace add ${REPOSITORY_URL} --sparse .agents/plugins --sparse plugins/eai-gofer\` then \`codex plugin add eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`codex plugin marketplace add ~/plugins/eai-gofer\` |
 | GitHub Copilot CLI | \`copilot plugin marketplace add ${REPOSITORY_URL}\` then \`copilot plugin install eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`copilot plugin marketplace add ~/plugins/eai-gofer\` |
-| Gemini CLI | \`gemini extensions install ${REPOSITORY_URL} --auto-update\` | Unzip to \`~/plugins/eai-gofer\`, then \`gemini extensions install ~/plugins/eai-gofer\` |
+| Google Antigravity | \`agy plugin install ${REPOSITORY_URL}\` | Start a new Antigravity session after installation |
 
 ## Download And Replace The Local Bundle Folder
 
@@ -1030,19 +1034,11 @@ copilot plugin marketplace add ~/plugins/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 \`\`\`
 
-## Gemini CLI
+## Legacy Gemini File-Format Compatibility
 
-Recommended public install:
+Existing Gemini file-format repositories can retain the generated \`.gemini/\` files. New installation and update actions use Google Antigravity and \`agy\`.
 
-\`\`\`bash
-gemini extensions install ${REPOSITORY_URL} --auto-update
-\`\`\`
-
-Downloaded bundle install:
-
-\`\`\`bash
-gemini extensions install ~/plugins/eai-gofer
-\`\`\`
+Do not identify Gemini as a current Gofer host in new documentation or metadata.
 `;
 }
 
@@ -1058,8 +1054,9 @@ After bootstrap, each repository gets a user-owned model policy at:
 \`\`\`
 
 The shipped default is copied from \`.specify/templates/gofer-model-policy.yaml\`
-and is not overwritten by bootstrap. Use it to tune simple, medium, hard, and
-arbiter model routes for Claude, Codex/OpenAI, Gemini, and Copilot. Copilot
+and is not overwritten by bootstrap. Use it only to constrain cost, quality, and
+capability classes. Fresh signed host receipts and independent benchmark evidence
+select the model for Claude, Codex/OpenAI, Google Antigravity, and Copilot. Copilot
 defaults to \`Auto\` for simple/default work because exact model availability is
 controlled by the Copilot client, plan, and organization policy.
 `;

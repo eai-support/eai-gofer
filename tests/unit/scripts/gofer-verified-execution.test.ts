@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the trusted-adapter seam accepts host-defined payloads. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import * as filesystem from 'node:fs/promises';
@@ -5,12 +6,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { generateKeyPairSync } from 'node:crypto';
 import { applyBlockerEvent } from '../../../.specify/scripts/node/gofer-blocker-control.mjs';
 import { createAcceptanceChecker } from '../../../.specify/scripts/node/gofer-acceptance-check.mjs';
 import {
   runVerifiedGraph,
   validateWorkGraph,
 } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
+import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -66,7 +69,10 @@ async function fixture({ parallel = false, conflict = false } = {}) {
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(root, name), body);
   const adapter = {
     reserve: vi.fn(async () => ({ allowed: true })),
-    lease: vi.fn(async () => ({ leaseId: 'fixture-lease', expiresAt: new Date(Date.now() + 5000).toISOString() })),
+    lease: vi.fn(async () => ({
+      leaseId: 'fixture-lease',
+      expiresAt: new Date(Date.now() + 5000).toISOString(),
+    })),
     execute: vi.fn(async () => ({ changedFiles: [] })),
     inputRevision: vi.fn(async () => 'input-1'),
     check: vi.fn(async (request: any) => ({
@@ -85,6 +91,42 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       return { committed: true, taskId, revision, inputRevision, receipt: 'local-commit' };
     }),
   };
+  const keys = generateKeyPairSync('ed25519');
+  const capabilityReceipt = createCapabilityReceipt({
+    host: 'codex',
+    evaluatorVersion: '2',
+    evaluationId: 'fixture',
+    evaluatedAt: new Date(Date.now() - 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    hostVersion: 'codex fixture',
+    models: [{ id: 'fixture-model', reasoningEfforts: ['high'] }],
+    reasoningCapabilities: ['high'],
+    toolCapabilities: ['shell'],
+    grantedPermissions: ['workspace-write'],
+    isolationClass: 'git-worktree',
+    provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
+    signingKey: keys.privateKey,
+  });
+  const ledger = {
+    authorize: vi.fn(async ({ taskId, revision, capabilityReceiptHash }: any) => ({
+      allowed: true,
+      taskId,
+      revision,
+      capabilityReceiptHash,
+      receipt: 'fixture-ledger-authority',
+    })),
+    authorizeCommit: vi.fn(
+      async ({ taskId, revision, inputRevision, leaseId, capabilityReceiptHash }: any) => ({
+        allowed: true,
+        taskId,
+        revision,
+        inputRevision,
+        leaseId,
+        capabilityReceiptHash,
+        receipt: 'fixture-ledger-commit-authority',
+      })
+    ),
+  };
   return {
     root,
     plan,
@@ -94,6 +136,9 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       workspaceRoot: root,
       checks: { T001: ['acceptance'], T002: ['acceptance'] },
       adapter,
+      ledger,
+      capabilityReceipt,
+      capabilityPublicKey: keys.publicKey,
       maxCalls: 40,
       deadlineMs: Date.now() + 10000,
       maxConcurrent: 2,
@@ -102,6 +147,33 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('fails closed without signed capability evidence and ledger authority', async () => {
+    const f = await fixture();
+    const untrusted = {
+      ...f.options,
+      ledger: undefined,
+      capabilityReceipt: undefined,
+      capabilityPublicKey: undefined,
+    };
+    await expect(runVerifiedGraph(untrusted)).rejects.toThrow(
+      'LEDGER_CAPABILITY_AUTHORITY_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not commit when the ledger refuses completion authority', async () => {
+    const f = await fixture();
+    f.options.ledger.authorizeCommit.mockResolvedValue({ allowed: false });
+    const result = await runVerifiedGraph(f.options);
+    expect(result.states.T001).toBe('blocked');
+    expect(f.options.ledger.authorizeCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'T001',
+        inputRevision: 'input-1',
+        leaseId: 'fixture-lease',
+      })
+    );
+    expect(f.adapter.verified).not.toHaveBeenCalled();
+  });
   it('retains all scope protection by aborting the run after unresolved cleanup', async () => {
     const f = await fixture({ parallel: true, conflict: true });
     f.adapter.check.mockImplementation(async (r: any) => ({
@@ -217,7 +289,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
   });
   it('does not execute a task without a finite, unexpired lease and writes a delta checkpoint', async () => {
     const f = await fixture();
-    f.adapter.lease.mockResolvedValueOnce({ leaseId: 'expired', expiresAt: new Date(Date.now() - 1).toISOString() });
+    f.adapter.lease.mockResolvedValueOnce({
+      leaseId: 'expired',
+      expiresAt: new Date(Date.now() - 1).toISOString(),
+    });
     const blocked = await runVerifiedGraph(f.options);
     expect(blocked.states.T001).toBe('blocked');
     expect(f.adapter.execute).not.toHaveBeenCalled();
@@ -225,8 +300,15 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     const fresh = await fixture();
     const result = await runVerifiedGraph(fresh.options);
     expect(result.status).toBe('verified');
-    expect(JSON.parse(await readFile(path.join(fresh.root, 'verified-execution.checkpoint.json'), 'utf8')))
-      .toMatchObject({ revision: result.revision, delta: { event: 'finished' }, states: { T001: 'verified', T002: 'verified' } });
+    expect(
+      JSON.parse(
+        await readFile(path.join(fresh.root, 'verified-execution.checkpoint.json'), 'utf8')
+      )
+    ).toMatchObject({
+      revision: result.revision,
+      delta: { event: 'finished' },
+      states: { T001: 'verified', T002: 'verified' },
+    });
   });
   it('does not accept a good worker answer when acceptance fails', async () => {
     const f = await fixture();
@@ -408,7 +490,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     f.plan.tasks.T001.dependsOn = Array.from({ length: 257 }, () => 'T002');
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
     f.plan.tasks.T001.dependsOn = [];
-    f.plan.tasks.T001.allowedEditScope = Array.from({ length: 257 }, (_, index) => `safe-${index}.txt`);
+    f.plan.tasks.T001.allowedEditScope = Array.from(
+      { length: 257 },
+      (_, index) => `safe-${index}.txt`
+    );
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
   });
   it('rejects missing limits and unsupported spend caps', async () => {
@@ -507,9 +592,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
         const sync = handle.sync.bind(handle);
         const close = handle.close.bind(handle);
         handle.sync = async () => {
-          // Lease grants add durable records before dispatch. Fail only after
-          // both independently scheduled workers have observed cancellation.
-          if (++writes > 12) throw new Error('disk failure');
+          // Admission, ledger authority, and lease grants add durable records
+          // before dispatch. Fail only after both independently scheduled
+          // workers have started and can observe cancellation.
+          if (++writes > 16) throw new Error('disk failure');
           await sync();
         };
         handle.close = async () => {

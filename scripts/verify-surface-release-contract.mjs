@@ -13,6 +13,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..');
 const hosts = ['claude', 'codex', 'copilot', 'antigravity', 'grok', 'vscode'];
+const requiredRuntimeAssets = [
+  '.specify/scripts/node/gofer-host-capability.mjs',
+  '.specify/scripts/node/gofer-live-routing.mjs',
+  '.specify/scripts/node/gofer-native-adapter.mjs',
+  '.specify/scripts/node/gofer-verified-execution.mjs',
+  '.specify/scripts/node/gofer-execution-recovery.mjs',
+  '.specify/scripts/node/gofer-execution-metrics.mjs',
+  '.specify/scripts/node/gofer-benchmark.mjs',
+];
+const packagedRuntimeRoots = [
+  'plugins/eai-gofer',
+  'plugins/eai-gofer/plugins/eai-gofer',
+  'extension/resources',
+];
 
 function parseArgs(argv) {
   const versionIndex = argv.indexOf('--version');
@@ -98,8 +112,40 @@ async function verifyInstructions() {
   }
 }
 
+async function verifyRuntimeAssetParity() {
+  for (const asset of requiredRuntimeAssets) {
+    await fs.access(path.join(repoRoot, asset));
+    for (const root of packagedRuntimeRoots) {
+      const packaged = asset.replace('.specify/scripts/node/', root.endsWith('resources')
+        ? 'node-scripts/'
+        : '.specify/scripts/node/');
+      try {
+        await fs.access(path.join(repoRoot, root, packaged));
+      } catch {
+        throw new Error(`Release runtime asset is missing from ${root}: ${asset}`);
+      }
+    }
+  }
+}
+
+async function verifyCanonicalHostIdentity() {
+  const currentHostSurfaces = [
+    '.specify/scripts/node/gofer-host-capability.mjs',
+    '.specify/scripts/node/gofer-surface-update.mjs',
+    '.specify/scripts/node/package-agent-plugin.mjs',
+    'README.md',
+  ];
+  const prohibited = /(?:supported|current|install|update)\\s+(?:AI\\s+)?(?:host|hosts|workflows?|surface)?[^\\n]{0,100}\\bGemini\\b|\\bGemini\\b[^\\n]{0,100}(?:supported|current|install|update)\\s+(?:AI\\s+)?(?:host|hosts|workflows?|surface)?/i;
+  for (const relative of currentHostSurfaces) {
+    const content = await fs.readFile(path.join(repoRoot, relative), 'utf8');
+    if (prohibited.test(content)) throw new Error(`Current-host Gemini reference in ${relative}.`);
+  }
+}
+
 const { version } = parseArgs(process.argv.slice(2));
 const expectedVersion = version || (await readJson('package.json')).version;
 await assertBundleVersion(expectedVersion);
 await verifyInstructions();
+await verifyRuntimeAssetParity();
+await verifyCanonicalHostIdentity();
 console.log(`Gofer release surface contract passed for v${expectedVersion}.`);

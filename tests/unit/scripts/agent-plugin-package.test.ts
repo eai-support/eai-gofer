@@ -88,7 +88,7 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
-  it('packages a zip with Claude, Codex, Copilot, and Gemini install metadata', (): void => {
+  it('packages a zip with current-host metadata and Gemini legacy compatibility', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
       execFileSync('node', [SCRIPT_PATH, '--version', VERSION, '--out-dir', outDir], {
@@ -151,6 +151,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/scripts/node/gofer-acceptance-check.mjs',
         'eai-gofer/.specify/scripts/node/gofer-execution-recovery.mjs',
         'eai-gofer/.specify/scripts/node/gofer-execution-metrics.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-benchmark.mjs',
         'eai-gofer/.specify/references/agent-catalog.json',
         'eai-gofer/.specify/references/verified-agent-execution.md',
         'eai-gofer/.specify/scripts/node/gofer-ui-preview.mjs',
@@ -215,9 +216,9 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain(
         'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain(
-        'gemini extensions install https://github.com/eai-support/eai-gofer'
-      );
+      expect(readme).toContain('Google Antigravity');
+      expect(readme).toContain('Gemini files remain only for legacy compatibility');
+      expect(readme).not.toContain('Gemini CLI | `gemini extensions install');
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain('does not invent EAI CLI commands');

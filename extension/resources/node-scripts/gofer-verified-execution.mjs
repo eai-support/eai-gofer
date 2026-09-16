@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
 import { inspectBlockers } from './gofer-blocker-control.mjs';
+import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
 const MAX_CONTRACT_FILE_BYTES = 1024 * 1024;
@@ -113,7 +114,7 @@ function overlaps(a, b) {
  * An existing journal is a reconciliation gate, not permission to replay work.
  */
 export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adapter,
-  maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
+  ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
   // Copy before any await: a caller or worker must not remove required checks.
   checks = freeze(structuredClone(checks));
   const journalName = 'verified-execution.jsonl';
@@ -122,6 +123,9 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
     if (typeof adapter?.[method] !== 'function') throw new Error(`TRUSTED_ADAPTER_REQUIRED:${method}`);
   }
+  if (typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' || !verifyCapabilityReceipt(capabilityReceipt, {
+    publicKey: capabilityPublicKey, requiredCapabilities,
+  })) throw new Error('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
   const root = await realpath(featureDir);
   const captured = await snapshot(root);
   const plan = freeze(JSON.parse(captured.files['priority-plan.json']));
@@ -136,6 +140,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   const initial = await reviewPriority(root);
   if (initial.status !== 'pass') throw new Error(`PRIORITY_BLOCKED:${initial.findings.join(',')}`);
   const revision = captured.revision;
+  const receiptHash = capabilityReceiptHash(capabilityReceipt);
   if (await executionRevision(root) !== revision) throw new Error('STALE_DIRECTION');
   const tasksText = await readFile(path.join(root, 'tasks.md'), 'utf8');
   const previouslyComplete = new Set([...tasksText.matchAll(/^\s*-\s+\[[xX]\]\s+(?:\*\*)?(T\d+)\b/gm)].map(m => m[1]));
@@ -220,7 +225,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
-    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId] };
+    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId],
+      capabilityReceiptHash: receiptHash };
     let previousChecks = [];
     try {
       while (attempts[taskId] < loop.maxIterations) {
@@ -232,6 +238,11 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         await canonicalScopes(workspaceRoot, task.allowedEditScope);
         const attempt = ++attempts[taskId];
         await record({ event: 'attempt_reserved', task: taskId, attempt });
+        const authority = await ledger.authorize({ ...request, attempt });
+        if (authority?.allowed !== true || authority.taskId !== taskId || authority.revision !== revision ||
+            authority.capabilityReceiptHash !== receiptHash || !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+        await record({ event: 'ledger_authorized', task: taskId, attempt, receipt: authority.receipt,
+          capabilityReceiptHash: receiptHash });
         // Connect to the caller's stable blocker register; denied repairs stop.
         const reservation = await invoke('reserve', { ...request, attempt });
         if (reservation?.allowed !== true) throw new Error('BLOCKER_OR_BUDGET_DENIED');
@@ -289,8 +300,17 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
             await current();
           };
           await assertCurrent();
+          const commitAuthority = await ledger.authorizeCommit({ ...leasedRequest, inputRevision,
+            validation: freeze(structuredClone(previousChecks)) });
+          if (commitAuthority?.allowed !== true || commitAuthority.taskId !== taskId ||
+              commitAuthority.revision !== revision || commitAuthority.inputRevision !== inputRevision ||
+              commitAuthority.leaseId !== lease.leaseId || commitAuthority.capabilityReceiptHash !== receiptHash ||
+              !text(commitAuthority.receipt)) throw new Error('LEDGER_COMMIT_AUTHORITY_REQUIRED');
+          await record({ event: 'commit_authorized', task: taskId, attempt, leaseId: lease.leaseId,
+            inputRevision, receipt: commitAuthority.receipt, capabilityReceiptHash: receiptHash });
           // The trusted adapter must compare-and-set, not unconditionally tick tasks.
-          const commit = await invoke('verified', { ...leasedRequest, inputRevision, assertCurrent });
+          const commit = await invoke('verified', { ...leasedRequest, inputRevision,
+            commitAuthorityReceipt: commitAuthority.receipt, assertCurrent });
           if (commit?.committed !== true || commit.taskId !== taskId || commit.revision !== revision ||
               commit.inputRevision !== inputRevision || !text(commit.receipt)) throw new Error('COMMIT_RECONCILIATION_REQUIRED');
           await assertCurrent();
@@ -312,7 +332,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     }
   }
   try {
-    await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations,
+    await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations, capabilityReceiptHash: receiptHash,
       requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
     await checkpoint('started');
     const active = new Map();

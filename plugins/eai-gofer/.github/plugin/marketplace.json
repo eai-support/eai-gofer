@@ -5,7 +5,7 @@
     "url": "https://github.com/eai-support/eai-gofer"
   },
   "metadata": {
-    "description": "Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.",
+    "description": "Public Gofer bundle for Claude Code, Codex, Copilot, and Google Antigravity workflows. Gemini files are legacy compatibility assets only.",
     "version": "3.12.8"
   },
   "plugins": [
@@ -27,7 +27,8 @@
         "claude",
         "codex",
         "copilot",
-        "gemini",
+        "antigravity",
+        "gemini-legacy",
         "spec-driven-development"
       ]
     }

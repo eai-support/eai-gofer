@@ -1,13 +1,13 @@
 # Gofer model policy
 #
 # This file is copied to .specify/memory/gofer-model-policy.yaml on bootstrap.
-# Edit the memory copy in each repo to tune cost, quality, and account-specific
-# model availability. Generated Gofer commands reference the memory copy; do not
-# hand-edit generated command files for model routing.
+# Edit the memory copy in each repo to set advisory cost, quality, and capability
+# constraints. A fresh signed host capability receipt and independent benchmark
+# evidence select a model. This file never authorizes a static model name.
 #
 # Last verified against public provider docs: 2026-05-30.
 version: 1
-lastVerified: "2026-05-30"
+lastVerified: '2026-05-30'
 profile: balanced
 
 principles:
@@ -92,7 +92,7 @@ surfaces:
       model: Auto
       useFor: normal Gofer stage prompts and workspace questions
     hard:
-      model: "Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro"
+      model: 'Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro'
       useFor: explicit hard review, security, architecture, or release gates
     note: Copilot model availability depends on plan, organization policy, client, and feature surface.
   grok:

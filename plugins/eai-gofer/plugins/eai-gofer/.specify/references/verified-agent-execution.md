@@ -81,6 +81,7 @@ The host integration must supply these trusted functions:
 | Function | Obligation |
 | --- | --- |
 | `reserve` | Reserve an attempt through the stable blocker register and existing permissions/budgets. Deny an exhausted or unanswered blocker. |
+| `lease` | Grant a unique, finite task lease after reservation. A missing or expired lease prevents dispatch. |
 | `execute` | Execute authorized work in the qualified boundary. Return actual changed files; do not trust worker-declared scope alone. |
 | `inputRevision` | Return the tested input identity, including relevant uncommitted files. A commit alone is insufficient. |
 | `check` | Execute a configured acceptance check separately from the worker. Store raw evidence and return matching task, revision, check and exit status. |
@@ -95,7 +96,10 @@ signals cancellation and stops new work. It does not prove a remote process
 stopped. Record unresolved side effects before further work. Monetary limits
 are rejected until a spend-reservation adapter exists; unknown cost is null.
 
-The append-only journal reserves actions before running them. An existing
+The append-only journal is an action-governing runtime ledger: it records
+reservations, leases, checks, conditional commits and terminal state before an
+operator can rely on the result. The controller also writes an atomic delta
+checkpoint with the current task state. An existing
 journal requires reconciliation; do not delete it, change its name, or create
 a new run to reset limits. Automated crash recovery is not qualified yet.
 Previously completed checkboxes require evidence reconciliation; the controller
@@ -110,7 +114,9 @@ outcome, closed-loop and release-capability checks.
 
 ## Current Qualification
 
-The controller and catalogue have deterministic test coverage. Local process
+The controller and catalogue have deterministic test coverage. Role definitions
+are reusable **advisory** guidance until the relevant host supplies fresh proof
+of real execution, read/write isolation and granted tool permissions. Local process
 tests are a separate category. Neither category qualifies Claude, Codex,
 Copilot, VS Code, Grok or Antigravity native delegation.
 
