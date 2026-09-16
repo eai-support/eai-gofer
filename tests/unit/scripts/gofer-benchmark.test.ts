@@ -15,9 +15,10 @@ const execute = async ({ run }: any) => ({
   receipt: `execution-${run}`,
   output: { repaired: true },
 });
-const verify = async ({ caseId, run, execution }: any) => ({
+const verify = async ({ caseId, run, inputHash, execution }: any) => ({
   caseId,
   run,
+  inputHash,
   executionReceipt: execution.receipt,
   passed: true,
   receipt: `verifier-${run}`,
@@ -38,9 +39,10 @@ describe('Gofer benchmark contract', () => {
   });
 
   it('does not turn a caller-supplied functional flag into a benchmark pass', async () => {
-    const verifier = vi.fn(async ({ caseId, run, execution }: any) => ({
+    const verifier = vi.fn(async ({ caseId, run, inputHash, execution }: any) => ({
       caseId,
       run,
+      inputHash,
       executionReceipt: execution.receipt,
       passed: run !== 2,
       receipt: `verifier-${run}`,
@@ -65,6 +67,25 @@ describe('Gofer benchmark contract', () => {
           caseId,
           run,
           executionReceipt: 'forged',
+          passed: true,
+          receipt: 'v',
+          verifierId: 'independent-local-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_VERDICT');
+  });
+
+  it('rejects a verifier verdict bound to a different held-out input', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, execution }: any) => ({
+          caseId,
+          run,
+          inputHash: 'forged',
+          executionReceipt: execution.receipt,
           passed: true,
           receipt: 'v',
           verifierId: 'independent-local-verifier',

@@ -114,15 +114,19 @@ async function verifyInstructions() {
 
 async function verifyRuntimeAssetParity() {
   for (const asset of requiredRuntimeAssets) {
-    await fs.access(path.join(repoRoot, asset));
+    const canonical = await fs.readFile(path.join(repoRoot, asset));
     for (const root of packagedRuntimeRoots) {
       const packaged = asset.replace('.specify/scripts/node/', root.endsWith('resources')
         ? 'node-scripts/'
         : '.specify/scripts/node/');
+      let packagedContent;
       try {
-        await fs.access(path.join(repoRoot, root, packaged));
+        packagedContent = await fs.readFile(path.join(repoRoot, root, packaged));
       } catch {
         throw new Error(`Release runtime asset is missing from ${root}: ${asset}`);
+      }
+      if (!canonical.equals(packagedContent)) {
+        throw new Error(`Release runtime asset differs in ${root}: ${asset}`);
       }
     }
   }
@@ -135,10 +139,12 @@ async function verifyCanonicalHostIdentity() {
     '.specify/scripts/node/package-agent-plugin.mjs',
     'README.md',
   ];
-  const prohibited = /(?:supported|current|install|update)\\s+(?:AI\\s+)?(?:host|hosts|workflows?|surface)?[^\\n]{0,100}\\bGemini\\b|\\bGemini\\b[^\\n]{0,100}(?:supported|current|install|update)\\s+(?:AI\\s+)?(?:host|hosts|workflows?|surface)?/i;
+  const prohibited = /(?:supported|current|install|update)\s+(?:AI\s+)?(?:host|hosts|workflows?|surface)\b[^\n]{0,100}\bGemini\b(?![^\n]{0,30}\blegacy\b)|\bGemini\b(?![^\n]{0,30}\blegacy\b)[^\n]{0,100}(?:supported|current|install|update)\s+(?:AI\s+)?(?:host|hosts|workflows?|surface)\b/i;
   for (const relative of currentHostSurfaces) {
     const content = await fs.readFile(path.join(repoRoot, relative), 'utf8');
-    if (prohibited.test(content)) throw new Error(`Current-host Gemini reference in ${relative}.`);
+    const currentHostGemini = content.split(/\r?\n/).find(line => prohibited.test(line) &&
+      !/\bGemini\b[^\n]{0,50}\b(?:legacy|not|never)\b/i.test(line));
+    if (currentHostGemini) throw new Error(`Current-host Gemini reference in ${relative}.`);
   }
 }
 

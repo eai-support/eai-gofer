@@ -23,7 +23,7 @@ export async function runBenchmark({ cases, execute, verify, repetitions = 3, pr
     if (!validExecution(execution)) throw new Error('INVALID_BENCHMARK_RESULT');
     const verdict = await verify(Object.freeze({ caseId: benchmarkCase.id, run, inputHash,
       execution: { receipt: execution.receipt, modelId: execution.modelId ?? null, output: structuredClone(execution.output ?? null) } }));
-    if (!verdict || verdict.caseId !== benchmarkCase.id || verdict.run !== run || verdict.executionReceipt !== execution.receipt ||
+    if (!verdict || verdict.caseId !== benchmarkCase.id || verdict.run !== run || verdict.inputHash !== inputHash || verdict.executionReceipt !== execution.receipt ||
         typeof verdict.passed !== 'boolean' || !text(verdict.receipt) || !text(verdict.verifierId)) throw new Error('INVALID_BENCHMARK_VERDICT');
     results.push(Object.freeze({ caseId: benchmarkCase.id, run, modelId: execution.modelId ?? null,
       costUsd: execution.costUsd, durationMs: execution.durationMs, receipt: execution.receipt, inputHash,

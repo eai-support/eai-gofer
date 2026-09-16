@@ -5,6 +5,8 @@
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
+const validBenchmarkMetrics = result => Number.isFinite(result?.reliability) && result.reliability >= 0 && result.reliability <= 1 &&
+  Number.isFinite(result?.costUsd) && result.costUsd >= 0;
 
 export async function selectCapabilityRoute({ receipt, publicKey, host, requiredCapabilities = {},
   advisoryConstraints = {}, benchmarkEvidence, verifyBenchmark, now = Date.now() } = {}) {
@@ -30,7 +32,7 @@ export async function selectCapabilityRoute({ receipt, publicKey, host, required
   const scored = candidates.map(model => {
     const result = benchmarkEvidence.results.find(item => item?.modelId === model.id &&
       item.receiptHash === receiptHash && item.functionalVerified === true &&
-      Number.isFinite(item.reliability) && Number.isFinite(item.costUsd));
+      validBenchmarkMetrics(item));
     return { model, result };
   }).filter(item => item.result);
   if (!scored.length) throw new Error('NO_VERIFIED_BENCHMARK_MATCH');

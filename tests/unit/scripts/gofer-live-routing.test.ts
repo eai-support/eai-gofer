@@ -61,4 +61,50 @@ describe('live capability routing', () => {
       'LIVE_RECEIPT_REQUIRED'
     );
   });
+
+  it('rejects impossible caller-supplied benchmark metrics', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'antigravity',
+      evaluatorVersion: '2.0.0',
+      evaluationId: 'eval-1',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-17T01:00:00.000Z',
+      hostVersion: 'agy 1.2.4',
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'worktree',
+      provenance: { evaluator: 'native', source: 'agy models', keyId: 'key-1' },
+      signingKey: keys.privateKey,
+      models: [{ id: 'model-high', reasoningEfforts: ['high'] }],
+    });
+    const { capabilityReceiptHash } =
+      await import('../../../.specify/scripts/node/gofer-host-capability.mjs');
+    await expect(
+      selectCapabilityRoute({
+        receipt,
+        publicKey: keys.publicKey,
+        host: 'antigravity',
+        now: Date.parse('2026-09-17T00:01:00Z'),
+        requiredCapabilities: { reasoningEfforts: ['high'] },
+        benchmarkEvidence: {
+          results: [
+            {
+              modelId: 'model-high',
+              receiptHash: capabilityReceiptHash(receipt),
+              functionalVerified: true,
+              reliability: 1.1,
+              costUsd: -1,
+            },
+          ],
+        },
+        verifyBenchmark: async ({ receiptHash }) => ({
+          valid: true,
+          receiptHash,
+          receipt: 'benchmark-verifier-receipt',
+        }),
+      })
+    ).rejects.toThrow('NO_VERIFIED_BENCHMARK_MATCH');
+  });
 });
