@@ -24,6 +24,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-execution-recovery.mjs',
   '.specify/scripts/node/gofer-execution-metrics.mjs',
   '.specify/scripts/node/gofer-benchmark.mjs',
+  '.specify/scripts/node/gofer-heldout-corpus.mjs',
 ];
 const packagedRuntimeRoots = [
   'plugins/eai-gofer',
