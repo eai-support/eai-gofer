@@ -102,6 +102,13 @@ method to remove its clean, receipt-bound task worktree. Disposal is refused
 while a run is active, failed, or incomplete. Keep the worktree for independent
 recovery inspection; do not force-remove it to clear a failed task.
 
+The native runtime requires a trusted `bindWorkspace` factory. It supplies the
+exact task worktree and receipt. The factory must return validation, input,
+reservation, lease, and commit methods bound to that worktree. The controller
+keeps its plan, journal, and worker evidence under the source workspace, outside
+the worker sandbox. The runtime rejects an unbound adapter, a control directory
+outside the source workspace, or a changed task worktree before run.
+
 Any missing sandbox, full-access bypass, cloud route, unbound project, or
 unsupported surface fails closed. Do not start a verified task by using the
 ordinary workspace-opening command.

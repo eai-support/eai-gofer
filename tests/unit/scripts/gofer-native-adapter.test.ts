@@ -66,7 +66,15 @@ describe('native adapter primitives', () => {
         provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
         signingKey: keys.privateKey,
       });
-      const runtime = await createVerifiedNativeRuntime({
+      const bindWorkspace = vi.fn(({ workspaceRoot }: { workspaceRoot: string }) => ({
+        workspaceRoot,
+        reserve: async () => ({}),
+        lease: async () => ({}),
+        inputRevision: async () => 'input',
+        check: async () => ({}),
+        verified: async () => ({}),
+      }));
+      const configuration = {
         workspaceRoot: root,
         localIsolation,
         capabilityReceipt: receipt,
@@ -77,15 +85,14 @@ describe('native adapter primitives', () => {
         },
         nativeLedger: async () => ({ allowed: false }),
         promptForRequest: async () => 'Approved task.',
-        adapter: {
-          reserve: async () => ({}),
-          lease: async () => ({}),
-          inputRevision: async () => 'input',
-          check: async () => ({}),
-          verified: async () => ({}),
-        },
-      });
+        adapter: { bindWorkspace },
+      };
+      const runtime = await createVerifiedNativeRuntime(configuration);
       expect(runtime.isolation.isolatedWorkspace).not.toBe(root);
+      expect(bindWorkspace).toHaveBeenCalledWith({
+        workspaceRoot: runtime.isolation.isolatedWorkspace,
+        worktreeReceipt: runtime.isolation.receipt,
+      });
       const taskFile = path.join(runtime.isolation.isolatedWorkspace, 'unfinished.txt');
       await writeFile(taskFile, 'keep this work');
       await expect(runtime.dispose()).rejects.toThrow(
@@ -94,6 +101,17 @@ describe('native adapter primitives', () => {
       await rm(taskFile);
       await runtime.dispose();
       await runtime.dispose();
+      await expect(
+        createVerifiedNativeRuntime({
+          ...configuration,
+          adapter: { bindWorkspace: async () => ({ workspaceRoot: root }) },
+        })
+      ).rejects.toThrow('NATIVE_ADAPTER_WORKSPACE_BINDING_REQUIRED');
+      expect(
+        execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], {
+          encoding: 'utf8',
+        }).match(/^worktree /gm)
+      ).toHaveLength(1);
       await expect(createVerifiedNativeRuntime({ workspaceRoot: root })).rejects.toThrow(
         'VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED'
       );
