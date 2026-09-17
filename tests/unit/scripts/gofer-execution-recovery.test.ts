@@ -167,7 +167,9 @@ describe('Read-only interrupted execution reconciliation', () => {
       await f.save();
       if (fixedClock) vi.spyOn(Date, 'now').mockReturnValue(Date.now());
       f.options.verifyReceipt.mockImplementation(() => new Promise(() => {}));
-      const report = await inspectExecutionRecovery({ ...f.options, timeoutMs: 50 });
+      // Allow journal I/O to finish on loaded CI hosts; the verifier itself
+      // remains pending until the bounded inspection timer expires.
+      const report = await inspectExecutionRecovery({ ...f.options, timeoutMs: 3000 });
       expect(f.options.verifyReceipt).toHaveBeenCalledOnce();
       expect(report.reusableTasks).toEqual([]);
       expect(report.reasons).toContain('INSPECTION_DEADLINE_EXHAUSTED');
