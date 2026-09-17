@@ -167,6 +167,45 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('continues pending work after a real controller interruption at a verified boundary', async () => {
+    const f = await fixture();
+    const controller = new AbortController();
+    const originalVerified = f.adapter.verified.getMockImplementation()!;
+    const originalInputRevision = f.adapter.inputRevision.getMockImplementation()!;
+    let firstTaskCommitted = false;
+    let readsAfterCommit = 0;
+    f.adapter.verified.mockImplementation(async (request: any) => {
+      const result = await originalVerified(request);
+      if (request.taskId === 'T001') firstTaskCommitted = true;
+      return result;
+    });
+    f.adapter.inputRevision.mockImplementation(async (request: any) => {
+      if (request.taskId === 'T001' && firstTaskCommitted && ++readsAfterCommit === 2) {
+        controller.abort();
+      }
+      return originalInputRevision(request);
+    });
+    await expect(runVerifiedGraph({ ...f.options, signal: controller.signal })).rejects.toThrow(
+      'CANCELLED'
+    );
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T001']);
+    f.adapter.execute.mockClear();
+    const recovery = {
+      inspectWorkers: async (request: any) => ({
+        ...request,
+        allStopped: true,
+        receipt: 'stopped',
+      }),
+      inspectLedger: async (request: any) => ({ ...request, allowed: true }),
+      verifyReceipt: async (request: any) => ({ ...request, valid: true }),
+    };
+    expect(
+      (await inspectExecutionRecovery({ featureDir: f.root, ...recovery })).resumeAllowed
+    ).toBe(true);
+    const result = await runVerifiedGraph({ ...f.options, recovery });
+    expect(result.status).toBe('verified');
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T002']);
+  });
   it('resumes only pending work after independent reconciliation of a verified checkpoint', async () => {
     const f = await fixture();
     expect((await runVerifiedGraph(f.options)).status).toBe('verified');
