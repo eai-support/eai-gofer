@@ -116,11 +116,13 @@ function overlaps(a, b) {
  */
 export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adapter,
   ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
-  advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent = 1, deadlineMs, signal, recovery }) {
+  advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent = 1, deadlineMs, signal, recovery,
+  adapterDrainMs = 5000 }) {
   // Copy before any await: a caller or worker must not remove required checks.
   checks = freeze(structuredClone(checks));
   const journalName = 'verified-execution.jsonl';
   if (!positive(maxCalls) || !positive(maxConcurrent) || maxConcurrent > 8 ||
+      !positive(adapterDrainMs) || adapterDrainMs > 10000 ||
       !Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) throw new Error('FINITE_LIMITS_REQUIRED');
   if (!text(approvalReceipt)) throw new Error('APPROVAL_RECEIPT_REQUIRED');
   for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
@@ -200,6 +202,19 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   let write = Promise.resolve();
   let checkpointWrite = Promise.resolve();
   let checkpointSequence = 0;
+  const pendingAdapterCalls = new Set();
+  let drainAttempted = false;
+  async function drainAdapterCalls() {
+    drainAttempted = true;
+    if (!pendingAdapterCalls.size) return true;
+    let drainTimer;
+    const settled = await Promise.race([
+      Promise.allSettled([...pendingAdapterCalls]).then(() => true),
+      new Promise(resolve => { drainTimer = setTimeout(() => resolve(false), adapterDrainMs); }),
+    ]);
+    clearTimeout(drainTimer);
+    return settled;
+  }
   const record = event => {
     write = write.then(async () => { await file.writeFile(`${JSON.stringify({ schemaVersion: 1, revision, time: new Date().toISOString(), ...event })}\n`); await file.sync(); })
       .catch(() => { controller.abort(new Error('JOURNAL_FAILURE')); throw new Error('JOURNAL_FAILURE'); });
@@ -248,8 +263,11 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     let listener;
     try {
       await current();
+      const operation = Promise.resolve().then(() => { abortCheck(); return adapter[method]({ ...request, signal: controller.signal }); });
+      const settled = operation.then(() => {}, () => {}).finally(() => pendingAdapterCalls.delete(settled));
+      pendingAdapterCalls.add(settled);
       return await Promise.race([
-        Promise.resolve().then(() => { abortCheck(); return adapter[method]({ ...request, signal: controller.signal }); }),
+        operation,
         new Promise((_, reject) => {
           listener = () => reject(controller.signal.reason);
           controller.signal.addEventListener('abort', listener, { once: true });
@@ -425,16 +443,21 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     // its journal and checkpoint operations. Do not close the runtime ledger
     // or return while a sibling can still write into the feature directory.
     if (active.size) await Promise.allSettled([...active.values()]);
+    // The abort race stops scheduling promptly, but a trusted adapter may
+    // still be delivering cancellation. Give it a bounded drain window and
+    // report when it has not settled; recovery must then inspect the worker.
+    const adapterCallsSettled = await drainAdapterCalls();
     const verified = ids.filter(id => states[id] === 'verified');
     const status = !controller.signal.aborted && ids.every(id => states[id] === 'verified') ? 'verified' : 'incomplete';
     // Task verification is not the feature/release outcome gate.
-    const result = { status, states, verified, calls, attempts, revision, cost: null,
+    const result = { status, states, verified, calls, attempts, revision, cost: null, adapterCallsSettled,
       nativeQualification: 'not-established', featureComplete: false };
     await record({ event: 'finished', ...result });
     await checkpoint('finished');
     return result;
   } finally {
     controller.abort(new Error('RUN_CLOSED'));
+    if (!drainAttempted) await drainAdapterCalls();
     clearTimeout(timer);
     signal?.removeEventListener('abort', cancel);
     // A journal failure must still drain checkpoint writes before callers or

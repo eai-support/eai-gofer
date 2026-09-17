@@ -545,8 +545,45 @@ describe('Verified execution kernel (local adapters, not native model qualificat
   it('stops waiting at the deadline without pretending the child was killed', async () => {
     const f = await fixture();
     f.adapter.execute.mockImplementation(() => new Promise(() => {}));
-    const result = await runVerifiedGraph({ ...f.options, deadlineMs: Date.now() + 150 });
+    const result = await runVerifiedGraph({
+      ...f.options,
+      deadlineMs: Date.now() + 150,
+      adapterDrainMs: 50,
+    });
     expect(result.states.T001).toBe('cancelled');
+    expect(result.status).toBe('incomplete');
+    expect(result.adapterCallsSettled).toBe(false);
+  });
+  it('waits for a cancelled trusted adapter call to settle before returning', async () => {
+    const f = await fixture();
+    const abort = new AbortController();
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let cleanupFinished = false;
+    f.adapter.execute.mockImplementation(async (request: any) => {
+      started();
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener(
+          'abort',
+          () => {
+            setTimeout(() => {
+              cleanupFinished = true;
+              resolve();
+            }, 40);
+          },
+          { once: true }
+        )
+      );
+      return { changedFiles: [] };
+    });
+    const run = runVerifiedGraph({ ...f.options, signal: abort.signal, adapterDrainMs: 1000 });
+    await entered;
+    abort.abort();
+    const result = await run;
+    expect(cleanupFinished).toBe(true);
+    expect(result.adapterCallsSettled).toBe(true);
     expect(result.status).toBe('incomplete');
   });
   it('serializes overlapping write scopes', async () => {

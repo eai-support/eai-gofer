@@ -153,7 +153,10 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
       commitAuthorities.set(event.task, event);
     }
     if (['blocked', 'cancelled', 'stale', 'repair_required'].includes(event.event)) active.delete(event.task);
-    if (event.event === 'finished') finished = true;
+    if (event.event === 'finished') {
+      finished = true;
+      if (event.adapterCallsSettled === false) reasons.push('ADAPTER_CALLS_NOT_SETTLED');
+    }
   }
   if (report.callsConsumed >= first.maxCalls) reasons.push('CALL_LIMIT_EXHAUSTED');
   if (reasons.some(reason => /^(INVALID|STALE)/.test(reason))) {

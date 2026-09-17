@@ -174,6 +174,15 @@ describe('Read-only interrupted execution reconciliation', () => {
     expect(report.replayAllowed).toBe(false);
     expect(await readFile(f.journal, 'utf8')).toBe(before);
   });
+  it('does not resume a run that returned while an adapter call was still active', async () => {
+    const f = await fixture();
+    f.events.push(f.event({ event: 'finished', status: 'incomplete', adapterCallsSettled: false }));
+    await f.save();
+    const report = await inspectExecutionRecovery(f.options);
+    expect(report.status).toBe('blocked');
+    expect(report.reasons).toContain('ADAPTER_CALLS_NOT_SETTLED');
+    expect(report.resumeAllowed).toBe(false);
+  });
   it('reconciles independently reverified receipts without granting replay', async () => {
     const f = await fixture();
     f.events.push(
