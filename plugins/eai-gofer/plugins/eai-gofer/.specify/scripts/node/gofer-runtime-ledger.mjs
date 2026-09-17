@@ -1,12 +1,47 @@
 /** Durable, append-only authority ledger for a single verified runtime. */
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, open, readFile, unlink } from 'node:fs/promises';
+import { chmod, link, lstat, mkdir, open, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sameList = (left, right) => Array.isArray(left) && Array.isArray(right) &&
   left.length === right.length && left.every((value, index) => value === right[index]);
+
+async function acquireLedgerLock(lockPath) {
+  let metadata = await lstat(lockPath).catch(error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!metadata) {
+    const temporary = `${lockPath}.${randomUUID()}.init`;
+    try {
+      const initial = new DatabaseSync(temporary, { timeout: 0 });
+      try { initial.exec('CREATE TABLE lock_identity (id INTEGER PRIMARY KEY)'); }
+      finally { initial.close(); }
+      await chmod(temporary, 0o600);
+      try { await link(temporary, lockPath); }
+      catch (error) { if (error.code !== 'EEXIST') throw error; }
+    } finally { await unlink(temporary).catch(() => {}); }
+    metadata = await lstat(lockPath);
+  }
+  // A legacy, empty .lock file may still belong to an older live controller.
+  // Do not reinterpret it as an unlocked database during an upgrade.
+  if (!metadata.isFile() || metadata.size === 0 ||
+      (process.platform !== 'win32' && (metadata.mode & 0o077) !== 0)) {
+    throw new Error('LEDGER_LOCK_MIGRATION_REQUIRED');
+  }
+  let database;
+  try {
+    database = new DatabaseSync(lockPath, { timeout: 0 });
+    database.exec('BEGIN IMMEDIATE');
+    return database;
+  } catch (error) {
+    database?.close();
+    throw new Error(/database is locked|SQLITE_BUSY/i.test(error.message) ? 'LEDGER_BUSY' : 'LEDGER_LOCK_UNAVAILABLE');
+  }
+}
 
 export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), verifyCancellation } = {}) {
   if (!path.isAbsolute(ledgerPath)) throw new Error('LEDGER_PATH_REQUIRED');
@@ -18,7 +53,7 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), 
   })).split('\n')
     .filter(Boolean).map(line => JSON.parse(line));
   const transact = async (event, evaluate) => {
-    const lock = await open(lockPath, 'wx', 0o600).catch(() => { throw new Error('LEDGER_BUSY'); });
+    const lock = await acquireLedgerLock(lockPath);
     try {
       const history = await events();
       const result = await evaluate(history);
@@ -27,7 +62,9 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), 
       const append = await open(ledgerPath, 'a', 0o600);
       try { await append.writeFile(`${JSON.stringify(record)}\n`); await append.sync(); } finally { await append.close(); }
       return result;
-    } finally { await lock.close(); await unlink(lockPath).catch(() => {}); }
+    } finally {
+      try { lock.exec('ROLLBACK'); } finally { lock.close(); }
+    }
   };
   const reservation = request => ({ taskId: request?.taskId, revision: request?.revision, attempt: request?.attempt,
     budgetReservation: `reservation:${digest(request).slice(0, 24)}` });

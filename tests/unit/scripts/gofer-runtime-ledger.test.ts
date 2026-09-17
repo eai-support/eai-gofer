@@ -1,10 +1,60 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createRuntimeLedger } from '../../../.specify/scripts/node/gofer-runtime-ledger.mjs';
 
 describe('durable verified-runtime ledger', () => {
+  it('releases a cross-process transaction lock after its owner exits', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
+    let child;
+    try {
+      const ledgerPath = path.join(root, 'authority.jsonl');
+      const ledger = await createRuntimeLedger({ ledgerPath });
+      expect((await ledger.reserve({ taskId: 'T001', revision: 'r1', attempt: 1 })).allowed).toBe(
+        true
+      );
+      child = spawn(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          "import { DatabaseSync } from 'node:sqlite'; const db = new DatabaseSync(process.argv[1]); db.exec('BEGIN IMMEDIATE'); process.stdout.write('ready\\n'); process.stdin.once('data', () => process.exit(1));",
+          `${ledgerPath}.lock`,
+        ],
+        { stdio: ['pipe', 'pipe', 'pipe'] }
+      );
+      await once(child.stdout!, 'data');
+      await expect(ledger.reserve({ taskId: 'T002', revision: 'r1', attempt: 1 })).rejects.toThrow(
+        'LEDGER_BUSY'
+      );
+      child.stdin!.write('exit\n');
+      await once(child, 'exit');
+      expect((await ledger.reserve({ taskId: 'T002', revision: 'r1', attempt: 1 })).allowed).toBe(
+        true
+      );
+    } finally {
+      if (child && child.exitCode === null) child.kill();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not reinterpret a legacy lock marker as a free transaction lock', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
+    try {
+      const ledgerPath = path.join(root, 'authority.jsonl');
+      await writeFile(`${ledgerPath}.lock`, '', { mode: 0o600 });
+      const ledger = await createRuntimeLedger({ ledgerPath });
+      await expect(ledger.reserve({ taskId: 'T001', revision: 'r1', attempt: 1 })).rejects.toThrow(
+        'LEDGER_LOCK_MIGRATION_REQUIRED'
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('releases a cancelled lease only after bound worker and replacement-worktree proof', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
     try {
