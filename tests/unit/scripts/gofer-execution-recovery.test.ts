@@ -69,6 +69,27 @@ async function fixture() {
   };
 }
 describe('Read-only interrupted execution reconciliation', () => {
+  it('accepts a journaled lease call from the verified execution graph', async () => {
+    const f = await fixture();
+    f.events.splice(
+      2,
+      1,
+      f.event({ event: 'call_reserved', task: 'T001', method: 'lease', call: 1 }),
+      f.event({
+        event: 'lease_granted',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        expiresAt: new Date(Date.now() + 5000).toISOString(),
+      }),
+      f.event({ event: 'call_reserved', task: 'T001', method: 'execute', call: 2 })
+    );
+    await f.save();
+    expect((await inspectExecutionRecovery(f.options)).reasons).not.toContain(
+      'INVALID_CALL_HISTORY'
+    );
+  });
+
   it('does not reuse the preceding attempt execution for a new attempt', async () => {
     const f = await fixture();
     f.events.push(

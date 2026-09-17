@@ -72,7 +72,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   const authorizedTasks = new Map();
   const commitAuthorities = new Map();
   const active = new Set();
-  const methods = new Set(['reserve', 'execute', 'inputRevision', 'check', 'verified']);
+  const methods = new Set(['reserve', 'lease', 'execute', 'inputRevision', 'check', 'verified']);
   const known = new Set(['started', 'attempt_reserved', 'call_reserved', 'lease_granted', 'ledger_authorized', 'check', 'commit_authorized', 'verified', 'repair_required', 'blocked', 'cancelled', 'stale', 'finished']);
   let finished = false;
   for (const [index, event] of events.entries()) {
