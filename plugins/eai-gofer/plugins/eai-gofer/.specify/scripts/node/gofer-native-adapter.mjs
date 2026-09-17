@@ -305,7 +305,7 @@ export function createLedgerBoundCodexExecutor({ isolatedWorkspace, worktreeRece
 
 export async function createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
   if (!text(workspaceRoot) || !text(baseRef) || baseRef.startsWith('-')) throw new Error('INVALID_ISOLATION_REQUEST');
-  if (!verifyLocalIsolationReport(localIsolation, { host, workspaceRoot })) throw new Error('LOCAL_SANDBOX_REQUIRED');
+  if (typeof localIsolation !== 'function') throw new Error('LOCAL_SANDBOX_REQUIRED');
   const workspace = await realpath(workspaceRoot);
   const temporary = await realpath(temporaryRoot);
   const relativeTemporary = path.relative(workspace, temporary);
@@ -323,6 +323,12 @@ export async function createVerifiedWorktree({ workspaceRoot, host, localIsolati
       git(isolated, ['rev-parse', 'HEAD']), git(workspace, ['rev-parse', baseRef]),
     ]);
     if (head.stdout.trim() !== expected.stdout.trim()) throw new Error('ISOLATION_REVISION_MISMATCH');
+    const report = await localIsolation(Object.freeze({ host, workspaceRoot: isolated }));
+    if (!verifyLocalIsolationReport(report, { host, workspaceRoot: isolated })) {
+      throw new Error('LOCAL_SANDBOX_REQUIRED');
+    }
+    const status = await git(isolated, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=matching']);
+    if (status.stdout.trim() !== '') throw new Error('ISOLATION_PREFLIGHT_CHANGED_WORKTREE');
     const receipt = worktreeReceipt(workspace, isolated, head.stdout.trim());
     return Object.freeze({ isolationClass: 'git-worktree+local-os-sandbox', workspace, isolatedWorkspace: isolated,
       revision: head.stdout.trim(), receipt });

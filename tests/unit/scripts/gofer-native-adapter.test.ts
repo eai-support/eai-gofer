@@ -20,7 +20,7 @@ import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofe
 type LedgerRequest = Record<string, unknown>;
 type NativeStartRequest = LedgerRequest & { capabilityReceiptHash: string };
 
-function localIsolation(workspaceRoot: string) {
+function localIsolation({ workspaceRoot }: { workspaceRoot: string }) {
   return {
     contractVersion: 'eai.local-isolation/v1',
     projectDirectory: workspaceRoot,
@@ -68,7 +68,7 @@ describe('native adapter primitives', () => {
       });
       const runtime = await createVerifiedNativeRuntime({
         workspaceRoot: root,
-        localIsolation: localIsolation(root),
+        localIsolation,
         capabilityReceipt: receipt,
         capabilityPublicKey: keys.publicKey,
         ledger: {
@@ -520,17 +520,39 @@ describe('native adapter primitives', () => {
       await writeFile(path.join(root, 'tracked.txt'), 'base');
       execFileSync('git', ['-C', root, 'add', '.']);
       execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const inspectLocalIsolation = vi.fn(localIsolation);
       const isolated = await createVerifiedWorktree({
         workspaceRoot: root,
         host: 'codex',
-        localIsolation: localIsolation(root),
+        localIsolation: inspectLocalIsolation,
       });
       expect(isolated.isolationClass).toBe('git-worktree+local-os-sandbox');
       expect(isolated.isolatedWorkspace).not.toBe(isolated.workspace);
+      expect(inspectLocalIsolation).toHaveBeenCalledWith({
+        host: 'codex',
+        workspaceRoot: isolated.isolatedWorkspace,
+      });
+      const listedBefore = execFileSync('git', [
+        '-C',
+        root,
+        'worktree',
+        'list',
+        '--porcelain',
+      ]).toString();
+      await expect(
+        createVerifiedWorktree({
+          workspaceRoot: root,
+          host: 'codex',
+          localIsolation: async () => localIsolation({ workspaceRoot: root }),
+        })
+      ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
+      expect(execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain']).toString()).toBe(
+        listedBefore
+      );
       const replacement = await createVerifiedWorktree({
         workspaceRoot: root,
         host: 'codex',
-        localIsolation: localIsolation(root),
+        localIsolation,
       });
       expect(replacement.receipt).not.toBe(isolated.receipt);
       expect(
@@ -604,12 +626,12 @@ describe('native adapter primitives', () => {
         abandoned = await createVerifiedWorktree({
           workspaceRoot: root,
           host: 'codex',
-          localIsolation: localIsolation(root),
+          localIsolation,
         });
         replacement = await createVerifiedWorktree({
           workspaceRoot: root,
           host: 'codex',
-          localIsolation: localIsolation(root),
+          localIsolation,
         });
         const objectiveRevision = 'objective-v1';
         const started = {
@@ -706,7 +728,7 @@ describe('native adapter primitives', () => {
         createVerifiedWorktree({
           workspaceRoot: root,
           host: 'codex',
-          localIsolation: localIsolation(root),
+          localIsolation,
           temporaryRoot: root,
         })
       ).rejects.toThrow('ISOLATION_ROOT_INSIDE_WORKSPACE');

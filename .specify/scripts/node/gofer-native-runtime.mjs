@@ -15,7 +15,8 @@ const text = value => typeof value === 'string' && value.trim().length > 0;
 export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex', localIsolation,
   capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger, nativeLedger = ledger?.authorizeNative,
   promptForRequest, adapter, baseRef } = {}) {
-  if (!text(workspaceRoot) || host !== 'codex' || !capabilityReceipt || !capabilityPublicKey ||
+  if (!text(workspaceRoot) || host !== 'codex' || typeof localIsolation !== 'function' ||
+      !capabilityReceipt || !capabilityPublicKey ||
       typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' ||
       typeof nativeLedger !== 'function' || typeof promptForRequest !== 'function' || !adapter ||
       ['reserve', 'lease', 'inputRevision', 'check', 'verified'].some(method => typeof adapter[method] !== 'function')) {

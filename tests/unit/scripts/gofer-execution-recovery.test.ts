@@ -245,9 +245,9 @@ describe('Read-only interrupted execution reconciliation', () => {
     await writeFile(path.join(source, 'tracked.txt'), 'base');
     await git('add', '.');
     await git('commit', '-m', 'base');
-    const localIsolation = {
+    const localIsolation = ({ workspaceRoot }: { workspaceRoot: string }) => ({
       contractVersion: 'eai.local-isolation/v1',
-      projectDirectory: source,
+      projectDirectory: workspaceRoot,
       cloudExecution: 'prohibited',
       gitRepository: true,
       assessments: [
@@ -261,7 +261,7 @@ describe('Read-only interrupted execution reconciliation', () => {
           missing: [],
         },
       ],
-    };
+    });
     const oldWorktree = await createVerifiedWorktree({
       workspaceRoot: source,
       host: 'codex',
