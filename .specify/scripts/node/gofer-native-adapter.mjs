@@ -33,6 +33,20 @@ function boundedCollector(limit = 1024 * 1024) {
   };
 }
 
+function codexUsage(events) {
+  for (const line of events.split(/\r?\n/).reverse()) {
+    try {
+      const usage = JSON.parse(line)?.usage;
+      if (Number.isSafeInteger(usage?.input_tokens) && Number.isSafeInteger(usage?.cached_input_tokens) &&
+          Number.isSafeInteger(usage?.output_tokens) && Number.isSafeInteger(usage?.reasoning_output_tokens)) {
+        return Object.freeze({ inputTokens: usage.input_tokens, cachedInputTokens: usage.cached_input_tokens,
+          outputTokens: usage.output_tokens, reasoningOutputTokens: usage.reasoning_output_tokens });
+      }
+    } catch { /* Non-JSON host diagnostics are not usage evidence. */ }
+  }
+  return null;
+}
+
 /**
  * Start a real local Codex process in a pre-created isolated worktree. This
  * primitive deliberately has no fallback host or cloud mode. Its receipt is
@@ -96,7 +110,8 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       if (changedFiles.some(file => !allowedWriteScope.some(scope => file === scope.replace(/\/$/, '') || file.startsWith(`${scope.replace(/\/$/, '')}/`)))) {
         throw new Error('NATIVE_SCOPE_VIOLATION');
       }
-      return Object.freeze({ invocationId, capabilityReceiptHash, receipt, changedFiles,
+      const usage = codexUsage(stdout.value());
+      return Object.freeze({ invocationId, capabilityReceiptHash, receipt, changedFiles, usage,
         outputPath, isolation: QUALIFIED_LOCAL_ISOLATION });
     },
   });
