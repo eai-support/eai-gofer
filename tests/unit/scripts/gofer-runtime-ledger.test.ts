@@ -9,7 +9,7 @@ describe('durable verified-runtime ledger', () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
     try {
       const ledger = await createRuntimeLedger({ ledgerPath: path.join(root, 'authority.jsonl') });
-      const request = { taskId: 'T007', revision: 'objective-v1', attempt: 1 };
+      const request = { taskId: 'T007', revision: 'objective-v1', attempt: 1, dependencies: [] };
       const reservation = await ledger.reserve(request);
       const lease = await ledger.lease(request);
       const authority = await ledger.authorize({
@@ -50,6 +50,18 @@ describe('durable verified-runtime ledger', () => {
           ...request,
           leaseId: lease.leaseId,
           ledgerAuthorityReceipt: 'authority:replayed',
+        })
+      ).resolves.toMatchObject({ allowed: false });
+      await expect(
+        ledger.authorizeCommit({
+          ...request,
+          dependencies: [{ taskId: 'T006', inputRevision: 'forged' }],
+          leaseId: lease.leaseId,
+          budgetReservation: reservation.budgetReservation,
+          approvalReceipt: 'approved:decision-1',
+          inputRevision: 'input-v1',
+          capabilityReceiptHash: 'capability:verified',
+          validation: [],
         })
       ).resolves.toMatchObject({ allowed: false });
       await expect(

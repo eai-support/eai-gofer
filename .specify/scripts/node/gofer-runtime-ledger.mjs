@@ -42,7 +42,8 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
         leaseId: `lease:${randomUUID()}`, expiresAt: new Date(now().getTime() + 300000).toISOString() };
     }),
     authorize: request => transact({ type: 'authorize', request }, async history => {
-      if (!text(request?.leaseId) || !text(request?.budgetReservation) || !text(request?.approvalReceipt)) return { allowed: false };
+      if (!text(request?.leaseId) || !text(request?.budgetReservation) || !text(request?.approvalReceipt) ||
+          !Array.isArray(request?.dependencies)) return { allowed: false };
       const lease = history.find(item => item.type === 'lease' && item.leaseId === request.leaseId);
       if (!lease || lease.taskId !== request.taskId || lease.revision !== request.revision || Date.parse(lease.expiresAt) <= now().getTime()) return { allowed: false };
       return { allowed: true, ...request, receipt: `authority:${digest(request).slice(0, 32)}` };
@@ -51,7 +52,8 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
       const authority = history.find(item => item.type === 'authorize' && item.leaseId === request?.leaseId && item.receipt === request?.ledgerAuthorityReceipt);
       if (!authority || authority.taskId !== request.taskId || authority.revision !== request.objectiveRevision ||
           authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt ||
-          authority.capabilityReceiptHash !== request.capabilityReceiptHash || !sameList(authority.allowedEditScope, request.allowedWriteScope)) return { allowed: false };
+          authority.capabilityReceiptHash !== request.capabilityReceiptHash || digest(authority.dependencies) !== digest(request.dependencies) ||
+          !sameList(authority.allowedEditScope, request.allowedWriteScope)) return { allowed: false };
       return { allowed: true, ...request, isolation: 'git-worktree+local-os-sandbox', receipt: authority.receipt };
     }),
     authorizeCommit: request => transact({ type: 'commit-authorize', request }, async history => {
@@ -59,7 +61,8 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
       if (!authority || authority.taskId !== request.taskId || authority.revision !== request.revision ||
           authority.attempt !== request.attempt || authority.budgetReservation !== request.budgetReservation ||
           authority.approvalReceipt !== request.approvalReceipt || authority.capabilityReceiptHash !== request.capabilityReceiptHash ||
-          !text(request.inputRevision) || !Array.isArray(request.validation)) return { allowed: false };
+          digest(authority.dependencies) !== digest(request.dependencies) || !text(request.inputRevision) ||
+          !Array.isArray(request.validation)) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, inputRevision: request.inputRevision,
         leaseId: request.leaseId, capabilityReceiptHash: request.capabilityReceiptHash, receipt: `commit:${digest(request).slice(0, 32)}` };
     }),

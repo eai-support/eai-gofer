@@ -231,7 +231,10 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
-    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId], approvalReceipt,
+    const dependencies = task.dependsOn.map(dependency => ({ taskId: dependency,
+      inputRevision: verifiedInputs.get(dependency) ?? null }));
+    if (dependencies.some(dependency => !text(dependency.inputRevision))) throw new Error('DEPENDENCY_INPUT_REQUIRED');
+    const request = { taskId, revision, dependencies, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId], approvalReceipt,
       capabilityReceiptHash: receiptHash, selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt };
     let previousChecks = [];
     try {
