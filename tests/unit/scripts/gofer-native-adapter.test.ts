@@ -12,6 +12,7 @@ import {
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
+import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 
 type LedgerRequest = Record<string, unknown>;
 type NativeStartRequest = LedgerRequest & { capabilityReceiptHash: string };
@@ -37,6 +38,67 @@ function localIsolation(workspaceRoot: string) {
 }
 
 describe('native adapter primitives', () => {
+  it('creates the graph runtime only after both ledger authority boundaries are configured', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-runtime-'));
+    try {
+      execFileSync('git', ['init', root]);
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+      await writeFile(path.join(root, 'tracked.txt'), 'base');
+      execFileSync('git', ['-C', root, 'add', '.']);
+      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const keys = generateKeyPairSync('ed25519');
+      const receipt = createCapabilityReceipt({
+        host: 'codex',
+        evaluatorVersion: '2',
+        evaluationId: 'id',
+        evaluatedAt: '2026-09-17T00:00:00.000Z',
+        expiresAt: '2026-09-18T00:00:00.000Z',
+        hostVersion: 'codex',
+        models: [{ id: 'live', reasoningEfforts: ['high'] }],
+        reasoningCapabilities: ['high'],
+        toolCapabilities: ['shell'],
+        grantedPermissions: ['workspace-write'],
+        isolationClass: 'git-worktree+local-os-sandbox',
+        provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+        signingKey: keys.privateKey,
+      });
+      const runtime = await createVerifiedNativeRuntime({
+        workspaceRoot: root,
+        localIsolation: localIsolation(root),
+        capabilityReceipt: receipt,
+        capabilityPublicKey: keys.publicKey,
+        ledger: {
+          authorize: async () => ({ allowed: false }),
+          authorizeCommit: async () => ({ allowed: false }),
+        },
+        nativeLedger: async () => ({ allowed: false }),
+        promptForRequest: async () => 'Approved task.',
+        adapter: {
+          reserve: async () => ({}),
+          lease: async () => ({}),
+          inputRevision: async () => 'input',
+          check: async () => ({}),
+          verified: async () => ({}),
+        },
+      });
+      expect(runtime.isolation.isolatedWorkspace).not.toBe(root);
+      execFileSync('git', [
+        '-C',
+        root,
+        'worktree',
+        'remove',
+        '--force',
+        runtime.isolation.isolatedWorkspace,
+      ]);
+      await expect(createVerifiedNativeRuntime({ workspaceRoot: root })).rejects.toThrow(
+        'VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED'
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('binds graph dispatch to the same ledger authority that approved it', async () => {
     const keys = generateKeyPairSync('ed25519');
     const receipt = createCapabilityReceipt({
