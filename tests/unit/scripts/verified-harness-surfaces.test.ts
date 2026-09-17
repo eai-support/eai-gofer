@@ -76,4 +76,10 @@ describe('Verified harness instruction and release preservation (not native exec
       expect(guidance).toContain('Do not qualify Antigravity native delegation');
     }
   });
+  it('requires local OS sandboxing as well as a dedicated worktree', () => {
+    const guidance = read('.specify/references/verified-agent-execution.md');
+    expect(guidance).toContain('dedicated Git worktree and an operating-\nsystem sandbox');
+    expect(guidance).toContain('Cloud execution cannot substitute');
+    expect(guidance).toContain('ordinary workspace-opening command');
+  });
 });

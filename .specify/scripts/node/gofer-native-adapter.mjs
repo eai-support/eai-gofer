@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
+import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -18,8 +19,9 @@ async function git(directory, args) {
   return execFileAsync('git', ['-C', directory, ...args], { encoding: 'utf8', env: gitEnvironment });
 }
 
-export async function createVerifiedWorktree({ workspaceRoot, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
+export async function createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
   if (!text(workspaceRoot) || !text(baseRef) || baseRef.startsWith('-')) throw new Error('INVALID_ISOLATION_REQUEST');
+  if (!verifyLocalIsolationReport(localIsolation, { host, workspaceRoot })) throw new Error('LOCAL_SANDBOX_REQUIRED');
   const workspace = await realpath(workspaceRoot);
   const temporary = await realpath(temporaryRoot);
   const relativeTemporary = path.relative(workspace, temporary);
@@ -37,7 +39,7 @@ export async function createVerifiedWorktree({ workspaceRoot, baseRef = 'HEAD', 
       git(isolated, ['rev-parse', 'HEAD']), git(workspace, ['rev-parse', baseRef]),
     ]);
     if (head.stdout.trim() !== expected.stdout.trim()) throw new Error('ISOLATION_REVISION_MISMATCH');
-    return Object.freeze({ isolationClass: 'git-worktree', workspace, isolatedWorkspace: isolated,
+    return Object.freeze({ isolationClass: 'git-worktree+local-os-sandbox', workspace, isolatedWorkspace: isolated,
       revision: head.stdout.trim(), receipt: `git-worktree:${head.stdout.trim()}` });
   } catch (error) {
     await git(workspace, ['worktree', 'remove', '--force', destination]).catch(() => {});

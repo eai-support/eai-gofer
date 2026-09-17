@@ -7,7 +7,7 @@
 #
 # Last verified against public provider docs: 2026-05-30.
 version: 1
-lastVerified: "2026-05-30"
+lastVerified: '2026-05-30'
 profile: balanced
 
 principles:
@@ -92,7 +92,7 @@ surfaces:
       model: Auto
       useFor: normal Gofer stage prompts and workspace questions
     hard:
-      model: "Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro"
+      model: 'Best available in picker: GPT-5.3-Codex, GPT-5.5, Claude Opus, or Gemini Pro'
       useFor: explicit hard review, security, architecture, or release gates
     note: Copilot model availability depends on plan, organization policy, client, and feature surface.
   grok:

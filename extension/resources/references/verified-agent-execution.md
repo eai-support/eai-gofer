@@ -86,6 +86,21 @@ receipt claiming `git-worktree` isolation, until a new exact-version run proves
 the host writes only inside a Gofer-created isolated boundary and returns a
 durable host receipt.
 
+### Local isolation requirement
+
+A qualified local task needs both a dedicated Git worktree and an operating-
+system sandbox. A worktree separates source changes; it does not restrict the
+host process. Cloud execution cannot substitute for this evidence.
+
+EAI Setup checks the machine prerequisites. EAI CLI reports the local isolation
+contract for the selected surface. Gofer validates that report before it creates
+the task worktree. The report is a readiness check, not proof that a host
+executed the task. A fresh host receipt is still required.
+
+Any missing sandbox, full-access bypass, cloud route, unbound project, or
+unsupported surface fails closed. Do not start a verified task by using the
+ordinary workspace-opening command.
+
 ## Bounded Execution
 
 `gofer-verified-execution.mjs` exports an experimental trusted-adapter

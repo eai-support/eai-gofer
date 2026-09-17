@@ -10,6 +10,26 @@ import {
   invokeLedgerBoundNative,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 
+function localIsolation(workspaceRoot: string) {
+  return {
+    contractVersion: 'eai.local-isolation/v1',
+    projectDirectory: workspaceRoot,
+    cloudExecution: 'prohibited',
+    gitRepository: true,
+    assessments: [
+      {
+        surfaceId: 'codex-cli',
+        status: 'ready',
+        localOnly: true,
+        requiresGitWorktree: true,
+        requiresOsSandbox: true,
+        hostArguments: ['--sandbox', 'workspace-write'],
+        missing: [],
+      },
+    ],
+  };
+}
+
 describe('native adapter primitives', () => {
   it('creates a detached worktree at the verified source revision', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
@@ -20,8 +40,12 @@ describe('native adapter primitives', () => {
       await writeFile(path.join(root, 'tracked.txt'), 'base');
       execFileSync('git', ['-C', root, 'add', '.']);
       execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
-      const isolated = await createVerifiedWorktree({ workspaceRoot: root });
-      expect(isolated.isolationClass).toBe('git-worktree');
+      const isolated = await createVerifiedWorktree({
+        workspaceRoot: root,
+        host: 'codex',
+        localIsolation: localIsolation(root),
+      });
+      expect(isolated.isolationClass).toBe('git-worktree+local-os-sandbox');
       expect(isolated.isolatedWorkspace).not.toBe(isolated.workspace);
       execFileSync('git', [
         '-C',
@@ -40,8 +64,24 @@ describe('native adapter primitives', () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
     try {
       await expect(
-        createVerifiedWorktree({ workspaceRoot: root, temporaryRoot: root })
+        createVerifiedWorktree({
+          workspaceRoot: root,
+          host: 'codex',
+          localIsolation: localIsolation(root),
+          temporaryRoot: root,
+        })
       ).rejects.toThrow('ISOLATION_ROOT_INSIDE_WORKSPACE');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a worktree when the EAI isolation contract is missing or bypassable', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    try {
+      await expect(createVerifiedWorktree({ workspaceRoot: root, host: 'codex' })).rejects.toThrow(
+        'LOCAL_SANDBOX_REQUIRED'
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
