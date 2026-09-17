@@ -9,7 +9,7 @@ import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 const text = value => typeof value === 'string' && value.trim().length > 0;
 
 export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex', localIsolation,
-  capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger, nativeLedger,
+  capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger, nativeLedger = ledger?.authorizeNative,
   promptForRequest, adapter, baseRef } = {}) {
   if (!text(workspaceRoot) || host !== 'codex' || !capabilityReceipt || !capabilityPublicKey ||
       typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' ||
