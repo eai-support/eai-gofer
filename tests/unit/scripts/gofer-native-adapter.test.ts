@@ -306,6 +306,53 @@ describe('native adapter primitives', () => {
     }
   });
 
+  it('accounts for new and ignored files when enforcing native write scope', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-scope-'));
+    try {
+      execFileSync('git', ['init', root]);
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+      await writeFile(path.join(root, 'tracked.txt'), 'base');
+      await writeFile(path.join(root, '.gitignore'), 'ignored.txt\n');
+      execFileSync('git', ['-C', root, 'add', '.']);
+      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const fakeSpawn = (file: string) => () => {
+        const child = Object.assign(new EventEmitter(), {
+          stdout: new EventEmitter(),
+          stderr: new EventEmitter(),
+          kill: vi.fn(() => true),
+        });
+        setTimeout(async () => {
+          await writeFile(path.join(root, file), 'changed');
+          child.emit('close', 0, null);
+        }, 0);
+        return child;
+      };
+      const invoke = async (file: string, allowedWriteScope: string[]) => {
+        const invocation = await startLocalCodexInvocation({
+          isolatedWorkspace: root,
+          prompt: 'Test scope',
+          modelId: 'live-model',
+          capabilityReceiptHash: 'receipt-hash',
+          allowedWriteScope,
+          spawnProcess: fakeSpawn(file),
+        });
+        return invocation.wait();
+      };
+      await expect(invoke('allowed.txt', ['allowed.txt'])).resolves.toMatchObject({
+        changedFiles: ['allowed.txt'],
+      });
+      await rm(path.join(root, 'allowed.txt'));
+      await expect(invoke('denied.txt', ['tracked.txt'])).rejects.toThrow('NATIVE_SCOPE_VIOLATION');
+      await rm(path.join(root, 'denied.txt'));
+      await expect(invoke('ignored.txt', ['tracked.txt'])).rejects.toThrow(
+        'NATIVE_SCOPE_VIOLATION'
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('confirms the Codex process has exited before treating cancellation as complete', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
     try {

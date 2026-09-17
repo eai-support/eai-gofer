@@ -193,8 +193,11 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
         return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
       }
       if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
-      const changedFiles = (await git(workspace, ['diff', '--name-only', '--no-renames', 'HEAD'])).stdout
-        .split(/\r?\n/).filter(Boolean);
+      const status = await git(workspace, ['-c', 'status.renames=false', 'status', '--porcelain=v1', '-z',
+        '--untracked-files=all', '--ignored=matching']);
+      const entries = status.stdout.split('\0').filter(Boolean);
+      if (entries.some(entry => entry.length < 4 || entry[2] !== ' ')) throw new Error('NATIVE_STATUS_UNAVAILABLE');
+      const changedFiles = [...new Set(entries.map(entry => entry.slice(3)))];
       if (changedFiles.some(file => !allowedWriteScope.some(scope => file === scope.replace(/\/$/, '') || file.startsWith(`${scope.replace(/\/$/, '')}/`)))) {
         throw new Error('NATIVE_SCOPE_VIOLATION');
       }
