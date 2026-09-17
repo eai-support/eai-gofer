@@ -34,20 +34,43 @@ function accountTrustRoot() {
   return path.join(home, '.eai-gofer-trust');
 }
 
+// A directory handle stays bound to the inode it opened even if something
+// later renames or replaces the path. Re-checking a path-based file open
+// against the handle's device/inode closes the gap between validating a
+// directory and reading a file inside it: a same-uid path substitution is
+// detected instead of silently trusted.
+async function assertSameDirectory(candidatePath, boundInfo) {
+  const current = await lstat(candidatePath).catch(() => null);
+  if (!current || current.dev !== boundInfo.dev || current.ino !== boundInfo.ino) throw denied();
+}
+
 async function inspectAccountTrustRoot(root, workspaceRoot) {
   if (!path.isAbsolute(root)) throw denied();
-  const [workspace, parent, rootInfo] = await Promise.all([
-    realpath(workspaceRoot), realpath(path.dirname(root)), lstat(root),
-  ]);
+  const [workspace, parent] = await Promise.all([realpath(workspaceRoot), realpath(path.dirname(root))]);
   const parentInfo = await lstat(parent);
   const canonicalRoot = path.join(parent, path.basename(root));
-  // No different account may rename the trust root between validation and open.
   if (!parentInfo.isDirectory() || ![0, process.getuid()].includes(parentInfo.uid) ||
       (parentInfo.mode & 0o022) !== 0 || inside(workspace, canonicalRoot) ||
-      inside(canonicalRoot, workspace) ||
-      !rootInfo.isDirectory() || rootInfo.uid !== process.getuid() ||
-      (rootInfo.mode & 0o077) !== 0) throw denied();
-  return canonicalRoot;
+      inside(canonicalRoot, workspace)) throw denied();
+  const handle = await open(canonicalRoot, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  try {
+    const rootInfo = await handle.stat();
+    if (!rootInfo.isDirectory() || rootInfo.uid !== process.getuid() ||
+        (rootInfo.mode & 0o077) !== 0) throw denied();
+    return { canonicalRoot, handle, info: rootInfo };
+  } catch (err) { await handle.close(); throw err; }
+}
+
+// Open a file below a directory already validated by `inspectAccountTrustRoot`,
+// re-confirming immediately beforehand that the directory path has not been
+// substituted since that validation.
+async function openVerifiedFile(directory, filename) {
+  const filePath = path.join(directory.canonicalRoot, filename);
+  const file = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    await assertSameDirectory(directory.canonicalRoot, directory.info);
+    return file;
+  } catch (err) { await file.close(); throw err; }
 }
 
 /**
@@ -60,16 +83,17 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
       !text(receipt?.provenance?.evaluator)) throw denied();
   const root = trustRoot ?? accountTrustRoot();
   try {
-    const canonicalRoot = await inspectAccountTrustRoot(root, workspaceRoot);
-    const filename = path.join(canonicalRoot, 'trusted-evaluators.json');
-    const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const directory = await inspectAccountTrustRoot(root, workspaceRoot);
     let registry;
     try {
-      const actual = await file.stat();
-      if (!actual.isFile() || actual.uid !== process.getuid() ||
-          (actual.mode & 0o077) !== 0 || actual.size < 2 || actual.size > 65536) throw denied();
-      registry = JSON.parse(await file.readFile('utf8'));
-    } finally { await file.close(); }
+      const file = await openVerifiedFile(directory, 'trusted-evaluators.json');
+      try {
+        const actual = await file.stat();
+        if (!actual.isFile() || actual.uid !== process.getuid() ||
+            (actual.mode & 0o077) !== 0 || actual.size < 2 || actual.size > 65536) throw denied();
+        registry = JSON.parse(await file.readFile('utf8'));
+      } finally { await file.close(); }
+    } finally { await directory.handle.close(); }
     if (registry?.schemaVersion !== 1 || !Array.isArray(registry.evaluators) ||
         registry.evaluators.length < 1 || registry.evaluators.length > 32 ||
         registry.evaluators.some(item => !text(item?.keyId) || !text(item?.host) ||
@@ -91,34 +115,35 @@ async function loadActiveEvaluatorKey({ workspaceRoot, trustRoot, identityName, 
   const root = trustRoot ?? accountTrustRoot();
   try {
     const active = path.join(root, 'active-keys');
-    const activeInfo = await lstat(active);
-    if (!activeInfo.isDirectory() || activeInfo.uid !== process.getuid() ||
-        (activeInfo.mode & 0o077) !== 0) throw denied();
-    const identityFile = await open(path.join(active, `${identityName}.json`),
-      constants.O_RDONLY | constants.O_NOFOLLOW);
-    let identity;
+    const handle = await open(active, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    let identity, privateKey;
     try {
-      const info = await identityFile.stat();
-      if (!info.isFile() || info.uid !== process.getuid() ||
-          (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
-      identity = JSON.parse(await identityFile.readFile('utf8'));
-    } finally { await identityFile.close(); }
-    if (identity?.schemaVersion !== 1 || identity.host !== 'codex' ||
-        identity.evaluator !== evaluator || !text(identity.keyId)) throw denied();
-    const publicKey = await resolveTrustedEvaluatorPublicKey({ host: identity.host,
-      provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot });
-    const privateFile = await open(path.join(active, `${identityName}.private.pem`),
-      constants.O_RDONLY | constants.O_NOFOLLOW);
-    let privateKey;
-    try {
-      const info = await privateFile.stat();
-      if (!info.isFile() || info.uid !== process.getuid() ||
-          (info.mode & 0o077) !== 0 || info.size < 32 || info.size > 8192) throw denied();
-      privateKey = createPrivateKey(await privateFile.readFile('utf8'));
-    } finally { await privateFile.close(); }
-    if (privateKey.asymmetricKeyType !== 'ed25519' ||
-        !createPublicKey(privateKey).export({ type: 'spki', format: 'der' })
-          .equals(publicKey.export({ type: 'spki', format: 'der' }))) throw denied();
+      const activeInfo = await handle.stat();
+      if (!activeInfo.isDirectory() || activeInfo.uid !== process.getuid() ||
+          (activeInfo.mode & 0o077) !== 0) throw denied();
+      const directory = { canonicalRoot: active, handle, info: activeInfo };
+      const identityFile = await openVerifiedFile(directory, `${identityName}.json`);
+      try {
+        const info = await identityFile.stat();
+        if (!info.isFile() || info.uid !== process.getuid() ||
+            (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
+        identity = JSON.parse(await identityFile.readFile('utf8'));
+      } finally { await identityFile.close(); }
+      if (identity?.schemaVersion !== 1 || identity.host !== 'codex' ||
+          identity.evaluator !== evaluator || !text(identity.keyId)) throw denied();
+      const publicKey = await resolveTrustedEvaluatorPublicKey({ host: identity.host,
+        provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot });
+      const privateFile = await openVerifiedFile(directory, `${identityName}.private.pem`);
+      try {
+        const info = await privateFile.stat();
+        if (!info.isFile() || info.uid !== process.getuid() ||
+            (info.mode & 0o077) !== 0 || info.size < 32 || info.size > 8192) throw denied();
+        privateKey = createPrivateKey(await privateFile.readFile('utf8'));
+      } finally { await privateFile.close(); }
+      if (privateKey.asymmetricKeyType !== 'ed25519' ||
+          !createPublicKey(privateKey).export({ type: 'spki', format: 'der' })
+            .equals(publicKey.export({ type: 'spki', format: 'der' }))) throw denied();
+    } finally { await handle.close(); }
     return Object.freeze({ privateKey, keyId: identity.keyId });
   } catch { throw denied(); }
 }
@@ -140,19 +165,20 @@ export async function loadTrustedHeldOutCorpus({ workspaceRoot, trustRoot } = {}
       typeof process.getuid !== 'function') throw denied();
   const root = trustRoot ?? accountTrustRoot();
   try {
-    const canonicalRoot = await inspectAccountTrustRoot(root, workspaceRoot);
-    const configFile = await open(path.join(canonicalRoot, 'heldout-corpus.json'),
-      constants.O_RDONLY | constants.O_NOFOLLOW);
+    const trustDirectory = await inspectAccountTrustRoot(root, workspaceRoot);
     let config;
     try {
-      const info = await configFile.stat();
-      if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
-          (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
-      config = JSON.parse(await configFile.readFile('utf8'));
-    } finally { await configFile.close(); }
+      const configFile = await openVerifiedFile(trustDirectory, 'heldout-corpus.json');
+      try {
+        const info = await configFile.stat();
+        if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
+            (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
+        config = JSON.parse(await configFile.readFile('utf8'));
+      } finally { await configFile.close(); }
+    } finally { await trustDirectory.handle.close(); }
     if (config?.schemaVersion !== 1 || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(config.corpusId ?? '') ||
         !/^[a-f0-9]{64}$/.test(config.corpusHash ?? '')) throw denied();
-    const corpora = path.join(canonicalRoot, 'corpora');
+    const corpora = path.join(trustDirectory.canonicalRoot, 'corpora');
     const corpusRoot = path.join(corpora, config.corpusId);
     for (const directory of [corpora, corpusRoot]) {
       const info = await lstat(directory);

@@ -1,10 +1,27 @@
 import { createHash, generateKeyPairSync } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Lets a single test intercept `open()` to inject a same-uid directory
+// substitution between the trust-root validation and the file read it
+// guards, without affecting any other test's real filesystem calls.
+let openHook:
+  | ((actual: typeof import('node:fs/promises').open, ...args: unknown[]) => unknown)
+  | null = null;
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    open: (...args: unknown[]) =>
+      openHook
+        ? openHook(actual.open, ...args)
+        : actual.open(...(args as Parameters<typeof actual.open>)),
+  };
+});
 import {
   createCapabilityReceipt,
   verifyCapabilityReceipt,
@@ -350,6 +367,48 @@ describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', 
         })
       ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
     } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a trust root substituted after validation but before the file read (TOCTOU)', async () => {
+    const f = await fixture();
+    const swapRoot = path.join(f.root, 'trust-swapped');
+    try {
+      let swapped = false;
+      openHook = async (actualOpen, ...args) => {
+        const [openPath] = args as [string, number];
+        if (
+          !swapped &&
+          typeof openPath === 'string' &&
+          openPath.endsWith(path.join('trust', 'trusted-evaluators.json'))
+        ) {
+          swapped = true;
+          // Simulate a same-uid process substituting a *different* but
+          // equally-permissioned directory for the one just validated,
+          // in the gap between opening the directory handle and reading
+          // the file believed to live inside it.
+          await rename(f.trustRoot, swapRoot);
+          await mkdir(f.trustRoot, { mode: 0o700 });
+          await writeFile(
+            path.join(f.trustRoot, 'trusted-evaluators.json'),
+            JSON.stringify(f.registry()),
+            {
+              mode: 0o600,
+            }
+          );
+        }
+        return actualOpen(...(args as Parameters<typeof actualOpen>));
+      };
+      await expect(
+        resolveTrustedEvaluatorPublicKey(f.receipt, {
+          workspaceRoot: f.workspaceRoot,
+          trustRoot: f.trustRoot,
+        })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      openHook = null;
+      await rm(swapRoot, { recursive: true, force: true });
       await rm(f.root, { recursive: true, force: true });
     }
   });
