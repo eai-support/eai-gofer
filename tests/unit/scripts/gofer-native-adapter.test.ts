@@ -36,6 +36,17 @@ describe('native adapter primitives', () => {
     }
   });
 
+  it('rejects an isolation root inside the source workspace', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    try {
+      await expect(
+        createVerifiedWorktree({ workspaceRoot: root, temporaryRoot: root })
+      ).rejects.toThrow('ISOLATION_ROOT_INSIDE_WORKSPACE');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('requires ledger authority and confirms cancellation', async () => {
     const keys = generateKeyPairSync('ed25519');
     const receipt = createCapabilityReceipt({

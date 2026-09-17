@@ -175,4 +175,24 @@ describe('Gofer host capability discovery', () => {
       })
     ).toBe(true);
   });
+
+  it('fails closed when a native session omits its model list', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    await expect(
+      evaluateNativeHost('codex', {
+        signingKey: keys.privateKey,
+        keyId: 'host-key',
+        run: async () => ({ ok: true, version: 'codex 0.154.0' }),
+        runtime: {
+          inspect: async () => ({
+            reasoningCapabilities: [],
+            toolCapabilities: [],
+            grantedPermissions: [],
+            isolationClass: 'worktree',
+            source: 'session',
+          }),
+        },
+      })
+    ).rejects.toThrow('native capability evidence is incomplete');
+  });
 });

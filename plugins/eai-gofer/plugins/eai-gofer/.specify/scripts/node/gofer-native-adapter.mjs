@@ -19,9 +19,14 @@ async function git(directory, args) {
 export async function createVerifiedWorktree({ workspaceRoot, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
   if (!text(workspaceRoot) || !text(baseRef) || baseRef.startsWith('-')) throw new Error('INVALID_ISOLATION_REQUEST');
   const workspace = await realpath(workspaceRoot);
+  const temporary = await realpath(temporaryRoot);
+  const relativeTemporary = path.relative(workspace, temporary);
+  if (relativeTemporary === '' || (!relativeTemporary.startsWith('..') && !path.isAbsolute(relativeTemporary))) {
+    throw new Error('ISOLATION_ROOT_INSIDE_WORKSPACE');
+  }
   const repository = (await git(workspace, ['rev-parse', '--is-inside-work-tree'])).stdout.trim();
   if (repository !== 'true') throw new Error('WORKSPACE_IS_NOT_GIT');
-  const destination = await mkdtemp(path.join(temporaryRoot, 'gofer-isolated-worktree-'));
+  const destination = await mkdtemp(path.join(temporary, 'gofer-isolated-worktree-'));
   try {
     await git(workspace, ['worktree', 'add', '--detach', destination, baseRef]);
     const isolated = await realpath(destination);

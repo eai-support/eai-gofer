@@ -164,8 +164,8 @@ export async function evaluateNativeHost(host, { signingKey, keyId, runtime, run
     run(HOSTS[canonical]), discovery ? run(discovery) : Promise.resolve(null), runtime.inspect({ host: canonical }),
   ]);
   const models = discovery && modelProbe?.ok === true ? MODEL_PARSERS[canonical](modelProbe.version ?? '') : session?.models;
-  if (versionProbe?.ok !== true || !text(versionProbe.version) || !models.length || !session ||
-      !Array.isArray(models) || !models.every(safeModel) ||
+  if (versionProbe?.ok !== true || !text(versionProbe.version) || !session || !Array.isArray(models) || !models.length ||
+      !models.every(safeModel) ||
       !Array.isArray(session.reasoningCapabilities) || !Array.isArray(session.toolCapabilities) ||
       !Array.isArray(session.grantedPermissions) || !text(session.isolationClass) || !text(session.source)) {
     fail('native capability evidence is incomplete');
