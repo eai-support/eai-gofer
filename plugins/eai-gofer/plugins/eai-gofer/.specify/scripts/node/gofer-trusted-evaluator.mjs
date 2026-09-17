@@ -77,9 +77,9 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
   } catch { throw denied(); }
 }
 
-/** The production issuer has no caller-selected key path. Test fixtures may
- * supply a trust root, but a staged key is never eligible to sign. */
-export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } = {}) {
+/** Only activated identities can sign. Production issuers never expose a
+ * caller-selected trust root; the override is for isolated tests. */
+async function loadActiveEvaluatorKey({ workspaceRoot, trustRoot, identityName, evaluator } = {}) {
   if (!text(workspaceRoot) || process.platform === 'win32' || typeof process.getuid !== 'function') throw denied();
   const root = trustRoot ?? accountTrustRoot();
   try {
@@ -87,7 +87,7 @@ export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } =
     const activeInfo = await lstat(active);
     if (!activeInfo.isDirectory() || activeInfo.uid !== process.getuid() ||
         (activeInfo.mode & 0o077) !== 0) throw denied();
-    const identityFile = await open(path.join(active, 'codex-evaluator.json'),
+    const identityFile = await open(path.join(active, `${identityName}.json`),
       constants.O_RDONLY | constants.O_NOFOLLOW);
     let identity;
     try {
@@ -97,10 +97,10 @@ export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } =
       identity = JSON.parse(await identityFile.readFile('utf8'));
     } finally { await identityFile.close(); }
     if (identity?.schemaVersion !== 1 || identity.host !== 'codex' ||
-        identity.evaluator !== 'gofer-native-host-evaluator' || !text(identity.keyId)) throw denied();
+        identity.evaluator !== evaluator || !text(identity.keyId)) throw denied();
     const publicKey = await resolveTrustedEvaluatorPublicKey({ host: identity.host,
       provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot });
-    const privateFile = await open(path.join(active, 'codex-evaluator.private.pem'),
+    const privateFile = await open(path.join(active, `${identityName}.private.pem`),
       constants.O_RDONLY | constants.O_NOFOLLOW);
     let privateKey;
     try {
@@ -114,4 +114,14 @@ export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } =
           .equals(publicKey.export({ type: 'spki', format: 'der' }))) throw denied();
     return Object.freeze({ privateKey, keyId: identity.keyId });
   } catch { throw denied(); }
+}
+
+export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } = {}) {
+  return loadActiveEvaluatorKey({ workspaceRoot, trustRoot,
+    identityName: 'codex-evaluator', evaluator: 'gofer-native-host-evaluator' });
+}
+
+export async function loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot } = {}) {
+  return loadActiveEvaluatorKey({ workspaceRoot, trustRoot,
+    identityName: 'heldout-verifier', evaluator: 'gofer-heldout-benchmark-verifier' });
 }

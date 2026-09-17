@@ -9,7 +9,11 @@ import {
   createCapabilityReceipt,
   verifyCapabilityReceipt,
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
-import { loadActiveCodexEvaluatorKey, resolveTrustedEvaluatorPublicKey } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
+import {
+  loadActiveBenchmarkVerifierKey,
+  loadActiveCodexEvaluatorKey,
+  resolveTrustedEvaluatorPublicKey,
+} from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
 
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'gofer-evaluator-trust-'));
@@ -55,30 +59,103 @@ async function fixture() {
 }
 
 describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', () => {
+  it('keeps benchmark signing inactive until a separate registered key is activated', async () => {
+    const f = await fixture();
+    try {
+      const verifierKeys = generateKeyPairSync('ed25519');
+      const registry = f.registry();
+      registry.evaluators.push({
+        keyId: 'heldout-key',
+        host: 'codex',
+        evaluator: 'gofer-heldout-benchmark-verifier',
+        publicKeyPem: verifierKeys.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+      });
+      await writeFile(f.registryPath, JSON.stringify(registry));
+      await expect(
+        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      const active = path.join(f.trustRoot, 'active-keys');
+      await mkdir(active, { mode: 0o700 });
+      const identity = path.join(active, 'heldout-verifier.json');
+      const privateFile = path.join(active, 'heldout-verifier.private.pem');
+      await writeFile(
+        identity,
+        JSON.stringify({
+          schemaVersion: 1,
+          host: 'codex',
+          evaluator: 'gofer-heldout-benchmark-verifier',
+          keyId: 'heldout-key',
+        }),
+        { mode: 0o600 }
+      );
+      await writeFile(
+        privateFile,
+        verifierKeys.privateKey.export({ type: 'pkcs8', format: 'pem' }),
+        { mode: 0o600 }
+      );
+      const loaded = await loadActiveBenchmarkVerifierKey({
+        workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot,
+      });
+      expect(loaded.keyId).toBe('heldout-key');
+      expect(loaded.privateKey.asymmetricKeyType).toBe('ed25519');
+      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
+      await expect(
+        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await writeFile(
+        privateFile,
+        verifierKeys.privateKey.export({ type: 'pkcs8', format: 'pem' })
+      );
+      await chmod(privateFile, 0o644);
+      await expect(
+        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
   it('requires an activated key matching the registered public identity', async () => {
     const f = await fixture();
     try {
-      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
-        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await expect(
+        loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
       const active = path.join(f.trustRoot, 'active-keys');
       await mkdir(active, { mode: 0o700 });
       const identity = path.join(active, 'codex-evaluator.json');
       const privateFile = path.join(active, 'codex-evaluator.private.pem');
-      await writeFile(identity, JSON.stringify({ schemaVersion: 1, host: 'codex',
-        evaluator: 'gofer-native-host-evaluator', keyId: 'installed-key' }), { mode: 0o600 });
-      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }),
-        { mode: 0o600 });
-      const activeKey = await loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
-        trustRoot: f.trustRoot });
+      await writeFile(
+        identity,
+        JSON.stringify({
+          schemaVersion: 1,
+          host: 'codex',
+          evaluator: 'gofer-native-host-evaluator',
+          keyId: 'installed-key',
+        }),
+        { mode: 0o600 }
+      );
+      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }), {
+        mode: 0o600,
+      });
+      const activeKey = await loadActiveCodexEvaluatorKey({
+        workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot,
+      });
       expect(activeKey.keyId).toBe('installed-key');
       expect(activeKey.privateKey.asymmetricKeyType).toBe('ed25519');
-      await writeFile(privateFile, generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }));
-      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
-        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await writeFile(
+        privateFile,
+        generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' })
+      );
+      await expect(
+        loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
       await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
       await chmod(privateFile, 0o644);
-      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
-        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await expect(
+        loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
     } finally {
       await rm(f.root, { recursive: true, force: true });
     }
