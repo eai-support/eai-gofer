@@ -9,7 +9,7 @@ import { createVerifiedWorktree, inspectVerifiedWorktree, disposeVerifiedWorktre
   inspectNativeWorkerEvidence, createNativeCancellationVerifier } from './gofer-native-adapter.mjs';
 import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
-import { runVerifiedGraph } from './gofer-verified-execution.mjs';
+import { executionRevision, runVerifiedGraph } from './gofer-verified-execution.mjs';
 import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -67,11 +67,19 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
       approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery } = {}) {
       if (lifecycle !== 'idle') throw new Error('NATIVE_RUNTIME_NOT_AVAILABLE');
       lifecycle = 'running';
+      let graphStarted = false;
       try {
         if (!text(featureDir)) throw new Error('NATIVE_EVIDENCE_DIRECTORY_REQUIRED');
         const controllerRoot = await realpath(featureDir);
         if (!inside(isolation.workspace, controllerRoot) || inside(isolation.isolatedWorkspace, controllerRoot)) {
           throw new Error('NATIVE_CONTROL_PLANE_OUTSIDE_SOURCE_WORKSPACE');
+        }
+        const relativeControlPath = path.relative(isolation.workspace, controllerRoot);
+        const isolatedControlRoot = await realpath(path.join(isolation.isolatedWorkspace, relativeControlPath))
+          .catch(() => { throw new Error('NATIVE_CONTROL_CONTRACT_NOT_IN_WORKTREE'); });
+        if (!inside(isolation.isolatedWorkspace, isolatedControlRoot) ||
+            await executionRevision(controllerRoot) !== await executionRevision(isolatedControlRoot)) {
+          throw new Error('NATIVE_CONTROL_CONTRACT_MISMATCH');
         }
         const worktree = await inspectVerifiedWorktree({ workspaceRoot: isolation.workspace,
           isolatedWorkspace: isolation.isolatedWorkspace, revision: isolation.revision,
@@ -90,6 +98,7 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
           execute: executor.execute });
         const trustedRecovery = recovery ? { ...recovery,
           inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) } : undefined;
+        graphStarted = true;
         const result = await runVerifiedGraph({ featureDir: controllerRoot, workspaceRoot: isolation.isolatedWorkspace,
           checks, adapter: trustedAdapter,
           ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
@@ -97,7 +106,7 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         lifecycle = result.status === 'verified' && result.adapterCallsSettled ? 'verified' : 'recovery-required';
         return result;
       } catch (error) {
-        lifecycle = 'recovery-required';
+        lifecycle = graphStarted ? 'recovery-required' : 'idle';
         throw error;
       }
     },
