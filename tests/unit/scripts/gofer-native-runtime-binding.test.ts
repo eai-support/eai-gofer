@@ -96,16 +96,23 @@ describe('native runtime workspace binding', () => {
         realpath(path.join(runtime.isolation.isolatedWorkspace, '.specify', 'specs', 'task'))
       ).rejects.toThrow();
       runGraph.mockImplementationOnce(
-        async ({ adapter, workspaceRoot, featureDir: controlRoot }) => {
+        async ({ adapter, workspaceRoot, featureDir: controlRoot, verifyBenchmark }) => {
           expect(workspaceRoot).toBe(runtime?.isolation.isolatedWorkspace);
           expect(controlRoot).toBe(await realpath(featureDir));
           expect(path.relative(workspaceRoot, controlRoot)).toMatch(/^\.\./);
+          await expect(
+            verifyBenchmark({
+              host: 'codex',
+              receiptHash: 'a'.repeat(64),
+              evidence: { callerResult: true },
+            })
+          ).rejects.toThrow('TRUSTED_BENCHMARK_REQUIRED');
           await adapter.check({});
           await adapter.verified({});
           return { status: 'verified', adapterCallsSettled: true };
         }
       );
-      await runtime.run({ featureDir });
+      await runtime.run({ featureDir, verifyBenchmark: async () => ({ valid: true }) });
       expect(observed).toEqual([
         `check:${runtime.isolation.isolatedWorkspace}`,
         `commit:${runtime.isolation.isolatedWorkspace}`,

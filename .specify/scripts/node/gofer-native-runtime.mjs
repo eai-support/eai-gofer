@@ -13,6 +13,7 @@ import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
 import { verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 import { resolveTrustedEvaluatorPublicKey } from './gofer-trusted-evaluator.mjs';
+import { verifyTrustedBenchmarkEvidence } from './gofer-trusted-benchmark.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const inside = (parent, child) => {
@@ -68,7 +69,7 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         throw error;
       }
     },
-    async run({ featureDir, checks, benchmarkEvidence, verifyBenchmark, advisoryConstraints,
+    async run({ featureDir, checks, benchmarkEvidence, benchmarkAttestation, advisoryConstraints,
       approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery } = {}) {
       if (lifecycle !== 'idle') throw new Error('NATIVE_RUNTIME_NOT_AVAILABLE');
       lifecycle = 'running';
@@ -97,6 +98,10 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         const trustedRecovery = recovery ? { ...recovery,
           inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) } : undefined;
         graphStarted = true;
+        const verifyBenchmark = request => verifyTrustedBenchmarkEvidence({ ...request,
+          attestation: benchmarkAttestation, capabilityKeyId: capabilityReceipt.provenance.keyId,
+          capabilityPublicKey,
+          workspaceRoot: isolation.workspace });
         const result = await runVerifiedGraph({ featureDir: controllerRoot, workspaceRoot: isolation.isolatedWorkspace,
           checks, adapter: trustedAdapter,
           ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
