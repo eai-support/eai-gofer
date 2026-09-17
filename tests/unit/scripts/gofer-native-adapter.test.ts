@@ -318,17 +318,20 @@ describe('native adapter primitives', () => {
       });
       expect(spawnProcess).toHaveBeenCalledOnce();
       expect(spawnProcess.mock.calls[0][0]).toBe('codex');
-      expect(spawnProcess.mock.calls[0][1]).toEqual(
-        expect.arrayContaining([
-          'exec',
-          '--sandbox',
-          'workspace-write',
-          '--json',
-          '--model',
-          'live-model',
-          'Update only tracked.txt',
-        ])
-      );
+      expect(spawnProcess.mock.calls[0][1]).toEqual([
+        '--ask-for-approval',
+        'never',
+        'exec',
+        '--ignore-user-config',
+        '--sandbox',
+        'workspace-write',
+        '--json',
+        '--output-last-message',
+        expect.stringMatching(/gofer-codex-.*\.md$/),
+        '--model',
+        'live-model',
+        'Update only tracked.txt',
+      ]);
       expect(spawnProcess.mock.calls[0][2]).toEqual(
         expect.objectContaining({
           cwd: expect.stringContaining(path.basename(root)),

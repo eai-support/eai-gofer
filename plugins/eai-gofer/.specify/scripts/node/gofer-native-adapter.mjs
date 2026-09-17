@@ -95,7 +95,8 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
     }
   }
   const outputPath = path.join(outputRoot, `gofer-codex-${randomUUID()}.md`);
-  const args = ['exec', '--sandbox', 'workspace-write', '--json', '--output-last-message', outputPath,
+  const args = ['--ask-for-approval', 'never', 'exec', '--ignore-user-config',
+    '--sandbox', 'workspace-write', '--json', '--output-last-message', outputPath,
     '--model', modelId, prompt];
   const stdout = boundedCollector();
   const stderr = boundedCollector();
