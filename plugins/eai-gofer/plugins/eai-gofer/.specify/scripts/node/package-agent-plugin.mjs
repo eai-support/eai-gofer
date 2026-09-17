@@ -273,7 +273,7 @@ function buildBundleMarketplace(version) {
     },
     metadata: {
       description:
-        'Public Gofer bundle for Claude Code, Codex, Copilot, and Google Antigravity workflows. Gemini files are legacy compatibility assets only.',
+        'Public Gofer bundle for Claude, Codex, Copilot, Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -297,6 +297,8 @@ function buildBundleMarketplace(version) {
           'codex',
           'copilot',
           'antigravity',
+          'grok',
+          'vscode',
           'gemini-legacy',
           'spec-driven-development',
         ],
@@ -314,7 +316,7 @@ function buildRepoMarketplace(version) {
     },
     metadata: {
       description:
-        'Install the Gofer repo marketplace for Claude Code, Codex, Copilot CLI, or Google Antigravity from the public GitHub repository. Gemini files are legacy compatibility assets only.',
+        'Install Gofer for Claude, Codex, Copilot, Antigravity, Grok, and VS Code from this GitHub repository. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -339,6 +341,8 @@ function buildRepoMarketplace(version) {
           'codex',
           'copilot',
           'antigravity',
+          'grok',
+          'vscode',
           'gemini-legacy',
           'spec-driven-development',
         ],

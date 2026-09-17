@@ -5,7 +5,7 @@
     "url": "https://github.com/eai-support/eai-gofer"
   },
   "metadata": {
-    "description": "Install the Gofer repo marketplace for Claude Code, Codex, Copilot CLI, or Google Antigravity from the public GitHub repository. Gemini files are legacy compatibility assets only.",
+    "description": "Install Gofer for Claude, Codex, Copilot, Antigravity, Grok, and VS Code from this GitHub repository. Gemini files are legacy compatibility assets only.",
     "version": "3.12.8"
   },
   "plugins": [
@@ -29,6 +29,8 @@
         "codex",
         "copilot",
         "antigravity",
+        "grok",
+        "vscode",
         "gemini-legacy",
         "spec-driven-development"
       ]

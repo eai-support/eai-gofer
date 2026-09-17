@@ -199,7 +199,7 @@ describe('Gofer agent plugin package', () => {
       );
       const claudeMarketplace = readJson<{
         name: string;
-        plugins: Array<{ name: string; source: string; version: string }>;
+        plugins: Array<{ name: string; source: string; version: string; tags: string[] }>;
       }>(path.join(pluginRoot, '.claude-plugin', 'marketplace.json'));
       const codexMarketplace = readJson<{
         name: string;
@@ -220,6 +220,7 @@ describe('Gofer agent plugin package', () => {
       expect(codexManifest).not.toHaveProperty('gofer');
       expect(claudeMarketplace.name).toBe('eai-gofer');
       expect(claudeMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
+      expect(claudeMarketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
       expect(codexMarketplace.name).toBe('eai-gofer');
       expect(codexMarketplace.plugins[0].source).toEqual({
         source: 'local',
@@ -338,10 +339,10 @@ describe('Gofer agent plugin package', () => {
 
   it('repo root exposes marketplace files for repo-based CLI installs', (): void => {
     const claudeMarketplace = readJson<{
-      plugins: Array<{ source: string }>;
+      plugins: Array<{ source: string; tags: string[] }>;
     }>(path.join(REPO_ROOT, '.claude-plugin', 'marketplace.json'));
     const copilotMarketplace = readJson<{
-      plugins: Array<{ source: string }>;
+      plugins: Array<{ source: string; tags: string[] }>;
     }>(path.join(REPO_ROOT, '.github', 'plugin', 'marketplace.json'));
     const codexMarketplace = readJson<{
       plugins: Array<{ source: { source: string; path: string } }>;
@@ -349,6 +350,17 @@ describe('Gofer agent plugin package', () => {
 
     expect(claudeMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
     expect(copilotMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
+    for (const marketplace of [claudeMarketplace, copilotMarketplace]) {
+      expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
+    }
+    for (const prefix of ['plugins/eai-gofer', 'plugins/eai-gofer/plugins/eai-gofer']) {
+      for (const suffix of ['.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']) {
+        const marketplace = readJson<{ plugins: Array<{ tags: string[] }> }>(
+          path.join(REPO_ROOT, prefix, suffix)
+        );
+        expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
+      }
+    }
     expect(codexMarketplace.plugins[0].source).toEqual({
       source: 'local',
       path: './plugins/eai-gofer',
