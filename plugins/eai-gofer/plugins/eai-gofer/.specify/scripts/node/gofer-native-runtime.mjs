@@ -19,15 +19,16 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
   }
   const isolation = await createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef });
   const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
+    worktreeReceipt: isolation.receipt,
     capabilityReceipt, capabilityPublicKey, requiredCapabilities, assertLedger: nativeLedger, promptForRequest });
-  const trustedAdapter = Object.freeze({ ...adapter, execute: executor.execute });
+  const trustedAdapter = Object.freeze({ ...adapter, worktreeReceipt: isolation.receipt, execute: executor.execute });
   return Object.freeze({
     isolation,
     async run({ featureDir, checks, benchmarkEvidence, verifyBenchmark, advisoryConstraints,
-      approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal } = {}) {
+      approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery } = {}) {
       return runVerifiedGraph({ featureDir, workspaceRoot: isolation.isolatedWorkspace, checks, adapter: trustedAdapter,
         ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
-        advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal });
+        advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery });
     },
   });
 }

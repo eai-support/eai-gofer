@@ -133,16 +133,18 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
  * prevents a caller from substituting a safe-looking local launcher after
  * the graph has authorised a different task, scope, lease, or approval.
  */
-export function createLedgerBoundCodexExecutor({ isolatedWorkspace, capabilityReceipt, capabilityPublicKey,
+export function createLedgerBoundCodexExecutor({ isolatedWorkspace, worktreeReceipt, capabilityReceipt, capabilityPublicKey,
   requiredCapabilities, assertLedger, promptForRequest, start = startLocalCodexInvocation } = {}) {
-  if (!text(isolatedWorkspace) || !capabilityReceipt || !capabilityPublicKey ||
+  if (!text(isolatedWorkspace) || !text(worktreeReceipt) || !capabilityReceipt || !capabilityPublicKey ||
       typeof assertLedger !== 'function' || typeof promptForRequest !== 'function' || typeof start !== 'function') {
     throw new Error('NATIVE_EXECUTOR_CONFIGURATION_REQUIRED');
   }
   return Object.freeze({
+    worktreeReceipt,
     async execute(request) {
       if (!request || !text(request.revision) || !text(request.taskId) || !text(request.ledgerAuthorityReceipt) ||
-          !text(request.selectedModel) || !Array.isArray(request.allowedEditScope)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+          !text(request.selectedModel) || !Array.isArray(request.allowedEditScope) ||
+          request.worktreeReceipt !== worktreeReceipt) throw new Error('LEDGER_AUTHORITY_REQUIRED');
       const prompt = await promptForRequest(Object.freeze({ ...request }));
       if (!text(prompt)) throw new Error('NATIVE_PROMPT_REQUIRED');
       return invokeLedgerBoundNative({
@@ -152,6 +154,7 @@ export function createLedgerBoundCodexExecutor({ isolatedWorkspace, capabilityRe
           leaseId: request.leaseId,
           budgetReservation: request.budgetReservation,
           approvalReceipt: request.approvalReceipt,
+          worktreeReceipt,
           usageReporting: request.usageReporting === true,
         },
         capabilityReceipt,
@@ -190,12 +193,35 @@ export async function createVerifiedWorktree({ workspaceRoot, host, localIsolati
       git(isolated, ['rev-parse', 'HEAD']), git(workspace, ['rev-parse', baseRef]),
     ]);
     if (head.stdout.trim() !== expected.stdout.trim()) throw new Error('ISOLATION_REVISION_MISMATCH');
+    const receipt = worktreeReceipt(workspace, isolated, head.stdout.trim());
     return Object.freeze({ isolationClass: 'git-worktree+local-os-sandbox', workspace, isolatedWorkspace: isolated,
-      revision: head.stdout.trim(), receipt: `git-worktree:${head.stdout.trim()}` });
+      revision: head.stdout.trim(), receipt });
   } catch (error) {
     await git(workspace, ['worktree', 'remove', '--force', destination]).catch(() => {});
     throw error;
   }
+}
+
+function worktreeReceipt(workspace, isolated, revision) {
+  return `git-worktree:${createHash('sha256').update(JSON.stringify({ workspace, isolated, revision })).digest('hex')}`;
+}
+
+/** Recheck a worktree before it is named in a cancellation reconciliation. */
+export async function inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace, revision, receipt, requireClean = false } = {}) {
+  if (![workspaceRoot, isolatedWorkspace, revision, receipt].every(text)) return { valid: false };
+  const workspace = await realpath(workspaceRoot);
+  const isolated = await realpath(isolatedWorkspace);
+  if (workspace === isolated || worktreeReceipt(workspace, isolated, revision) !== receipt) return { valid: false };
+  const [head, listed, status] = await Promise.all([
+    git(isolated, ['rev-parse', 'HEAD']),
+    git(workspace, ['worktree', 'list', '--porcelain']),
+    git(isolated, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=matching']),
+  ]);
+  const registered = [...listed.stdout.matchAll(/^worktree (.+)$/gm)].some(match => match[1] === isolated);
+  const clean = status.stdout.trim() === '';
+  if (!registered || head.stdout.trim() !== revision || (requireClean && !clean)) return { valid: false };
+  return Object.freeze({ valid: true, receipt, revision, isolatedWorkspace: isolated, clean,
+    statusHash: createHash('sha256').update(status.stdout).digest('hex') });
 }
 
 /**
@@ -217,6 +243,7 @@ export async function invokeLedgerBoundNative({ request, capabilityReceipt, capa
   if (authority?.allowed !== true || authority.objectiveRevision !== request.objectiveRevision ||
       authority.capabilityReceiptHash !== receiptHash || authority.leaseId !== request.leaseId ||
       authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt ||
+      authority.worktreeReceipt !== request.worktreeReceipt ||
       !sameScope(authority.allowedWriteScope, request.allowedWriteScope) ||
       authority.isolation !== capabilityReceipt.isolationClass) {
     throw new Error('LEDGER_AUTHORITY_REQUIRED');

@@ -8,6 +8,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import {
   createVerifiedWorktree,
+  inspectVerifiedWorktree,
   createLedgerBoundCodexExecutor,
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
@@ -129,6 +130,7 @@ describe('native adapter primitives', () => {
     }));
     const executor = createLedgerBoundCodexExecutor({
       isolatedWorkspace: '/isolated',
+      worktreeReceipt: 'worktree-1',
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
       promptForRequest: async () => 'Complete the approved task.',
@@ -149,6 +151,7 @@ describe('native adapter primitives', () => {
         budgetReservation: 'reservation-1',
         approvalReceipt: 'approval-1',
         ledgerAuthorityReceipt: 'graph-ledger-receipt',
+        worktreeReceipt: 'worktree-1',
         selectedModel: 'live',
         usageReporting: true,
       })
@@ -185,6 +188,7 @@ describe('native adapter primitives', () => {
     const start = vi.fn();
     const executor = createLedgerBoundCodexExecutor({
       isolatedWorkspace: '/isolated',
+      worktreeReceipt: 'worktree-1',
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
       promptForRequest: async () => 'Complete the approved task.',
@@ -205,6 +209,7 @@ describe('native adapter primitives', () => {
         budgetReservation: 'reservation-1',
         approvalReceipt: 'approval-1',
         ledgerAuthorityReceipt: 'graph-ledger-receipt',
+        worktreeReceipt: 'worktree-1',
         selectedModel: 'live',
       })
     ).rejects.toThrow('LEDGER_AUTHORITY_REQUIRED');
@@ -331,6 +336,45 @@ describe('native adapter primitives', () => {
       });
       expect(isolated.isolationClass).toBe('git-worktree+local-os-sandbox');
       expect(isolated.isolatedWorkspace).not.toBe(isolated.workspace);
+      const replacement = await createVerifiedWorktree({
+        workspaceRoot: root,
+        host: 'codex',
+        localIsolation: localIsolation(root),
+      });
+      expect(replacement.receipt).not.toBe(isolated.receipt);
+      expect(
+        (
+          await inspectVerifiedWorktree({
+            workspaceRoot: root,
+            isolatedWorkspace: replacement.isolatedWorkspace,
+            revision: replacement.revision,
+            receipt: replacement.receipt,
+            requireClean: true,
+          })
+        ).valid
+      ).toBe(true);
+      await writeFile(path.join(isolated.isolatedWorkspace, 'tracked.txt'), 'partial work');
+      expect(
+        (
+          await inspectVerifiedWorktree({
+            workspaceRoot: root,
+            isolatedWorkspace: isolated.isolatedWorkspace,
+            revision: isolated.revision,
+            receipt: isolated.receipt,
+            requireClean: true,
+          })
+        ).valid
+      ).toBe(false);
+      expect(
+        (
+          await inspectVerifiedWorktree({
+            workspaceRoot: root,
+            isolatedWorkspace: isolated.isolatedWorkspace,
+            revision: isolated.revision,
+            receipt: isolated.receipt,
+          })
+        ).valid
+      ).toBe(true);
       execFileSync('git', [
         '-C',
         root,
@@ -338,6 +382,14 @@ describe('native adapter primitives', () => {
         'remove',
         '--force',
         isolated.isolatedWorkspace,
+      ]);
+      execFileSync('git', [
+        '-C',
+        root,
+        'worktree',
+        'remove',
+        '--force',
+        replacement.isolatedWorkspace,
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });

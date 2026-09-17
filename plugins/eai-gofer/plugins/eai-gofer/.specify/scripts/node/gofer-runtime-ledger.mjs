@@ -8,7 +8,7 @@ const digest = value => createHash('sha256').update(JSON.stringify(value)).diges
 const sameList = (left, right) => Array.isArray(left) && Array.isArray(right) &&
   left.length === right.length && left.every((value, index) => value === right[index]);
 
-export async function createRuntimeLedger({ ledgerPath, now = () => new Date() } = {}) {
+export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), verifyCancellation } = {}) {
   if (!path.isAbsolute(ledgerPath)) throw new Error('LEDGER_PATH_REQUIRED');
   await mkdir(path.dirname(ledgerPath), { recursive: true, mode: 0o700 });
   const lockPath = `${ledgerPath}.lock`;
@@ -32,12 +32,19 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
   const reservation = request => ({ taskId: request?.taskId, revision: request?.revision, attempt: request?.attempt,
     budgetReservation: `reservation:${digest(request).slice(0, 24)}` });
   return Object.freeze({
-    reserve: request => transact({ type: 'reserve', request }, async () => text(request?.taskId) && text(request?.revision) &&
-      Number.isSafeInteger(request?.attempt) ? { allowed: true, ...reservation(request) } : { allowed: false }),
+    reserve: request => transact({ type: 'reserve', request }, async history => text(request?.taskId) && text(request?.revision) &&
+      Number.isSafeInteger(request?.attempt) && request.attempt > 0 &&
+      !history.some(item => item.type === 'reserve' && item.taskId === request.taskId &&
+        item.revision === request.revision && item.attempt >= request.attempt) &&
+      !history.some(item => item.type === 'lease' && item.taskId === request.taskId &&
+        !history.some(closed => closed.type === 'cancel-reconciled' && closed.leaseId === item.leaseId))
+      ? { allowed: true, ...reservation(request) } : { allowed: false }),
     lease: request => transact({ type: 'lease', request }, async history => {
       const reserved = reservation(request);
-      if (!history.some(item => item.type === 'reserve' && item.budgetReservation === reserved.budgetReservation)) return { allowed: false };
-      if (history.some(item => item.type === 'lease' && item.taskId === request.taskId && Date.parse(item.expiresAt) > now().getTime())) return { allowed: false };
+      if (!history.some(item => item.type === 'reserve' && item.budgetReservation === reserved.budgetReservation) ||
+          history.some(item => item.type === 'lease' && item.budgetReservation === reserved.budgetReservation)) return { allowed: false };
+      if (history.some(item => item.type === 'lease' && item.taskId === request.taskId &&
+          !history.some(closed => closed.type === 'cancel-reconciled' && closed.leaseId === item.leaseId))) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, attempt: request.attempt,
         leaseId: `lease:${randomUUID()}`, expiresAt: new Date(now().getTime() + 300000).toISOString() };
     }),
@@ -45,27 +52,80 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
       if (!text(request?.leaseId) || !text(request?.budgetReservation) || !text(request?.approvalReceipt) ||
           !Array.isArray(request?.dependencies)) return { allowed: false };
       const lease = history.find(item => item.type === 'lease' && item.leaseId === request.leaseId);
-      if (!lease || lease.taskId !== request.taskId || lease.revision !== request.revision || Date.parse(lease.expiresAt) <= now().getTime()) return { allowed: false };
+      const replacement = history.filter(item => item.type === 'cancel-reconciled' &&
+        item.taskId === request.taskId && item.revision === request.revision).at(-1);
+      if (!lease || lease.taskId !== request.taskId || lease.revision !== request.revision ||
+          Date.parse(lease.expiresAt) <= now().getTime() ||
+          (replacement && request.worktreeReceipt !== replacement.replacementWorktreeReceipt) ||
+          history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request.leaseId)) return { allowed: false };
       return { allowed: true, ...request, receipt: `authority:${digest(request).slice(0, 32)}` };
     }),
     authorizeNative: request => transact({ type: 'native-authorize', request }, async history => {
       const authority = history.find(item => item.type === 'authorize' && item.leaseId === request?.leaseId && item.receipt === request?.ledgerAuthorityReceipt);
-      if (!authority || authority.taskId !== request.taskId || authority.revision !== request.objectiveRevision ||
+      if (!authority || history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request?.leaseId) ||
+          authority.taskId !== request.taskId || authority.revision !== request.objectiveRevision ||
           authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt ||
+          authority.worktreeReceipt !== request.worktreeReceipt ||
           authority.capabilityReceiptHash !== request.capabilityReceiptHash || digest(authority.dependencies) !== digest(request.dependencies) ||
           !sameList(authority.allowedEditScope, request.allowedWriteScope)) return { allowed: false };
       return { allowed: true, ...request, isolation: 'git-worktree+local-os-sandbox', receipt: authority.receipt };
     }),
     authorizeCommit: request => transact({ type: 'commit-authorize', request }, async history => {
       const authority = history.find(item => item.type === 'authorize' && item.leaseId === request?.leaseId);
-      if (!authority || authority.taskId !== request.taskId || authority.revision !== request.revision ||
+      if (!authority || history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request?.leaseId) ||
+          authority.taskId !== request.taskId || authority.revision !== request.revision ||
           authority.attempt !== request.attempt || authority.budgetReservation !== request.budgetReservation ||
           authority.approvalReceipt !== request.approvalReceipt || authority.capabilityReceiptHash !== request.capabilityReceiptHash ||
+          authority.worktreeReceipt !== request.worktreeReceipt ||
           digest(authority.dependencies) !== digest(request.dependencies) || !text(request.inputRevision) ||
           !Array.isArray(request.validation)) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, inputRevision: request.inputRevision,
         leaseId: request.leaseId, capabilityReceiptHash: request.capabilityReceiptHash, receipt: `commit:${digest(request).slice(0, 32)}` };
     }),
+    reconcileCancelledLease: request => transact({ type: 'cancel-reconciled', request }, async history => {
+      if (typeof verifyCancellation !== 'function' || !text(request?.taskId) || !text(request?.revision) ||
+          !Number.isSafeInteger(request?.attempt) || !text(request?.leaseId) || !text(request?.journalHash) ||
+          !text(request?.workerStopReceipt) || !text(request?.abandonedWorktreeReceipt) ||
+          !text(request?.replacementWorktreeReceipt) ||
+          request.abandonedWorktreeReceipt === request.replacementWorktreeReceipt ||
+          !text(request?.inputRevision) || !text(request?.approvalReceipt) ||
+          !text(request?.capabilityReceiptHash) || !text(request?.budgetReservation)) return { allowed: false };
+      const lease = history.find(item => item.type === 'lease' && item.leaseId === request.leaseId);
+      const authority = history.find(item => item.type === 'authorize' && item.leaseId === request.leaseId);
+      const native = history.find(item => item.type === 'native-authorize' && item.leaseId === request.leaseId);
+      if (!lease || !authority || !native || lease.taskId !== request.taskId ||
+          lease.revision !== request.revision || lease.attempt !== request.attempt ||
+          authority.budgetReservation !== request.budgetReservation ||
+          authority.approvalReceipt !== request.approvalReceipt ||
+          authority.capabilityReceiptHash !== request.capabilityReceiptHash ||
+          authority.worktreeReceipt !== request.abandonedWorktreeReceipt ||
+          native.worktreeReceipt !== request.abandonedWorktreeReceipt ||
+          history.some(item => item.leaseId === request.leaseId &&
+            ['commit-authorize', 'cancel-reconciled'].includes(item.type))) return { allowed: false };
+      const proof = await verifyCancellation(structuredClone(request));
+      if (proof?.valid !== true || Object.entries(request).some(([key, value]) => proof[key] !== value)) return { allowed: false };
+      return { allowed: true, ...request, receipt: `cancellation:${digest(request).slice(0, 32)}` };
+    }),
+    inspectCancellation: async request => {
+      if (!text(request?.taskId) || !text(request?.revision) || !text(request?.leaseId) ||
+          !text(request?.receipt) || !text(request?.journalHash)) return { valid: false };
+      const history = await events();
+      const valid = history.some(item => item.type === 'cancel-reconciled' &&
+        item.taskId === request.taskId && item.revision === request.revision &&
+        item.leaseId === request.leaseId && item.receipt === request.receipt &&
+        item.journalHash === request.journalHash &&
+        Object.entries(request).every(([key, value]) => key === 'receipt' || item.request?.[key] === value));
+      return { valid, ...request };
+    },
+    readCancellation: async request => {
+      if (!text(request?.taskId) || !text(request?.revision) || !text(request?.leaseId) ||
+          !text(request?.journalHash)) return { found: false };
+      const history = await events();
+      const record = history.find(item => item.type === 'cancel-reconciled' &&
+        item.taskId === request.taskId && item.revision === request.revision &&
+        item.leaseId === request.leaseId && item.journalHash === request.journalHash);
+      return record ? { found: true, receipt: record.receipt, request: record.request } : { found: false };
+    },
     // Recovery is read-only. It proves that journaled execution facts came from
     // this ledger before a caller may consider any work reusable.
     inspectRecovery: async request => {

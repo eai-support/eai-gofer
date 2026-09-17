@@ -172,6 +172,9 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
           run.capabilityReceiptHash !== receiptHash || run.selectedModel !== route.model.id ||
           run.benchmarkReceipt !== route.benchmarkReceipt || run.approvalReceipt !== approvalReceipt ||
           JSON.stringify(run.requiredChecks) !== JSON.stringify(checks) ||
+          (resumeReport.restartableTasks.length > 0 &&
+            (resumeReport.restartableTasks.length !== 1 ||
+              resumeReport.replacementWorktreeReceipt !== adapter.worktreeReceipt)) ||
           previouslyComplete.size !== resumeReport.reusableTasks.length ||
           [...previouslyComplete].some(id => !resumeReport.reusableTasks.includes(id)) ||
           resumeReport.reusableTasks.length === ids.length) throw new Error('RESUME_RECONCILIATION_REQUIRED');
@@ -284,6 +287,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
       inputRevision: verifiedInputs.get(dependency) ?? null }));
     if (dependencies.some(dependency => !text(dependency.inputRevision))) throw new Error('DEPENDENCY_INPUT_REQUIRED');
     const request = { taskId, revision, dependencies, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId], approvalReceipt,
+      ...(text(adapter.worktreeReceipt) ? { worktreeReceipt: adapter.worktreeReceipt } : {}),
       capabilityReceiptHash: receiptHash, selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt };
     let previousChecks = [];
     try {
@@ -310,11 +314,13 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         if (authority?.allowed !== true || authority.taskId !== taskId || authority.revision !== revision ||
             authority.attempt !== attempt || authority.capabilityReceiptHash !== receiptHash ||
             authority.budgetReservation !== reservation.budgetReservation || authority.leaseId !== lease.leaseId ||
+            authority.worktreeReceipt !== request.worktreeReceipt ||
             authority.leaseExpiresAt !== lease.expiresAt || authority.allowedEditScope?.join('\0') !== request.allowedEditScope.join('\0') ||
             authority.requiredChecks?.join('\0') !== request.requiredChecks.join('\0') || authority.approvalReceipt !== approvalReceipt ||
             !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
         await record({ event: 'ledger_authorized', task: taskId, attempt, leaseId: lease.leaseId,
-          budgetReservation: reservation.budgetReservation, receipt: authority.receipt, capabilityReceiptHash: receiptHash });
+          budgetReservation: reservation.budgetReservation, receipt: authority.receipt, capabilityReceiptHash: receiptHash,
+          worktreeReceipt: request.worktreeReceipt ?? null });
         states[taskId] = 'running';
         await checkpoint('running', taskId);
         // Repair sees measured failures, never just "try again" or prior reasoning.
@@ -404,7 +410,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     } else {
       await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations, capabilityReceiptHash: receiptHash,
         selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt, approvalReceipt,
-        requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
+        requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete],
+        worktreeReceipt: adapter.worktreeReceipt ?? null });
       await checkpoint('started');
     }
     const active = new Map();

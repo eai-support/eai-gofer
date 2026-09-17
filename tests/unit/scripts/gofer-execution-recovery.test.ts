@@ -4,8 +4,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createHash } from 'node:crypto';
 import { executionRevision } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
-import { inspectExecutionRecovery } from '../../../.specify/scripts/node/gofer-execution-recovery.mjs';
+import {
+  inspectExecutionRecovery,
+  reconcileCancelledExecution,
+} from '../../../.specify/scripts/node/gofer-execution-recovery.mjs';
+import { createRuntimeLedger } from '../../../.specify/scripts/node/gofer-runtime-ledger.mjs';
+import { createVerifiedWorktree } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -173,6 +179,214 @@ describe('Read-only interrupted execution reconciliation', () => {
     expect(report.resumeAllowed).toBe(false);
     expect(report.replayAllowed).toBe(false);
     expect(await readFile(f.journal, 'utf8')).toBe(before);
+  });
+  it('requires a trusted cancellation proof before a cancelled task can restart', async () => {
+    const f = await fixture();
+    f.events[3].worktreeReceipt = 'old-worktree';
+    f.events.push(
+      f.event({
+        event: 'cancelled',
+        task: 'T001',
+        reason: 'CANCELLED',
+        reconciliationRequired: true,
+      }),
+      f.event({ event: 'finished', status: 'incomplete', adapterCallsSettled: true })
+    );
+    const journalHash = createHash('sha256')
+      .update(f.events.map((e) => `${JSON.stringify(e)}\n`).join(''))
+      .digest('hex');
+    f.events.push(
+      f.event({
+        event: 'cancel_reconciled',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        journalHash,
+        abandonedWorktreeReceipt: 'old-worktree',
+        replacementWorktreeReceipt: 'new-worktree',
+        workerStopReceipt: 'stopped',
+        inputRevision: 'input-1',
+        receipt: 'cancellation-1',
+      })
+    );
+    await f.save();
+    const withoutVerifier = await inspectExecutionRecovery(f.options);
+    expect(withoutVerifier.status).toBe('blocked');
+    expect(withoutVerifier.reasons).toContain('CANCELLATION_VERIFIER_REQUIRED');
+    const verifyCancellation = vi.fn(async (request: Record<string, unknown>) => ({
+      ...request,
+      valid: true,
+    }));
+    const report = await inspectExecutionRecovery({ ...f.options, verifyCancellation });
+    expect(report.status).toBe('reconciled');
+    expect(report.restartableTasks).toEqual(['T001']);
+    expect(report.replacementWorktreeReceipt).toBe('new-worktree');
+    expect(report.resumeAllowed).toBe(true);
+    expect(report.replayAllowed).toBe(false);
+    expect(verifyCancellation).toHaveBeenCalledOnce();
+    f.events.at(-1)!.journalHash = 'forged';
+    await f.save();
+    const forged = await inspectExecutionRecovery({ ...f.options, verifyCancellation });
+    expect(forged.status).toBe('blocked');
+    expect(forged.reasons).toContain('INVALID_CANCELLATION_RECONCILIATION');
+  });
+  it('writes a ledger-bound restart record only after both worktrees are inspected', async () => {
+    const f = await fixture();
+    const source = await mkdtemp(path.join(tmpdir(), 'gofer-recovery-source-'));
+    roots.push(source);
+    const git = (...args: string[]) => promisify(execFile)('git', ['-C', source, ...args]);
+    await git('init');
+    await git('config', 'user.email', 'test@example.com');
+    await git('config', 'user.name', 'Test');
+    await writeFile(path.join(source, 'tracked.txt'), 'base');
+    await git('add', '.');
+    await git('commit', '-m', 'base');
+    const localIsolation = {
+      contractVersion: 'eai.local-isolation/v1',
+      projectDirectory: source,
+      cloudExecution: 'prohibited',
+      gitRepository: true,
+      assessments: [
+        {
+          surfaceId: 'codex-cli',
+          status: 'ready',
+          localOnly: true,
+          requiresGitWorktree: true,
+          requiresOsSandbox: true,
+          hostArguments: ['--sandbox', 'workspace-write'],
+          missing: [],
+        },
+      ],
+    };
+    const oldWorktree = await createVerifiedWorktree({
+      workspaceRoot: source,
+      host: 'codex',
+      localIsolation,
+    });
+    const newWorktree = await createVerifiedWorktree({
+      workspaceRoot: source,
+      host: 'codex',
+      localIsolation,
+    });
+    try {
+      await writeFile(path.join(oldWorktree.isolatedWorkspace, 'tracked.txt'), 'partial');
+      f.events[0].approvalReceipt = 'approved';
+      f.events[3].worktreeReceipt = oldWorktree.receipt;
+      const ledger = await createRuntimeLedger({
+        ledgerPath: path.join(f.root, 'ledger.jsonl'),
+        verifyCancellation: async (request) => ({ ...request, valid: true }),
+      });
+      const base = {
+        taskId: 'T001',
+        revision: f.revision,
+        attempt: 1,
+        dependencies: [],
+        worktreeReceipt: oldWorktree.receipt,
+      };
+      const reservation = await ledger.reserve(base);
+      const lease = await ledger.lease(base);
+      const authority = await ledger.authorize({
+        ...base,
+        leaseId: lease.leaseId,
+        budgetReservation: reservation.budgetReservation,
+        approvalReceipt: 'approved',
+        allowedEditScope: ['tracked.txt'],
+        capabilityReceiptHash: 'capability-1',
+      });
+      await ledger.authorizeNative({
+        ...base,
+        objectiveRevision: f.revision,
+        leaseId: lease.leaseId,
+        budgetReservation: reservation.budgetReservation,
+        approvalReceipt: 'approved',
+        capabilityReceiptHash: 'capability-1',
+        ledgerAuthorityReceipt: authority.receipt,
+        allowedWriteScope: ['tracked.txt'],
+      });
+      f.events[3].leaseId = lease.leaseId;
+      f.events[3].budgetReservation = reservation.budgetReservation;
+      f.events[3].receipt = authority.receipt;
+      f.events.push(
+        f.event({
+          event: 'cancelled',
+          task: 'T001',
+          reason: 'CANCELLED',
+          reconciliationRequired: true,
+        }),
+        f.event({ event: 'finished', status: 'incomplete', adapterCallsSettled: true })
+      );
+      await f.save();
+      await writeFile(path.join(newWorktree.isolatedWorkspace, 'tracked.txt'), 'not-clean');
+      await expect(
+        reconcileCancelledExecution({
+          ...f.options,
+          featureDir: f.root,
+          workspaceRoot: source,
+          abandonedWorkspace: oldWorktree.isolatedWorkspace,
+          replacementWorkspace: newWorktree.isolatedWorkspace,
+          worktreeRevision: oldWorktree.revision,
+          replacementWorktreeReceipt: newWorktree.receipt,
+          inputRevision: 'source-head',
+          ledger,
+        })
+      ).rejects.toThrow('REPLACEMENT_WORKTREE_UNVERIFIED');
+      await writeFile(path.join(newWorktree.isolatedWorkspace, 'tracked.txt'), 'base');
+      const result = await reconcileCancelledExecution({
+        ...f.options,
+        featureDir: f.root,
+        workspaceRoot: source,
+        abandonedWorkspace: oldWorktree.isolatedWorkspace,
+        replacementWorkspace: newWorktree.isolatedWorkspace,
+        worktreeRevision: oldWorktree.revision,
+        replacementWorktreeReceipt: newWorktree.receipt,
+        inputRevision: 'source-head',
+        ledger,
+      });
+      expect(result.reconciled).toBe(true);
+      const resumed = await inspectExecutionRecovery({
+        ...f.options,
+        verifyCancellation: async (request) => {
+          const proof = await ledger.inspectCancellation(request);
+          return { ...request, valid: proof.valid };
+        },
+      });
+      expect(resumed.status).toBe('reconciled');
+      expect(resumed.restartableTasks).toEqual(['T001']);
+      const raw = await readFile(f.journal, 'utf8');
+      expect(raw).toContain('cancel_reconciled');
+      const records = raw
+        .trimEnd()
+        .split('\n')
+        .map((line) => JSON.parse(line));
+      records.at(-1).replacementWorktreeReceipt = 'forged-replacement';
+      await f.save(records);
+      const forged = await inspectExecutionRecovery({
+        ...f.options,
+        verifyCancellation: async (request) => {
+          const proof = await ledger.inspectCancellation(request);
+          return { ...request, valid: proof.valid };
+        },
+      });
+      expect(forged.status).toBe('blocked');
+      expect(forged.reasons).toContain('CANCELLATION_NOT_VERIFIED:T001');
+      await writeFile(f.journal, raw);
+      await expect(
+        reconcileCancelledExecution({
+          ...f.options,
+          featureDir: f.root,
+          workspaceRoot: source,
+          abandonedWorkspace: oldWorktree.isolatedWorkspace,
+          replacementWorkspace: newWorktree.isolatedWorkspace,
+          worktreeRevision: oldWorktree.revision,
+          replacementWorktreeReceipt: newWorktree.receipt,
+          inputRevision: 'source-head',
+          ledger,
+        })
+      ).rejects.toThrow('CANCELLATION_RECONCILIATION_REQUIRED');
+    } finally {
+      await git('worktree', 'remove', '--force', oldWorktree.isolatedWorkspace);
+      await git('worktree', 'remove', '--force', newWorktree.isolatedWorkspace);
+    }
   });
   it('does not resume a run that returned while an adapter call was still active', async () => {
     const f = await fixture();
