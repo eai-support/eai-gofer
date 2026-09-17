@@ -6,6 +6,7 @@ import path from 'node:path';
 import {
   captureHeldOutResultSnapshot,
   inspectHeldOutResultSnapshot,
+  loadPinnedHeldOutSnapshot,
 } from '../../../.specify/scripts/node/gofer-heldout-snapshot.mjs';
 
 const roots: string[] = [];
@@ -135,5 +136,35 @@ describe('held-out result snapshot custody', () => {
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('HELDOUT_SNAPSHOT_REQUIRED');
+  });
+
+  it('loads only an owner-only pinned result matching the corpus', async () => {
+    const f = await fixture();
+    const snapshot = await captureHeldOutResultSnapshot(f);
+    const config = path.join(f.trustRoot, 'heldout-results.json');
+    await writeFile(
+      config,
+      JSON.stringify({
+        schemaVersion: 1,
+        snapshotId: snapshot.snapshotId,
+        corpusHash: snapshot.corpusHash,
+      }),
+      { mode: 0o600 }
+    );
+    await expect(
+      loadPinnedHeldOutSnapshot({
+        trustRoot: f.trustRoot,
+        workspaceRoot: f.workspaceRoot,
+        corpusHash: snapshot.corpusHash,
+      })
+    ).resolves.toMatchObject({ snapshotId: snapshot.snapshotId });
+    await chmod(config, 0o644);
+    await expect(
+      loadPinnedHeldOutSnapshot({
+        trustRoot: f.trustRoot,
+        workspaceRoot: f.workspaceRoot,
+        corpusHash: snapshot.corpusHash,
+      })
+    ).rejects.toThrow('HELDOUT_SNAPSHOT_REQUIRED');
   });
 });

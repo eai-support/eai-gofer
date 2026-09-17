@@ -1,10 +1,14 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { recheckHeldOutBenchmark } from '../../../.specify/scripts/node/gofer-heldout-verifier.mjs';
+import {
+  recheckHeldOutBenchmark,
+  recheckHeldOutSnapshot,
+} from '../../../.specify/scripts/node/gofer-heldout-verifier.mjs';
+import { captureHeldOutResultSnapshot } from '../../../.specify/scripts/node/gofer-heldout-snapshot.mjs';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const jsonHash = (value: unknown) => hash(JSON.stringify(value));
@@ -17,11 +21,13 @@ async function fixture(
   verifySource = "import assert from 'node:assert/strict'; import { value } from './src/value.mjs'; assert.equal(value, 1);\n"
 ) {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'gofer-verifier-workspace-'));
-  const corpusRoot = await mkdtemp(path.join(tmpdir(), 'gofer-verifier-corpus-'));
+  const trustRoot = await mkdtemp(path.join(tmpdir(), 'gofer-verifier-trust-'));
+  const corpusRoot = path.join(trustRoot, 'corpora', 'fixture');
   const worktreesRoot = await mkdtemp(path.join(tmpdir(), 'gofer-verifier-worktrees-'));
-  roots.push(workspaceRoot, corpusRoot, worktreesRoot);
+  roots.push(workspaceRoot, trustRoot, worktreesRoot);
+  await mkdir(corpusRoot, { recursive: true, mode: 0o700 });
   const receipts = path.join(corpusRoot, 'receipts');
-  await mkdir(receipts);
+  await mkdir(receipts, { mode: 0o700 });
   const categories = ['bug-fix', 'refactor', 'cross-service-contract', 'security-sensitive'];
   const manifest = { schemaVersion: 1, cases: [] as Array<Record<string, string>> };
   const inputs: Array<{
@@ -111,7 +117,7 @@ async function fixture(
       },
     })
   );
-  return { corpusRoot, workspaceRoot, worktrees };
+  return { corpusRoot, workspaceRoot, trustRoot, worktrees };
 }
 
 describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/Users/'))(
@@ -146,6 +152,35 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
       );
       const result = await recheckHeldOutBenchmark(f);
       expect(result.functionalPasses).toBe(12);
+    });
+
+    it('rechecks captured bytes even after the original worktree changes', async () => {
+      const f = await fixture();
+      const snapshot = await captureHeldOutResultSnapshot(f);
+      await writeFile(path.join(f.worktrees[0], 'src/value.mjs'), 'export const value = 0;\n');
+      const result = await recheckHeldOutSnapshot({ ...f, snapshotId: snapshot.snapshotId });
+      expect(result).toMatchObject({
+        source: 'protected-snapshot',
+        snapshotId: snapshot.snapshotId,
+        functionalPasses: 12,
+        authority: 'diagnostic-only',
+      });
+      const manifest = JSON.parse(
+        await readFile(
+          path.join(f.trustRoot, 'results', snapshot.snapshotId, 'manifest.json'),
+          'utf8'
+        )
+      );
+      const answer = manifest.entries.find(
+        (entry: { name: string }) => entry.name === 'worktrees/eai-bug-fix-1/src/value.mjs'
+      );
+      await writeFile(
+        path.join(f.trustRoot, 'results', snapshot.snapshotId, 'objects', answer.sha256),
+        'changed'
+      );
+      await expect(
+        recheckHeldOutSnapshot({ ...f, snapshotId: snapshot.snapshotId })
+      ).rejects.toThrow('HELDOUT_VERIFIER_REQUIRED');
     });
 
     it('does not let a CLI caller select the trusted corpus', async () => {

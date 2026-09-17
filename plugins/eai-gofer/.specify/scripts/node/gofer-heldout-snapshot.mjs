@@ -2,7 +2,7 @@
  * Capture preserves bytes; it does not verify functionality or grant routing authority. */
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, opendir, realpath, rename, rm } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, open, opendir, realpath, rename, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,9 @@ import { loadTrustedHeldOutCorpus } from './gofer-trusted-evaluator.mjs';
 const denied = () => new Error('HELDOUT_SNAPSHOT_REQUIRED');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const safeName = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(value);
+const safeEntry = value => typeof value === 'string' &&
+  /^(receipts|worktrees)\/[a-zA-Z0-9._/-]+$/.test(value) &&
+  !value.split('/').some(part => part === '.' || part === '..' || !part);
 const inside = (root, target) => {
   const relative = path.relative(root, target);
   return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
@@ -176,9 +179,8 @@ export async function inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, s
     const names = new Set();
     let totalBytes = 0;
     for (const entry of manifest.entries) {
-      if (typeof entry?.name !== 'string' || !/^(receipts|worktrees)\/[a-zA-Z0-9._/-]+$/.test(entry.name) ||
-          entry.name.split('/').some(part => part === '.' || part === '..' || !part) ||
-          names.has(entry.name) || !/^[a-f0-9]{64}$/.test(entry.sha256 ?? '')) throw denied();
+      if (!safeEntry(entry?.name) || names.has(entry.name) ||
+          !/^[a-f0-9]{64}$/.test(entry.sha256 ?? '')) throw denied();
       names.add(entry.name);
       const bytes = await sourceFile(path.join(objects, entry.sha256), 2 * 1024 * 1024, 0);
       totalBytes += bytes.length;
@@ -189,6 +191,60 @@ export async function inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, s
     return Object.freeze({ snapshotId, corpusHash: manifest.corpusHash,
       reportSha256: manifest.reportSha256, fileCount: manifest.entries.length,
       authority: 'diagnostic-only' });
+  } catch { throw denied(); }
+}
+
+/** Materialize verified bytes outside the account trust root for the
+ * read-only, offline verifier sandbox. The caller owns cleanup of `root`. */
+export async function materializeHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId } = {}) {
+  await inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId });
+  let root;
+  try {
+    const folder = path.join(await realpath(trustRoot), 'results', snapshotId);
+    const manifestBytes = await sourceFile(path.join(folder, 'manifest.json'), 4 * 1024 * 1024);
+    if (sha(manifestBytes) !== snapshotId) throw denied();
+    const manifest = JSON.parse(manifestBytes.toString('utf8'));
+    root = await mkdtemp(path.join(os.tmpdir(), 'gofer-heldout-recheck-'));
+    for (const entry of manifest.entries) {
+      if (!safeEntry(entry?.name) || !/^[a-f0-9]{64}$/.test(entry.sha256 ?? '')) throw denied();
+      const bytes = await sourceFile(path.join(folder, 'objects', entry.sha256), 2 * 1024 * 1024, 0);
+      if (sha(bytes) !== entry.sha256) throw denied();
+      const filename = path.join(root, entry.name);
+      if (!inside(root, filename)) throw denied();
+      await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
+      const file = await open(filename, constants.O_WRONLY | constants.O_CREAT |
+        constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      try { await file.writeFile(bytes); }
+      finally { await file.close(); }
+    }
+    await inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId });
+    return Object.freeze({ root, snapshotId, corpusHash: manifest.corpusHash,
+      reportSha256: manifest.reportSha256 });
+  } catch {
+    if (root) await rm(root, { recursive: true, force: true });
+    throw denied();
+  }
+}
+
+/** A trusted setup path may pin one captured result without signing it. */
+export async function loadPinnedHeldOutSnapshot({ trustRoot, workspaceRoot, corpusHash } = {}) {
+  if (!/^[a-f0-9]{64}$/.test(corpusHash ?? '') ||
+      ![trustRoot, workspaceRoot].every(value => typeof value === 'string' && path.isAbsolute(value))) throw denied();
+  try {
+    const trust = await realpath(trustRoot);
+    const workspace = await realpath(workspaceRoot);
+    if (inside(workspace, trust) || inside(trust, workspace)) throw denied();
+    await ownerDirectory(trust);
+    const configPath = path.join(trust, 'heldout-results.json');
+    const configInfo = await lstat(configPath);
+    if (!configInfo.isFile() || configInfo.uid !== process.getuid() ||
+        configInfo.nlink !== 1 || (configInfo.mode & 0o077) !== 0) throw denied();
+    const config = JSON.parse((await sourceFile(configPath, 4096)).toString('utf8'));
+    if (config?.schemaVersion !== 1 || !/^[a-f0-9]{64}$/.test(config.snapshotId ?? '') ||
+        config.corpusHash !== corpusHash) throw denied();
+    const snapshot = await inspectHeldOutResultSnapshot({ trustRoot: trust, workspaceRoot, snapshotId: config.snapshotId });
+    if (snapshot.corpusHash !== corpusHash) throw denied();
+    return Object.freeze({ snapshotId: config.snapshotId, trustRoot: trust });
   } catch { throw denied(); }
 }
 

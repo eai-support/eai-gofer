@@ -3,12 +3,14 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, open, opendir, realpath } from 'node:fs/promises';
+import { lstat, open, opendir, realpath, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadHeldOutCorpus } from './gofer-heldout-corpus.mjs';
 import { loadTrustedHeldOutCorpus } from './gofer-trusted-evaluator.mjs';
+import { inspectHeldOutResultSnapshot, loadPinnedHeldOutSnapshot,
+  materializeHeldOutResultSnapshot } from './gofer-heldout-snapshot.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const denied = () => new Error('HELDOUT_VERIFIER_REQUIRED');
@@ -86,7 +88,8 @@ function runSandboxCheck(worktree) {
 
 /** The report and receipts may be mutable. Only the fresh sandbox result is
  * authoritative for this diagnostic; the output is never routing authority. */
-export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}) {
+export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot,
+  receiptsRoot, worktreesRoot } = {}) {
   if (process.platform !== 'darwin' || !path.isAbsolute(corpusRoot ?? '') ||
       !path.isAbsolute(workspaceRoot ?? '')) throw denied();
   try {
@@ -94,7 +97,8 @@ export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}
     const root = await realpath(corpusRoot);
     const workspace = await realpath(workspaceRoot);
     const temporary = await realpath(os.tmpdir());
-    const saved = await readJson(path.join(root, 'receipts', 'benchmark-report.json'));
+    const receipts = receiptsRoot ? await realpath(receiptsRoot) : path.join(root, 'receipts');
+    const saved = await readJson(path.join(receipts, 'benchmark-report.json'));
     const report = saved?.report;
     if (saved.corpusHash !== corpus.corpusHash || report?.schemaVersion !== 2 ||
         report.repetitions !== 3 || report.caseCount !== corpus.cases.length ||
@@ -116,8 +120,8 @@ export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}
       if (run.modelId !== report.provenance?.modelId) throw denied();
       if (run.inputHash !== sha(JSON.stringify({ caseId: run.caseId, input: benchmarkCase.input }))) throw denied();
       const label = `${run.caseId}-${run.run}`;
-      const execution = await readJson(path.join(root, 'receipts', `${label}.execution.json`));
-      const verification = await readJson(path.join(root, 'receipts', `${label}.verification.json`));
+      const execution = await readJson(path.join(receipts, `${label}.execution.json`));
+      const verification = await readJson(path.join(receipts, `${label}.verification.json`));
       const { executionReceipt, ...payload } = execution;
       if (sha(JSON.stringify(payload)) !== executionReceipt || executionReceipt !== run.receipt ||
           execution.id !== run.caseId || execution.run !== run.run ||
@@ -127,7 +131,8 @@ export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}
           verification.receipt !== run.verifierReceipt ||
           verification.passed !== run.functionalVerified ||
           execution.native?.isolation !== 'git-worktree+local-os-sandbox') throw denied();
-      const worktree = await realpath(execution.worktree);
+      if (!path.isAbsolute(execution.worktree ?? '')) throw denied();
+      const worktree = await realpath(worktreesRoot ? path.join(worktreesRoot, label) : execution.worktree);
       const info = await lstat(worktree);
       if (!inside(temporary, worktree) || inside(workspace, worktree) || inside(root, worktree) ||
           !info.isDirectory() || info.uid !== process.getuid() || (info.mode & 0o077) !== 0 ||
@@ -159,11 +164,34 @@ export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}
   } catch { throw denied(); }
 }
 
+/** Recheck only the captured bytes. The original worktrees may have changed
+ * or disappeared; their retained receipt paths are never executed. */
+export async function recheckHeldOutSnapshot({ corpusRoot, workspaceRoot, trustRoot, snapshotId } = {}) {
+  let materialized;
+  try {
+    const before = await inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId });
+    const corpus = await loadHeldOutCorpus({ corpusRoot, workspaceRoot });
+    if (before.corpusHash !== corpus.corpusHash) throw denied();
+    materialized = await materializeHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId });
+    const result = await recheckHeldOutBenchmark({ corpusRoot, workspaceRoot,
+      receiptsRoot: path.join(materialized.root, 'receipts'),
+      worktreesRoot: path.join(materialized.root, 'worktrees') });
+    const after = await inspectHeldOutResultSnapshot({ trustRoot, workspaceRoot, snapshotId });
+    if (before.reportSha256 !== after.reportSha256 || before.snapshotId !== after.snapshotId) throw denied();
+    return Object.freeze({ ...result, snapshotId, source: 'protected-snapshot' });
+  } catch { throw denied(); }
+  finally { if (materialized) await rm(materialized.root, { recursive: true, force: true }); }
+}
+
 /** Production entrypoint: the account trust root chooses the corpus. */
 export async function recheckConfiguredHeldOutBenchmark({ workspaceRoot } = {}) {
   try {
     const corpus = await loadTrustedHeldOutCorpus({ workspaceRoot });
-    return await recheckHeldOutBenchmark({ corpusRoot: corpus.corpusRoot, workspaceRoot });
+    const trustRoot = path.dirname(path.dirname(corpus.corpusRoot));
+    const snapshot = await loadPinnedHeldOutSnapshot({ trustRoot, workspaceRoot,
+      corpusHash: corpus.corpusHash });
+    return await recheckHeldOutSnapshot({ corpusRoot: corpus.corpusRoot, workspaceRoot,
+      trustRoot, snapshotId: snapshot.snapshotId });
   } catch { throw denied(); }
 }
 
