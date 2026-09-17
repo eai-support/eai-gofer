@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   LOCAL_ISOLATION_CONTRACT,
+  inspectEaiLocalIsolation,
   verifyLocalIsolationReport,
 } from '../../../.specify/scripts/node/gofer-local-isolation.mjs';
 
@@ -52,5 +53,35 @@ describe('EAI local isolation contract', () => {
         { host: 'codex', workspaceRoot }
       )
     ).toBe(false);
+  });
+
+  it('reads the selected worktree from the local CLI and rejects failed readiness', async () => {
+    const run = vi.fn(async () => ({ stdout: JSON.stringify(readyReport), stderr: '' }));
+    await expect(
+      inspectEaiLocalIsolation({ host: 'codex', workspaceRoot, run })
+    ).resolves.toMatchObject(readyReport);
+    expect(run).toHaveBeenCalledWith(
+      'eai',
+      ['start', workspaceRoot, '--isolation-check', '--surface', 'codex-cli', '--format', 'json'],
+      expect.objectContaining({ timeout: 15000 })
+    );
+    await expect(
+      inspectEaiLocalIsolation({
+        host: 'codex',
+        workspaceRoot,
+        run: async () => {
+          throw new Error('exit 1');
+        },
+      })
+    ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
+    await expect(
+      inspectEaiLocalIsolation({
+        host: 'codex',
+        workspaceRoot,
+        run: async () => ({
+          stdout: JSON.stringify({ ...readyReport, projectDirectory: '/other' }),
+        }),
+      })
+    ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
   });
 });

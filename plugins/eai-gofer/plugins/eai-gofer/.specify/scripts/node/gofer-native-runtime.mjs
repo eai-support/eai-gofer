@@ -9,10 +9,12 @@ import { createVerifiedWorktree, createLedgerBoundCodexExecutor, startLocalCodex
 import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
 import { runVerifiedGraph } from './gofer-verified-execution.mjs';
+import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 
-export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex', localIsolation,
+export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex',
+  localIsolation = inspectEaiLocalIsolation,
   capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger, nativeLedger = ledger?.authorizeNative,
   promptForRequest, adapter, baseRef } = {}) {
   if (!text(workspaceRoot) || host !== 'codex' || typeof localIsolation !== 'function' ||
