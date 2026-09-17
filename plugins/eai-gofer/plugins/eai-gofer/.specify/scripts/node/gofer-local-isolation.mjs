@@ -17,6 +17,14 @@ const HOST_SURFACES = Object.freeze({
   grok: 'grok-cli',
 });
 
+function hasQualifiedHostArguments(host, args) {
+  if (host !== 'codex' || !Array.isArray(args)) return false;
+  const qualified = ['--sandbox', 'workspace-write'];
+  const withApproval = [...qualified, '--ask-for-approval', 'never'];
+  return [qualified, withApproval].some(expected =>
+    args.length === expected.length && args.every((value, index) => value === expected[index]));
+}
+
 export function verifyLocalIsolationReport(report, { host, workspaceRoot } = {}) {
   const surfaceId = HOST_SURFACES[host];
   if (!surfaceId || !text(workspaceRoot) || !report || report.contractVersion !== LOCAL_ISOLATION_CONTRACT ||
@@ -25,7 +33,7 @@ export function verifyLocalIsolationReport(report, { host, workspaceRoot } = {})
   const assessment = report.assessments.find(item => item?.surfaceId === surfaceId);
   if (!assessment || assessment.status !== 'ready' || assessment.localOnly !== true ||
       assessment.requiresGitWorktree !== true || assessment.requiresOsSandbox !== true ||
-      !Array.isArray(assessment.hostArguments) || assessment.hostArguments.some(value => !text(value)) ||
+      !hasQualifiedHostArguments(host, assessment.hostArguments) ||
       !Array.isArray(assessment.missing) || assessment.missing.length !== 0) return false;
   const normalizedReportRoot = report.projectDirectory.replace(/\\/g, '/').replace(/\/+$/, '');
   const normalizedWorkspace = workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '');

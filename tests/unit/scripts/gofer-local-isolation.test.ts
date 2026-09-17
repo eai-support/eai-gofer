@@ -36,6 +36,18 @@ describe('EAI local isolation contract', () => {
         { host: 'codex', workspaceRoot }
       )
     ).toBe(false);
+    for (const hostArguments of [
+      ['--no-sandbox'],
+      ['--sandbox', 'danger-full-access'],
+      ['--sandbox', 'workspace-write', '--sandbox', 'danger-full-access'],
+    ]) {
+      expect(
+        verifyLocalIsolationReport(
+          { ...readyReport, assessments: [{ ...readyReport.assessments[0], hostArguments }] },
+          { host: 'codex', workspaceRoot }
+        )
+      ).toBe(false);
+    }
     expect(
       verifyLocalIsolationReport(
         { ...readyReport, projectDirectory: '/work/other' },

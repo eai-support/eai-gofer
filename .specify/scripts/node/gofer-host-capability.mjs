@@ -183,7 +183,7 @@ export function verifyCapabilityReceipt(receipt, { publicKey, now = Date.now(), 
   if (!verify(null, Buffer.from(canonicalJson(unsignedReceipt(receipt))), publicKey,
     Buffer.from(receipt.signature.value, 'base64url'))) return false;
   for (const [field, expected] of Object.entries(required)) {
-    const values = receipt[field];
+    const values = receipt[field === 'reasoningEfforts' ? 'reasoningCapabilities' : field];
     if (Array.isArray(expected) && (!Array.isArray(values) || expected.some(value => !values.includes(value)))) return false;
     if (typeof expected === 'string' && values !== expected) return false;
   }

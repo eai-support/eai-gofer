@@ -44,8 +44,8 @@ function benchmarkResult(report, modelId, receiptHash) {
 
 export async function selectCapabilityRoute({ receipt, publicKey, host, requiredCapabilities = {},
   advisoryConstraints = {}, benchmarkEvidence, verifyBenchmark, now = Date.now() } = {}) {
-  const { reasoningEfforts = [], ...receiptRequirements } = requiredCapabilities;
-  if (!verifyCapabilityReceipt(receipt, { publicKey, host, requiredCapabilities: receiptRequirements, now })) {
+  const { reasoningEfforts = [] } = requiredCapabilities;
+  if (!verifyCapabilityReceipt(receipt, { publicKey, host, requiredCapabilities, now })) {
     throw new Error('LIVE_RECEIPT_REQUIRED');
   }
   const reports = Array.isArray(benchmarkEvidence) ? benchmarkEvidence : [benchmarkEvidence];
