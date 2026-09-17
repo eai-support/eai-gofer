@@ -4,10 +4,11 @@
  * governs both graph dispatch and the host launch.
  */
 import path from 'node:path';
-import { realpath } from 'node:fs/promises';
+import { lstat, realpath } from 'node:fs/promises';
 import { createVerifiedWorktree, inspectVerifiedWorktree, disposeVerifiedWorktree, createLedgerBoundCodexExecutor, startLocalCodexInvocation,
-  inspectNativeWorkerEvidence, createNativeCancellationVerifier } from './gofer-native-adapter.mjs';
+  inspectNativeWorkerEvidence, createNativeCancellationVerifier, createNativeBenchmarkCaptureVerifier } from './gofer-native-adapter.mjs';
 import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
+import { captureConfiguredHeldOutResultSnapshot } from './gofer-heldout-snapshot.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
 import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
@@ -133,4 +134,36 @@ export async function reconcileVerifiedNativeCancellation({ featureDir, ledgerPa
     replacementWorkspace, worktreeRevision, replacementWorktreeReceipt, inputRevision,
     ledger, verifyReceipt, timeoutMs,
     inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) });
+}
+
+/** Reopen the dispatch ledger from the controller's source-side feature root.
+ * Capture stays unavailable until that same ledger proves all native runs and
+ * the controller-owned process evidence proves that every worker has stopped. */
+export async function openVerifiedNativeBenchmarkCapture({ featureDir, ledgerPath, workspaceRoot } = {}) {
+  if (![featureDir, ledgerPath, workspaceRoot].every(text) ||
+      ![featureDir, ledgerPath, workspaceRoot].every(path.isAbsolute)) {
+    throw new Error('NATIVE_BENCHMARK_CAPTURE_CONFIGURATION_REQUIRED');
+  }
+  const [workspace, controllerRoot, ledgerParent] = await Promise.all([
+    realpath(workspaceRoot), realpath(featureDir), realpath(path.dirname(ledgerPath)),
+  ]);
+  if (!inside(workspace, controllerRoot) || controllerRoot === workspace ||
+      !inside(controllerRoot, ledgerParent)) {
+    throw new Error('NATIVE_BENCHMARK_CAPTURE_CONTROL_PLANE_REQUIRED');
+  }
+  const ledgerFile = path.join(ledgerParent, path.basename(ledgerPath));
+  const info = await lstat(ledgerFile);
+  if (!info.isFile() || info.nlink !== 1 ||
+      (typeof process.getuid === 'function' && info.uid !== process.getuid()) ||
+      (info.mode & 0o077) !== 0) {
+    throw new Error('NATIVE_BENCHMARK_CAPTURE_LEDGER_REQUIRED');
+  }
+  const evidenceDirectory = path.join(controllerRoot, '.native-worker-evidence');
+  const ledger = await createRuntimeLedger({ ledgerPath: ledgerFile,
+    verifyBenchmarkCapture: createNativeBenchmarkCaptureVerifier({ evidenceDirectory }) });
+  return Object.freeze({
+    authorizeCapture: request => ledger.authorizeBenchmarkCapture(request),
+    capture: captureAuthorization => captureConfiguredHeldOutResultSnapshot({ workspaceRoot: workspace,
+      ledger, captureAuthorization }),
+  });
 }

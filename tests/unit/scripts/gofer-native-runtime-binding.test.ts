@@ -1,11 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { chmod, link, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
-import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
+import {
+  createVerifiedNativeRuntime,
+  openVerifiedNativeBenchmarkCapture,
+} from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 import { localIsolationReport } from './local-isolation-fixture.js';
 
 const runGraph = vi.hoisted(() => vi.fn());
@@ -18,6 +21,57 @@ vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
 }));
 
 describe('native runtime workspace binding', () => {
+  it('opens only an existing private source-side ledger and fails closed without native run evidence', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-capture-'));
+    try {
+      const featureDir = path.join(root, '.specify', 'specs', 'task');
+      await mkdir(featureDir, { recursive: true });
+      const ledgerPath = path.join(featureDir, 'runtime-ledger.jsonl');
+      await expect(
+        openVerifiedNativeBenchmarkCapture({ workspaceRoot: root, featureDir, ledgerPath })
+      ).rejects.toThrow();
+      await writeFile(ledgerPath, '', { mode: 0o600 });
+      const capture = await openVerifiedNativeBenchmarkCapture({
+        workspaceRoot: root,
+        featureDir,
+        ledgerPath,
+      });
+      expect(await capture.authorizeCapture({})).toEqual({ allowed: false });
+      await expect(capture.capture({})).rejects.toThrow('HELDOUT_SNAPSHOT_REQUIRED');
+      await expect(
+        openVerifiedNativeBenchmarkCapture({
+          workspaceRoot: root,
+          featureDir,
+          ledgerPath: path.join(root, 'outside.jsonl'),
+        })
+      ).rejects.toThrow('NATIVE_BENCHMARK_CAPTURE_CONTROL_PLANE_REQUIRED');
+      const linkPath = path.join(featureDir, 'linked-ledger.jsonl');
+      await symlink(ledgerPath, linkPath);
+      await expect(
+        openVerifiedNativeBenchmarkCapture({
+          workspaceRoot: root,
+          featureDir,
+          ledgerPath: linkPath,
+        })
+      ).rejects.toThrow('NATIVE_BENCHMARK_CAPTURE_LEDGER_REQUIRED');
+      const hardlinkPath = path.join(featureDir, 'hardlinked-ledger.jsonl');
+      await link(ledgerPath, hardlinkPath);
+      await expect(
+        openVerifiedNativeBenchmarkCapture({
+          workspaceRoot: root,
+          featureDir,
+          ledgerPath: hardlinkPath,
+        })
+      ).rejects.toThrow('NATIVE_BENCHMARK_CAPTURE_LEDGER_REQUIRED');
+      await chmod(ledgerPath, 0o644);
+      await expect(
+        openVerifiedNativeBenchmarkCapture({ workspaceRoot: root, featureDir, ledgerPath })
+      ).rejects.toThrow('NATIVE_BENCHMARK_CAPTURE_LEDGER_REQUIRED');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('runs validation and commit against the isolated worktree while keeping control evidence outside it', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-binding-'));
     let runtime: Awaited<ReturnType<typeof createVerifiedNativeRuntime>> | undefined;
