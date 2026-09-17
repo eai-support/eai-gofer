@@ -8,9 +8,13 @@ import { generateKeyPairSync } from 'node:crypto';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import {
   createVerifiedWorktree,
+  createLedgerBoundCodexExecutor,
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
+
+type LedgerRequest = Record<string, unknown>;
+type NativeStartRequest = LedgerRequest & { capabilityReceiptHash: string };
 
 function localIsolation(workspaceRoot: string) {
   return {
@@ -33,6 +37,116 @@ function localIsolation(workspaceRoot: string) {
 }
 
 describe('native adapter primitives', () => {
+  it('binds graph dispatch to the same ledger authority that approved it', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'id',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-18T00:00:00.000Z',
+      hostVersion: 'codex',
+      models: [{ id: 'live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree+local-os-sandbox',
+      provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+      signingKey: keys.privateKey,
+    });
+    const start = vi.fn(async (request: NativeStartRequest) => ({
+      invocationId: 'native-1',
+      cancel: async () => {},
+      inspect: async () => ({ invocationId: 'native-1', cancelled: false, receipt: 'complete' }),
+      wait: async () => ({
+        invocationId: 'native-1',
+        capabilityReceiptHash: request.capabilityReceiptHash,
+        receipt: 'complete',
+        changedFiles: [],
+      }),
+    }));
+    const executor = createLedgerBoundCodexExecutor({
+      isolatedWorkspace: '/isolated',
+      capabilityReceipt: receipt,
+      capabilityPublicKey: keys.publicKey,
+      promptForRequest: async () => 'Complete the approved task.',
+      start,
+      assertLedger: async (request: LedgerRequest) => ({
+        allowed: true,
+        ...request,
+        isolation: 'git-worktree+local-os-sandbox',
+        receipt: 'graph-ledger-receipt',
+      }),
+    });
+    await expect(
+      executor.execute({
+        taskId: 'T001',
+        revision: 'objective-1',
+        allowedEditScope: ['src/'],
+        leaseId: 'lease-1',
+        budgetReservation: 'reservation-1',
+        approvalReceipt: 'approval-1',
+        ledgerAuthorityReceipt: 'graph-ledger-receipt',
+        selectedModel: 'live',
+      })
+    ).resolves.toMatchObject({ invocationId: 'native-1', receipt: 'complete' });
+    expect(start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isolatedWorkspace: '/isolated',
+        modelId: 'live',
+        prompt: 'Complete the approved task.',
+        objectiveRevision: 'objective-1',
+        allowedWriteScope: ['src/'],
+      })
+    );
+  });
+
+  it('refuses a graph dispatch when the ledger cannot reproduce its authority receipt', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'id',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-18T00:00:00.000Z',
+      hostVersion: 'codex',
+      models: [{ id: 'live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree+local-os-sandbox',
+      provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+      signingKey: keys.privateKey,
+    });
+    const start = vi.fn();
+    const executor = createLedgerBoundCodexExecutor({
+      isolatedWorkspace: '/isolated',
+      capabilityReceipt: receipt,
+      capabilityPublicKey: keys.publicKey,
+      promptForRequest: async () => 'Complete the approved task.',
+      start,
+      assertLedger: async (request: LedgerRequest) => ({
+        allowed: true,
+        ...request,
+        isolation: 'git-worktree+local-os-sandbox',
+        receipt: 'different-ledger-receipt',
+      }),
+    });
+    await expect(
+      executor.execute({
+        taskId: 'T001',
+        revision: 'objective-1',
+        allowedEditScope: ['src/'],
+        leaseId: 'lease-1',
+        budgetReservation: 'reservation-1',
+        approvalReceipt: 'approval-1',
+        ledgerAuthorityReceipt: 'graph-ledger-receipt',
+        selectedModel: 'live',
+      })
+    ).rejects.toThrow('LEDGER_AUTHORITY_REQUIRED');
+    expect(start).not.toHaveBeenCalled();
+  });
+
   it('starts Codex locally with its sandbox and returns only scoped worktree changes', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
     try {

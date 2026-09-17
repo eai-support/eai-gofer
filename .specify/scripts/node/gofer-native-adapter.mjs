@@ -102,6 +102,49 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
   });
 }
 
+/**
+ * Adapt the verified graph's `execute` seam to a real Codex invocation. The
+ * caller supplies the durable ledger assertion; this adapter refuses to run
+ * if it cannot reproduce the graph's just-issued authority receipt. This
+ * prevents a caller from substituting a safe-looking local launcher after
+ * the graph has authorised a different task, scope, lease, or approval.
+ */
+export function createLedgerBoundCodexExecutor({ isolatedWorkspace, capabilityReceipt, capabilityPublicKey,
+  requiredCapabilities, assertLedger, promptForRequest, start = startLocalCodexInvocation } = {}) {
+  if (!text(isolatedWorkspace) || !capabilityReceipt || !capabilityPublicKey ||
+      typeof assertLedger !== 'function' || typeof promptForRequest !== 'function' || typeof start !== 'function') {
+    throw new Error('NATIVE_EXECUTOR_CONFIGURATION_REQUIRED');
+  }
+  return Object.freeze({
+    async execute(request) {
+      if (!request || !text(request.revision) || !text(request.taskId) || !text(request.ledgerAuthorityReceipt) ||
+          !text(request.selectedModel) || !Array.isArray(request.allowedEditScope)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+      const prompt = await promptForRequest(Object.freeze({ ...request }));
+      if (!text(prompt)) throw new Error('NATIVE_PROMPT_REQUIRED');
+      return invokeLedgerBoundNative({
+        request: {
+          objectiveRevision: request.revision,
+          allowedWriteScope: request.allowedEditScope,
+          leaseId: request.leaseId,
+          budgetReservation: request.budgetReservation,
+          approvalReceipt: request.approvalReceipt,
+        },
+        capabilityReceipt,
+        capabilityPublicKey,
+        requiredCapabilities,
+        assertLedger: async nativeRequest => {
+          const authority = await assertLedger(Object.freeze({ ...request, ...nativeRequest }));
+          if (authority?.receipt !== request.ledgerAuthorityReceipt) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+          return authority;
+        },
+        start: nativeRequest => start({ isolatedWorkspace, prompt, modelId: request.selectedModel,
+          allowedWriteScope: request.allowedEditScope, ...nativeRequest }),
+        signal: request.signal,
+      });
+    },
+  });
+}
+
 export async function createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
   if (!text(workspaceRoot) || !text(baseRef) || baseRef.startsWith('-')) throw new Error('INVALID_ISOLATION_REQUEST');
   if (!verifyLocalIsolationReport(localIsolation, { host, workspaceRoot })) throw new Error('LOCAL_SANDBOX_REQUIRED');

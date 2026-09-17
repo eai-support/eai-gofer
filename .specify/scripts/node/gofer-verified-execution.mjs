@@ -266,7 +266,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         states[taskId] = 'running';
         await checkpoint('running', taskId);
         // Repair sees measured failures, never just "try again" or prior reasoning.
-        const result = await invoke('execute', { ...leasedRequest, previousChecks: freeze(structuredClone(previousChecks)) });
+        const result = await invoke('execute', { ...leasedRequest, ledgerAuthorityReceipt: authority.receipt,
+          previousChecks: freeze(structuredClone(previousChecks)) });
         await current();
         if (!result || !Array.isArray(result.changedFiles) || result.changedFiles.some(f => !text(f))) throw new Error('INVALID_WORKER_RESULT');
         const scope = await reviewPriority(root, { task: taskId, changedFiles: result.changedFiles, workspaceRoot });
