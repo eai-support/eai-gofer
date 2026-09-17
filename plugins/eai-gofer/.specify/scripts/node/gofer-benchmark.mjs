@@ -9,6 +9,14 @@ const hash = value => createHash('sha256').update(JSON.stringify(value)).digest(
 const validCase = item => item && text(item.id) && item.heldOut === true;
 const validExecution = result => result && text(result.modelId) && positive(result.costUsd) && positive(result.durationMs) && text(result.receipt);
 const validVerifiedRun = result => validExecution(result) && result.functionalVerified === true && text(result.verifierReceipt) && text(result.verifierId) && text(result.inputHash);
+const wilson95 = (successes, total) => {
+  const z = 1.96;
+  const p = successes / total;
+  const denominator = 1 + z ** 2 / total;
+  const centre = (p + z ** 2 / (2 * total)) / denominator;
+  const spread = z * Math.sqrt((p * (1 - p) + z ** 2 / (4 * total)) / total) / denominator;
+  return Object.freeze({ level: 0.95, lower: Math.max(0, centre - spread), upper: Math.min(1, centre + spread) });
+};
 
 export async function runBenchmark({ cases, execute, verify, repetitions = 3, provenance } = {}) {
   if (!Array.isArray(cases) || !cases.length || cases.length > 1000 || !cases.every(validCase) ||
@@ -25,15 +33,17 @@ export async function runBenchmark({ cases, execute, verify, repetitions = 3, pr
     const verdict = await verify(Object.freeze({ caseId: benchmarkCase.id, run, inputHash,
       execution: { receipt: execution.receipt, modelId: execution.modelId ?? null, output: structuredClone(execution.output ?? null) } }));
     if (!verdict || verdict.caseId !== benchmarkCase.id || verdict.run !== run || verdict.inputHash !== inputHash || verdict.executionReceipt !== execution.receipt ||
-        typeof verdict.passed !== 'boolean' || !text(verdict.receipt) || !text(verdict.verifierId)) throw new Error('INVALID_BENCHMARK_VERDICT');
+        typeof verdict.passed !== 'boolean' || !text(verdict.receipt) || !text(verdict.verifierId) ||
+        !text(verdict.failureClassification) || !text(verdict.reviewReceipt)) throw new Error('INVALID_BENCHMARK_VERDICT');
     results.push(Object.freeze({ caseId: benchmarkCase.id, run, modelId: execution.modelId ?? null,
       costUsd: execution.costUsd, durationMs: execution.durationMs, receipt: execution.receipt, inputHash,
-      functionalVerified: verdict.passed, verifierReceipt: verdict.receipt, verifierId: verdict.verifierId }));
+      functionalVerified: verdict.passed, verifierReceipt: verdict.receipt, verifierId: verdict.verifierId,
+      failureClassification: verdict.failureClassification, reviewReceipt: verdict.reviewReceipt }));
   }
   const functionalPasses = results.filter(validVerifiedRun).length;
   const totals = results.reduce((sum, result) => ({ costUsd: sum.costUsd + result.costUsd, durationMs: sum.durationMs + result.durationMs }), { costUsd: 0, durationMs: 0 });
   return Object.freeze({ schemaVersion: 2, repetitions, caseCount: cases.length, runs: results, provenance: { ...provenance },
-    reliability: functionalPasses / results.length, functionalPasses, functionalRuns: results.length,
+    reliability: functionalPasses / results.length, confidenceInterval: wilson95(functionalPasses, results.length), functionalPasses, functionalRuns: results.length,
     costUsd: totals.costUsd, durationMs: totals.durationMs, status: functionalPasses === results.length ? 'pass' : 'fail' });
 }
 

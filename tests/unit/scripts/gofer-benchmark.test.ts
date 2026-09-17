@@ -23,6 +23,8 @@ const verify = async ({ caseId, run, inputHash, execution }: any) => ({
   passed: true,
   receipt: `verifier-${run}`,
   verifierId: 'independent-local-verifier',
+  failureClassification: 'none',
+  reviewReceipt: `review-${run}`,
 });
 
 describe('Gofer benchmark contract', () => {
@@ -35,6 +37,7 @@ describe('Gofer benchmark contract', () => {
       costUsd: 6,
       durationMs: 60,
     });
+    expect(report.confidenceInterval).toMatchObject({ level: 0.95 });
     expect(report.runs.every((run) => run.functionalVerified && run.verifierReceipt)).toBe(true);
   });
 
@@ -47,6 +50,8 @@ describe('Gofer benchmark contract', () => {
       passed: run !== 2,
       receipt: `verifier-${run}`,
       verifierId: 'independent-local-verifier',
+      failureClassification: run === 2 ? 'functional-failure' : 'none',
+      reviewReceipt: `review-${run}`,
     }));
     const report = await runBenchmark({
       cases,
@@ -88,6 +93,25 @@ describe('Gofer benchmark contract', () => {
           executionReceipt: execution.receipt,
           passed: true,
           receipt: 'v',
+          verifierId: 'independent-local-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_VERDICT');
+  });
+
+  it('requires independent review and a failure classification for every run', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, inputHash, execution }: any) => ({
+          caseId,
+          run,
+          inputHash,
+          executionReceipt: execution.receipt,
+          passed: true,
+          receipt: `verifier-${run}`,
           verifierId: 'independent-local-verifier',
         }),
         provenance,
