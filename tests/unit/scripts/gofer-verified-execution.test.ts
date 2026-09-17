@@ -636,13 +636,27 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     const f = await fixture({ parallel: true });
     let active = 0;
     let peak = 0;
+    let releaseBoth = () => {};
+    const bothStarted = new Promise<void>((resolve) => { releaseBoth = resolve; });
     const run = promisify(execFile);
     f.adapter.execute.mockImplementation(async () => {
       active++;
       peak = Math.max(active, peak);
-      await run(process.execPath, ['-e', 'setTimeout(() => process.stdout.write("worked"), 80)']);
-      active--;
-      return { changedFiles: [] };
+      if (active === 2) releaseBoth();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          bothStarted,
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Independent tasks did not overlap')), 3000);
+          }),
+        ]);
+        await run(process.execPath, ['-e', 'process.stdout.write("worked")']);
+        return { changedFiles: [] };
+      } finally {
+        if (timer) clearTimeout(timer);
+        active--;
+      }
     });
     f.adapter.check.mockImplementation(async (r: any) => {
       const { stdout } = await run(process.execPath, ['-e', 'process.stdout.write("PASS")']);
