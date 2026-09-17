@@ -369,6 +369,37 @@ npm run gofer:generate
 npm run gofer:package-plugin -- --sync-repo
 ```
 
+### Optional TypeSafe semantic review
+
+TypeSafe adds an independent, bounded signal for long-running delivery work. It
+does not replace the specification, tests, priority controls, or human
+approval.
+
+From the repository where Gofer is installed, connect once:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect
+```
+
+The prompt stores the key only in the ignored private file
+`.specify/secrets/typesafe.env`, enables the non-secret policy, and does not
+print the key. A process-level `TYPESAFE_API_KEY` takes priority for CI or a
+managed surface. Remove the project key and disable review with:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --disconnect
+```
+
+Run a review at a Gofer delivery checkpoint with:
+
+```bash
+node .specify/scripts/node/gofer-semantic-drift.mjs --feature-dir .specify/specs/<feature> --event before_validation --json
+```
+
+The receipt contains only hashes and review outcomes. A conflict or uncertain
+outcome requires reconciliation; it cannot modify the specification or close a
+task.
+
 ## Community
 
 - Questions and usage help:

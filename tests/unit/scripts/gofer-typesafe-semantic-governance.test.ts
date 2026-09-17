@@ -1,0 +1,61 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+const credentialsUrl = new URL('../../../.specify/scripts/node/gofer-typesafe-credentials.mjs', import.meta.url);
+const semanticUrl = new URL('../../../.specify/scripts/node/gofer-semantic-drift.mjs', import.meta.url);
+const directories: string[] = [];
+
+async function fixture() {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-'));
+  directories.push(workspace);
+  const featureDir = path.join(workspace, '.specify', 'specs', '002-typesafe');
+  await mkdir(path.join(workspace, '.specify', 'config'), { recursive: true });
+  await mkdir(featureDir, { recursive: true });
+  await writeFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), JSON.stringify({ schemaVersion: 1, enabled: false, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 0.85, uncertainAction: 'reconcile', conflictAction: 'block_affected_task' }));
+  await writeFile(path.join(featureDir, 'goal-ledger.json'), '{"goal":"deliver"}');
+  await writeFile(path.join(featureDir, 'spec.md'), '# Spec');
+  return { workspace, featureDir };
+}
+
+afterEach(async () => { await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))); });
+
+describe('TypeSafe semantic governance', () => {
+  it('writes only an ignored project secret file and enables review', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    expect(await readFile(path.join(workspace, '.specify', 'secrets', 'typesafe.env'), 'utf8')).toBe('TYPESAFE_API_KEY=secret-value\n');
+    expect(JSON.parse(await readFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), 'utf8')).enabled).toBe(true);
+    const result = await credentials.disconnect({ workspace });
+    expect(result.removedProjectSecret).toBe(true);
+    expect(JSON.parse(await readFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), 'utf8')).enabled).toBe(false);
+  });
+
+  it('does not call the provider when review is disabled or no credential exists', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    const fetchImpl = vi.fn();
+    expect(await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })).toMatchObject({ status: 'disabled' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const policyPath = path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json');
+    const policy = JSON.parse(await readFile(policyPath, 'utf8')); policy.enabled = true; await writeFile(policyPath, JSON.stringify(policy));
+    expect(await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })).toMatchObject({ status: 'not_configured' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('writes a hash-bound receipt and blocks a provider conflict', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'conflict', confidence: 0.99 }, required_action: { choice: 'ask_user', confidence: 0.99 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result).toMatchObject({ status: 'conflict', confidence: 0.99 });
+    expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer secret-value');
+    const receipt = JSON.parse(await readFile(path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'), 'utf8'));
+    expect(receipt.artifacts['spec.md']).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(receipt)).not.toContain('secret-value');
+  });
+});
