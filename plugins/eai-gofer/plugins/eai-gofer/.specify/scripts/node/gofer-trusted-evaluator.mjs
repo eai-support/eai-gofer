@@ -13,7 +13,16 @@ const inside = (parent, child) => {
 const denied = () => new Error('TRUSTED_EVALUATOR_REQUIRED');
 
 function accountTrustRoot() {
-  // HOME is caller-controlled. Read the macOS account record instead.
+  // HOME is caller-controlled. Resolve the account record by effective UID.
+  if (process.platform === 'linux') {
+    const uid = process.getuid();
+    const record = execFileSync('/usr/bin/getent', ['passwd', String(uid)],
+      { encoding: 'utf8', timeout: 3000 }).trim();
+    const fields = record.split(':');
+    const home = fields.length === 7 && fields[2] === String(uid) ? fields[5] : null;
+    if (!home || !path.isAbsolute(home) || home.includes('\n')) throw denied();
+    return path.join(home, '.eai-gofer-trust');
+  }
   if (process.platform !== 'darwin') throw denied();
   const name = execFileSync('/usr/bin/id', ['-un'], { encoding: 'utf8', timeout: 3000 }).trim();
   if (!/^[a-zA-Z0-9._-]+$/.test(name)) throw denied();
@@ -38,8 +47,12 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
     const [workspace, parent, rootInfo] = await Promise.all([
       realpath(workspaceRoot), realpath(path.dirname(root)), lstat(root),
     ]);
+    const parentInfo = await lstat(parent);
     const canonicalRoot = path.join(parent, path.basename(root));
-    if (inside(workspace, canonicalRoot) || !rootInfo.isDirectory() ||
+    // No different account may rename the trust root between validation and open.
+    if (!parentInfo.isDirectory() || ![0, process.getuid()].includes(parentInfo.uid) ||
+        (parentInfo.mode & 0o022) !== 0 ||
+        inside(workspace, canonicalRoot) || !rootInfo.isDirectory() ||
         rootInfo.uid !== process.getuid() || (rootInfo.mode & 0o077) !== 0) throw denied();
     const filename = path.join(canonicalRoot, 'trusted-evaluators.json');
     const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);

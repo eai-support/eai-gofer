@@ -1,7 +1,12 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   LOCAL_ISOLATION_CONTRACT,
   inspectEaiLocalIsolation,
+  probeMacCodexSandboxBoundary,
   verifyLocalIsolationReport,
 } from '../../../.specify/scripts/node/gofer-local-isolation.mjs';
 
@@ -25,6 +30,70 @@ const readyReport = {
 };
 
 describe('EAI local isolation contract', () => {
+  it.skipIf(process.platform !== 'darwin')(
+    'rejects a sandbox that can write shared Git metadata outside the task worktree',
+    () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'gofer-git-boundary-'));
+      const repository = path.join(root, 'repository');
+      const worker = path.join(root, 'worker');
+      const gitEnvironment = Object.fromEntries(
+        Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))
+      );
+      try {
+        execFileSync('git', ['init', repository], { env: gitEnvironment });
+        execFileSync(
+          'git',
+          [
+            '-C',
+            repository,
+            '-c',
+            'user.name=Test',
+            '-c',
+            'user.email=test@example.com',
+            'commit',
+            '--allow-empty',
+            '-m',
+            'base',
+          ],
+          { env: gitEnvironment }
+        );
+        execFileSync('git', ['-C', repository, 'worktree', 'add', '--detach', worker], {
+          env: gitEnvironment,
+        });
+        const common = realpathSync(path.join(repository, '.git'));
+        const sandbox = (sharedGitWritable: boolean) => (_command: string, args: string[]) => {
+          const target = args.at(-1)!;
+          if (
+            target.startsWith(worker + path.sep) ||
+            (sharedGitWritable && target.startsWith(common + path.sep))
+          ) {
+            writeFileSync(target, 'probe');
+            return { status: 0, stdout: '', stderr: '' };
+          }
+          return { status: 1, stdout: '', stderr: 'Operation not permitted' };
+        };
+        expect(
+          probeMacCodexSandboxBoundary({
+            workspaceRoot: worker,
+            executable: '/usr/bin/codex',
+            runSandbox: sandbox(true),
+          })
+        ).toBeNull();
+        expect(
+          probeMacCodexSandboxBoundary({
+            workspaceRoot: worker,
+            executable: '/usr/bin/codex',
+            runSandbox: sandbox(false),
+          })
+        ).toBe('/usr/bin/codex');
+        expect(readdirSync(common).some((name) => name.startsWith('.gofer-isolation-probe-'))).toBe(
+          false
+        );
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
   it('accepts a ready local report for the selected workspace and host', () => {
     expect(verifyLocalIsolationReport(readyReport, { host: 'codex', workspaceRoot })).toBe(true);
   });

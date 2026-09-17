@@ -55,7 +55,7 @@ async function fixture() {
 }
 
 describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', () => {
-  it.skipIf(process.platform !== 'darwin')(
+  it.skipIf(process.platform !== 'darwin' && process.platform !== 'linux')(
     'does not trust a caller-selected HOME directory',
     async () => {
       const f = await fixture();
@@ -158,6 +158,21 @@ describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', 
     const f = await fixture();
     try {
       await writeFile(f.registryPath, ' '.repeat(65537), { mode: 0o600 });
+      await expect(
+        resolveTrustedEvaluatorPublicKey(f.receipt, {
+          workspaceRoot: f.workspaceRoot,
+          trustRoot: f.trustRoot,
+        })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a parent directory that another account can replace through', async () => {
+    const f = await fixture();
+    try {
+      await chmod(f.root, 0o770);
       await expect(
         resolveTrustedEvaluatorPublicKey(f.receipt, {
           workspaceRoot: f.workspaceRoot,

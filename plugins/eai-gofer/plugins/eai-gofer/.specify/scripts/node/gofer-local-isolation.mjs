@@ -4,7 +4,7 @@
 import { execFile, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { accessSync, constants, existsSync, mkdtempSync, realpathSync, rmSync, rmdirSync, statSync } from 'node:fs';
-import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -36,34 +36,59 @@ function signedCodexExecutable() {
   return null;
 }
 
-/** An independent, no-model check of the executable Gofer will launch. */
-export function probeNativeCodexSandbox(workspaceRoot) {
-  const executable = signedCodexExecutable();
-  if (!executable || !existsSync('/usr/bin/touch')) return null;
+/** A no-model boundary probe. A worker must not write the shared Git store. */
+export function probeMacCodexSandboxBoundary({ workspaceRoot, executable, runSandbox = spawnSync } = {}) {
+  if (!workspaceRoot || !executable || !existsSync('/usr/bin/touch') ||
+      typeof runSandbox !== 'function') return null;
+  const git = spawnSync('/usr/bin/git', ['-C', workspaceRoot, 'rev-parse',
+    '--path-format=absolute', '--git-common-dir'],
+  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000,
+    env: Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))) });
+  if (git.status !== 0 || !git.stdout?.trim()) return null;
+  let common;
+  try { common = realpathSync(git.stdout.trim()); }
+  catch { return null; }
+  let commonRelative;
+  try { commonRelative = relative(realpathSync(workspaceRoot), common); }
+  catch { return null; }
+  if (commonRelative === '' || (commonRelative !== '..' &&
+      !commonRelative.startsWith(`..${sep}`) && !isAbsolute(commonRelative))) return null;
   let sibling;
   try { sibling = mkdtempSync(join(dirname(workspaceRoot), '.gofer-isolation-probe-')); }
   catch { return null; }
   const inside = join(workspaceRoot, `.gofer-isolation-probe-${randomUUID()}`);
   const outside = join(sibling, 'outside');
-  const probe = target => spawnSync(executable,
+  const sharedGit = join(common, `.gofer-isolation-probe-${randomUUID()}`);
+  const probe = target => runSandbox(executable,
     ['sandbox', '-P', ':workspace', '-C', workspaceRoot, '--', '/usr/bin/touch', target],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000, maxBuffer: 16384 });
+  const denied = result => result.status !== 0 && !result.error &&
+    /Operation not permitted|Permission denied/i.test(`${result.stderr}\n${result.stdout}`);
   try {
-    const baseline = spawnSync('/usr/bin/touch', [outside], { stdio: 'ignore', timeout: 5000 });
-    if (baseline.status !== 0 || !existsSync(outside)) return null;
-    rmSync(outside);
+    for (const target of [outside, sharedGit]) {
+      const baseline = spawnSync('/usr/bin/touch', [target], { stdio: 'ignore', timeout: 5000 });
+      if (baseline.status !== 0 || !existsSync(target)) return null;
+      rmSync(target);
+    }
     const allowed = probe(inside);
     if (allowed.status !== 0 || !existsSync(inside)) return null;
-    const denied = probe(outside);
-    return denied.status !== 0 && !denied.error && !existsSync(outside) &&
-      /Operation not permitted|Permission denied/i.test(`${denied.stderr}\n${denied.stdout}`)
-      ? executable : null;
+    const siblingResult = probe(outside);
+    if (!denied(siblingResult) || existsSync(outside)) return null;
+    const gitResult = probe(sharedGit);
+    return denied(gitResult) && !existsSync(sharedGit) ? executable : null;
   } catch { return null; }
   finally {
     rmSync(inside, { force: true });
     rmSync(outside, { force: true });
+    rmSync(sharedGit, { force: true });
     try { rmdirSync(sibling); } catch { /* Preserve unexpected contents. */ }
   }
+}
+
+/** An independent check of the signed executable Gofer will launch. */
+export function probeNativeCodexSandbox(workspaceRoot) {
+  const executable = signedCodexExecutable();
+  return executable ? probeMacCodexSandboxBoundary({ workspaceRoot, executable }) : null;
 }
 
 export const LOCAL_ISOLATION_CONTRACT = 'eai.local-isolation/v1';
