@@ -5,6 +5,7 @@ import {
   HOSTS,
   HOST_ALIASES,
   createCapabilityReceipt,
+  createCodexAppServerRuntime,
   evaluateNativeHost,
   inspectHost,
   selectLiveModel,
@@ -12,6 +13,23 @@ import {
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 
 describe('Gofer host capability discovery', () => {
+  const localCodexIsolation = (workspaceRoot = '/workspace') => ({
+    contractVersion: 'eai.local-isolation/v1',
+    projectDirectory: workspaceRoot,
+    cloudExecution: 'prohibited',
+    gitRepository: true,
+    assessments: [
+      {
+        surfaceId: 'codex-cli',
+        status: 'ready',
+        localOnly: true,
+        requiresGitWorktree: true,
+        requiresOsSandbox: true,
+        hostArguments: ['--sandbox', 'workspace-write'],
+        missing: [],
+      },
+    ],
+  });
   it('does not guess a host or model when auto detection lacks a runtime signal', async () => {
     await expect(inspectHost('auto')).resolves.toMatchObject({
       status: 'host-name-required',
@@ -181,6 +199,31 @@ describe('Gofer host capability discovery', () => {
         now: Date.parse('2026-09-17T12:01:00Z'),
       })
     ).toBe(true);
+  });
+
+  it('reads live Codex models and provider capabilities from the local app-server only', async () => {
+    const runtime = createCodexAppServerRuntime({
+      workspaceRoot: '/workspace',
+      localIsolation: localCodexIsolation(),
+      request: async (method: string) =>
+        method === 'model/list'
+          ? { data: [{ id: 'gpt-live', supportedReasoningEfforts: [{ reasoningEffort: 'high' }] }] }
+          : { namespaceTools: true, imageGeneration: false, webSearch: true },
+    });
+    await expect(runtime.inspect()).resolves.toEqual({
+      models: [{ id: 'gpt-live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['namespaceTools', 'webSearch'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree+local-os-sandbox',
+      source: 'codex app-server model/list and modelProvider/capabilities/read',
+    });
+    expect(() =>
+      createCodexAppServerRuntime({
+        workspaceRoot: '/workspace',
+        localIsolation: { ...localCodexIsolation(), cloudExecution: 'allowed' },
+      })
+    ).toThrow('LOCAL_SANDBOX_REQUIRED');
   });
 
   it('fails closed when a native session omits its model list', async () => {

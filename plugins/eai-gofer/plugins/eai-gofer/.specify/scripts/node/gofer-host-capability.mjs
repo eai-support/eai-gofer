@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { createHash, randomUUID, sign, verify } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 
 export const HOSTS = Object.freeze({
   antigravity: { program: 'agy', args: ['--version'] },
@@ -68,6 +69,84 @@ function modelsFromGrok(output) {
 }
 
 const MODEL_PARSERS = Object.freeze({ antigravity: modelsFromAntigravity, grok: modelsFromGrok });
+
+function codexModels(catalog) {
+  if (!Array.isArray(catalog?.data)) return [];
+  return catalog.data.flatMap(model => text(model?.id) && Array.isArray(model.supportedReasoningEfforts) &&
+    model.supportedReasoningEfforts.every(option => text(option?.reasoningEffort))
+    ? [{ id: model.id, reasoningEfforts: model.supportedReasoningEfforts.map(option => option.reasoningEffort) }]
+    : []);
+}
+
+/**
+ * Read the local Codex app-server catalog. This is a native-session read, not
+ * a policy fallback: failure to receive a complete catalog leaves Codex
+ * unqualified. Workspace-write is reported only when the separately verified
+ * local-isolation report requires Codex's workspace-write OS sandbox.
+ */
+export function createCodexAppServerRuntime({ workspaceRoot, localIsolation, request = codexAppServerRequest } = {}) {
+  if (!verifyLocalIsolationReport(localIsolation, { host: 'codex', workspaceRoot })) {
+    throw new Error('LOCAL_SANDBOX_REQUIRED');
+  }
+  const assessment = localIsolation.assessments.find(item => item.surfaceId === 'codex-cli');
+  if (!assessment.hostArguments.includes('--sandbox') || !assessment.hostArguments.includes('workspace-write')) {
+    throw new Error('LOCAL_SANDBOX_REQUIRED');
+  }
+  return Object.freeze({
+    async inspect() {
+      const [catalog, provider] = await Promise.all([
+        request('model/list', { limit: 100, includeHidden: false }),
+        request('modelProvider/capabilities/read', {}),
+      ]);
+      const models = codexModels(catalog);
+      if (!models.length || !provider || ['namespaceTools', 'imageGeneration', 'webSearch'].some(key => typeof provider[key] !== 'boolean')) {
+        throw new Error('NATIVE_CODEX_CATALOG_REQUIRED');
+      }
+      const reasoningCapabilities = [...new Set(models.flatMap(model => model.reasoningEfforts))];
+      const toolCapabilities = Object.entries(provider).filter(([, enabled]) => enabled).map(([name]) => name);
+      return Object.freeze({ models, reasoningCapabilities, toolCapabilities, grantedPermissions: ['workspace-write'],
+        isolationClass: 'git-worktree+local-os-sandbox', source: 'codex app-server model/list and modelProvider/capabilities/read' });
+    },
+  });
+}
+
+function codexAppServerRequest(method, params) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('codex', ['app-server', '--stdio'], { shell: false, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    let buffer = '';
+    let initialized = false;
+    let settled = false;
+    const finish = (error, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.stdin.end();
+      child.kill('SIGTERM');
+      error ? reject(error) : resolve(result);
+    };
+    const send = (id, requestMethod, requestParams) => child.stdin.write(`${JSON.stringify({ id, method: requestMethod, params: requestParams })}\n`);
+    child.once('error', error => finish(new Error(`NATIVE_CODEX_CATALOG_REQUIRED:${error.message}`)));
+    child.stdout.on('data', chunk => {
+      buffer += chunk;
+      for (;;) {
+        const index = buffer.indexOf('\n');
+        if (index < 0) return;
+        const line = buffer.slice(0, index); buffer = buffer.slice(index + 1);
+        let message;
+        try { message = JSON.parse(line); } catch { continue; }
+        if (message.id === 1) {
+          if (message.error) return finish(new Error('NATIVE_CODEX_CATALOG_REQUIRED'));
+          initialized = true;
+          send(2, method, params);
+        } else if (initialized && message.id === 2) {
+          return message.error ? finish(new Error('NATIVE_CODEX_CATALOG_REQUIRED')) : finish(null, message.result);
+        }
+      }
+    });
+    const timer = setTimeout(() => finish(new Error('NATIVE_CODEX_CATALOG_REQUIRED')), 5000);
+    send(1, 'initialize', { clientInfo: { name: 'gofer-native-capability', version: '2.0.0' }, capabilities: {} });
+  });
+}
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
