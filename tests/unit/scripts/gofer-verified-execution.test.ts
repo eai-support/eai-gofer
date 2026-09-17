@@ -106,7 +106,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
     reasoningCapabilities: ['high'],
     toolCapabilities: ['shell'],
     grantedPermissions: ['workspace-write'],
-    isolationClass: 'git-worktree',
+    isolationClass: 'git-worktree+local-os-sandbox',
     provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
     signingKey: keys.privateKey,
   });
@@ -132,6 +132,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
     root,
     plan,
     adapter,
+    keys,
     options: {
       featureDir: root,
       workspaceRoot: root,
@@ -190,6 +191,28 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     await expect(runVerifiedGraph({ ...f.options, approvalReceipt: undefined })).rejects.toThrow(
       'APPROVAL_RECEIPT_REQUIRED'
     );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch when the receipt lacks an OS sandbox', async () => {
+    const f = await fixture();
+    const unsafeReceipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'unsafe',
+      evaluatedAt: new Date(Date.now() - 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      hostVersion: 'codex fixture',
+      models: [{ id: 'fixture-model', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree',
+      provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
+      signingKey: f.keys.privateKey,
+    });
+    await expect(
+      runVerifiedGraph({ ...f.options, capabilityReceipt: unsafeReceipt })
+    ).rejects.toThrow('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });
   it('does not commit when the ledger refuses completion authority', async () => {

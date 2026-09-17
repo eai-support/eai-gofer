@@ -126,7 +126,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
     if (typeof adapter?.[method] !== 'function') throw new Error(`TRUSTED_ADAPTER_REQUIRED:${method}`);
   }
-  if (typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' || !verifyCapabilityReceipt(capabilityReceipt, {
+  if (capabilityReceipt?.isolationClass !== 'git-worktree+local-os-sandbox' ||
+      typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' || !verifyCapabilityReceipt(capabilityReceipt, {
     publicKey: capabilityPublicKey, requiredCapabilities,
   })) throw new Error('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
   const route = await selectCapabilityRoute({ receipt: capabilityReceipt, publicKey: capabilityPublicKey,
