@@ -9,6 +9,8 @@ import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-cap
 
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
+const sameScope = (left, right) => Array.isArray(left) && Array.isArray(right) &&
+  left.length === right.length && left.every((value, index) => value === right[index]);
 const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
   !['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR'].includes(key)));
 
@@ -60,12 +62,25 @@ export async function invokeLedgerBoundNative({ request, capabilityReceipt, capa
   const authority = await assertLedger({ ...request, capabilityReceiptHash: receiptHash });
   if (authority?.allowed !== true || authority.objectiveRevision !== request.objectiveRevision ||
       authority.capabilityReceiptHash !== receiptHash || authority.leaseId !== request.leaseId ||
-      authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt) {
+      authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt ||
+      !sameScope(authority.allowedWriteScope, request.allowedWriteScope) ||
+      authority.isolation !== capabilityReceipt.isolationClass) {
     throw new Error('LEDGER_AUTHORITY_REQUIRED');
   }
   const invocation = await start(Object.freeze({ ...request, capabilityReceiptHash: receiptHash }));
   if (!text(invocation?.invocationId) || typeof invocation.wait !== 'function' || typeof invocation.cancel !== 'function' ||
-      typeof invocation.inspect !== 'function') throw new Error('NATIVE_INVOCATION_REQUIRED');
+      typeof invocation.inspect !== 'function') {
+    if (typeof invocation?.cancel === 'function') await invocation.cancel();
+    if (typeof invocation?.inspect === 'function') {
+      const state = await invocation.inspect();
+      if (state?.invocationId !== invocation.invocationId || state?.cancelled !== true || !text(state?.receipt)) {
+        throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+      }
+    } else if (invocation) {
+      throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+    }
+    throw new Error('NATIVE_INVOCATION_REQUIRED');
+  }
   let cancelPromise;
   const cancel = () => {
     if (!cancelPromise) {

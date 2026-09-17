@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import {
@@ -88,6 +88,62 @@ describe('native adapter primitives', () => {
       }),
     });
     expect(result.isolation).toBe('git-worktree');
+    const start = vi.fn();
+    await expect(
+      invokeLedgerBoundNative({
+        request,
+        capabilityReceipt: receipt,
+        capabilityPublicKey: keys.publicKey,
+        assertLedger: async (value) => ({
+          ...value,
+          allowed: true,
+          allowedWriteScope: ['src/', 'broader/'],
+          isolation: 'git-worktree',
+        }),
+        start,
+      })
+    ).rejects.toThrow('LEDGER_AUTHORITY_REQUIRED');
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('cancels and confirms a malformed native invocation before failing closed', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'id',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-18T00:00:00.000Z',
+      hostVersion: 'codex',
+      models: [{ id: 'live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree',
+      provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+      signingKey: keys.privateKey,
+    });
+    const cancel = vi.fn(async () => {});
+    await expect(
+      invokeLedgerBoundNative({
+        request: {
+          objectiveRevision: 'r1',
+          allowedWriteScope: ['src/'],
+          leaseId: 'lease',
+          budgetReservation: 'budget',
+          approvalReceipt: 'approval',
+        },
+        capabilityReceipt: receipt,
+        capabilityPublicKey: keys.publicKey,
+        assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+        start: async () => ({
+          invocationId: 'run-1',
+          cancel,
+          inspect: async () => ({ invocationId: 'run-1', cancelled: true, receipt: 'cancelled' }),
+        }),
+      })
+    ).rejects.toThrow('NATIVE_INVOCATION_REQUIRED');
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it('does not return from an aborted invocation until cancellation is confirmed', async () => {
