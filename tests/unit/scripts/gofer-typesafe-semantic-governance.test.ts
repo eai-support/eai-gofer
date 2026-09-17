@@ -58,4 +58,49 @@ describe('TypeSafe semantic governance', () => {
     expect(receipt.artifacts['spec.md']).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(receipt)).not.toContain('secret-value');
   });
+
+  it('reports unavailable, not an uncaught exception, on a network failure or timeout', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const networkFailure = vi.fn(async () => { throw new TypeError('fetch failed'); });
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl: networkFailure })
+    ).resolves.toMatchObject({ status: 'unavailable', reason: 'network_error' });
+    const timeout = vi.fn(async () => { const error = new Error('The operation was aborted'); error.name = 'TimeoutError'; throw error; });
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl: timeout })
+    ).resolves.toMatchObject({ status: 'unavailable', reason: 'timeout' });
+  });
+
+  it('fails toward reconcile, not a silent aligned pass, on an unrecognized provider answer', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'unclear', confidence: 0.99 }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.status).toBe('reconcile');
+  });
+
+  it('reports unavailable on a response body that is not valid JSON', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response('not json', { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_body' });
+  });
+
+  it('reports aligned when confidence is high and both answers are recognized', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.status).toBe('aligned');
+  });
 });

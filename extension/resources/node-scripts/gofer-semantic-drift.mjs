@@ -27,6 +27,10 @@ function parseArgs(argv) {
 async function readJson(target) { return JSON.parse(await fs.readFile(target, 'utf8')); }
 async function readArtifact(target) { try { const value = await fs.readFile(target, 'utf8'); return value.slice(0, MAX_ARTIFACT_BYTES); } catch (error) { if (error?.code === 'ENOENT') return ''; throw error; } }
 function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCase(); }
+// A response outside this set is unexpected (a provider bug, a new API
+// version, a malformed payload) and must not be read as a silent pass.
+const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
+const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 
 export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
   const policyPath = path.join(workspace, POLICY_RELATIVE_PATH);
@@ -37,16 +41,25 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const artifacts = await Promise.all(['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md', 'decisions.md', 'traceability.md'].map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
   const state = Object.fromEntries(artifacts.map(([name, content]) => [name, { sha256: digest(content), content }]));
   const { apiKey } = await resolveApiKey({ workspace, env });
-  const response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
-    method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    signal: AbortSignal.timeout(10_000),
-    body: JSON.stringify({ model: 'jev-latest', state: JSON.stringify(state), questions: {
-      goal_alignment: { type: 'choice', instructions: 'Does the current work remain aligned to the approved goal and specification?', criteria: { aligned: 'The work remains aligned.', partial: 'The work needs document reconciliation.', conflict: 'The work conflicts with approved direction.' } },
-      required_action: { type: 'choice', instructions: 'What is the required delivery action?', criteria: { continue: 'Continue within the approved path.', reconcile: 'Reconcile affected artefacts before work continues.', ask_user: 'A material user decision is required.' } },
-    } }),
-  });
+  let response;
+  try {
+    response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
+      method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ model: 'jev-latest', state: JSON.stringify(state), questions: {
+        goal_alignment: { type: 'choice', instructions: 'Does the current work remain aligned to the approved goal and specification?', criteria: { aligned: 'The work remains aligned.', partial: 'The work needs document reconciliation.', conflict: 'The work conflicts with approved direction.' } },
+        required_action: { type: 'choice', instructions: 'What is the required delivery action?', criteria: { continue: 'Continue within the approved path.', reconcile: 'Reconcile affected artefacts before work continues.', ask_user: 'A material user decision is required.' } },
+      } }),
+    });
+  } catch (error) {
+    // A network failure or timeout is not a verdict. Report it as
+    // unavailable rather than letting the caller's caller see an uncaught
+    // exception where it expects a status.
+    return { status: 'unavailable', event, reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error' };
+  }
   if (!response.ok) return { status: 'unavailable', event, httpStatus: response.status };
-  const payload = await response.json();
+  let payload;
+  try { payload = await response.json(); } catch { return { status: 'unavailable', event, reason: 'invalid_response_body' }; }
   const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
   const alignmentAnswer = answers.goal_alignment || {};
   const actionAnswer = answers.required_action || {};
@@ -54,7 +67,13 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const action = normalizeAnswer(actionAnswer.choice);
   const confidences = [alignmentAnswer, actionAnswer].map((answer) => Number(answer.confidence ?? 0)).filter(Number.isFinite);
   const confidence = confidences.length > 0 ? Math.min(...confidences) : 0;
-  const status = alignment === 'conflict' || action === 'ask_user' ? 'conflict' : confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile' : 'aligned';
+  // An answer outside the known choice set fails toward reconcile, not
+  // toward a silent aligned pass: an unexpected label must not be read as
+  // "everything is fine".
+  const recognized = KNOWN_ALIGNMENTS.has(alignment) && KNOWN_ACTIONS.has(action);
+  const status = alignment === 'conflict' || action === 'ask_user' ? 'conflict'
+    : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
+    : 'aligned';
   const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, content]) => [name, digest(content)])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
   const receiptPath = path.join(featureDir, 'evidence', 'semantic-review', `${event}.json`);
   await fs.mkdir(path.dirname(receiptPath), { recursive: true }); await fs.writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
