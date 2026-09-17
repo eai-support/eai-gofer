@@ -5,6 +5,22 @@
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
+const list = value => Array.isArray(value) && value.every(text);
+function validateAdvisoryConstraints(value) {
+  const allowed = new Set(['reasoningEfforts', 'toolCapabilities', 'grantedPermissions',
+    'isolationClass', 'maxCostUsd', 'maxDurationMs', 'minReliability']);
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some(key => !allowed.has(key)) ||
+      ['reasoningEfforts', 'toolCapabilities', 'grantedPermissions'].some(key =>
+        value[key] !== undefined && !list(value[key])) ||
+      (value.isolationClass !== undefined && !text(value.isolationClass)) ||
+      ['maxCostUsd', 'maxDurationMs'].some(key => value[key] !== undefined &&
+        (!Number.isFinite(value[key]) || value[key] < 0)) ||
+      (value.minReliability !== undefined &&
+        (!Number.isFinite(value.minReliability) || value.minReliability < 0 || value.minReliability > 1))) {
+    throw new Error('UNSUPPORTED_ADVISORY_CONSTRAINT');
+  }
+}
 function benchmarkResult(report, modelId, receiptHash) {
   if (report?.schemaVersion !== 2 || report.repetitions !== 3 ||
       report.provenance?.modelId !== modelId || report.provenance?.capabilityReceiptHash !== receiptHash ||
@@ -39,14 +55,21 @@ function benchmarkResult(report, modelId, receiptHash) {
       Math.abs(report.costUsd - costUsd) > 1e-9 || report.durationMs !== durationMs ||
       report.status !== (passes === report.runs.length ? 'pass' : 'fail')) return null;
   return { modelId, receiptHash, functionalVerified: passes === report.runs.length,
-    reliability: report.reliability, costUsd: report.costUsd };
+    reliability: report.reliability, costUsd: report.costUsd, durationMs: report.durationMs };
 }
 
 export async function selectCapabilityRoute({ receipt, publicKey, host, requiredCapabilities = {},
   advisoryConstraints = {}, benchmarkEvidence, verifyBenchmark, now = Date.now() } = {}) {
   const { reasoningEfforts = [] } = requiredCapabilities;
+  validateAdvisoryConstraints(advisoryConstraints);
   if (!verifyCapabilityReceipt(receipt, { publicKey, host, requiredCapabilities, now })) {
     throw new Error('LIVE_RECEIPT_REQUIRED');
+  }
+  if (['toolCapabilities', 'grantedPermissions'].some(key =>
+    advisoryConstraints[key]?.some(value => !receipt[key].includes(value))) ||
+    (advisoryConstraints.isolationClass !== undefined &&
+      receipt.isolationClass !== advisoryConstraints.isolationClass)) {
+    throw new Error('NO_LIVE_CAPABILITY_MATCH');
   }
   const reports = Array.isArray(benchmarkEvidence) ? benchmarkEvidence : [benchmarkEvidence];
   if (typeof verifyBenchmark !== 'function' || !reports.length ||
@@ -69,7 +92,10 @@ export async function selectCapabilityRoute({ receipt, publicKey, host, required
     const result = reports.map(report => benchmarkResult(report, model.id, receiptHash))
       .find(item => item?.functionalVerified === true);
     return { model, result };
-  }).filter(item => item.result);
+  }).filter(item => item.result &&
+    (advisoryConstraints.maxCostUsd === undefined || item.result.costUsd <= advisoryConstraints.maxCostUsd) &&
+    (advisoryConstraints.minReliability === undefined || item.result.reliability >= advisoryConstraints.minReliability) &&
+    (advisoryConstraints.maxDurationMs === undefined || item.result.durationMs <= advisoryConstraints.maxDurationMs));
   if (!scored.length) throw new Error('NO_VERIFIED_BENCHMARK_MATCH');
   scored.sort((left, right) => right.result.reliability - left.result.reliability ||
     left.result.costUsd - right.result.costUsd || left.model.id.localeCompare(right.model.id));

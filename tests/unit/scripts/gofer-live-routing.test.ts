@@ -77,6 +77,45 @@ describe('live capability routing', () => {
       benchmark: { reliability: 1 },
     });
     expect(route.benchmark.costUsd).toBeCloseTo(0.3);
+    const base = {
+      receipt,
+      publicKey: keys.publicKey,
+      host: 'antigravity',
+      now: Date.parse('2026-09-17T00:01:00Z'),
+      benchmarkEvidence,
+      verifyBenchmark: async ({ receiptHash }: { receiptHash: string }) => ({
+        valid: true,
+        receiptHash,
+        receipt: 'benchmark-verifier-receipt',
+      }),
+    };
+    await expect(
+      selectCapabilityRoute({
+        ...base,
+        advisoryConstraints: { toolCapabilities: ['missing-tool'] },
+      })
+    ).rejects.toThrow('NO_LIVE_CAPABILITY_MATCH');
+    await expect(
+      selectCapabilityRoute({
+        ...base,
+        advisoryConstraints: { grantedPermissions: ['network-access'] },
+      })
+    ).rejects.toThrow('NO_LIVE_CAPABILITY_MATCH');
+    await expect(
+      selectCapabilityRoute({
+        ...base,
+        advisoryConstraints: { isolationClass: 'local-os-sandbox' },
+      })
+    ).rejects.toThrow('NO_LIVE_CAPABILITY_MATCH');
+    await expect(
+      selectCapabilityRoute({ ...base, advisoryConstraints: { maxCostUsd: 0.2 } })
+    ).rejects.toThrow('NO_VERIFIED_BENCHMARK_MATCH');
+    await expect(
+      selectCapabilityRoute({ ...base, advisoryConstraints: { maxDurationMs: 20 } })
+    ).rejects.toThrow('NO_VERIFIED_BENCHMARK_MATCH');
+    await expect(
+      selectCapabilityRoute({ ...base, advisoryConstraints: { unsupported: true } })
+    ).rejects.toThrow('UNSUPPORTED_ADVISORY_CONSTRAINT');
   });
 
   it('rejects a caller-supplied benchmark result without an independent verifier', async () => {
