@@ -47,6 +47,7 @@ describe('native runtime workspace binding', () => {
         localIsolation: async ({ workspaceRoot }: { workspaceRoot: string }) => ({
           contractVersion: 'eai.local-isolation/v1',
           projectDirectory: workspaceRoot,
+          nativeExecutable: '/usr/bin/codex',
           cloudExecution: 'prohibited',
           gitRepository: true,
           assessments: [

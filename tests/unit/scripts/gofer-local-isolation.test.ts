@@ -88,13 +88,26 @@ describe('EAI local isolation contract', () => {
   it('reads the selected worktree from the local CLI and rejects failed readiness', async () => {
     const run = vi.fn(async () => ({ stdout: JSON.stringify(readyReport), stderr: '' }));
     await expect(
-      inspectEaiLocalIsolation({ host: 'codex', workspaceRoot, run })
-    ).resolves.toMatchObject(readyReport);
+      inspectEaiLocalIsolation({
+        host: 'codex',
+        workspaceRoot,
+        run,
+        verifyNativeSandbox: () => '/usr/bin/codex',
+      })
+    ).resolves.toMatchObject({ ...readyReport, nativeExecutable: '/usr/bin/codex' });
     expect(run).toHaveBeenCalledWith(
       'eai',
       ['start', workspaceRoot, '--isolation-check', '--surface', 'codex-cli', '--format', 'json'],
       expect.objectContaining({ timeout: 15000 })
     );
+    await expect(
+      inspectEaiLocalIsolation({
+        host: 'codex',
+        workspaceRoot,
+        run,
+        verifyNativeSandbox: () => null,
+      })
+    ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
     await expect(
       inspectEaiLocalIsolation({
         host: 'codex',

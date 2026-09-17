@@ -83,7 +83,8 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
           worktreeReceipt: isolation.receipt,
           capabilityReceipt, capabilityPublicKey, requiredCapabilities, assertLedger: nativeLedger, promptForRequest,
-          start: request => startLocalCodexInvocation({ ...request, evidenceDirectory }) });
+          start: request => startLocalCodexInvocation({ ...request,
+            command: isolation.nativeExecutable, evidenceDirectory }) });
         const trustedAdapter = Object.freeze({ ...boundAdapter, worktreeReceipt: isolation.receipt,
           execute: executor.execute });
         const trustedRecovery = recovery ? { ...recovery,

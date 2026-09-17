@@ -24,6 +24,7 @@ function localIsolation({ workspaceRoot }: { workspaceRoot: string }) {
   return {
     contractVersion: 'eai.local-isolation/v1',
     projectDirectory: workspaceRoot,
+    nativeExecutable: '/usr/bin/codex',
     cloudExecution: 'prohibited',
     gitRepository: true,
     assessments: [
@@ -609,6 +610,17 @@ describe('native adapter primitives', () => {
           workspaceRoot: root,
           host: 'codex',
           localIsolation: async () => localIsolation({ workspaceRoot: root }),
+        })
+      ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
+      await expect(
+        createVerifiedWorktree({
+          workspaceRoot: root,
+          host: 'codex',
+          localIsolation: async ({ workspaceRoot }) => {
+            const report = { ...localIsolation({ workspaceRoot }) };
+            Reflect.deleteProperty(report, 'nativeExecutable');
+            return report;
+          },
         })
       ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
       expect(execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain']).toString()).toBe(

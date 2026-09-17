@@ -327,14 +327,15 @@ export async function createVerifiedWorktree({ workspaceRoot, host, localIsolati
     ]);
     if (head.stdout.trim() !== expected.stdout.trim()) throw new Error('ISOLATION_REVISION_MISMATCH');
     const report = await localIsolation(Object.freeze({ host, workspaceRoot: isolated }));
-    if (!verifyLocalIsolationReport(report, { host, workspaceRoot: isolated })) {
+    if (!verifyLocalIsolationReport(report, { host, workspaceRoot: isolated }) ||
+        !text(report.nativeExecutable) || !path.isAbsolute(report.nativeExecutable)) {
       throw new Error('LOCAL_SANDBOX_REQUIRED');
     }
     const status = await git(isolated, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=matching']);
     if (status.stdout.trim() !== '') throw new Error('ISOLATION_PREFLIGHT_CHANGED_WORKTREE');
     const receipt = worktreeReceipt(workspace, isolated, head.stdout.trim());
     return Object.freeze({ isolationClass: 'git-worktree+local-os-sandbox', workspace, isolatedWorkspace: isolated,
-      revision: head.stdout.trim(), receipt });
+      nativeExecutable: report.nativeExecutable, revision: head.stdout.trim(), receipt });
   } catch (error) {
     await git(workspace, ['worktree', 'remove', '--force', destination]).catch(() => {});
     throw error;

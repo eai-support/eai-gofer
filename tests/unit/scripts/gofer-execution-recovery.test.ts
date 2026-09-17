@@ -248,6 +248,7 @@ describe('Read-only interrupted execution reconciliation', () => {
     const localIsolation = ({ workspaceRoot }: { workspaceRoot: string }) => ({
       contractVersion: 'eai.local-isolation/v1',
       projectDirectory: workspaceRoot,
+      nativeExecutable: '/usr/bin/codex',
       cloudExecution: 'prohibited',
       gitRepository: true,
       assessments: [
