@@ -102,6 +102,15 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('Copilot, Grok,\nand VS Code');
       expect(readme).toContain('No static provider default qualifies a model');
       expect(readme).not.toContain('Copilot\ndefaults to `Auto`');
+      for (const manifest of [
+        'plugin.json',
+        '.github/plugin/plugin.json',
+        '.codex-plugin/plugin.json',
+      ]) {
+        expect(readJson<{ keywords: string[] }>(path.join(pluginRoot, manifest)).keywords).toContain(
+          'grok'
+        );
+      }
       const umbrellaSkill = fs.readFileSync(
         path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'),
         'utf8'

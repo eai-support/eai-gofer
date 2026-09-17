@@ -44,6 +44,7 @@ describe('Verified harness instruction and release preservation (not native exec
       '.specify/commands',
       'plugins/eai-gofer/.specify/commands',
       'plugins/eai-gofer/plugins/eai-gofer/.specify/commands',
+      'tests/fixtures/golden/claude-commands',
     ]) {
       for (const file of readdirSync(path.join(root, directory)).filter((name) =>
         name.endsWith('.md')
