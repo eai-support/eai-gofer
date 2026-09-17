@@ -153,4 +153,19 @@ describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', 
       await rm(f.root, { recursive: true, force: true });
     }
   });
+
+  it('rejects an oversized registry after opening the file', async () => {
+    const f = await fixture();
+    try {
+      await writeFile(f.registryPath, ' '.repeat(65537), { mode: 0o600 });
+      await expect(
+        resolveTrustedEvaluatorPublicKey(f.receipt, {
+          workspaceRoot: f.workspaceRoot,
+          trustRoot: f.trustRoot,
+        })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
 });

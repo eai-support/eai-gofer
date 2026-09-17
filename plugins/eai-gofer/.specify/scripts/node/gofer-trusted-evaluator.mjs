@@ -42,15 +42,12 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
     if (inside(workspace, canonicalRoot) || !rootInfo.isDirectory() ||
         rootInfo.uid !== process.getuid() || (rootInfo.mode & 0o077) !== 0) throw denied();
     const filename = path.join(canonicalRoot, 'trusted-evaluators.json');
-    const expected = await lstat(filename);
-    if (!expected.isFile() || expected.uid !== process.getuid() ||
-        (expected.mode & 0o077) !== 0 || expected.size < 2 || expected.size > 65536) throw denied();
     const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
     let registry;
     try {
       const actual = await file.stat();
-      if (!actual.isFile() || actual.dev !== expected.dev || actual.ino !== expected.ino ||
-          actual.size !== expected.size) throw denied();
+      if (!actual.isFile() || actual.uid !== process.getuid() ||
+          (actual.mode & 0o077) !== 0 || actual.size < 2 || actual.size > 65536) throw denied();
       registry = JSON.parse(await file.readFile('utf8'));
     } finally { await file.close(); }
     if (registry?.schemaVersion !== 1 || !Array.isArray(registry.evaluators) ||
