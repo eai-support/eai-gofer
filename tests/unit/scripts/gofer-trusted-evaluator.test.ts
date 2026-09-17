@@ -1,6 +1,6 @@
-import { generateKeyPairSync } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +12,7 @@ import {
 import {
   loadActiveBenchmarkVerifierKey,
   loadActiveCodexEvaluatorKey,
+  loadTrustedHeldOutCorpus,
   resolveTrustedEvaluatorPublicKey,
 } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
 
@@ -59,6 +60,62 @@ async function fixture() {
 }
 
 describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', () => {
+  it('loads only an owner-protected, pinned external corpus', async () => {
+    const f = await fixture();
+    try {
+      await expect(
+        loadTrustedHeldOutCorpus({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      const corpora = path.join(f.trustRoot, 'corpora');
+      const corpusRoot = path.join(corpora, 'eai-heldout-v1');
+      await mkdir(corpora, { mode: 0o700 });
+      await mkdir(corpusRoot, { mode: 0o700 });
+      const categories = ['bug-fix', 'refactor', 'cross-service-contract', 'security-sensitive'];
+      const cases = [];
+      for (const [index, category] of categories.entries()) {
+        const inputFile = `${index}.json`;
+        const input = JSON.stringify({ prompt: category });
+        await writeFile(path.join(corpusRoot, inputFile), input, { mode: 0o600 });
+        cases.push({
+          id: `EAI-${index + 1}`,
+          category,
+          inputFile,
+          inputSha256: createHash('sha256').update(input).digest('hex'),
+        });
+      }
+      const manifest = { schemaVersion: 1, cases };
+      const corpusHash = createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
+      await writeFile(path.join(corpusRoot, 'manifest.json'), JSON.stringify(manifest), {
+        mode: 0o600,
+      });
+      const configFile = path.join(f.trustRoot, 'heldout-corpus.json');
+      await writeFile(
+        configFile,
+        JSON.stringify({ schemaVersion: 1, corpusId: 'eai-heldout-v1', corpusHash }),
+        { mode: 0o600 }
+      );
+      await expect(
+        loadTrustedHeldOutCorpus({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).resolves.toMatchObject({
+        corpusHash,
+        corpusRoot: await realpath(corpusRoot),
+        cases: expect.arrayContaining([
+          expect.objectContaining({ category: 'security-sensitive' }),
+        ]),
+      });
+      await writeFile(path.join(corpusRoot, '0.json'), '{"changed":true}');
+      await expect(
+        loadTrustedHeldOutCorpus({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await writeFile(path.join(corpusRoot, '0.json'), JSON.stringify({ prompt: 'bug-fix' }));
+      await chmod(configFile, 0o644);
+      await expect(
+        loadTrustedHeldOutCorpus({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
   it('keeps benchmark signing inactive until a separate registered key is activated', async () => {
     const f = await fixture();
     try {
@@ -232,6 +289,14 @@ describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', 
   it('rejects writable or linked trust files and a trust root inside the worker workspace', async () => {
     const f = await fixture();
     try {
+      const nestedWorkspace = path.join(f.trustRoot, 'worker');
+      await mkdir(nestedWorkspace, { mode: 0o700 });
+      await expect(
+        resolveTrustedEvaluatorPublicKey(f.receipt, {
+          workspaceRoot: nestedWorkspace,
+          trustRoot: f.trustRoot,
+        })
+      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
       await chmod(f.registryPath, 0o644);
       await expect(
         resolveTrustedEvaluatorPublicKey(f.receipt, {

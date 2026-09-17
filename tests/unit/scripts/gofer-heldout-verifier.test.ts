@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -145,6 +146,18 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
       );
       const result = await recheckHeldOutBenchmark(f);
       expect(result.functionalPasses).toBe(12);
+    });
+
+    it('does not let a CLI caller select the trusted corpus', async () => {
+      const f = await fixture();
+      const command = path.resolve('.specify/scripts/node/gofer-heldout-verifier.mjs');
+      const result = spawnSync(
+        process.execPath,
+        [command, '--corpus-root', f.corpusRoot, '--workspace-root', f.workspaceRoot],
+        { encoding: 'utf8', timeout: 10000 }
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('HELDOUT_VERIFIER_REQUIRED');
     });
   }
 );

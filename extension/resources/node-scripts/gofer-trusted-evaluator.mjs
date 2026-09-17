@@ -1,9 +1,10 @@
 /** Read a locally provisioned evaluator key. The worker never chooses it. */
-import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { loadHeldOutCorpus } from './gofer-heldout-corpus.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const inside = (parent, child) => {
@@ -33,6 +34,22 @@ function accountTrustRoot() {
   return path.join(home, '.eai-gofer-trust');
 }
 
+async function inspectAccountTrustRoot(root, workspaceRoot) {
+  if (!path.isAbsolute(root)) throw denied();
+  const [workspace, parent, rootInfo] = await Promise.all([
+    realpath(workspaceRoot), realpath(path.dirname(root)), lstat(root),
+  ]);
+  const parentInfo = await lstat(parent);
+  const canonicalRoot = path.join(parent, path.basename(root));
+  // No different account may rename the trust root between validation and open.
+  if (!parentInfo.isDirectory() || ![0, process.getuid()].includes(parentInfo.uid) ||
+      (parentInfo.mode & 0o022) !== 0 || inside(workspace, canonicalRoot) ||
+      inside(canonicalRoot, workspace) ||
+      !rootInfo.isDirectory() || rootInfo.uid !== process.getuid() ||
+      (rootInfo.mode & 0o077) !== 0) throw denied();
+  return canonicalRoot;
+}
+
 /**
  * The default trust root is fixed outside the checkout. `trustRoot` exists for
  * isolated tests; the production composition root never accepts an override.
@@ -42,18 +59,8 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
       !text(workspaceRoot) || !text(receipt?.host) || !text(receipt?.provenance?.keyId) ||
       !text(receipt?.provenance?.evaluator)) throw denied();
   const root = trustRoot ?? accountTrustRoot();
-  if (!path.isAbsolute(root)) throw denied();
   try {
-    const [workspace, parent, rootInfo] = await Promise.all([
-      realpath(workspaceRoot), realpath(path.dirname(root)), lstat(root),
-    ]);
-    const parentInfo = await lstat(parent);
-    const canonicalRoot = path.join(parent, path.basename(root));
-    // No different account may rename the trust root between validation and open.
-    if (!parentInfo.isDirectory() || ![0, process.getuid()].includes(parentInfo.uid) ||
-        (parentInfo.mode & 0o022) !== 0 ||
-        inside(workspace, canonicalRoot) || !rootInfo.isDirectory() ||
-        rootInfo.uid !== process.getuid() || (rootInfo.mode & 0o077) !== 0) throw denied();
+    const canonicalRoot = await inspectAccountTrustRoot(root, workspaceRoot);
     const filename = path.join(canonicalRoot, 'trusted-evaluators.json');
     const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
     let registry;
@@ -124,4 +131,54 @@ export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } =
 export async function loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot } = {}) {
   return loadActiveEvaluatorKey({ workspaceRoot, trustRoot,
     identityName: 'heldout-verifier', evaluator: 'gofer-heldout-benchmark-verifier' });
+}
+
+/** The controller pins one corpus inside its account-owned trust root.
+ * A worker cannot select a path or replace a pinned input through this API. */
+export async function loadTrustedHeldOutCorpus({ workspaceRoot, trustRoot } = {}) {
+  if (!text(workspaceRoot) || process.platform === 'win32' ||
+      typeof process.getuid !== 'function') throw denied();
+  const root = trustRoot ?? accountTrustRoot();
+  try {
+    const canonicalRoot = await inspectAccountTrustRoot(root, workspaceRoot);
+    const configFile = await open(path.join(canonicalRoot, 'heldout-corpus.json'),
+      constants.O_RDONLY | constants.O_NOFOLLOW);
+    let config;
+    try {
+      const info = await configFile.stat();
+      if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
+          (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
+      config = JSON.parse(await configFile.readFile('utf8'));
+    } finally { await configFile.close(); }
+    if (config?.schemaVersion !== 1 || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(config.corpusId ?? '') ||
+        !/^[a-f0-9]{64}$/.test(config.corpusHash ?? '')) throw denied();
+    const corpora = path.join(canonicalRoot, 'corpora');
+    const corpusRoot = path.join(corpora, config.corpusId);
+    for (const directory of [corpora, corpusRoot]) {
+      const info = await lstat(directory);
+      if (!info.isDirectory() || info.uid !== process.getuid() ||
+          (info.mode & 0o077) !== 0) throw denied();
+    }
+    const manifestFile = await open(path.join(corpusRoot, 'manifest.json'),
+      constants.O_RDONLY | constants.O_NOFOLLOW);
+    let manifest;
+    try {
+      const info = await manifestFile.stat();
+      if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
+          (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 65536) throw denied();
+      manifest = JSON.parse(await manifestFile.readFile('utf8'));
+    } finally { await manifestFile.close(); }
+    if (!Array.isArray(manifest?.cases) ||
+        createHash('sha256').update(JSON.stringify(manifest)).digest('hex') !== config.corpusHash) throw denied();
+    for (const name of manifest.cases.map(item => item?.inputFile)) {
+      if (!text(name) || name === '.' || name === '..' || name.includes('/') ||
+          name.includes('\\')) throw denied();
+      const info = await lstat(path.join(corpusRoot, name));
+      if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
+          (info.mode & 0o077) !== 0) throw denied();
+    }
+    const corpus = await loadHeldOutCorpus({ corpusRoot, workspaceRoot });
+    if (corpus.corpusHash !== config.corpusHash) throw denied();
+    return Object.freeze({ ...corpus, corpusRoot });
+  } catch { throw denied(); }
 }

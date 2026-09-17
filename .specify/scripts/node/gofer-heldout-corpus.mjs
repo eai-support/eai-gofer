@@ -2,7 +2,7 @@
  * into Gofer's distributable source tree. */
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { open, readFile, realpath } from 'node:fs/promises';
+import { open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -29,7 +29,16 @@ export async function loadHeldOutCorpus({ corpusRoot, workspaceRoot } = {}) {
     throw new Error('HELDOUT_CORPUS_MUST_BE_EXTERNAL');
   }
   const manifestPath = path.join(root, 'manifest.json');
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  let manifestText;
+  try {
+    const file = await open(manifestPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const info = await file.stat();
+      if (!info.isFile() || info.size < 2 || info.size > 65536) throw new Error('INVALID_HELDOUT_MANIFEST');
+      manifestText = await file.readFile('utf8');
+    } finally { await file.close(); }
+  } catch { throw new Error('INVALID_HELDOUT_MANIFEST'); }
+  const manifest = JSON.parse(manifestText);
   if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest.cases) || manifest.cases.length < 4 ||
       new Set(manifest.cases.map(item => item?.id)).size !== manifest.cases.length) throw new Error('INVALID_HELDOUT_MANIFEST');
   const categories = new Set();

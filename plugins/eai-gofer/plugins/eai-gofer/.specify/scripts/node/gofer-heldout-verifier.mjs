@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadHeldOutCorpus } from './gofer-heldout-corpus.mjs';
+import { loadTrustedHeldOutCorpus } from './gofer-trusted-evaluator.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const denied = () => new Error('HELDOUT_VERIFIER_REQUIRED');
@@ -158,15 +159,21 @@ export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot } = {}
   } catch { throw denied(); }
 }
 
+/** Production entrypoint: the account trust root chooses the corpus. */
+export async function recheckConfiguredHeldOutBenchmark({ workspaceRoot } = {}) {
+  try {
+    const corpus = await loadTrustedHeldOutCorpus({ workspaceRoot });
+    return await recheckHeldOutBenchmark({ corpusRoot: corpus.corpusRoot, workspaceRoot });
+  } catch { throw denied(); }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const rootFlag = process.argv.indexOf('--corpus-root');
   const workspaceFlag = process.argv.indexOf('--workspace-root');
-  if (rootFlag < 0 || workspaceFlag < 0 || process.argv.length !== 6) {
+  if (workspaceFlag !== 2 || process.argv.length !== 4) {
     process.stderr.write('HELDOUT_VERIFIER_REQUIRED\n');
     process.exitCode = 1;
   } else {
-    recheckHeldOutBenchmark({ corpusRoot: process.argv[rootFlag + 1],
-      workspaceRoot: process.argv[workspaceFlag + 1] }).then(
+    recheckConfiguredHeldOutBenchmark({ workspaceRoot: process.argv[workspaceFlag + 1] }).then(
       result => process.stdout.write(`${JSON.stringify(result)}\n`),
       () => { process.stderr.write('HELDOUT_VERIFIER_REQUIRED\n'); process.exitCode = 1; });
   }

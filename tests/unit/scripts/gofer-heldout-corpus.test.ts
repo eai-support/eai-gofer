@@ -81,6 +81,33 @@ describe('held-out benchmark corpus', () => {
     }
   });
 
+  it('rejects a linked manifest before reading its contents', async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), 'gofer-workspace-'));
+    const corpus = await mkdtemp(path.join(tmpdir(), 'gofer-heldout-'));
+    const external = await mkdtemp(path.join(tmpdir(), 'gofer-external-'));
+    try {
+      const cases = [];
+      for (const [index, category] of categories.entries()) {
+        const inputFile = `${index}.json`;
+        const input = JSON.stringify({ hiddenTask: category });
+        await writeFile(path.join(corpus, inputFile), input);
+        cases.push({ id: `EAI-${index + 1}`, category, inputFile, inputSha256: hash(input) });
+      }
+      const externalManifest = path.join(external, 'manifest.json');
+      await writeFile(externalManifest, JSON.stringify({ schemaVersion: 1, cases }));
+      await symlink(externalManifest, path.join(corpus, 'manifest.json'));
+      await expect(
+        loadHeldOutCorpus({ corpusRoot: corpus, workspaceRoot: workspace })
+      ).rejects.toThrow('INVALID_HELDOUT_MANIFEST');
+    } finally {
+      await Promise.all(
+        [workspace, corpus, external].map((directory) =>
+          rm(directory, { recursive: true, force: true })
+        )
+      );
+    }
+  });
+
   it('rejects nested case paths so a parent symlink cannot redirect an opened file', async () => {
     const workspace = await mkdtemp(path.join(tmpdir(), 'gofer-workspace-'));
     const corpus = await mkdtemp(path.join(tmpdir(), 'gofer-heldout-'));
