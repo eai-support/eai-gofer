@@ -66,5 +66,23 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date() }
       return { allowed: true, taskId: request.taskId, revision: request.revision, inputRevision: request.inputRevision,
         leaseId: request.leaseId, capabilityReceiptHash: request.capabilityReceiptHash, receipt: `commit:${digest(request).slice(0, 32)}` };
     }),
+    // Recovery is read-only. It proves that journaled execution facts came from
+    // this ledger before a caller may consider any work reusable.
+    inspectRecovery: async request => {
+      if (!text(request?.revision) || !text(request?.journalHash) || !Array.isArray(request?.authorizations) ||
+          !Array.isArray(request?.commits)) return { allowed: false };
+      const history = await events();
+      const authorized = request.authorizations.every(proof => text(proof?.taskId) && text(proof?.leaseId) &&
+        text(proof?.receipt) && text(proof?.capabilityReceiptHash) && history.some(event =>
+          event.type === 'authorize' && event.taskId === proof.taskId && event.revision === request.revision &&
+          event.leaseId === proof.leaseId && event.receipt === proof.receipt &&
+          event.capabilityReceiptHash === proof.capabilityReceiptHash));
+      const committed = request.commits.every(proof => text(proof?.taskId) && text(proof?.leaseId) &&
+        text(proof?.receipt) && text(proof?.inputRevision) && history.some(event =>
+          event.type === 'commit-authorize' && event.taskId === proof.taskId && event.revision === request.revision &&
+          event.leaseId === proof.leaseId && event.receipt === proof.receipt &&
+          event.inputRevision === proof.inputRevision));
+      return { allowed: authorized && committed, revision: request.revision, journalHash: request.journalHash };
+    },
   });
 }

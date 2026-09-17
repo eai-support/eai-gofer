@@ -25,7 +25,7 @@ async function fixture() {
     await writeFile(path.join(root, file), '{}');
   }
   const revision = await executionRevision(root);
-  const event = (value: any) => ({ schemaVersion: 1, revision, ...value });
+  const event = (value: Record<string, unknown>) => ({ schemaVersion: 1, revision, ...value });
   const events = [
     event({
       event: 'started',
@@ -37,17 +37,27 @@ async function fixture() {
     }),
     event({ event: 'attempt_reserved', task: 'T001', attempt: 1 }),
     event({ event: 'call_reserved', task: 'T001', method: 'execute', call: 1 }),
+    event({
+      event: 'ledger_authorized',
+      task: 'T001',
+      attempt: 1,
+      leaseId: 'lease-1',
+      budgetReservation: 'budget-1',
+      receipt: 'authority-1',
+      capabilityReceiptHash: 'capability-1',
+    }),
   ];
   const journal = path.join(root, 'verified-execution.jsonl');
   const save = async (records = events) =>
     writeFile(journal, records.map((e) => JSON.stringify(e)).join('\n') + '\n');
   await save();
-  const inspectWorkers = vi.fn(async (r: any) => ({
+  const inspectWorkers = vi.fn(async (r: Record<string, unknown>) => ({
     ...r,
     allStopped: true,
     receipt: 'trusted-worker-inspection',
   }));
-  const verifyReceipt = vi.fn(async (r: any) => ({ ...r, valid: true }));
+  const verifyReceipt = vi.fn(async (r: Record<string, unknown>) => ({ ...r, valid: true }));
+  const inspectLedger = vi.fn(async (r: Record<string, unknown>) => ({ ...r, allowed: true }));
   return {
     root,
     revision,
@@ -55,7 +65,7 @@ async function fixture() {
     events,
     journal,
     save,
-    options: { featureDir: root, inspectWorkers, verifyReceipt },
+    options: { featureDir: root, inspectWorkers, verifyReceipt, inspectLedger },
   };
 }
 describe('Read-only interrupted execution reconciliation', () => {
@@ -89,7 +99,16 @@ describe('Read-only interrupted execution reconciliation', () => {
         if (task === 'T002')
           f.events.push(
             f.event({ event: 'attempt_reserved', task, attempt: 1 }),
-            f.event({ event: 'call_reserved', task, method: 'execute', call })
+            f.event({ event: 'call_reserved', task, method: 'execute', call }),
+            f.event({
+              event: 'ledger_authorized',
+              task,
+              attempt: 1,
+              leaseId: 'lease-2',
+              budgetReservation: 'budget-2',
+              receipt: 'authority-2',
+              capabilityReceiptHash: 'capability-1',
+            })
           );
         f.events.push(
           f.event({
@@ -100,6 +119,15 @@ describe('Read-only interrupted execution reconciliation', () => {
             passed: true,
             inputRevision: 'i',
             receipt: 'c',
+          }),
+          f.event({
+            event: 'commit_authorized',
+            task,
+            attempt: 1,
+            leaseId: task === 'T001' ? 'lease-1' : 'lease-2',
+            inputRevision: 'i',
+            receipt: `commit-${task}`,
+            capabilityReceiptHash: 'capability-1',
           }),
           f.event({ event: 'verified', task, inputRevision: 'i', receipt: 'r' })
         );
@@ -137,6 +165,15 @@ describe('Read-only interrupted execution reconciliation', () => {
         inputRevision: 'input-1',
         receipt: 'check-1',
       }),
+      f.event({
+        event: 'commit_authorized',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        inputRevision: 'input-1',
+        receipt: 'commit-1',
+        capabilityReceiptHash: 'capability-1',
+      }),
       f.event({ event: 'verified', task: 'T001', inputRevision: 'input-1', receipt: 'proof-1' })
     );
     await f.save();
@@ -151,6 +188,14 @@ describe('Read-only interrupted execution reconciliation', () => {
     const report = await inspectExecutionRecovery({ featureDir: f.root });
     expect(report.reasons).toContain('WORKER_INSPECTION_REQUIRED');
     expect(report.reasons).toContain('RECEIPT_VERIFIER_REQUIRED');
+    expect(report.reasons).toContain('LEDGER_INSPECTION_REQUIRED');
+  });
+  it('does not reuse work when the authority ledger cannot reconcile it', async () => {
+    const f = await fixture();
+    f.options.inspectLedger.mockResolvedValue({ allowed: false });
+    const report = await inspectExecutionRecovery(f.options);
+    expect(report.reasons).toContain('LEDGER_NOT_RECONCILED');
+    expect(report.resumeAllowed).toBe(false);
   });
   it('does not accept still-active workers', async () => {
     const f = await fixture();
@@ -177,9 +222,20 @@ describe('Read-only interrupted execution reconciliation', () => {
         receipt: 'c',
       })
     );
+    f.events.push(
+      f.event({
+        event: 'commit_authorized',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        inputRevision: 'i',
+        receipt: 'commit-1',
+        capabilityReceiptHash: 'capability-1',
+      })
+    );
     f.events.push(f.event({ event: 'verified', task: 'T001', inputRevision: 'i', receipt: 'r' }));
     await f.save();
-    f.options.verifyReceipt.mockImplementation(async (r: any) => {
+    f.options.verifyReceipt.mockImplementation(async (r: Record<string, unknown>) => {
       await appendFile(f.journal, JSON.stringify(f.event({ event: 'finished' })) + '\n');
       return { ...r, valid: true };
     });
@@ -199,10 +255,19 @@ describe('Read-only interrupted execution reconciliation', () => {
         inputRevision: 'i',
         receipt: 'c',
       }),
+      f.event({
+        event: 'commit_authorized',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        inputRevision: 'i',
+        receipt: 'commit-1',
+        capabilityReceiptHash: 'capability-1',
+      }),
       f.event({ event: 'verified', task: 'T001', inputRevision: 'i', receipt: 'r' })
     );
     await f.save();
-    f.options.verifyReceipt.mockImplementation(async (r: any) => ({
+    f.options.verifyReceipt.mockImplementation(async (r: Record<string, unknown>) => ({
       ...r,
       valid: true,
       journalHash: 'wrong',
@@ -232,6 +297,25 @@ describe('Read-only interrupted execution reconciliation', () => {
   it('does not accept verification without required check history', async () => {
     const f = await fixture();
     f.events.push(f.event({ event: 'verified', task: 'T001', inputRevision: 'i', receipt: 'r' }));
+    await f.save();
+    expect((await inspectExecutionRecovery(f.options)).reasons).toContain(
+      'INVALID_VERIFICATION_RECORD'
+    );
+  });
+  it('does not accept a verified journal event without ledger and commit authority', async () => {
+    const f = await fixture();
+    f.events.push(
+      f.event({
+        event: 'check',
+        task: 'T001',
+        attempt: 1,
+        check: 'acceptance',
+        passed: true,
+        inputRevision: 'i',
+        receipt: 'c',
+      }),
+      f.event({ event: 'verified', task: 'T001', inputRevision: 'i', receipt: 'r' })
+    );
     await f.save();
     expect((await inspectExecutionRecovery(f.options)).reasons).toContain(
       'INVALID_VERIFICATION_RECORD'

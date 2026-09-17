@@ -28,7 +28,7 @@ async function readJournal(root) {
 }
 
 /** Read-only reconciliation. This never clears a journal or replays a side effect. */
-export async function inspectExecutionRecovery({ featureDir, verifyReceipt, inspectWorkers, timeoutMs = 2000 }) {
+export async function inspectExecutionRecovery({ featureDir, verifyReceipt, inspectWorkers, inspectLedger, timeoutMs = 2000 }) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 10000) throw new Error('INVALID_INSPECTION_LIMIT');
   let inspectionDeadline = Date.now() + timeoutMs;
   let inspectionTimedOut = false;
@@ -67,9 +67,13 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   const uncertain = new Set();
   const receipts = new Map();
   const latestChecks = new Map();
+  const authorizations = [];
+  const commits = [];
+  const authorizedTasks = new Map();
+  const commitAuthorities = new Map();
   const active = new Set();
   const methods = new Set(['reserve', 'execute', 'inputRevision', 'check', 'verified']);
-  const known = new Set(['started', 'attempt_reserved', 'call_reserved', 'check', 'verified', 'repair_required', 'blocked', 'cancelled', 'stale', 'finished']);
+  const known = new Set(['started', 'attempt_reserved', 'call_reserved', 'lease_granted', 'ledger_authorized', 'check', 'commit_authorized', 'verified', 'repair_required', 'blocked', 'cancelled', 'stale', 'finished']);
   let finished = false;
   for (const [index, event] of events.entries()) {
     if (!event || event.schemaVersion !== 1 || event.revision !== first.revision || !known.has(event.event) ||
@@ -96,6 +100,16 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
       if (event.method === 'execute') active.add(event.task);
       if (active.size > first.maxConcurrent) { reasons.push('INVALID_CONCURRENCY_HISTORY'); break; }
     }
+    if (event.event === 'lease_granted' && (!report.attemptsConsumed[event.task] || !text(event.leaseId) || !text(event.expiresAt))) {
+      reasons.push('INVALID_LEASE_HISTORY'); break;
+    }
+    if (event.event === 'ledger_authorized') {
+      if (!report.attemptsConsumed[event.task] || !text(event.leaseId) || !text(event.receipt) ||
+          !text(event.capabilityReceiptHash)) { reasons.push('INVALID_LEDGER_AUTHORIZATION'); break; }
+      authorizations.push({ taskId: event.task, leaseId: event.leaseId, receipt: event.receipt,
+        capabilityReceiptHash: event.capabilityReceiptHash });
+      authorizedTasks.set(event.task, event);
+    }
     if (event.event === 'check') {
       if (!active.has(event.task) || event.attempt !== report.attemptsConsumed[event.task] ||
           !first.requiredChecks[event.task].includes(event.check)) { reasons.push('INVALID_CHECK_HISTORY'); break; }
@@ -103,6 +117,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
     }
     if (event.event === 'verified') {
       if (!active.has(event.task) || !text(event.inputRevision) || !text(event.receipt) || receipts.has(event.task) ||
+          !authorizedTasks.has(event.task) || commitAuthorities.get(event.task)?.inputRevision !== event.inputRevision ||
           first.requiredChecks[event.task].some(check => {
             const proof = latestChecks.get(event.task)?.get(check);
             return proof?.passed !== true || proof.inputRevision !== event.inputRevision || !text(proof.receipt);
@@ -111,6 +126,14 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
       }
       receipts.set(event.task, event);
       active.delete(event.task);
+    }
+    if (event.event === 'commit_authorized') {
+      if (!active.has(event.task) || !text(event.leaseId) || !text(event.receipt) || !text(event.inputRevision)) {
+        reasons.push('INVALID_COMMIT_AUTHORIZATION'); break;
+      }
+      commits.push({ taskId: event.task, leaseId: event.leaseId, receipt: event.receipt,
+        inputRevision: event.inputRevision });
+      commitAuthorities.set(event.task, event);
     }
     if (['blocked', 'cancelled', 'stale', 'repair_required'].includes(event.event)) active.delete(event.task);
     if (event.event === 'finished') finished = true;
@@ -129,6 +152,16 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
     } catch { reasons.push('WORKER_INSPECTION_FAILED'); }
   }
   if (typeof verifyReceipt !== 'function') reasons.push('RECEIPT_VERIFIER_REQUIRED');
+  if (typeof inspectLedger !== 'function') reasons.push('LEDGER_INSPECTION_REQUIRED');
+  else {
+    try {
+      const result = await bounded(() => inspectLedger({ revision: first.revision, journalHash,
+        authorizations: structuredClone(authorizations), commits: structuredClone(commits) }));
+      if (result?.allowed !== true || result.revision !== first.revision || result.journalHash !== journalHash) {
+        reasons.push('LEDGER_NOT_RECONCILED');
+      }
+    } catch { reasons.push('LEDGER_INSPECTION_FAILED'); }
+  }
   if (!reasons.length) {
     for (const [task, event] of receipts) {
       if (inspectionTimedOut || Date.now() >= inspectionDeadline) { reasons.push('INSPECTION_DEADLINE_EXHAUSTED'); break; }

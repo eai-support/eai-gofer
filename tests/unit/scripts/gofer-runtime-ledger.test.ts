@@ -44,6 +44,28 @@ describe('durable verified-runtime ledger', () => {
       expect([reservation, lease, authority, native, commit].every((item) => item.allowed)).toBe(
         true
       );
+      await expect(
+        ledger.inspectRecovery({
+          revision: request.revision,
+          journalHash: 'journal:verified',
+          authorizations: [
+            {
+              taskId: request.taskId,
+              leaseId: lease.leaseId,
+              receipt: authority.receipt,
+              capabilityReceiptHash: 'capability:verified',
+            },
+          ],
+          commits: [
+            {
+              taskId: request.taskId,
+              leaseId: lease.leaseId,
+              receipt: commit.receipt,
+              inputRevision: 'input-v1',
+            },
+          ],
+        })
+      ).resolves.toMatchObject({ allowed: true });
       await expect(ledger.lease(request)).resolves.toMatchObject({ allowed: false });
       await expect(
         ledger.authorizeNative({
