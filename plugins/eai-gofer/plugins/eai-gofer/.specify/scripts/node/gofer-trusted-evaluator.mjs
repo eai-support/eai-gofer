@@ -1,5 +1,5 @@
 /** Read a locally provisioned evaluator key. The worker never chooses it. */
-import { createPublicKey } from 'node:crypto';
+import { createPrivateKey, createPublicKey } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
@@ -74,5 +74,44 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
     const key = createPublicKey(entry.publicKeyPem);
     if (key.asymmetricKeyType !== 'ed25519') throw denied();
     return key;
+  } catch { throw denied(); }
+}
+
+/** The production issuer has no caller-selected key path. Test fixtures may
+ * supply a trust root, but a staged key is never eligible to sign. */
+export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } = {}) {
+  if (!text(workspaceRoot) || process.platform === 'win32' || typeof process.getuid !== 'function') throw denied();
+  const root = trustRoot ?? accountTrustRoot();
+  try {
+    const active = path.join(root, 'active-keys');
+    const activeInfo = await lstat(active);
+    if (!activeInfo.isDirectory() || activeInfo.uid !== process.getuid() ||
+        (activeInfo.mode & 0o077) !== 0) throw denied();
+    const identityFile = await open(path.join(active, 'codex-evaluator.json'),
+      constants.O_RDONLY | constants.O_NOFOLLOW);
+    let identity;
+    try {
+      const info = await identityFile.stat();
+      if (!info.isFile() || info.uid !== process.getuid() ||
+          (info.mode & 0o077) !== 0 || info.size < 2 || info.size > 4096) throw denied();
+      identity = JSON.parse(await identityFile.readFile('utf8'));
+    } finally { await identityFile.close(); }
+    if (identity?.schemaVersion !== 1 || identity.host !== 'codex' ||
+        identity.evaluator !== 'gofer-native-host-evaluator' || !text(identity.keyId)) throw denied();
+    const publicKey = await resolveTrustedEvaluatorPublicKey({ host: identity.host,
+      provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot });
+    const privateFile = await open(path.join(active, 'codex-evaluator.private.pem'),
+      constants.O_RDONLY | constants.O_NOFOLLOW);
+    let privateKey;
+    try {
+      const info = await privateFile.stat();
+      if (!info.isFile() || info.uid !== process.getuid() ||
+          (info.mode & 0o077) !== 0 || info.size < 32 || info.size > 8192) throw denied();
+      privateKey = createPrivateKey(await privateFile.readFile('utf8'));
+    } finally { await privateFile.close(); }
+    if (privateKey.asymmetricKeyType !== 'ed25519' ||
+        !createPublicKey(privateKey).export({ type: 'spki', format: 'der' })
+          .equals(publicKey.export({ type: 'spki', format: 'der' }))) throw denied();
+    return Object.freeze({ privateKey, keyId: identity.keyId });
   } catch { throw denied(); }
 }

@@ -236,6 +236,12 @@ describe('Gofer host capability discovery', () => {
         localIsolation: { ...localCodexIsolation(), cloudExecution: 'allowed' },
       })
     ).toThrow('LOCAL_SANDBOX_REQUIRED');
+    expect(() =>
+      createCodexAppServerRuntime({
+        workspaceRoot: fixture.worktree,
+        localIsolation: { ...localCodexIsolation(), nativeExecutable: undefined },
+      })
+    ).toThrow('NATIVE_CODEX_CATALOG_REQUIRED');
   });
 
   it('fails closed when a native session omits its model list', async () => {

@@ -84,15 +84,19 @@ function codexModels(catalog) {
  * unqualified. Workspace-write is reported only when the separately verified
  * local-isolation report requires Codex's workspace-write OS sandbox.
  */
-export function createCodexAppServerRuntime({ workspaceRoot, localIsolation, request = codexAppServerRequest } = {}) {
+export function createCodexAppServerRuntime({ workspaceRoot, localIsolation, request } = {}) {
   if (!verifyLocalIsolationReport(localIsolation, { host: 'codex', workspaceRoot })) {
     throw new Error('LOCAL_SANDBOX_REQUIRED');
   }
+  if (!request && (!text(localIsolation.nativeExecutable) ||
+      !path.isAbsolute(localIsolation.nativeExecutable))) throw new Error('NATIVE_CODEX_CATALOG_REQUIRED');
+  const activeRequest = request ?? ((method, params) => codexAppServerRequest(
+    method, params, localIsolation.nativeExecutable));
   return Object.freeze({
     async inspect() {
       const [catalog, provider] = await Promise.all([
-        request('model/list', { limit: 100, includeHidden: false }),
-        request('modelProvider/capabilities/read', {}),
+        activeRequest('model/list', { limit: 100, includeHidden: false }),
+        activeRequest('modelProvider/capabilities/read', {}),
       ]);
       const models = codexModels(catalog);
       if (!models.length || !provider || ['namespaceTools', 'imageGeneration', 'webSearch'].some(key => typeof provider[key] !== 'boolean')) {
@@ -106,9 +110,9 @@ export function createCodexAppServerRuntime({ workspaceRoot, localIsolation, req
   });
 }
 
-function codexAppServerRequest(method, params) {
+function codexAppServerRequest(method, params, executable) {
   return new Promise((resolve, reject) => {
-    const child = spawn('codex', ['app-server', '--stdio'], { shell: false, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    const child = spawn(executable, ['app-server', '--stdio'], { shell: false, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
     let buffer = '';
     let initialized = false;
     let settled = false;

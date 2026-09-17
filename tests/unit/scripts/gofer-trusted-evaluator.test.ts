@@ -9,7 +9,7 @@ import {
   createCapabilityReceipt,
   verifyCapabilityReceipt,
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
-import { resolveTrustedEvaluatorPublicKey } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
+import { loadActiveCodexEvaluatorKey, resolveTrustedEvaluatorPublicKey } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
 
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'gofer-evaluator-trust-'));
@@ -51,10 +51,38 @@ async function fixture() {
     ],
   });
   await writeFile(registryPath, JSON.stringify(registry()), { mode: 0o600 });
-  return { root, workspaceRoot, trustRoot, registryPath, receipt, registry };
+  return { root, workspaceRoot, trustRoot, registryPath, receipt, registry, keys };
 }
 
 describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', () => {
+  it('requires an activated key matching the registered public identity', async () => {
+    const f = await fixture();
+    try {
+      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      const active = path.join(f.trustRoot, 'active-keys');
+      await mkdir(active, { mode: 0o700 });
+      const identity = path.join(active, 'codex-evaluator.json');
+      const privateFile = path.join(active, 'codex-evaluator.private.pem');
+      await writeFile(identity, JSON.stringify({ schemaVersion: 1, host: 'codex',
+        evaluator: 'gofer-native-host-evaluator', keyId: 'installed-key' }), { mode: 0o600 });
+      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }),
+        { mode: 0o600 });
+      const activeKey = await loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot });
+      expect(activeKey.keyId).toBe('installed-key');
+      expect(activeKey.privateKey.asymmetricKeyType).toBe('ed25519');
+      await writeFile(privateFile, generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }));
+      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
+      await chmod(privateFile, 0o644);
+      await expect(loadActiveCodexEvaluatorKey({ workspaceRoot: f.workspaceRoot,
+        trustRoot: f.trustRoot })).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
+  });
   it.skipIf(process.platform !== 'darwin' && process.platform !== 'linux')(
     'does not trust a caller-selected HOME directory',
     async () => {

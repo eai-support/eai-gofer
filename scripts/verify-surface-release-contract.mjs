@@ -22,6 +22,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-trusted-evaluator.mjs',
   '.specify/scripts/node/gofer-trusted-benchmark.mjs',
   '.specify/scripts/node/gofer-trust-bootstrap.mjs',
+  '.specify/scripts/node/gofer-local-capability-issuer.mjs',
   '.specify/scripts/node/gofer-runtime-ledger.mjs',
   '.specify/scripts/node/gofer-verified-execution.mjs',
   '.specify/scripts/node/gofer-execution-recovery.mjs',
