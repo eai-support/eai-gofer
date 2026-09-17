@@ -16,6 +16,7 @@ const hosts = ['claude', 'codex', 'copilot', 'antigravity', 'grok', 'vscode'];
 const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-host-capability.mjs',
   '.specify/scripts/node/gofer-live-routing.mjs',
+  '.specify/scripts/node/gofer-local-isolation.mjs',
   '.specify/scripts/node/gofer-native-adapter.mjs',
   '.specify/scripts/node/gofer-verified-execution.mjs',
   '.specify/scripts/node/gofer-execution-recovery.mjs',

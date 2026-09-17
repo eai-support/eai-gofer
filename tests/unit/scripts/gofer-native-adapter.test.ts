@@ -100,7 +100,7 @@ describe('native adapter primitives', () => {
       reasoningCapabilities: ['high'],
       toolCapabilities: ['shell'],
       grantedPermissions: ['workspace-write'],
-      isolationClass: 'git-worktree',
+      isolationClass: 'git-worktree+local-os-sandbox',
       provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
       signingKey: keys.privateKey,
     });
@@ -115,7 +115,11 @@ describe('native adapter primitives', () => {
       request,
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
-      assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+      assertLedger: async (value) => ({
+        allowed: true,
+        ...value,
+        isolation: 'git-worktree+local-os-sandbox',
+      }),
       start: async (value) => ({
         invocationId: 'run-1',
         cancel: async () => {},
@@ -127,7 +131,7 @@ describe('native adapter primitives', () => {
         }),
       }),
     });
-    expect(result.isolation).toBe('git-worktree');
+    expect(result.isolation).toBe('git-worktree+local-os-sandbox');
     const start = vi.fn();
     await expect(
       invokeLedgerBoundNative({
@@ -138,7 +142,7 @@ describe('native adapter primitives', () => {
           ...value,
           allowed: true,
           allowedWriteScope: ['src/', 'broader/'],
-          isolation: 'git-worktree',
+          isolation: 'git-worktree+local-os-sandbox',
         }),
         start,
       })
@@ -159,7 +163,7 @@ describe('native adapter primitives', () => {
       reasoningCapabilities: ['high'],
       toolCapabilities: ['shell'],
       grantedPermissions: ['workspace-write'],
-      isolationClass: 'git-worktree',
+      isolationClass: 'git-worktree+local-os-sandbox',
       provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
       signingKey: keys.privateKey,
     });
@@ -175,7 +179,11 @@ describe('native adapter primitives', () => {
         },
         capabilityReceipt: receipt,
         capabilityPublicKey: keys.publicKey,
-        assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+        assertLedger: async (value) => ({
+          allowed: true,
+          ...value,
+          isolation: 'git-worktree+local-os-sandbox',
+        }),
         start: async () => ({
           invocationId: 'run-1',
           cancel,
@@ -199,7 +207,7 @@ describe('native adapter primitives', () => {
       reasoningCapabilities: ['high'],
       toolCapabilities: ['shell'],
       grantedPermissions: ['workspace-write'],
-      isolationClass: 'git-worktree',
+      isolationClass: 'git-worktree+local-os-sandbox',
       provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
       signingKey: keys.privateKey,
     });
@@ -217,7 +225,11 @@ describe('native adapter primitives', () => {
         },
         capabilityReceipt: receipt,
         capabilityPublicKey: keys.publicKey,
-        assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+        assertLedger: async (value) => ({
+          allowed: true,
+          ...value,
+          isolation: 'git-worktree+local-os-sandbox',
+        }),
         start: async () => ({
           invocationId: 'run-1',
           cancel: async () => {},
@@ -241,7 +253,7 @@ describe('native adapter primitives', () => {
       reasoningCapabilities: ['high'],
       toolCapabilities: ['shell'],
       grantedPermissions: ['workspace-write'],
-      isolationClass: 'git-worktree',
+      isolationClass: 'git-worktree+local-os-sandbox',
       provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
       signingKey: keys.privateKey,
     });
@@ -261,7 +273,11 @@ describe('native adapter primitives', () => {
       },
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
-      assertLedger: async (value) => ({ allowed: true, ...value, isolation: 'git-worktree' }),
+      assertLedger: async (value) => ({
+        allowed: true,
+        ...value,
+        isolation: 'git-worktree+local-os-sandbox',
+      }),
       start: async () => ({
         invocationId: 'run-1',
         cancel: async () => cancellation,
@@ -301,7 +317,7 @@ describe('native adapter primitives', () => {
       reasoningCapabilities: ['high'],
       toolCapabilities: ['shell'],
       grantedPermissions: ['workspace-write'],
-      isolationClass: 'git-worktree',
+      isolationClass: 'git-worktree+local-os-sandbox',
       provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
       signingKey: keys.privateKey,
     });
@@ -319,5 +335,41 @@ describe('native adapter primitives', () => {
         start: async () => ({}),
       })
     ).rejects.toThrow('CAPABILITY_RECEIPT_REQUIRED');
+  });
+
+  it('refuses a signed receipt that has a worktree but no OS sandbox', async () => {
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'id',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-18T00:00:00.000Z',
+      hostVersion: 'codex',
+      models: [{ id: 'live', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree',
+      provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+      signingKey: keys.privateKey,
+    });
+    const start = vi.fn();
+    await expect(
+      invokeLedgerBoundNative({
+        request: {
+          objectiveRevision: 'r1',
+          allowedWriteScope: ['src/'],
+          leaseId: 'lease',
+          budgetReservation: 'budget',
+          approvalReceipt: 'approval',
+        },
+        capabilityReceipt: receipt,
+        capabilityPublicKey: keys.publicKey,
+        assertLedger: async () => ({ allowed: true }),
+        start,
+      })
+    ).rejects.toThrow('CAPABILITY_RECEIPT_REQUIRED');
+    expect(start).not.toHaveBeenCalled();
   });
 });

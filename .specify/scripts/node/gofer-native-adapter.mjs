@@ -10,6 +10,7 @@ import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
+const QUALIFIED_LOCAL_ISOLATION = 'git-worktree+local-os-sandbox';
 const sameScope = (left, right) => Array.isArray(left) && Array.isArray(right) &&
   left.length === right.length && left.every((value, index) => value === right[index]);
 const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
@@ -57,7 +58,8 @@ export async function invokeLedgerBoundNative({ request, capabilityReceipt, capa
   if (!request || !capabilityReceipt || typeof assertLedger !== 'function' || typeof start !== 'function' ||
       !text(request.objectiveRevision) || !Array.isArray(request.allowedWriteScope) || !text(request.leaseId) ||
       !text(request.budgetReservation) || !text(request.approvalReceipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
-  if (!verifyCapabilityReceipt(capabilityReceipt, { publicKey: capabilityPublicKey, requiredCapabilities })) {
+  if (capabilityReceipt?.isolationClass !== QUALIFIED_LOCAL_ISOLATION ||
+      !verifyCapabilityReceipt(capabilityReceipt, { publicKey: capabilityPublicKey, requiredCapabilities })) {
     throw new Error('CAPABILITY_RECEIPT_REQUIRED');
   }
   const receiptHash = capabilityReceiptHash(capabilityReceipt);
