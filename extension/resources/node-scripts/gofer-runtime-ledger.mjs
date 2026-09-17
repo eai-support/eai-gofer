@@ -9,7 +9,7 @@ const digest = value => createHash('sha256').update(JSON.stringify(value)).diges
 const sameList = (left, right) => Array.isArray(left) && Array.isArray(right) &&
   left.length === right.length && left.every((value, index) => value === right[index]);
 
-async function acquireLedgerLock(lockPath) {
+export async function acquireLedgerLock(lockPath) {
   let metadata = await lstat(lockPath).catch(error => {
     if (error.code === 'ENOENT') return null;
     throw error;

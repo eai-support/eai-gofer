@@ -3,18 +3,22 @@
  * commands or capability declarations received from a worker or a document.
  */
 import { constants } from 'node:fs';
-import { open, readFile, realpath, lstat, rename, unlink, writeFile } from 'node:fs/promises';
+import { open, readFile, realpath, lstat, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
 import { inspectBlockers } from './gofer-blocker-control.mjs';
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 import { selectCapabilityRoute } from './gofer-live-routing.mjs';
+import { acquireLedgerLock } from './gofer-runtime-ledger.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
 const MAX_CONTRACT_FILE_BYTES = 1024 * 1024;
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const text = value => typeof value === 'string' && value.trim().length > 0;
+function releaseResumeLock(lock) {
+  try { lock.exec('ROLLBACK'); } finally { lock.close(); }
+}
 
 export async function executionRevision(featureDir) {
   return (await snapshot(featureDir)).revision;
@@ -158,9 +162,9 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   let resumeLock;
   const lockPath = path.join(root, 'verified-execution.resume.lock');
   if (recovery) {
-    // One controller owns reconciliation and append. A stale lock is a manual
-    // recovery gate; it never grants permission to start a second worker.
-    resumeLock = await open(lockPath, 'wx', 0o600).catch(() => { throw new Error('RESUME_LOCKED'); });
+    // The transaction excludes other controllers and the operating system
+    // releases it if this controller exits before reconciliation finishes.
+    resumeLock = await acquireLedgerLock(lockPath).catch(() => { throw new Error('RESUME_LOCKED'); });
     try {
       const { inspectExecutionRecovery } = await import('./gofer-execution-recovery.mjs');
       resumeReport = await inspectExecutionRecovery({ ...recovery, featureDir: root });
@@ -184,7 +188,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         if (input !== resumeReport.verifiedInputs[taskId]) throw new Error('STALE_PREREQUISITE_EVIDENCE');
       }
     } catch (error) {
-      await resumeLock.close(); await unlink(lockPath);
+      releaseResumeLock(resumeLock);
       throw error;
     }
   } else if (previouslyComplete.size) throw new Error('BASELINE_EVIDENCE_RECONCILIATION_REQUIRED');
@@ -198,7 +202,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   const timer = setTimeout(() => controller.abort(new Error('DEADLINE')), Math.min(deadlineMs - Date.now(), 2147483647));
   const file = await open(path.join(root, journalName), recovery ? constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW : 'wx', 0o600).catch(async error => {
     clearTimeout(timer); signal?.removeEventListener('abort', cancel);
-    if (resumeLock) { await resumeLock.close(); await unlink(lockPath); }
+    if (resumeLock) releaseResumeLock(resumeLock);
     throw new Error(error.code === 'EEXIST' ? 'RECONCILIATION_REQUIRED' : 'JOURNAL_UNAVAILABLE');
   });
   let calls = resumeReport?.callsConsumed || 0;
@@ -473,7 +477,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     try { await write; } finally {
       try { await checkpointWrite; } finally {
         await file.close();
-        if (resumeLock) { await resumeLock.close(); await unlink(lockPath); }
+        if (resumeLock) releaseResumeLock(resumeLock);
       }
     }
   }

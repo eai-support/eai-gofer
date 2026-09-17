@@ -254,8 +254,13 @@ describe('Verified execution kernel (local adapters, not native model qualificat
       inspectLedger: async (request: any) => ({ ...request, allowed: true }),
       verifyReceipt: async (request: any) => ({ ...request, valid: true }),
     };
+    const resumeLockPath = path.join(f.root, 'verified-execution.resume.lock');
+    await writeFile(resumeLockPath, '');
+    await expect(runVerifiedGraph({ ...f.options, recovery })).rejects.toThrow('RESUME_LOCKED');
+    await rm(resumeLockPath);
     const result = await runVerifiedGraph({ ...f.options, recovery });
     expect(result.status).toBe('verified');
+    expect((await readFile(resumeLockPath)).subarray(0, 16).toString()).toBe('SQLite format 3\0');
     expect(result.verified).toEqual(['T001', 'T002']);
     expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T002']);
     const resumed = (await readFile(journalPath, 'utf8')).trimEnd().split('\n').map(JSON.parse);
