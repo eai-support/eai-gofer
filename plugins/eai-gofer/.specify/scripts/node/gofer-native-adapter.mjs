@@ -217,7 +217,10 @@ export async function inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace
     git(workspace, ['worktree', 'list', '--porcelain']),
     git(isolated, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=matching']),
   ]);
-  const registered = [...listed.stdout.matchAll(/^worktree (.+)$/gm)].some(match => match[1] === isolated);
+  const comparablePath = value => process.platform === 'win32'
+    ? path.normalize(value.trim()).toLowerCase() : path.normalize(value.trim());
+  const registered = [...listed.stdout.matchAll(/^worktree (.+)$/gm)]
+    .some(match => comparablePath(match[1]) === comparablePath(isolated));
   const clean = status.stdout.trim() === '';
   if (!registered || head.stdout.trim() !== revision || (requireClean && !clean)) return { valid: false };
   return Object.freeze({ valid: true, receipt, revision, isolatedWorkspace: isolated, clean,
