@@ -167,6 +167,7 @@ describe('native adapter primitives', () => {
       worktreeReceipt: 'worktree-1',
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
+      requiredCapabilities: { reasoningEfforts: ['high'] },
       promptForRequest: async () => 'Complete the approved task.',
       start,
       assertLedger: async (request: LedgerRequest) => ({

@@ -183,6 +183,15 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('accepts a live model reasoning-effort requirement through graph routing', async () => {
+    const f = await fixture();
+    const result = await runVerifiedGraph({
+      ...f.options,
+      requiredCapabilities: { reasoningEfforts: ['high'] },
+    });
+    expect(result.status).toBe('verified');
+    expect(f.adapter.execute).toHaveBeenCalled();
+  });
   it('continues pending work after a real controller interruption at a verified boundary', async () => {
     const f = await fixture();
     const controller = new AbortController();
