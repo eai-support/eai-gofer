@@ -274,8 +274,22 @@ export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision,
       leaseId: record.started.leaseId, pid: record.started.pid,
       cancelled: record.stopped.cancelled, receipt: record.stopped.receipt }))
       .sort((left, right) => left.invocationId.localeCompare(right.invocationId)) })).digest('hex')}`;
-  return { allStopped: true, revision, journalHash, receipt,
+  return { allStopped: true, revision, journalHash, receipt, workerCount: records.length,
     cancelledLeases: records.filter(record => record.stopped.cancelled === true).map(record => record.started.leaseId) };
+}
+
+/** Bind benchmark capture to the controller-owned worker evidence directory.
+ * Workers cannot choose the directory or declare their own stopped state. */
+export function createNativeBenchmarkCaptureVerifier({ evidenceDirectory } = {}) {
+  if (!text(evidenceDirectory) || !path.isAbsolute(evidenceDirectory)) {
+    throw new Error('BENCHMARK_CAPTURE_EVIDENCE_REQUIRED');
+  }
+  return request => inspectNativeWorkerEvidence({ evidenceDirectory,
+    revision: request?.revision, journalHash: request?.journalHash,
+    authorizations: request?.runs?.map(run => ({ leaseId: run.leaseId,
+      capabilityReceiptHash: run.capabilityReceiptHash,
+      worktreeReceipt: run.worktreeReceipt,
+      isolatedWorkspace: run.isolatedWorkspace })) });
 }
 
 /**

@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
@@ -13,6 +13,7 @@ import {
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
   inspectNativeWorkerEvidence,
+  createNativeBenchmarkCaptureVerifier,
   createNativeCancellationVerifier,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
@@ -579,6 +580,7 @@ describe('native adapter primitives', () => {
         });
         expect(await inspectNativeWorkerEvidence(inspection)).toMatchObject({
           allStopped: true,
+          workerCount: 1,
           cancelledLeases: ['lease-v1'],
           receipt: expect.stringMatching(/^worker-stop:/),
         });
@@ -686,6 +688,20 @@ describe('native adapter primitives', () => {
           ],
         });
         expect(proof.allStopped).toBe(true);
+        expect(
+          await createNativeBenchmarkCaptureVerifier({ evidenceDirectory })({
+            revision: 'objective-v1',
+            journalHash: 'journal-v1',
+            runs: [
+              {
+                leaseId: 'lease-v1',
+                worktreeReceipt: 'worktree-v1',
+                capabilityReceiptHash: 'capability',
+                isolatedWorkspace: await realpath(root),
+              },
+            ],
+          })
+        ).toMatchObject({ allStopped: true, workerCount: 1, cancelledLeases: ['lease-v1'] });
       } finally {
         await invocation?.cancel().catch(() => {});
         await rm(base, { recursive: true, force: true });

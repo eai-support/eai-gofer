@@ -1,16 +1,24 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
   captureHeldOutResultSnapshot,
+  captureConfiguredHeldOutResultSnapshot,
   inspectHeldOutResultSnapshot,
   loadPinnedHeldOutSnapshot,
 } from '../../../.specify/scripts/node/gofer-heldout-snapshot.mjs';
 
+const trustedCorpus = vi.hoisted(() => ({ value: null as null | Record<string, unknown> }));
+vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
+  loadTrustedHeldOutCorpus: async () => trustedCorpus.value,
+}));
+
 const roots: string[] = [];
 afterEach(async () => {
+  trustedCorpus.value = null;
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
@@ -166,5 +174,55 @@ describe('held-out result snapshot custody', () => {
         corpusHash: snapshot.corpusHash,
       })
     ).rejects.toThrow('HELDOUT_SNAPSHOT_REQUIRED');
+  });
+
+  it('requires ledger approval before a configured capture can publish', async () => {
+    const f = await fixture();
+    const corpusHash = 'a'.repeat(64);
+    const reportSha256 = createHash('sha256')
+      .update(await readFile(path.join(f.receipts, 'benchmark-report.json')))
+      .digest('hex');
+    trustedCorpus.value = {
+      corpusRoot: f.corpusRoot,
+      corpusHash,
+      cases: ['bug', 'refactor', 'contract', 'security'].map((id) => ({ id })),
+    };
+    const ledger = {
+      inspectBenchmarkCapture: vi.fn(async () => ({ valid: true })),
+      recordBenchmarkSnapshot: vi.fn(async () => ({
+        allowed: true,
+        receipt: 'snapshot-ledger-v1',
+      })),
+    };
+    const captureAuthorization = {
+      receipt: 'capture-ledger-v1',
+      workerStopReceipt: 'worker-stop-v1',
+      revision: 'objective-v1',
+      corpusHash,
+      reportSha256,
+    };
+    await expect(
+      captureConfiguredHeldOutResultSnapshot({ workspaceRoot: f.workspaceRoot })
+    ).rejects.toThrow('HELDOUT_SNAPSHOT_REQUIRED');
+    await expect(
+      captureConfiguredHeldOutResultSnapshot({
+        workspaceRoot: f.workspaceRoot,
+        ledger,
+        captureAuthorization: { ...captureAuthorization, reportSha256: 'b'.repeat(64) },
+      })
+    ).rejects.toThrow('HELDOUT_SNAPSHOT_REQUIRED');
+    expect(ledger.recordBenchmarkSnapshot).not.toHaveBeenCalled();
+    await expect(
+      captureConfiguredHeldOutResultSnapshot({
+        workspaceRoot: f.workspaceRoot,
+        ledger,
+        captureAuthorization,
+      })
+    ).resolves.toMatchObject({
+      ledgerCaptureReceipt: captureAuthorization.receipt,
+      ledgerSnapshotReceipt: 'snapshot-ledger-v1',
+      authority: 'diagnostic-only',
+    });
+    expect(ledger.recordBenchmarkSnapshot).toHaveBeenCalledTimes(1);
   });
 });

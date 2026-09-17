@@ -432,4 +432,119 @@ describe('durable verified-runtime ledger', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it('records one benchmark capture only after twelve ledger-bound workers stop', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
+    try {
+      let allStopped = false;
+      let cancelledLeases: string[] = [];
+      const ledger = await createRuntimeLedger({
+        ledgerPath: path.join(root, 'authority.jsonl'),
+        verifyBenchmarkCapture: async (request) => ({
+          allStopped,
+          revision: request.revision,
+          journalHash: request.journalHash,
+          workerCount: request.runs.length,
+          receipt: request.workerStopReceipt,
+          cancelledLeases,
+        }),
+      });
+      const runs = [];
+      for (const caseId of ['bug', 'refactor', 'contract', 'security']) {
+        for (const run of [1, 2, 3]) {
+          const request = {
+            taskId: `${caseId}-${run}`,
+            revision: 'objective-v1',
+            attempt: 1,
+            dependencies: [],
+            worktreeReceipt: `worktree-${caseId}-${run}`,
+            allowedEditScope: ['src/'],
+            requiredChecks: ['verify'],
+            capabilityReceiptHash: 'capability-v1',
+            approvalReceipt: 'approved-v1',
+            selectedModel: 'live-model',
+            benchmarkReceipt: 'benchmark-v1',
+          };
+          const reservation = await ledger.reserve(request);
+          const lease = await ledger.lease(request);
+          const proposal = {
+            ...request,
+            leaseId: lease.leaseId,
+            budgetReservation: reservation.budgetReservation,
+          };
+          const authority = await ledger.authorize(proposal);
+          await ledger.authorizeNative({
+            ...proposal,
+            objectiveRevision: request.revision,
+            ledgerAuthorityReceipt: authority.receipt,
+            allowedWriteScope: request.allowedEditScope,
+          });
+          runs.push({
+            caseId,
+            run,
+            taskId: request.taskId,
+            leaseId: lease.leaseId,
+            worktreeReceipt: request.worktreeReceipt,
+            capabilityReceiptHash: request.capabilityReceiptHash,
+            ledgerAuthorityReceipt: authority.receipt,
+            budgetReservation: reservation.budgetReservation,
+            approvalReceipt: request.approvalReceipt,
+            isolatedWorkspace: path.join(root, `worktree-${caseId}-${run}`),
+          });
+        }
+      }
+      const capture = {
+        revision: 'objective-v1',
+        journalHash: 'journal-v1',
+        corpusHash: 'a'.repeat(64),
+        reportSha256: 'b'.repeat(64),
+        workerStopReceipt: 'worker-stop:v1',
+        runs,
+      };
+      expect(
+        (
+          await ledger.authorizeBenchmarkCapture({
+            ...capture,
+            runs: [...runs.slice(0, 11), { ...runs[11], capabilityReceiptHash: 'forged' }],
+          })
+        ).allowed
+      ).toBe(false);
+      expect(
+        (await ledger.authorizeBenchmarkCapture({ ...capture, runs: runs.slice(0, 11) })).allowed
+      ).toBe(false);
+      expect((await ledger.authorizeBenchmarkCapture(capture)).allowed).toBe(false);
+      allStopped = true;
+      cancelledLeases = [runs[0].leaseId];
+      expect((await ledger.authorizeBenchmarkCapture(capture)).allowed).toBe(false);
+      cancelledLeases = [];
+      const approved = await ledger.authorizeBenchmarkCapture(capture);
+      expect(approved.allowed).toBe(true);
+      expect(
+        (
+          await ledger.inspectBenchmarkCapture({
+            receipt: approved.receipt,
+            revision: capture.revision,
+            corpusHash: capture.corpusHash,
+            reportSha256: capture.reportSha256,
+            workerStopReceipt: capture.workerStopReceipt,
+          })
+        ).valid
+      ).toBe(true);
+      const snapshot = {
+        captureReceipt: approved.receipt,
+        corpusHash: capture.corpusHash,
+        reportSha256: capture.reportSha256,
+        snapshotId: 'c'.repeat(64),
+      };
+      expect(
+        (await ledger.recordBenchmarkSnapshot({ ...snapshot, reportSha256: 'd'.repeat(64) }))
+          .allowed
+      ).toBe(false);
+      expect((await ledger.recordBenchmarkSnapshot(snapshot)).allowed).toBe(true);
+      expect((await ledger.recordBenchmarkSnapshot(snapshot)).allowed).toBe(false);
+      expect((await ledger.authorizeBenchmarkCapture(capture)).allowed).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -248,13 +248,29 @@ export async function loadPinnedHeldOutSnapshot({ trustRoot, workspaceRoot, corp
   } catch { throw denied(); }
 }
 
-/** Production entrypoint never accepts a caller-selected corpus or trust root. */
-export async function captureConfiguredHeldOutResultSnapshot({ workspaceRoot } = {}) {
+/** The trusted controller must present a durable capture authorization.
+ * The command-line surface has no way to inject one and stays fail-closed. */
+export async function captureConfiguredHeldOutResultSnapshot({ workspaceRoot, ledger,
+  captureAuthorization } = {}) {
   try {
+    if (typeof ledger?.inspectBenchmarkCapture !== 'function' ||
+        typeof ledger?.recordBenchmarkSnapshot !== 'function' ||
+        !captureAuthorization?.receipt || !captureAuthorization?.workerStopReceipt ||
+        !captureAuthorization?.revision || !captureAuthorization?.reportSha256) throw denied();
     const corpus = await loadTrustedHeldOutCorpus({ workspaceRoot });
-    return await captureHeldOutResultSnapshot({ corpusRoot: corpus.corpusRoot, workspaceRoot,
+    const reportSha256 = sha(await sourceFile(path.join(corpus.corpusRoot, 'receipts', 'benchmark-report.json')));
+    if (captureAuthorization.corpusHash !== corpus.corpusHash ||
+        captureAuthorization.reportSha256 !== reportSha256 ||
+        (await ledger.inspectBenchmarkCapture(captureAuthorization))?.valid !== true) throw denied();
+    const snapshot = await captureHeldOutResultSnapshot({ corpusRoot: corpus.corpusRoot, workspaceRoot,
       trustRoot: path.dirname(path.dirname(corpus.corpusRoot)), expectedCorpusHash: corpus.corpusHash,
       expectedCaseIds: corpus.cases.map(item => item.id) });
+    if (snapshot.reportSha256 !== reportSha256) throw denied();
+    const recorded = await ledger.recordBenchmarkSnapshot({ captureReceipt: captureAuthorization.receipt,
+      corpusHash: corpus.corpusHash, reportSha256, snapshotId: snapshot.snapshotId });
+    if (recorded?.allowed !== true || !recorded?.receipt) throw denied();
+    return Object.freeze({ ...snapshot, ledgerCaptureReceipt: captureAuthorization.receipt,
+      ledgerSnapshotReceipt: recorded.receipt });
   } catch { throw denied(); }
 }
 

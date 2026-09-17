@@ -43,7 +43,8 @@ export async function acquireLedgerLock(lockPath) {
   }
 }
 
-export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), verifyCancellation } = {}) {
+export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), verifyCancellation,
+  verifyBenchmarkCapture } = {}) {
   if (!path.isAbsolute(ledgerPath)) throw new Error('LEDGER_PATH_REQUIRED');
   await mkdir(path.dirname(ledgerPath), { recursive: true, mode: 0o700 });
   const lockPath = `${ledgerPath}.lock`;
@@ -148,6 +149,78 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), 
             item?.inputRevision !== request.inputRevision || !text(item?.receipt))) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, inputRevision: request.inputRevision,
         leaseId: request.leaseId, capabilityReceiptHash: request.capabilityReceiptHash, receipt: `commit:${digest(request).slice(0, 32)}` };
+    }),
+    authorizeBenchmarkCapture: request => transact({ type: 'benchmark-capture-authorize', request }, async history => {
+      const runs = request?.runs;
+      if (typeof verifyBenchmarkCapture !== 'function' || !text(request?.revision) ||
+          !text(request?.journalHash) || !text(request?.workerStopReceipt) ||
+          !/^[a-f0-9]{64}$/.test(request?.corpusHash ?? '') ||
+          !/^[a-f0-9]{64}$/.test(request?.reportSha256 ?? '') ||
+          !Array.isArray(runs) || runs.length < 12 || runs.length > 3000 ||
+          history.some(item => item.type === 'benchmark-capture-authorize' &&
+            item.corpusHash === request.corpusHash && item.reportSha256 === request.reportSha256)) return { allowed: false };
+      const cases = new Map();
+      const leases = new Set();
+      for (const run of runs) {
+        if (!text(run?.caseId) || ![1, 2, 3].includes(run?.run) ||
+            ![run.taskId, run.leaseId, run.worktreeReceipt, run.capabilityReceiptHash,
+              run.ledgerAuthorityReceipt, run.budgetReservation, run.approvalReceipt,
+              run.isolatedWorkspace].every(text) || leases.has(run.leaseId)) return { allowed: false };
+        leases.add(run.leaseId);
+        const repetitions = cases.get(run.caseId) ?? new Set();
+        if (repetitions.has(run.run)) return { allowed: false };
+        repetitions.add(run.run);
+        cases.set(run.caseId, repetitions);
+        const lease = history.find(item => item.type === 'lease' && item.leaseId === run.leaseId);
+        const authority = history.find(item => item.type === 'authorize' && item.leaseId === run.leaseId &&
+          item.receipt === run.ledgerAuthorityReceipt);
+        const native = history.find(item => item.type === 'native-authorize' && item.leaseId === run.leaseId &&
+          item.receipt === run.ledgerAuthorityReceipt);
+        if (!lease || !authority || !native || lease.taskId !== run.taskId ||
+            lease.revision !== request.revision || authority.taskId !== run.taskId ||
+            authority.revision !== request.revision || authority.worktreeReceipt !== run.worktreeReceipt ||
+            authority.capabilityReceiptHash !== run.capabilityReceiptHash ||
+            authority.budgetReservation !== run.budgetReservation ||
+            authority.approvalReceipt !== run.approvalReceipt ||
+            native.worktreeReceipt !== run.worktreeReceipt ||
+            native.capabilityReceiptHash !== run.capabilityReceiptHash ||
+            native.isolation !== 'git-worktree+local-os-sandbox' ||
+            history.some(item => item.type === 'cancel-reconciled' && item.leaseId === run.leaseId)) {
+          return { allowed: false };
+        }
+      }
+      if (cases.size < 4 || [...cases.values()].some(repetitions => repetitions.size !== 3)) return { allowed: false };
+      const proof = await verifyBenchmarkCapture(structuredClone(request));
+      if (proof?.allStopped !== true || proof.revision !== request.revision ||
+          proof.journalHash !== request.journalHash || proof.workerCount !== runs.length ||
+          proof.receipt !== request.workerStopReceipt ||
+          !Array.isArray(proof.cancelledLeases) || proof.cancelledLeases.length !== 0) return { allowed: false };
+      return { allowed: true, revision: request.revision, corpusHash: request.corpusHash,
+        reportSha256: request.reportSha256, workerStopReceipt: request.workerStopReceipt,
+        runs, receipt: `benchmark-capture:${digest(request).slice(0, 32)}` };
+    }),
+    inspectBenchmarkCapture: async request => {
+      if (!text(request?.receipt) || !text(request?.revision) ||
+          !/^[a-f0-9]{64}$/.test(request?.corpusHash ?? '') ||
+          !/^[a-f0-9]{64}$/.test(request?.reportSha256 ?? '') ||
+          !text(request?.workerStopReceipt)) return { valid: false };
+      const history = await events();
+      const record = history.find(item => item.type === 'benchmark-capture-authorize' &&
+        item.receipt === request.receipt && item.revision === request.revision &&
+        item.corpusHash === request.corpusHash && item.reportSha256 === request.reportSha256 &&
+        item.workerStopReceipt === request.workerStopReceipt);
+      return record ? { valid: true, receipt: record.receipt, runs: record.runs } : { valid: false };
+    },
+    recordBenchmarkSnapshot: request => transact({ type: 'benchmark-snapshot', request }, async history => {
+      if (!text(request?.captureReceipt) || !/^[a-f0-9]{64}$/.test(request?.corpusHash ?? '') ||
+          !/^[a-f0-9]{64}$/.test(request?.reportSha256 ?? '') ||
+          !/^[a-f0-9]{64}$/.test(request?.snapshotId ?? '')) return { allowed: false };
+      const capture = history.find(item => item.type === 'benchmark-capture-authorize' &&
+        item.receipt === request.captureReceipt && item.corpusHash === request.corpusHash &&
+        item.reportSha256 === request.reportSha256);
+      if (!capture || history.some(item => item.type === 'benchmark-snapshot' &&
+          item.captureReceipt === request.captureReceipt)) return { allowed: false };
+      return { allowed: true, ...request, receipt: `benchmark-snapshot:${digest(request).slice(0, 32)}` };
     }),
     reconcileCancelledLease: request => transact({ type: 'cancel-reconciled', request }, async history => {
       if (typeof verifyCancellation !== 'function' || !text(request?.taskId) || !text(request?.revision) ||
