@@ -201,7 +201,7 @@ describe('Read-only interrupted execution reconciliation', () => {
     const report = await inspectExecutionRecovery(f.options);
     expect(report.status).toBe('reconciled');
     expect(report.reusableTasks).toEqual(['T001']);
-    expect(report.resumeAllowed).toBe(false);
+    expect(report.resumeAllowed).toBe(true);
     expect(f.options.verifyReceipt).toHaveBeenCalledOnce();
   });
   it('does not turn a journal claim into proof without trusted inspectors', async () => {

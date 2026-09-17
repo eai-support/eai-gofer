@@ -188,6 +188,9 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   }
   report.uncertainTasks = [...uncertain];
   if (uncertain.size) reasons.push('SIDE_EFFECT_RECONCILIATION_REQUIRED');
-  if (!reasons.length) report.status = 'reconciled';
+  if (!reasons.length) {
+    report.status = 'reconciled';
+    report.resumeAllowed = report.reusableTasks.length > 0;
+  }
   return report;
 }
