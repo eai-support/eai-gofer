@@ -63,6 +63,31 @@ describe('Gofer benchmark contract', () => {
     expect(verifier).toHaveBeenCalledTimes(3);
   });
 
+  it('rejects repeated execution or verification receipts across repetitions', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async (request: any) => ({
+          ...(await execute(request)),
+          receipt: 'reused-execution',
+        }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('NON_INDEPENDENT_BENCHMARK_RUNS');
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, inputHash, execution }: any) => ({
+          ...(await verify({ caseId, run, inputHash, execution })),
+          receipt: 'reused-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('NON_INDEPENDENT_BENCHMARK_RUNS');
+  });
+
   it('rejects executions whose model differs from the report provenance', async () => {
     await expect(
       runBenchmark({

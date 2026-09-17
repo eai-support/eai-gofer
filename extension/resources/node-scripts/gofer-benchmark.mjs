@@ -40,6 +40,10 @@ export async function runBenchmark({ cases, execute, verify, repetitions = 3, pr
       functionalVerified: verdict.passed, verifierReceipt: verdict.receipt, verifierId: verdict.verifierId,
       failureClassification: verdict.failureClassification, reviewReceipt: verdict.reviewReceipt }));
   }
+  if (new Set(results.map(result => result.receipt)).size !== results.length ||
+      new Set(results.map(result => result.verifierReceipt)).size !== results.length) {
+    throw new Error('NON_INDEPENDENT_BENCHMARK_RUNS');
+  }
   const functionalPasses = results.filter(validVerifiedRun).length;
   const totals = results.reduce((sum, result) => ({ costUsd: sum.costUsd + result.costUsd, durationMs: sum.durationMs + result.durationMs }), { costUsd: 0, durationMs: 0 });
   return Object.freeze({ schemaVersion: 2, repetitions, caseCount: cases.length, runs: results, provenance: { ...provenance },
