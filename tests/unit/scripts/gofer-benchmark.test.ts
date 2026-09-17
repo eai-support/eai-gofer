@@ -63,6 +63,20 @@ describe('Gofer benchmark contract', () => {
     expect(verifier).toHaveBeenCalledTimes(3);
   });
 
+  it('rejects executions whose model differs from the report provenance', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async (request: { run: number }) => ({
+          ...(await execute(request)),
+          modelId: 'other-model',
+        }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_RESULT');
+  });
+
   it('rejects a verifier verdict not bound to the worker receipt', async () => {
     await expect(
       runBenchmark({

@@ -21,7 +21,7 @@ const wilson95 = (successes, total) => {
 export async function runBenchmark({ cases, execute, verify, repetitions = 3, provenance } = {}) {
   if (!Array.isArray(cases) || !cases.length || cases.length > 1000 || !cases.every(validCase) ||
       new Set(cases.map(item => item.id)).size !== cases.length || typeof execute !== 'function' ||
-      typeof verify !== 'function' || execute === verify || repetitions !== 3 || !text(provenance?.harnessId)) {
+      typeof verify !== 'function' || execute === verify || repetitions !== 3 || !text(provenance?.harnessId) || !text(provenance?.modelId)) {
     throw new Error('INVALID_BENCHMARK_CONTRACT');
   }
   const results = [];
@@ -29,7 +29,7 @@ export async function runBenchmark({ cases, execute, verify, repetitions = 3, pr
     const input = structuredClone(benchmarkCase.input);
     const inputHash = hash({ caseId: benchmarkCase.id, input });
     const execution = await execute(Object.freeze({ id: benchmarkCase.id, run, input }));
-    if (!validExecution(execution)) throw new Error('INVALID_BENCHMARK_RESULT');
+    if (!validExecution(execution) || execution.modelId !== provenance.modelId) throw new Error('INVALID_BENCHMARK_RESULT');
     const verdict = await verify(Object.freeze({ caseId: benchmarkCase.id, run, inputHash,
       execution: { receipt: execution.receipt, modelId: execution.modelId ?? null, output: structuredClone(execution.output ?? null) } }));
     if (!verdict || verdict.caseId !== benchmarkCase.id || verdict.run !== run || verdict.inputHash !== inputHash || verdict.executionReceipt !== execution.receipt ||
