@@ -13,7 +13,10 @@ import {
   runVerifiedGraph,
   validateWorkGraph,
 } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
-import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import {
+  capabilityReceiptHash,
+  createCapabilityReceipt,
+} from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -137,6 +140,22 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       ledger,
       capabilityReceipt,
       capabilityPublicKey: keys.publicKey,
+      benchmarkEvidence: {
+        results: [
+          {
+            modelId: 'fixture-model',
+            receiptHash: capabilityReceiptHash(capabilityReceipt),
+            functionalVerified: true,
+            reliability: 1,
+            costUsd: 0,
+          },
+        ],
+      },
+      verifyBenchmark: async ({ receiptHash }: any) => ({
+        valid: true,
+        receiptHash,
+        receipt: 'fixture-benchmark',
+      }),
       maxCalls: 40,
       deadlineMs: Date.now() + 10000,
       maxConcurrent: 2,
@@ -155,6 +174,13 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     };
     await expect(runVerifiedGraph(untrusted)).rejects.toThrow(
       'LEDGER_CAPABILITY_AUTHORITY_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch without independently verified benchmark evidence', async () => {
+    const f = await fixture();
+    await expect(runVerifiedGraph({ ...f.options, verifyBenchmark: undefined })).rejects.toThrow(
+      'INDEPENDENT_BENCHMARK_REQUIRED'
     );
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });

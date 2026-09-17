@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
 import { inspectBlockers } from './gofer-blocker-control.mjs';
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
+import { selectCapabilityRoute } from './gofer-live-routing.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
 const MAX_CONTRACT_FILE_BYTES = 1024 * 1024;
@@ -114,7 +115,8 @@ function overlaps(a, b) {
  * An existing journal is a reconciliation gate, not permission to replay work.
  */
 export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adapter,
-  ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
+  ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
+  advisoryConstraints, maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
   // Copy before any await: a caller or worker must not remove required checks.
   checks = freeze(structuredClone(checks));
   const journalName = 'verified-execution.jsonl';
@@ -126,6 +128,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   if (typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' || !verifyCapabilityReceipt(capabilityReceipt, {
     publicKey: capabilityPublicKey, requiredCapabilities,
   })) throw new Error('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
+  const route = await selectCapabilityRoute({ receipt: capabilityReceipt, publicKey: capabilityPublicKey,
+    host: capabilityReceipt.host, requiredCapabilities, benchmarkEvidence, verifyBenchmark, advisoryConstraints });
   const root = await realpath(featureDir);
   const captured = await snapshot(root);
   const plan = freeze(JSON.parse(captured.files['priority-plan.json']));
@@ -226,7 +230,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
     const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId],
-      capabilityReceiptHash: receiptHash };
+      capabilityReceiptHash: receiptHash, selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt };
     let previousChecks = [];
     try {
       while (attempts[taskId] < loop.maxIterations) {
@@ -336,7 +340,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   try {
     await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations, capabilityReceiptHash: receiptHash,
-      requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
+      selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt, requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
     await checkpoint('started');
     const active = new Map();
     while (!controller.signal.aborted) {
