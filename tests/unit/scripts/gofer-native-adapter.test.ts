@@ -13,6 +13,7 @@ import {
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
   inspectNativeWorkerEvidence,
+  createNativeCancellationVerifier,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 
@@ -585,6 +586,117 @@ describe('native adapter primitives', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'binds cancellation to stopped worker evidence, clean replacement, and fresh input',
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'gofer-cancel-verifier-'));
+      const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-cancel-evidence-'));
+      let abandoned: Awaited<ReturnType<typeof createVerifiedWorktree>> | undefined;
+      let replacement: Awaited<ReturnType<typeof createVerifiedWorktree>> | undefined;
+      try {
+        execFileSync('git', ['init', root]);
+        execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+        execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+        await writeFile(path.join(root, 'tracked.txt'), 'base');
+        execFileSync('git', ['-C', root, 'add', '.']);
+        execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+        abandoned = await createVerifiedWorktree({
+          workspaceRoot: root,
+          host: 'codex',
+          localIsolation: localIsolation(root),
+        });
+        replacement = await createVerifiedWorktree({
+          workspaceRoot: root,
+          host: 'codex',
+          localIsolation: localIsolation(root),
+        });
+        const started = {
+          schemaVersion: 1,
+          event: 'started',
+          invocationId: 'codex-test',
+          objectiveRevision: abandoned.revision,
+          leaseId: 'lease-1',
+          worktreeReceipt: abandoned.receipt,
+          capabilityReceiptHash: 'capability-1',
+          isolatedWorkspace: abandoned.isolatedWorkspace,
+          pid: 2147483647,
+          processGroupId: 2147483647,
+        };
+        const stopped = {
+          schemaVersion: 1,
+          event: 'stopped',
+          invocationId: 'codex-test',
+          pid: started.pid,
+          processGroupId: started.processGroupId,
+          cancelled: true,
+          receipt: 'stop-1',
+        };
+        const evidencePath = path.join(evidenceDirectory, 'native-worker-codex-a1.jsonl');
+        await writeFile(evidencePath, `${JSON.stringify(started)}\n${JSON.stringify(stopped)}\n`);
+        const workers = await inspectNativeWorkerEvidence({
+          evidenceDirectory,
+          revision: abandoned.revision,
+          journalHash: 'journal-1',
+          authorizations: [
+            {
+              leaseId: 'lease-1',
+              worktreeReceipt: abandoned.receipt,
+              capabilityReceiptHash: 'capability-1',
+              isolatedWorkspace: abandoned.isolatedWorkspace,
+            },
+          ],
+        });
+        expect(workers.allStopped).toBe(true);
+        const inspectInputRevision = vi.fn(async () => 'input-1');
+        const verify = createNativeCancellationVerifier({
+          workspaceRoot: root,
+          abandonedWorkspace: abandoned.isolatedWorkspace,
+          replacementWorkspace: replacement.isolatedWorkspace,
+          worktreeRevision: abandoned.revision,
+          evidenceDirectory,
+          inspectInputRevision,
+        });
+        const request = {
+          taskId: 'T001',
+          revision: abandoned.revision,
+          leaseId: 'lease-1',
+          journalHash: 'journal-1',
+          workerStopReceipt: workers.receipt,
+          abandonedWorktreeReceipt: abandoned.receipt,
+          replacementWorktreeReceipt: replacement.receipt,
+          capabilityReceiptHash: 'capability-1',
+          inputRevision: 'input-1',
+        };
+        expect((await verify(request)).valid).toBe(true);
+        expect(inspectInputRevision).toHaveBeenCalledWith({
+          taskId: 'T001',
+          revision: abandoned.revision,
+          isolatedWorkspace: replacement.isolatedWorkspace,
+          worktreeReceipt: replacement.receipt,
+        });
+        expect((await verify({ ...request, workerStopReceipt: 'forged' })).valid).toBe(false);
+        expect((await verify({ ...request, leaseId: 'other' })).valid).toBe(false);
+        expect((await verify({ ...request, inputRevision: 'stale' })).valid).toBe(false);
+        await writeFile(path.join(replacement.isolatedWorkspace, 'tracked.txt'), 'dirty');
+        expect((await verify(request)).valid).toBe(false);
+      } finally {
+        for (const worktree of [abandoned, replacement]) {
+          if (worktree)
+            execFileSync('git', [
+              '-C',
+              root,
+              'worktree',
+              'remove',
+              '--force',
+              worktree.isolatedWorkspace,
+            ]);
+        }
+        await rm(root, { recursive: true, force: true });
+        await rm(evidenceDirectory, { recursive: true, force: true });
+      }
+    }
+  );
 
   it('rejects an isolation root inside the source workspace', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));

@@ -245,7 +245,8 @@ export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision,
     !text(authority?.leaseId) || !text(authority?.worktreeReceipt) ||
     records.filter(record => record.started.leaseId === authority.leaseId &&
       record.started.capabilityReceiptHash === authority.capabilityReceiptHash &&
-      record.started.worktreeReceipt === authority.worktreeReceipt).length !== 1)) return denied;
+      record.started.worktreeReceipt === authority.worktreeReceipt &&
+      (!authority.isolatedWorkspace || record.started.isolatedWorkspace === authority.isolatedWorkspace)).length !== 1)) return denied;
   const receipt = `worker-stop:${createHash('sha256').update(JSON.stringify({ revision, journalHash,
     records: records.map(record => ({ invocationId: record.started.invocationId,
       leaseId: record.started.leaseId, pid: record.started.pid,
@@ -354,6 +355,49 @@ export async function inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace
   if (!registered || head.stdout.trim() !== revision || (requireClean && !clean)) return { valid: false };
   return Object.freeze({ valid: true, receipt, revision, isolatedWorkspace: isolated, clean,
     statusHash: createHash('sha256').update(status.stdout).digest('hex') });
+}
+
+/** Bind ledger cancellation authority to independently inspected local state. */
+export function createNativeCancellationVerifier({ workspaceRoot, abandonedWorkspace,
+  replacementWorkspace, worktreeRevision, evidenceDirectory, inspectInputRevision } = {}) {
+  if (![workspaceRoot, abandonedWorkspace, replacementWorkspace, worktreeRevision, evidenceDirectory].every(text) ||
+      typeof inspectInputRevision !== 'function') throw new Error('NATIVE_CANCELLATION_VERIFIER_CONFIGURATION_REQUIRED');
+  return async request => {
+    const denied = { valid: false };
+    if (![request?.taskId, request?.revision, request?.leaseId, request?.journalHash,
+      request?.workerStopReceipt, request?.abandonedWorktreeReceipt,
+      request?.replacementWorktreeReceipt, request?.capabilityReceiptHash,
+      request?.inputRevision].every(text) || request.revision !== worktreeRevision) return denied;
+    try {
+      const [oldWorktree, newWorktree, evidenceRoot] = await Promise.all([
+        inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace: abandonedWorkspace,
+          revision: worktreeRevision, receipt: request.abandonedWorktreeReceipt }),
+        inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace: replacementWorkspace,
+          revision: worktreeRevision, receipt: request.replacementWorktreeReceipt, requireClean: true }),
+        realpath(evidenceDirectory),
+      ]);
+      if (!oldWorktree.valid || !newWorktree.valid ||
+          oldWorktree.isolatedWorkspace === newWorktree.isolatedWorkspace ||
+          oldWorktree.receipt === newWorktree.receipt) return denied;
+      for (const worktree of [oldWorktree, newWorktree]) {
+        const relative = path.relative(worktree.isolatedWorkspace, evidenceRoot);
+        if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return denied;
+      }
+      const workers = await inspectNativeWorkerEvidence({ evidenceDirectory: evidenceRoot,
+        revision: request.revision, journalHash: request.journalHash,
+        authorizations: [{ leaseId: request.leaseId,
+          capabilityReceiptHash: request.capabilityReceiptHash,
+          worktreeReceipt: request.abandonedWorktreeReceipt,
+          isolatedWorkspace: oldWorktree.isolatedWorkspace }] });
+      if (!workers.allStopped || workers.receipt !== request.workerStopReceipt ||
+          !workers.cancelledLeases.includes(request.leaseId)) return denied;
+      const currentInput = await inspectInputRevision(Object.freeze({ taskId: request.taskId,
+        revision: request.revision, isolatedWorkspace: newWorktree.isolatedWorkspace,
+        worktreeReceipt: newWorktree.receipt }));
+      if (currentInput !== request.inputRevision) return denied;
+      return { ...request, valid: true };
+    } catch { return denied; }
+  };
 }
 
 /**
