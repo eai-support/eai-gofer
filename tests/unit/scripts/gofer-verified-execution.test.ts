@@ -13,6 +13,7 @@ import {
   runVerifiedGraph,
   validateWorkGraph,
 } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
+import { inspectExecutionRecovery } from '../../../.specify/scripts/node/gofer-execution-recovery.mjs';
 import {
   capabilityReceiptHash,
   createCapabilityReceipt,
@@ -166,6 +167,40 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('resumes only pending work after independent reconciliation of a verified checkpoint', async () => {
+    const f = await fixture();
+    expect((await runVerifiedGraph(f.options)).status).toBe('verified');
+    const journalPath = path.join(f.root, 'verified-execution.jsonl');
+    const original = (await readFile(journalPath, 'utf8')).trimEnd().split('\n').map(JSON.parse);
+    const partial = original.filter(
+      (event: any) => event.task !== 'T002' && event.event !== 'finished'
+    );
+    await writeFile(
+      journalPath,
+      `${partial.map((event: any) => JSON.stringify(event)).join('\n')}\n`
+    );
+    await writeFile(path.join(f.root, 'tasks.md'), '- [x] T001: First\n- [ ] T002: Second\n');
+    f.adapter.execute.mockClear();
+    const recovery = {
+      inspectWorkers: async (request: any) => ({
+        ...request,
+        allStopped: true,
+        receipt: 'stopped',
+      }),
+      inspectLedger: async (request: any) => ({ ...request, allowed: true }),
+      verifyReceipt: async (request: any) => ({ ...request, valid: true }),
+    };
+    const result = await runVerifiedGraph({ ...f.options, recovery });
+    expect(result.status).toBe('verified');
+    expect(result.verified).toEqual(['T001', 'T002']);
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T002']);
+    const resumed = (await readFile(journalPath, 'utf8')).trimEnd().split('\n').map(JSON.parse);
+    expect(resumed.filter((event: any) => event.event === 'resumed')).toHaveLength(1);
+    expect(resumed.filter((event: any) => event.event === 'verified')).toHaveLength(2);
+    const reconciled = await inspectExecutionRecovery({ featureDir: f.root, ...recovery });
+    expect(reconciled.status).toBe('reconciled');
+    expect(reconciled.reusableTasks).toEqual(['T001', 'T002']);
+  });
   it('fails closed without signed capability evidence and ledger authority', async () => {
     const f = await fixture();
     const untrusted = {

@@ -44,7 +44,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   const raw = await readJournal(root);
   const journalHash = createHash('sha256').update(raw).digest('hex');
   const report = { status: 'blocked', journalHash, resumeAllowed: false, replayAllowed: false,
-    reusableTasks: [], uncertainTasks: [], callsConsumed: 0, attemptsConsumed: {}, reasons: [],
+    reusableTasks: [], verifiedInputs: {}, uncertainTasks: [], callsConsumed: 0, attemptsConsumed: {}, reasons: [],
     coverage: 'Read-only reconciliation; trusted receipt and worker inspection are required. No automatic replay.' };
   const reasons = report.reasons;
   if (!raw.endsWith('\n')) { reasons.push('TRUNCATED_JOURNAL'); return report; }
@@ -62,6 +62,10 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
     reasons.push('INVALID_RUN_HEADER'); return report;
   }
   inspectionDeadline = Math.min(inspectionDeadline, first.deadlineMs);
+  report.run = { revision: first.revision, maxCalls: first.maxCalls, maxConcurrent: first.maxConcurrent,
+    maxIterations: first.maxIterations, deadlineMs: first.deadlineMs, requiredChecks: first.requiredChecks,
+    capabilityReceiptHash: first.capabilityReceiptHash, selectedModel: first.selectedModel,
+    benchmarkReceipt: first.benchmarkReceipt, approvalReceipt: first.approvalReceipt };
   if (await executionRevision(root) !== first.revision) reasons.push('STALE_DIRECTION');
   if (Date.now() >= first.deadlineMs) reasons.push('DEADLINE_EXHAUSTED');
   const uncertain = new Set();
@@ -73,16 +77,29 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
   const commitAuthorities = new Map();
   const active = new Set();
   const methods = new Set(['reserve', 'lease', 'execute', 'inputRevision', 'check', 'verified']);
-  const known = new Set(['started', 'attempt_reserved', 'call_reserved', 'lease_granted', 'ledger_authorized', 'check', 'commit_authorized', 'verified', 'repair_required', 'blocked', 'cancelled', 'stale', 'finished']);
+  const known = new Set(['started', 'resumed', 'attempt_reserved', 'call_reserved', 'lease_granted', 'ledger_authorized', 'check', 'commit_authorized', 'verified', 'repair_required', 'blocked', 'cancelled', 'stale', 'finished']);
   let finished = false;
   for (const [index, event] of events.entries()) {
     if (!event || event.schemaVersion !== 1 || event.revision !== first.revision || !known.has(event.event) ||
-        (index > 0 && event.event === 'started') || finished ||
-        (!['started', 'finished'].includes(event.event) && !taskId(event.task))) {
+        (index > 0 && event.event === 'started') || (finished && event.event !== 'resumed') ||
+        (!['started', 'finished', 'resumed'].includes(event.event) && !taskId(event.task))) {
       reasons.push('INVALID_JOURNAL_SEQUENCE'); break;
     }
-    if (event.task) uncertain.add(event.task);
-    if (event.task && (!Object.hasOwn(first.requiredChecks, event.task) || receipts.has(event.task))) {
+    if (event.event === 'resumed') {
+      const prefix = events.slice(0, index).map(record => `${JSON.stringify(record)}\n`).join('');
+      const expectedHash = createHash('sha256').update(prefix).digest('hex');
+      if (!receipts.size || event.previousJournalHash !== expectedHash ||
+          event.callsConsumed !== report.callsConsumed ||
+          JSON.stringify(event.attemptsConsumed) !== JSON.stringify(report.attemptsConsumed) ||
+          [...uncertain].some(task => !receipts.has(task))) {
+        reasons.push('INVALID_RESUME_HISTORY'); break;
+      }
+      finished = false;
+      continue;
+    }
+    const verifiedRead = receipts.has(event.task) && event.event === 'call_reserved' && event.method === 'inputRevision';
+    if (event.task && !verifiedRead) uncertain.add(event.task);
+    if (event.task && (!Object.hasOwn(first.requiredChecks, event.task) || (receipts.has(event.task) && !verifiedRead))) {
       receipts.delete(event.task); reasons.push('INVALID_LATE_OR_UNKNOWN_TASK'); break;
     }
     if (event.event === 'attempt_reserved') {
@@ -171,6 +188,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
         if (result?.valid !== true || result.taskId !== task || result.revision !== first.revision ||
             result.inputRevision !== event.inputRevision || result.receipt !== event.receipt || result.journalHash !== journalHash) throw new Error('UNVERIFIED');
         report.reusableTasks.push(task); uncertain.delete(task);
+        report.verifiedInputs[task] = event.inputRevision;
       } catch { reasons.push(`RECEIPT_NOT_VERIFIED:${task}`); }
     }
   }
@@ -180,11 +198,13 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, insp
     reasons.push('RECOVERY_INPUT_CHANGED');
     for (const task of report.reusableTasks) uncertain.add(task);
     report.reusableTasks = [];
+    report.verifiedInputs = {};
   }
   if (inspectionTimedOut || Date.now() >= inspectionDeadline) {
     reasons.push('INSPECTION_DEADLINE_EXHAUSTED');
     for (const task of report.reusableTasks) uncertain.add(task);
     report.reusableTasks = [];
+    report.verifiedInputs = {};
   }
   report.uncertainTasks = [...uncertain];
   if (uncertain.size) reasons.push('SIDE_EFFECT_RECONCILIATION_REQUIRED');

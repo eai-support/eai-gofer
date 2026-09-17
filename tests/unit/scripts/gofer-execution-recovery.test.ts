@@ -204,6 +204,41 @@ describe('Read-only interrupted execution reconciliation', () => {
     expect(report.resumeAllowed).toBe(true);
     expect(f.options.verifyReceipt).toHaveBeenCalledOnce();
   });
+  it('rejects a forged restart link even when the earlier task has a valid receipt', async () => {
+    const f = await fixture();
+    f.events.push(
+      f.event({
+        event: 'check',
+        task: 'T001',
+        attempt: 1,
+        check: 'acceptance',
+        passed: true,
+        inputRevision: 'input-1',
+        receipt: 'check-1',
+      }),
+      f.event({
+        event: 'commit_authorized',
+        task: 'T001',
+        attempt: 1,
+        leaseId: 'lease-1',
+        inputRevision: 'input-1',
+        receipt: 'commit-1',
+      }),
+      f.event({ event: 'verified', task: 'T001', inputRevision: 'input-1', receipt: 'proof-1' }),
+      f.event({ event: 'finished', status: 'incomplete' }),
+      f.event({
+        event: 'resumed',
+        previousJournalHash: 'forged',
+        callsConsumed: 1,
+        attemptsConsumed: { T001: 1 },
+      })
+    );
+    await f.save();
+    const report = await inspectExecutionRecovery(f.options);
+    expect(report.status).toBe('blocked');
+    expect(report.reasons).toContain('INVALID_RESUME_HISTORY');
+    expect(report.resumeAllowed).toBe(false);
+  });
   it('does not turn a journal claim into proof without trusted inspectors', async () => {
     const f = await fixture();
     const report = await inspectExecutionRecovery({ featureDir: f.root });
