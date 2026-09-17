@@ -257,6 +257,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-execution-metrics.mjs',
       'node/gofer-benchmark.mjs',
       'node/gofer-heldout-corpus.mjs',
+      'node/gofer-heldout-verifier.mjs',
     ]),
   ].sort()
 );
