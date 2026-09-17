@@ -249,6 +249,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-native-runtime.mjs',
       'node/gofer-trusted-evaluator.mjs',
       'node/gofer-trusted-benchmark.mjs',
+      'node/gofer-trust-bootstrap.mjs',
       'node/gofer-runtime-ledger.mjs',
       'node/gofer-verified-execution.mjs',
       'node/gofer-execution-recovery.mjs',
