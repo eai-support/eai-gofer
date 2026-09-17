@@ -140,6 +140,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       ledger,
       capabilityReceipt,
       capabilityPublicKey: keys.publicKey,
+      approvalReceipt: 'fixture-approval',
       benchmarkEvidence: {
         results: [
           {
@@ -181,6 +182,13 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     const f = await fixture();
     await expect(runVerifiedGraph({ ...f.options, verifyBenchmark: undefined })).rejects.toThrow(
       'INDEPENDENT_BENCHMARK_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch without an approval receipt', async () => {
+    const f = await fixture();
+    await expect(runVerifiedGraph({ ...f.options, approvalReceipt: undefined })).rejects.toThrow(
+      'APPROVAL_RECEIPT_REQUIRED'
     );
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });

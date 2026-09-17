@@ -116,12 +116,13 @@ function overlaps(a, b) {
  */
 export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adapter,
   ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
-  advisoryConstraints, maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
+  advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
   // Copy before any await: a caller or worker must not remove required checks.
   checks = freeze(structuredClone(checks));
   const journalName = 'verified-execution.jsonl';
   if (!positive(maxCalls) || !positive(maxConcurrent) || maxConcurrent > 8 ||
       !Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) throw new Error('FINITE_LIMITS_REQUIRED');
+  if (!text(approvalReceipt)) throw new Error('APPROVAL_RECEIPT_REQUIRED');
   for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
     if (typeof adapter?.[method] !== 'function') throw new Error(`TRUSTED_ADAPTER_REQUIRED:${method}`);
   }
@@ -229,7 +230,7 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
-    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId],
+    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId], approvalReceipt,
       capabilityReceiptHash: receiptHash, selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt };
     let previousChecks = [];
     try {
@@ -257,7 +258,8 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
             authority.attempt !== attempt || authority.capabilityReceiptHash !== receiptHash ||
             authority.budgetReservation !== reservation.budgetReservation || authority.leaseId !== lease.leaseId ||
             authority.leaseExpiresAt !== lease.expiresAt || authority.allowedEditScope?.join('\0') !== request.allowedEditScope.join('\0') ||
-            authority.requiredChecks?.join('\0') !== request.requiredChecks.join('\0') || !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+            authority.requiredChecks?.join('\0') !== request.requiredChecks.join('\0') || authority.approvalReceipt !== approvalReceipt ||
+            !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
         await record({ event: 'ledger_authorized', task: taskId, attempt, leaseId: lease.leaseId,
           budgetReservation: reservation.budgetReservation, receipt: authority.receipt, capabilityReceiptHash: receiptHash });
         states[taskId] = 'running';
