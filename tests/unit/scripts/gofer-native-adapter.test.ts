@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
@@ -8,6 +9,7 @@ import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-ho
 import {
   createVerifiedWorktree,
   invokeLedgerBoundNative,
+  startLocalCodexInvocation,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 
 function localIsolation(workspaceRoot: string) {
@@ -31,6 +33,99 @@ function localIsolation(workspaceRoot: string) {
 }
 
 describe('native adapter primitives', () => {
+  it('starts Codex locally with its sandbox and returns only scoped worktree changes', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    try {
+      execFileSync('git', ['init', root]);
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+      await writeFile(path.join(root, 'tracked.txt'), 'base');
+      execFileSync('git', ['-C', root, 'add', '.']);
+      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const spawnProcess = vi.fn(() => {
+        const child = Object.assign(new EventEmitter(), {
+          stdout: new EventEmitter(),
+          stderr: new EventEmitter(),
+          kill: vi.fn(() => true),
+        });
+        setTimeout(async () => {
+          await writeFile(path.join(root, 'tracked.txt'), 'changed');
+          child.emit('close', 0, null);
+        }, 0);
+        return child;
+      });
+      const invocation = await startLocalCodexInvocation({
+        isolatedWorkspace: root,
+        prompt: 'Update only tracked.txt',
+        modelId: 'live-model',
+        capabilityReceiptHash: 'receipt-hash',
+        allowedWriteScope: ['tracked.txt'],
+        spawnProcess,
+      });
+      await expect(invocation.wait()).resolves.toMatchObject({
+        invocationId: expect.stringMatching(/^codex-/),
+        capabilityReceiptHash: 'receipt-hash',
+        changedFiles: ['tracked.txt'],
+        isolation: 'git-worktree+local-os-sandbox',
+      });
+      expect(spawnProcess).toHaveBeenCalledOnce();
+      expect(spawnProcess.mock.calls[0][0]).toBe('codex');
+      expect(spawnProcess.mock.calls[0][1]).toEqual(
+        expect.arrayContaining([
+          'exec',
+          '--sandbox',
+          'workspace-write',
+          '--json',
+          '--model',
+          'live-model',
+          'Update only tracked.txt',
+        ])
+      );
+      expect(spawnProcess.mock.calls[0][2]).toEqual(
+        expect.objectContaining({
+          cwd: expect.stringContaining(path.basename(root)),
+          shell: false,
+        })
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('confirms the Codex process has exited before treating cancellation as complete', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    try {
+      const child = Object.assign(new EventEmitter(), {
+        stdout: new EventEmitter(),
+        stderr: new EventEmitter(),
+        kill: vi.fn(() => {
+          setTimeout(() => child.emit('close', null, 'SIGTERM'), 0);
+          return true;
+        }),
+      });
+      const invocation = await startLocalCodexInvocation({
+        isolatedWorkspace: root,
+        prompt: 'Stop safely',
+        modelId: 'live-model',
+        capabilityReceiptHash: 'receipt-hash',
+        allowedWriteScope: ['tracked.txt'],
+        spawnProcess: () => child,
+      });
+      await invocation.cancel();
+      await expect(invocation.inspect()).resolves.toMatchObject({
+        cancelled: true,
+        state: 'exited',
+      });
+      await expect(invocation.wait()).resolves.toMatchObject({
+        cancelled: true,
+        capabilityReceiptHash: 'receipt-hash',
+      });
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('creates a detached worktree at the verified source revision', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
     try {

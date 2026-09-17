@@ -1,10 +1,11 @@
 /** Native adapter primitives. They create real Git worktree isolation and
  * require a ledger authority record before a host integration can start work. */
-import { execFile } from 'node:child_process';
-import { mkdtemp, realpath } from 'node:fs/promises';
+import { execFile, spawn } from 'node:child_process';
+import { mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { createHash, randomUUID } from 'node:crypto';
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 
@@ -18,6 +19,87 @@ const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([k
 
 async function git(directory, args) {
   return execFileAsync('git', ['-C', directory, ...args], { encoding: 'utf8', env: gitEnvironment });
+}
+
+function safeScope(scope) {
+  return text(scope) && !/(^\/|\\|\0|(^|\/)\.\.?(?:\/|$))/.test(scope);
+}
+
+function boundedCollector(limit = 1024 * 1024) {
+  let value = '';
+  return {
+    add(chunk) { value = `${value}${chunk}`.slice(-limit); },
+    value: () => value,
+  };
+}
+
+/**
+ * Start a real local Codex process in a pre-created isolated worktree. This
+ * primitive deliberately has no fallback host or cloud mode. Its receipt is
+ * only available after the child has exited, so a cancellation cannot be
+ * reported as confirmed while the host still owns the worktree.
+ */
+export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, modelId,
+  capabilityReceiptHash, allowedWriteScope, command = 'codex', spawnProcess = spawn,
+  receiptDirectory = tmpdir() } = {}) {
+  if (!text(isolatedWorkspace) || !text(prompt) || !text(modelId) || !text(capabilityReceiptHash) ||
+      !Array.isArray(allowedWriteScope) || !allowedWriteScope.length ||
+      allowedWriteScope.some(scope => !safeScope(scope)) || !text(command)) throw new Error('INVALID_NATIVE_REQUEST');
+  const workspace = await realpath(isolatedWorkspace);
+  const outputRoot = await realpath(receiptDirectory);
+  const outputPath = path.join(outputRoot, `gofer-codex-${randomUUID()}.md`);
+  const args = ['exec', '--sandbox', 'workspace-write', '--json', '--output-last-message', outputPath,
+    '--model', modelId, prompt];
+  const stdout = boundedCollector();
+  const stderr = boundedCollector();
+  let child;
+  let exit = null;
+  let cancelRequested = false;
+  let completion;
+  const invocationId = `codex-${randomUUID()}`;
+  const receiptFor = async () => {
+    const message = await readFile(outputPath, 'utf8').catch(() => '');
+    return createHash('sha256').update(JSON.stringify({ invocationId, capabilityReceiptHash, modelId,
+      allowedWriteScope, exit, stdout: stdout.value(), stderr: stderr.value(), message })).digest('hex');
+  };
+  try {
+    child = spawnProcess(command, args, { cwd: workspace, shell: false, detached: false,
+      stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  } catch (error) {
+    throw new Error(`NATIVE_HOST_START_FAILED:${error.message}`);
+  }
+  if (!child || typeof child.once !== 'function' || typeof child.kill !== 'function') throw new Error('NATIVE_HOST_START_FAILED');
+  child.stdout?.on('data', chunk => stdout.add(chunk));
+  child.stderr?.on('data', chunk => stderr.add(chunk));
+  completion = new Promise((resolve, reject) => {
+    child.once('error', error => reject(new Error(`NATIVE_HOST_START_FAILED:${error.message}`)));
+    child.once('close', (code, signal) => { exit = { code, signal }; resolve(); });
+  });
+  return Object.freeze({
+    invocationId,
+    async cancel() {
+      cancelRequested = true;
+      if (exit === null && child.kill('SIGTERM') === false) throw new Error('CANCELLATION_DELIVERY_REQUIRED');
+      await completion;
+    },
+    async inspect() {
+      if (exit === null) return { invocationId, cancelled: false, receipt: null, state: 'running' };
+      return { invocationId, cancelled: cancelRequested, receipt: await receiptFor(), state: 'exited', exit: { ...exit } };
+    },
+    async wait() {
+      await completion;
+      const receipt = await receiptFor();
+      if (cancelRequested) return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
+      if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
+      const changedFiles = (await git(workspace, ['diff', '--name-only', '--no-renames', 'HEAD'])).stdout
+        .split(/\r?\n/).filter(Boolean);
+      if (changedFiles.some(file => !allowedWriteScope.some(scope => file === scope.replace(/\/$/, '') || file.startsWith(`${scope.replace(/\/$/, '')}/`)))) {
+        throw new Error('NATIVE_SCOPE_VIOLATION');
+      }
+      return Object.freeze({ invocationId, capabilityReceiptHash, receipt, changedFiles,
+        outputPath, isolation: QUALIFIED_LOCAL_ISOLATION });
+    },
+  });
 }
 
 export async function createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef = 'HEAD', temporaryRoot = tmpdir() } = {}) {
