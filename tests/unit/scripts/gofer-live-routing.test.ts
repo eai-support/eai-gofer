@@ -114,7 +114,11 @@ describe('live capability routing', () => {
         host: 'antigravity',
         now: Date.parse('2026-09-17T00:01:00Z'),
         benchmarkEvidence: { results: [{ modelId: 'model-high', reliability: 1 }] },
-        verifyBenchmark: async () => ({ valid: true, receiptHash, receipt: 'claimed-verifier' }),
+        verifyBenchmark: async () => ({
+          valid: true,
+          receiptHash: capabilityReceiptHash(receipt),
+          receipt: 'claimed-verifier',
+        }),
       })
     ).rejects.toThrow('INDEPENDENT_BENCHMARK_REQUIRED');
   });

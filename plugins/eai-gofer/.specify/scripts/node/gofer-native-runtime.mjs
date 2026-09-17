@@ -4,7 +4,7 @@
  * governs both graph dispatch and the host launch.
  */
 import path from 'node:path';
-import { createVerifiedWorktree, createLedgerBoundCodexExecutor, startLocalCodexInvocation,
+import { createVerifiedWorktree, disposeVerifiedWorktree, createLedgerBoundCodexExecutor, startLocalCodexInvocation,
   inspectNativeWorkerEvidence, createNativeCancellationVerifier } from './gofer-native-adapter.mjs';
 import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
@@ -25,22 +25,49 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
     throw new Error('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
   }
   const isolation = await createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef });
+  let lifecycle = 'idle';
   return Object.freeze({
     isolation,
+    async dispose() {
+      if (lifecycle === 'disposed') return;
+      if (lifecycle !== 'idle' && lifecycle !== 'verified') {
+        throw new Error('NATIVE_RUNTIME_REQUIRES_RECOVERY_BEFORE_DISPOSAL');
+      }
+      const prior = lifecycle;
+      lifecycle = 'disposing';
+      try {
+        await disposeVerifiedWorktree({ workspaceRoot: isolation.workspace,
+          isolatedWorkspace: isolation.isolatedWorkspace, revision: isolation.revision,
+          receipt: isolation.receipt });
+        lifecycle = 'disposed';
+      } catch (error) {
+        lifecycle = prior;
+        throw error;
+      }
+    },
     async run({ featureDir, checks, benchmarkEvidence, verifyBenchmark, advisoryConstraints,
       approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery } = {}) {
-      if (!text(featureDir)) throw new Error('NATIVE_EVIDENCE_DIRECTORY_REQUIRED');
-      const evidenceDirectory = path.join(featureDir, '.native-worker-evidence');
-      const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
-        worktreeReceipt: isolation.receipt,
-        capabilityReceipt, capabilityPublicKey, requiredCapabilities, assertLedger: nativeLedger, promptForRequest,
-        start: request => startLocalCodexInvocation({ ...request, evidenceDirectory }) });
-      const trustedAdapter = Object.freeze({ ...adapter, worktreeReceipt: isolation.receipt, execute: executor.execute });
-      const trustedRecovery = recovery ? { ...recovery,
-        inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) } : undefined;
-      return runVerifiedGraph({ featureDir, workspaceRoot: isolation.isolatedWorkspace, checks, adapter: trustedAdapter,
-        ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
-        advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery: trustedRecovery });
+      if (lifecycle !== 'idle') throw new Error('NATIVE_RUNTIME_NOT_AVAILABLE');
+      lifecycle = 'running';
+      try {
+        if (!text(featureDir)) throw new Error('NATIVE_EVIDENCE_DIRECTORY_REQUIRED');
+        const evidenceDirectory = path.join(featureDir, '.native-worker-evidence');
+        const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
+          worktreeReceipt: isolation.receipt,
+          capabilityReceipt, capabilityPublicKey, requiredCapabilities, assertLedger: nativeLedger, promptForRequest,
+          start: request => startLocalCodexInvocation({ ...request, evidenceDirectory }) });
+        const trustedAdapter = Object.freeze({ ...adapter, worktreeReceipt: isolation.receipt, execute: executor.execute });
+        const trustedRecovery = recovery ? { ...recovery,
+          inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) } : undefined;
+        const result = await runVerifiedGraph({ featureDir, workspaceRoot: isolation.isolatedWorkspace, checks, adapter: trustedAdapter,
+          ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
+          advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery: trustedRecovery });
+        lifecycle = result.status === 'verified' && result.adapterCallsSettled ? 'verified' : 'recovery-required';
+        return result;
+      } catch (error) {
+        lifecycle = 'recovery-required';
+        throw error;
+      }
     },
   });
 }

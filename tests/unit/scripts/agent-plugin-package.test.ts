@@ -156,6 +156,8 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/scripts/node/gofer-live-routing.mjs',
         'eai-gofer/.specify/scripts/node/gofer-local-isolation.mjs',
         'eai-gofer/.specify/scripts/node/gofer-native-adapter.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-native-runtime.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-heldout-corpus.mjs',
         'eai-gofer/.specify/references/agent-catalog.json',
         'eai-gofer/.specify/references/verified-agent-execution.md',
         'eai-gofer/.specify/scripts/node/gofer-ui-preview.mjs',

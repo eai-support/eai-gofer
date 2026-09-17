@@ -92,10 +92,15 @@ A qualified local task needs both a dedicated Git worktree and an operating-
 system sandbox. A worktree separates source changes; it does not restrict the
 host process. Cloud execution cannot substitute for this evidence.
 
-EAI Setup checks the machine prerequisites. EAI CLI reports the local isolation
-contract for the selected surface. Gofer validates that report before it creates
-the task worktree. The report is a readiness check, not proof that a host
-executed the task. A fresh host receipt is still required.
+EAI Setup checks the machine prerequisites. Gofer creates a dedicated task
+worktree, then asks EAI CLI to report local isolation readiness for that exact
+path. The report is a readiness check, not proof that a host executed the task.
+A fresh host receipt is still required.
+
+After a verified run, the controller must call the native runtime's `dispose()`
+method to remove its clean, receipt-bound task worktree. Disposal is refused
+while a run is active, failed, or incomplete. Keep the worktree for independent
+recovery inspection; do not force-remove it to clear a failed task.
 
 Any missing sandbox, full-access bypass, cloud route, unbound project, or
 unsupported surface fails closed. Do not start a verified task by using the

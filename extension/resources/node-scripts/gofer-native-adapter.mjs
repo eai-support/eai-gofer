@@ -363,6 +363,14 @@ export async function inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace
     statusHash: createHash('sha256').update(status.stdout).digest('hex') });
 }
 
+/** Remove only a matching, clean task worktree after its controller has closed. */
+export async function disposeVerifiedWorktree({ workspaceRoot, isolatedWorkspace, revision, receipt } = {}) {
+  const inspection = await inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace,
+    revision, receipt, requireClean: true });
+  if (!inspection.valid) throw new Error('WORKTREE_DISPOSAL_REQUIRES_CLEAN_VERIFIED_STATE');
+  await git(workspaceRoot, ['worktree', 'remove', isolatedWorkspace]);
+}
+
 /** Bind ledger cancellation authority to independently inspected local state. */
 export function createNativeCancellationVerifier({ workspaceRoot, abandonedWorkspace,
   replacementWorkspace, worktreeRevision, evidenceDirectory, inspectInputRevision } = {}) {

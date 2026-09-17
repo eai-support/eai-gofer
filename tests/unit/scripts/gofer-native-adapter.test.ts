@@ -86,14 +86,14 @@ describe('native adapter primitives', () => {
         },
       });
       expect(runtime.isolation.isolatedWorkspace).not.toBe(root);
-      execFileSync('git', [
-        '-C',
-        root,
-        'worktree',
-        'remove',
-        '--force',
-        runtime.isolation.isolatedWorkspace,
-      ]);
+      const taskFile = path.join(runtime.isolation.isolatedWorkspace, 'unfinished.txt');
+      await writeFile(taskFile, 'keep this work');
+      await expect(runtime.dispose()).rejects.toThrow(
+        'WORKTREE_DISPOSAL_REQUIRES_CLEAN_VERIFIED_STATE'
+      );
+      await rm(taskFile);
+      await runtime.dispose();
+      await runtime.dispose();
       await expect(createVerifiedNativeRuntime({ workspaceRoot: root })).rejects.toThrow(
         'VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED'
       );
