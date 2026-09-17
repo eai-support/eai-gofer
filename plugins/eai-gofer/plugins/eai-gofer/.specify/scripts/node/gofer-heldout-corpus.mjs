@@ -24,7 +24,9 @@ export async function loadHeldOutCorpus({ corpusRoot, workspaceRoot } = {}) {
     throw new Error('HELDOUT_CORPUS_PATH_REQUIRED');
   }
   const [root, workspace] = await Promise.all([realpath(corpusRoot), realpath(workspaceRoot)]);
-  if (within(workspace, root)) throw new Error('HELDOUT_CORPUS_MUST_BE_EXTERNAL');
+  if (within(workspace, root) || within(root, workspace)) {
+    throw new Error('HELDOUT_CORPUS_MUST_BE_EXTERNAL');
+  }
   const manifestPath = path.join(root, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest.cases) || manifest.cases.length < 4 ||

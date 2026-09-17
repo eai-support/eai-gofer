@@ -1,4 +1,4 @@
-import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -78,6 +78,19 @@ describe('held-out benchmark corpus', () => {
           rm(directory, { recursive: true, force: true })
         )
       );
+    }
+  });
+
+  it('rejects a corpus directory that contains the released workspace', async () => {
+    const corpus = await mkdtemp(path.join(tmpdir(), 'gofer-heldout-parent-'));
+    const workspace = path.join(corpus, 'released-workspace');
+    try {
+      await mkdir(workspace);
+      await expect(
+        loadHeldOutCorpus({ corpusRoot: corpus, workspaceRoot: workspace })
+      ).rejects.toThrow('HELDOUT_CORPUS_MUST_BE_EXTERNAL');
+    } finally {
+      await rm(corpus, { recursive: true, force: true });
     }
   });
 });
