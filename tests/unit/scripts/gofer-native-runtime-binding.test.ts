@@ -10,7 +10,6 @@ import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofe
 const runGraph = vi.hoisted(() => vi.fn());
 vi.mock('../../../.specify/scripts/node/gofer-verified-execution.mjs', () => ({
   runVerifiedGraph: runGraph,
-  executionRevision: async () => 'committed-contract',
 }));
 
 describe('native runtime workspace binding', () => {
@@ -22,11 +21,11 @@ describe('native runtime workspace binding', () => {
       execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
       execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
       await writeFile(path.join(root, 'tracked.txt'), 'base');
-      const featureDir = path.join(root, '.specify', 'specs', 'task');
-      await mkdir(featureDir, { recursive: true });
-      await writeFile(path.join(featureDir, 'spec.md'), 'committed contract');
       execFileSync('git', ['-C', root, 'add', '.']);
       execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const featureDir = path.join(root, '.specify', 'specs', 'task');
+      await mkdir(featureDir, { recursive: true });
+      await writeFile(path.join(featureDir, 'spec.md'), 'private controller direction');
       const keys = generateKeyPairSync('ed25519');
       const receipt = createCapabilityReceipt({
         host: 'codex',
@@ -89,6 +88,9 @@ describe('native runtime workspace binding', () => {
           }),
         },
       });
+      await expect(
+        realpath(path.join(runtime.isolation.isolatedWorkspace, '.specify', 'specs', 'task'))
+      ).rejects.toThrow();
       runGraph.mockImplementationOnce(
         async ({ adapter, workspaceRoot, featureDir: controlRoot }) => {
           expect(workspaceRoot).toBe(runtime?.isolation.isolatedWorkspace);

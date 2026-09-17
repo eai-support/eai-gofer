@@ -9,7 +9,7 @@ import { createVerifiedWorktree, inspectVerifiedWorktree, disposeVerifiedWorktre
   inspectNativeWorkerEvidence, createNativeCancellationVerifier } from './gofer-native-adapter.mjs';
 import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
-import { executionRevision, runVerifiedGraph } from './gofer-verified-execution.mjs';
+import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -73,13 +73,6 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         const controllerRoot = await realpath(featureDir);
         if (!inside(isolation.workspace, controllerRoot) || inside(isolation.isolatedWorkspace, controllerRoot)) {
           throw new Error('NATIVE_CONTROL_PLANE_OUTSIDE_SOURCE_WORKSPACE');
-        }
-        const relativeControlPath = path.relative(isolation.workspace, controllerRoot);
-        const isolatedControlRoot = await realpath(path.join(isolation.isolatedWorkspace, relativeControlPath))
-          .catch(() => { throw new Error('NATIVE_CONTROL_CONTRACT_NOT_IN_WORKTREE'); });
-        if (!inside(isolation.isolatedWorkspace, isolatedControlRoot) ||
-            await executionRevision(controllerRoot) !== await executionRevision(isolatedControlRoot)) {
-          throw new Error('NATIVE_CONTROL_CONTRACT_MISMATCH');
         }
         const worktree = await inspectVerifiedWorktree({ workspaceRoot: isolation.workspace,
           isolatedWorkspace: isolation.isolatedWorkspace, revision: isolation.revision,

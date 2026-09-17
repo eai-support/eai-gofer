@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
@@ -49,17 +49,6 @@ describe('native adapter primitives', () => {
       execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
       execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
       await writeFile(path.join(root, 'tracked.txt'), 'base');
-      const featureDir = path.join(root, 'feature');
-      await mkdir(featureDir);
-      for (const name of [
-        'spec.md',
-        'plan.md',
-        'decisions.md',
-        'priority-plan.json',
-        'loop-contract.json',
-      ]) {
-        await writeFile(path.join(featureDir, name), `committed ${name}`);
-      }
       execFileSync('git', ['-C', root, 'add', '.']);
       execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const keys = generateKeyPairSync('ed25519');
@@ -105,8 +94,9 @@ describe('native adapter primitives', () => {
         workspaceRoot: runtime.isolation.isolatedWorkspace,
         worktreeReceipt: runtime.isolation.receipt,
       });
-      await writeFile(path.join(featureDir, 'spec.md'), 'uncommitted direction');
-      await expect(runtime.run({ featureDir })).rejects.toThrow('NATIVE_CONTROL_CONTRACT_MISMATCH');
+      await expect(
+        runtime.run({ featureDir: path.join(root, 'missing-feature') })
+      ).rejects.toThrow();
       const taskFile = path.join(runtime.isolation.isolatedWorkspace, 'unfinished.txt');
       await writeFile(taskFile, 'keep this work');
       await expect(runtime.dispose()).rejects.toThrow(
