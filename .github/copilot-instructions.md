@@ -30,13 +30,11 @@ live in `.specify/specs/{feature}/`.
 
 ## Token And Cost Policy
 
-- Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned model
-  policy. Use Copilot `Auto` for simple/default work unless the user explicitly
-  chooses a specific model.
-- Use the cheapest capable model first. Prefer compact Copilot prompts and
-  built-in workspace context; only choose paid/high-tier chat models when the
-  task is ambiguous, security-sensitive, release-critical, or a cheaper pass
-  fails.
+- Treat `.specify/memory/gofer-model-policy.yaml` as advisory policy. Choose the
+  lowest-cost model qualified by a fresh signed host receipt and independent
+  benchmark evidence. Do not select a model from a static name or price.
+- Prefer compact Copilot prompts and built-in workspace context. Escalate only
+  when a cheaper qualified pass fails or the task needs stronger review.
 - Keep raw command and search output out of chat context. Save durable summaries
   to `.specify/specs/{feature}/context-bundle.md` and continue from artifacts.
 - Reuse stable non-secret prefixes for provider caching where supported: Gofer
