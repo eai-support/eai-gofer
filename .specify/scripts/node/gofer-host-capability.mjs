@@ -89,9 +89,6 @@ export function createCodexAppServerRuntime({ workspaceRoot, localIsolation, req
     throw new Error('LOCAL_SANDBOX_REQUIRED');
   }
   const assessment = localIsolation.assessments.find(item => item.surfaceId === 'codex-cli');
-  if (!assessment.hostArguments.includes('--sandbox') || !assessment.hostArguments.includes('workspace-write')) {
-    throw new Error('LOCAL_SANDBOX_REQUIRED');
-  }
   return Object.freeze({
     async inspect() {
       const [catalog, provider] = await Promise.all([

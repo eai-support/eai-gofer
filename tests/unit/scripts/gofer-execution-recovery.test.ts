@@ -16,6 +16,7 @@ import {
   startLocalCodexInvocation,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { reconcileVerifiedNativeCancellation } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
+import { localIsolationReport } from './local-isolation-fixture.js';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -245,24 +246,8 @@ describe('Read-only interrupted execution reconciliation', () => {
     await writeFile(path.join(source, 'tracked.txt'), 'base');
     await git('add', '.');
     await git('commit', '-m', 'base');
-    const localIsolation = ({ workspaceRoot }: { workspaceRoot: string }) => ({
-      contractVersion: 'eai.local-isolation/v1',
-      projectDirectory: workspaceRoot,
-      nativeExecutable: '/usr/bin/codex',
-      cloudExecution: 'prohibited',
-      gitRepository: true,
-      assessments: [
-        {
-          surfaceId: 'codex-cli',
-          status: 'ready',
-          localOnly: true,
-          requiresGitWorktree: true,
-          requiresOsSandbox: true,
-          hostArguments: ['--sandbox', 'workspace-write'],
-          missing: [],
-        },
-      ],
-    });
+    const localIsolation = ({ workspaceRoot }: { workspaceRoot: string }) =>
+      localIsolationReport(workspaceRoot);
     const oldWorktree = await createVerifiedWorktree({
       workspaceRoot: source,
       host: 'codex',

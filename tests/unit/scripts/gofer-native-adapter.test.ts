@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import {
@@ -16,8 +16,17 @@ import {
   createNativeCancellationVerifier,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
+import { localIsolationReport } from './local-isolation-fixture.js';
 
 const trustedKey = vi.hoisted(() => ({ value: null as KeyObject | null }));
+const inheritedGitIndexFile = process.env.GIT_INDEX_FILE;
+beforeAll(() => {
+  delete process.env.GIT_INDEX_FILE;
+});
+afterAll(() => {
+  if (inheritedGitIndexFile === undefined) delete process.env.GIT_INDEX_FILE;
+  else process.env.GIT_INDEX_FILE = inheritedGitIndexFile;
+});
 vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
   resolveTrustedEvaluatorPublicKey: async () => trustedKey.value,
 }));
@@ -26,24 +35,21 @@ type LedgerRequest = Record<string, unknown>;
 type NativeStartRequest = LedgerRequest & { capabilityReceiptHash: string };
 
 function localIsolation({ workspaceRoot }: { workspaceRoot: string }) {
-  return {
-    contractVersion: 'eai.local-isolation/v1',
-    projectDirectory: workspaceRoot,
-    nativeExecutable: '/usr/bin/codex',
-    cloudExecution: 'prohibited',
-    gitRepository: true,
-    assessments: [
-      {
-        surfaceId: 'codex-cli',
-        status: 'ready',
-        localOnly: true,
-        requiresGitWorktree: true,
-        requiresOsSandbox: true,
-        hostArguments: ['--sandbox', 'workspace-write'],
-        missing: [],
-      },
-    ],
-  };
+  return localIsolationReport(workspaceRoot);
+}
+
+async function nativeTaskWorktree(prefix: string, files: Record<string, string> = {}) {
+  const base = await mkdtemp(path.join(tmpdir(), prefix));
+  const root = path.join(base, 'task');
+  execFileSync('git', ['init', base]);
+  execFileSync('git', ['-C', base, 'config', 'user.email', 'test@example.com']);
+  execFileSync('git', ['-C', base, 'config', 'user.name', 'Test']);
+  for (const [name, content] of Object.entries(files))
+    await writeFile(path.join(base, name), content);
+  execFileSync('git', ['-C', base, 'add', '.']);
+  execFileSync('git', ['-C', base, 'commit', '--allow-empty', '-m', 'base']);
+  execFileSync('git', ['-C', base, 'worktree', 'add', '--detach', root]);
+  return { base, root };
 }
 
 describe('native adapter primitives', () => {
@@ -273,14 +279,10 @@ describe('native adapter primitives', () => {
   });
 
   it('starts Codex locally with its sandbox and returns only scoped worktree changes', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    const { base, root } = await nativeTaskWorktree('gofer-native-adapter-', {
+      'tracked.txt': 'base',
+    });
     try {
-      execFileSync('git', ['init', root]);
-      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
-      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
-      await writeFile(path.join(root, 'tracked.txt'), 'base');
-      execFileSync('git', ['-C', root, 'add', '.']);
-      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const spawnProcess = vi.fn(() => {
         const child = Object.assign(new EventEmitter(), {
           stdout: new EventEmitter(),
@@ -345,19 +347,15 @@ describe('native adapter primitives', () => {
         })
       );
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(base, { recursive: true, force: true });
     }
   });
 
   it('rejects a worker commit even when Git reports a clean worktree', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-commit-'));
+    const { base, root } = await nativeTaskWorktree('gofer-native-commit-', {
+      'tracked.txt': 'base',
+    });
     try {
-      execFileSync('git', ['init', root]);
-      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
-      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
-      await writeFile(path.join(root, 'tracked.txt'), 'base');
-      execFileSync('git', ['-C', root, 'add', '.']);
-      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const expectedHead = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
         encoding: 'utf8',
       }).trim();
@@ -398,19 +396,13 @@ describe('native adapter primitives', () => {
       });
       await expect(invocation.wait()).rejects.toThrow('NATIVE_UNAUTHORIZED_GIT_CHANGE');
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(base, { recursive: true, force: true });
     }
   });
 
   it('rejects a new worker branch even when HEAD and file status do not change', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-ref-'));
+    const { base, root } = await nativeTaskWorktree('gofer-native-ref-', { 'tracked.txt': 'base' });
     try {
-      execFileSync('git', ['init', root]);
-      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
-      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
-      await writeFile(path.join(root, 'tracked.txt'), 'base');
-      execFileSync('git', ['-C', root, 'add', '.']);
-      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const child = Object.assign(new EventEmitter(), {
         stdout: new EventEmitter(),
         stderr: new EventEmitter(),
@@ -432,20 +424,16 @@ describe('native adapter primitives', () => {
       });
       await expect(invocation.wait()).rejects.toThrow('NATIVE_UNAUTHORIZED_GIT_CHANGE');
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(base, { recursive: true, force: true });
     }
   });
 
   it('accounts for new and ignored files when enforcing native write scope', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-scope-'));
+    const { base, root } = await nativeTaskWorktree('gofer-native-scope-', {
+      'tracked.txt': 'base',
+      '.gitignore': 'ignored.txt\n',
+    });
     try {
-      execFileSync('git', ['init', root]);
-      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
-      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
-      await writeFile(path.join(root, 'tracked.txt'), 'base');
-      await writeFile(path.join(root, '.gitignore'), 'ignored.txt\n');
-      execFileSync('git', ['-C', root, 'add', '.']);
-      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const fakeSpawn = (file: string) => () => {
         const child = Object.assign(new EventEmitter(), {
           stdout: new EventEmitter(),
@@ -479,14 +467,13 @@ describe('native adapter primitives', () => {
         'NATIVE_SCOPE_VIOLATION'
       );
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(base, { recursive: true, force: true });
     }
   });
 
   it('confirms the Codex process has exited before treating cancellation as complete', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
+    const { base, root } = await nativeTaskWorktree('gofer-native-adapter-');
     try {
-      execFileSync('git', ['init', root]);
       const child = Object.assign(new EventEmitter(), {
         stdout: new EventEmitter(),
         stderr: new EventEmitter(),
@@ -514,17 +501,16 @@ describe('native adapter primitives', () => {
       });
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(base, { recursive: true, force: true });
     }
   });
 
   it.skipIf(process.platform === 'win32')(
     'durably records a local worker start and confirmed cancellation outside its worktree',
     async () => {
-      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const { base, root } = await nativeTaskWorktree('gofer-native-worktree-');
       const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-native-evidence-'));
       try {
-        execFileSync('git', ['init', root]);
         const child = Object.assign(new EventEmitter(), {
           pid: 99999999,
           stdout: new EventEmitter(),
@@ -609,7 +595,7 @@ describe('native adapter primitives', () => {
           ).allStopped
         ).toBe(false);
       } finally {
-        await rm(root, { recursive: true, force: true });
+        await rm(base, { recursive: true, force: true });
         await rm(evidenceDirectory, { recursive: true, force: true });
       }
     }
@@ -618,10 +604,9 @@ describe('native adapter primitives', () => {
   it.skipIf(process.platform === 'win32')(
     'does not place worker-stop evidence inside the model worktree',
     async () => {
-      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const { base, root } = await nativeTaskWorktree('gofer-native-worktree-');
       const spawnProcess = vi.fn();
       try {
-        execFileSync('git', ['init', root]);
         await expect(
           startLocalCodexInvocation({
             isolatedWorkspace: root,
@@ -639,7 +624,7 @@ describe('native adapter primitives', () => {
         expect(spawnProcess).not.toHaveBeenCalled();
         expect(await readdir(root)).toEqual(['.git']);
       } finally {
-        await rm(root, { recursive: true, force: true });
+        await rm(base, { recursive: true, force: true });
       }
     }
   );
@@ -647,7 +632,7 @@ describe('native adapter primitives', () => {
   it.skipIf(process.platform === 'win32')(
     'stops a real local process group before issuing a worker-stop proof',
     async () => {
-      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const { base, root } = await nativeTaskWorktree('gofer-native-worktree-');
       const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-native-evidence-'));
       let readyResolve: (value: string) => void;
       const ready = new Promise<string>((resolve) => {
@@ -659,7 +644,6 @@ describe('native adapter primitives', () => {
         "process.stdout.write('ready:' + child.pid + '\\n'); setInterval(() => {}, 1000);";
       let invocation: Awaited<ReturnType<typeof startLocalCodexInvocation>> | undefined;
       try {
-        execFileSync('git', ['init', root]);
         invocation = await startLocalCodexInvocation({
           isolatedWorkspace: root,
           prompt: 'No model call',
@@ -704,7 +688,7 @@ describe('native adapter primitives', () => {
         expect(proof.allStopped).toBe(true);
       } finally {
         await invocation?.cancel().catch(() => {});
-        await rm(root, { recursive: true, force: true });
+        await rm(base, { recursive: true, force: true });
         await rm(evidenceDirectory, { recursive: true, force: true });
       }
     }
@@ -742,7 +726,10 @@ describe('native adapter primitives', () => {
         createVerifiedWorktree({
           workspaceRoot: root,
           host: 'codex',
-          localIsolation: async () => localIsolation({ workspaceRoot: root }),
+          localIsolation: async () => ({
+            ...localIsolation({ workspaceRoot: isolated.isolatedWorkspace }),
+            projectDirectory: root,
+          }),
         })
       ).rejects.toThrow('LOCAL_SANDBOX_REQUIRED');
       await expect(

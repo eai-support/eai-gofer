@@ -2,34 +2,30 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { createIsolationRepository, localIsolationReport } from './local-isolation-fixture.js';
 import {
-  LOCAL_ISOLATION_CONTRACT,
+  codexIsolatedPermissionArgs,
   inspectEaiLocalIsolation,
   probeMacCodexSandboxBoundary,
   verifyLocalIsolationReport,
 } from '../../../.specify/scripts/node/gofer-local-isolation.mjs';
 
-const workspaceRoot = '/work/feature';
-const readyReport = {
-  contractVersion: LOCAL_ISOLATION_CONTRACT,
-  projectDirectory: workspaceRoot,
-  cloudExecution: 'prohibited',
-  gitRepository: true,
-  assessments: [
-    {
-      surfaceId: 'codex-cli',
-      status: 'ready',
-      localOnly: true,
-      requiresGitWorktree: true,
-      requiresOsSandbox: true,
-      hostArguments: ['--sandbox', 'workspace-write'],
-      missing: [],
-    },
-  ],
-};
+const fixture = createIsolationRepository();
+const workspaceRoot = fixture.worktree;
+const readyReport = localIsolationReport(workspaceRoot);
+afterAll(() => fixture.cleanup());
 
 describe('EAI local isolation contract', () => {
+  it('rejects an ordinary checkout and the old isolation report', () => {
+    expect(codexIsolatedPermissionArgs(fixture.source)).toBeNull();
+    expect(
+      verifyLocalIsolationReport(
+        { ...readyReport, contractVersion: 'eai.local-isolation/v1' },
+        { host: 'codex', workspaceRoot }
+      )
+    ).toBe(false);
+  });
   it.skipIf(process.platform !== 'darwin')(
     'rejects a sandbox that can write shared Git metadata outside the task worktree',
     () => {

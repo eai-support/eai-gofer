@@ -4,7 +4,7 @@
 import { execFile, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { accessSync, constants, existsSync, mkdtempSync, realpathSync, rmSync, rmdirSync, statSync } from 'node:fs';
-import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -19,17 +19,25 @@ const CODEX_PROFILE = 'gofer-isolated';
 export function codexIsolatedPermissionArgs(workspaceRoot) {
   if (!text(workspaceRoot)) return null;
   const git = spawnSync('/usr/bin/git', ['-C', workspaceRoot, 'rev-parse',
-    '--path-format=absolute', '--git-common-dir'],
+    '--path-format=absolute', '--show-toplevel', '--git-dir', '--git-common-dir'],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000,
     env: Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))) });
   if (git.status !== 0 || !git.stdout?.trim()) return null;
+  const [topLevel, gitDirectory, commonDirectory] = git.stdout.trim().split('\n');
+  if (!topLevel || !gitDirectory || !commonDirectory) return null;
   let common;
   let workspace;
+  let gitDir;
+  let top;
   try {
-    common = realpathSync(git.stdout.trim());
+    common = realpathSync(commonDirectory);
     workspace = realpathSync(workspaceRoot);
+    gitDir = realpathSync(gitDirectory);
+    top = realpathSync(topLevel);
   } catch { return null; }
-  if (common === workspace) return null;
+  const commonRelative = relative(workspace, common);
+  if (top !== workspace || gitDir === common || commonRelative === '' ||
+      (!commonRelative.startsWith(`..${sep}`) && commonRelative !== '..' && !isAbsolute(commonRelative))) return null;
   return Object.freeze({ common,
     config: Object.freeze([
       `permissions.${CODEX_PROFILE}.extends=":workspace"`,
@@ -105,18 +113,19 @@ export function probeNativeCodexSandbox(workspaceRoot) {
   return executable ? probeMacCodexSandboxBoundary({ workspaceRoot, executable }) : null;
 }
 
-export const LOCAL_ISOLATION_CONTRACT = 'eai.local-isolation/v1';
+export const LOCAL_ISOLATION_CONTRACT = 'eai.local-isolation/v2';
 
 const HOST_SURFACES = Object.freeze({
   codex: 'codex-cli',
 });
 
-function hasQualifiedHostArguments(host, args) {
+function hasQualifiedHostArguments(host, workspaceRoot, args) {
   if (host !== 'codex' || !Array.isArray(args)) return false;
-  const qualified = ['--sandbox', 'workspace-write'];
-  const withApproval = [...qualified, '--ask-for-approval', 'never'];
-  return [qualified, withApproval].some(expected =>
-    args.length === expected.length && args.every((value, index) => value === expected[index]));
+  const policy = codexIsolatedPermissionArgs(workspaceRoot);
+  if (!policy) return false;
+  const expected = ['--ask-for-approval', 'never', 'exec', '--ignore-user-config',
+    ...policy.config.flatMap(value => ['-c', value])];
+  return args.length === expected.length && args.every((value, index) => value === expected[index]);
 }
 
 export function verifyLocalIsolationReport(report, { host, workspaceRoot } = {}) {
@@ -129,7 +138,7 @@ export function verifyLocalIsolationReport(report, { host, workspaceRoot } = {})
   const assessment = matchingAssessments[0];
   if (!assessment || assessment.status !== 'ready' || assessment.localOnly !== true ||
       assessment.requiresGitWorktree !== true || assessment.requiresOsSandbox !== true ||
-      !hasQualifiedHostArguments(host, assessment.hostArguments) ||
+      !hasQualifiedHostArguments(host, workspaceRoot, assessment.hostArguments) ||
       !Array.isArray(assessment.missing) || assessment.missing.length !== 0) return false;
   const normalizedReportRoot = report.projectDirectory.replace(/\\/g, '/').replace(/\/+$/, '');
   const normalizedWorkspace = workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '');

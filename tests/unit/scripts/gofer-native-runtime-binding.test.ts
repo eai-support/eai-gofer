@@ -6,6 +6,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
+import { localIsolationReport } from './local-isolation-fixture.js';
 
 const runGraph = vi.hoisted(() => vi.fn());
 const trustedKey = vi.hoisted(() => ({ value: null as KeyObject | null }));
@@ -50,24 +51,8 @@ describe('native runtime workspace binding', () => {
       const observed: string[] = [];
       runtime = await createVerifiedNativeRuntime({
         workspaceRoot: root,
-        localIsolation: async ({ workspaceRoot }: { workspaceRoot: string }) => ({
-          contractVersion: 'eai.local-isolation/v1',
-          projectDirectory: workspaceRoot,
-          nativeExecutable: '/usr/bin/codex',
-          cloudExecution: 'prohibited',
-          gitRepository: true,
-          assessments: [
-            {
-              surfaceId: 'codex-cli',
-              status: 'ready',
-              localOnly: true,
-              requiresGitWorktree: true,
-              requiresOsSandbox: true,
-              hostArguments: ['--sandbox', 'workspace-write'],
-              missing: [],
-            },
-          ],
-        }),
+        localIsolation: async ({ workspaceRoot }: { workspaceRoot: string }) =>
+          localIsolationReport(workspaceRoot),
         capabilityReceipt: receipt,
         ledger: {
           authorize: async () => ({ allowed: false }),

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import { createIsolationRepository, localIsolationReport } from './local-isolation-fixture.js';
 import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
 import {
@@ -13,23 +14,9 @@ import {
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 
 describe('Gofer host capability discovery', () => {
-  const localCodexIsolation = (workspaceRoot = '/workspace') => ({
-    contractVersion: 'eai.local-isolation/v1',
-    projectDirectory: workspaceRoot,
-    cloudExecution: 'prohibited',
-    gitRepository: true,
-    assessments: [
-      {
-        surfaceId: 'codex-cli',
-        status: 'ready',
-        localOnly: true,
-        requiresGitWorktree: true,
-        requiresOsSandbox: true,
-        hostArguments: ['--sandbox', 'workspace-write'],
-        missing: [],
-      },
-    ],
-  });
+  const fixture = createIsolationRepository();
+  const localCodexIsolation = () => localIsolationReport(fixture.worktree);
+  afterAll(() => fixture.cleanup());
   it('does not guess a host or model when auto detection lacks a runtime signal', async () => {
     await expect(inspectHost('auto')).resolves.toMatchObject({
       status: 'host-name-required',
@@ -228,7 +215,7 @@ describe('Gofer host capability discovery', () => {
 
   it('reads live Codex models and provider capabilities from the local app-server only', async () => {
     const runtime = createCodexAppServerRuntime({
-      workspaceRoot: '/workspace',
+      workspaceRoot: fixture.worktree,
       localIsolation: localCodexIsolation(),
       request: async (method: string) =>
         method === 'model/list'
@@ -245,7 +232,7 @@ describe('Gofer host capability discovery', () => {
     });
     expect(() =>
       createCodexAppServerRuntime({
-        workspaceRoot: '/workspace',
+        workspaceRoot: fixture.worktree,
         localIsolation: { ...localCodexIsolation(), cloudExecution: 'allowed' },
       })
     ).toThrow('LOCAL_SANDBOX_REQUIRED');
