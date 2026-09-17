@@ -30,6 +30,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-benchmark.mjs',
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
+  '.specify/scripts/node/gofer-heldout-snapshot.mjs',
 ];
 const packagedRuntimeRoots = [
   'plugins/eai-gofer',
