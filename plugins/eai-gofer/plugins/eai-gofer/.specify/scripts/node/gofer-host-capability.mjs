@@ -165,7 +165,9 @@ export function capabilityReceiptHash(receipt) {
 }
 
 export function verifyCapabilityReceipt(receipt, { publicKey, now = Date.now(), host, requiredCapabilities = {} } = {}) {
-  const canonical = host === undefined ? receipt?.host : hostName(host);
+  let canonical;
+  try { canonical = hostName(host === undefined ? receipt?.host : host); }
+  catch { return false; }
   const required = requiredCapabilities ?? {};
   if (!receipt || receipt.schemaVersion !== 2 || receipt.host !== canonical ||
       !text(receipt.evaluatorVersion) || !text(receipt.evaluationId) || !text(receipt.hostVersion) ||

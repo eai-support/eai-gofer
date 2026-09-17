@@ -110,6 +110,15 @@ describe('Gofer host capability discovery', () => {
       })
     ).toBe(true);
     expect(
+      verifyCapabilityReceipt(
+        { ...receipt, host: 'unknown-host' },
+        {
+          publicKey: keys.publicKey,
+          now: Date.parse('2026-09-17T12:00:00Z'),
+        }
+      )
+    ).toBe(false);
+    expect(
       verifyCapabilityReceipt(receipt, {
         publicKey: keys.publicKey,
         host: 'codex',

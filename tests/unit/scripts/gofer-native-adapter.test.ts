@@ -83,8 +83,8 @@ describe('native adapter primitives', () => {
         ledger: {
           authorize: async () => ({ allowed: false }),
           authorizeCommit: async () => ({ allowed: false }),
+          authorizeNative: async () => ({ allowed: false }),
         },
-        nativeLedger: async () => ({ allowed: false }),
         promptForRequest: async () => 'Approved task.',
         adapter: { bindWorkspace },
       };
@@ -101,6 +101,19 @@ describe('native adapter primitives', () => {
       );
       await rm(taskFile);
       await runtime.dispose();
+      await expect(
+        createVerifiedNativeRuntime({
+          ...configuration,
+          capabilityReceipt: { ...receipt, host: 'antigravity' },
+        })
+      ).rejects.toThrow('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
+      await expect(
+        createVerifiedNativeRuntime({
+          ...configuration,
+          ledger: { ...configuration.ledger, authorizeNative: undefined },
+          nativeLedger: async () => ({ allowed: true }),
+        })
+      ).rejects.toThrow('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
       await runtime.dispose();
       await expect(
         createVerifiedNativeRuntime({
@@ -849,6 +862,22 @@ describe('native adapter primitives', () => {
       budgetReservation: 'budget',
       approvalReceipt: 'approval',
     };
+    const wrongHost = createCapabilityReceipt({
+      ...receipt,
+      host: 'antigravity',
+      signingKey: keys.privateKey,
+    });
+    const wrongHostStart = vi.fn();
+    await expect(
+      invokeLedgerBoundNative({
+        request,
+        capabilityReceipt: wrongHost,
+        capabilityPublicKey: keys.publicKey,
+        assertLedger: async () => ({ allowed: true }),
+        start: wrongHostStart,
+      })
+    ).rejects.toThrow('CAPABILITY_RECEIPT_REQUIRED');
+    expect(wrongHostStart).not.toHaveBeenCalled();
     const result = await invokeLedgerBoundNative({
       request,
       capabilityReceipt: receipt,

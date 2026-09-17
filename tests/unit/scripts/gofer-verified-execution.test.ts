@@ -558,7 +558,7 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     );
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });
-  it('stops waiting at the deadline without pretending the child was killed', async () => {
+  it('reports an unsettled child only if the deadline reached a running adapter', async () => {
     const f = await fixture();
     f.adapter.execute.mockImplementation(() => new Promise(() => {}));
     const result = await runVerifiedGraph({
@@ -568,7 +568,9 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     });
     expect(result.states.T001).toBe('cancelled');
     expect(result.status).toBe('incomplete');
-    expect(result.adapterCallsSettled).toBe(false);
+    // Under a busy CI runner, the deadline can expire before execute starts.
+    // In that case there is no child call to drain.
+    expect(result.adapterCallsSettled).toBe(f.adapter.execute.mock.calls.length === 0);
   });
   it('waits for a cancelled trusted adapter call to settle before returning', async () => {
     const f = await fixture();

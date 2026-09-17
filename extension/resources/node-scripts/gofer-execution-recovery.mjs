@@ -161,11 +161,21 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, veri
       active.delete(event.task);
     }
     if (event.event === 'commit_authorized') {
-      if (!active.has(event.task) || !text(event.leaseId) || !text(event.receipt) || !text(event.inputRevision)) {
+      const authority = authorizedTasks.get(event.task);
+      if (!active.has(event.task) || !authority || !text(event.leaseId) ||
+          !text(event.receipt) || !text(event.inputRevision) ||
+          !text(event.capabilityReceiptHash) ||
+          event.attempt !== authority.attempt || event.leaseId !== authority.leaseId ||
+          event.capabilityReceiptHash !== authority.capabilityReceiptHash ||
+          commitAuthorities.get(event.task)?.attempt === event.attempt ||
+          first.requiredChecks[event.task].some(check => {
+            const proof = latestChecks.get(event.task)?.get(check);
+            return proof?.passed !== true || proof.inputRevision !== event.inputRevision || !text(proof.receipt);
+          })) {
         reasons.push('INVALID_COMMIT_AUTHORIZATION'); break;
       }
       commits.push({ taskId: event.task, leaseId: event.leaseId, receipt: event.receipt,
-        inputRevision: event.inputRevision });
+        inputRevision: event.inputRevision, capabilityReceiptHash: event.capabilityReceiptHash });
       commitAuthorities.set(event.task, event);
     }
     if (['blocked', 'cancelled', 'stale', 'repair_required'].includes(event.event)) active.delete(event.task);

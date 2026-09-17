@@ -290,6 +290,12 @@ describe('Read-only interrupted execution reconciliation', () => {
         attempt: 1,
         dependencies: [],
         worktreeReceipt: oldWorktree.receipt,
+        allowedEditScope: ['tracked.txt'],
+        requiredChecks: ['test'],
+        approvalReceipt: 'approved',
+        capabilityReceiptHash: 'capability-1',
+        selectedModel: 'local-process-test',
+        benchmarkReceipt: 'benchmark-v1',
       };
       const reservation = await ledger.reserve(base);
       const lease = await ledger.lease(base);
@@ -485,6 +491,7 @@ describe('Read-only interrupted execution reconciliation', () => {
         leaseId: 'lease-1',
         inputRevision: 'input-1',
         receipt: 'commit-1',
+        capabilityReceiptHash: 'capability-1',
       }),
       f.event({ event: 'verified', task: 'T001', inputRevision: 'input-1', receipt: 'proof-1' }),
       f.event({ event: 'finished', status: 'incomplete' }),

@@ -20,12 +20,12 @@ const inside = (parent, child) => {
 
 export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex',
   localIsolation = inspectEaiLocalIsolation,
-  capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger, nativeLedger = ledger?.authorizeNative,
+  capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger,
   promptForRequest, adapter, baseRef } = {}) {
   if (!text(workspaceRoot) || host !== 'codex' || typeof localIsolation !== 'function' ||
-      !capabilityReceipt || !capabilityPublicKey ||
+      capabilityReceipt?.host !== host || !capabilityPublicKey ||
       typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' ||
-      typeof nativeLedger !== 'function' || typeof promptForRequest !== 'function' ||
+      typeof ledger?.authorizeNative !== 'function' || typeof promptForRequest !== 'function' ||
       typeof adapter?.bindWorkspace !== 'function') {
     throw new Error('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
   }
@@ -82,7 +82,8 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         const evidenceDirectory = path.join(controllerRoot, '.native-worker-evidence');
         const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
           worktreeReceipt: isolation.receipt,
-          capabilityReceipt, capabilityPublicKey, requiredCapabilities, assertLedger: nativeLedger, promptForRequest,
+          capabilityReceipt, capabilityPublicKey, requiredCapabilities,
+          assertLedger: request => ledger.authorizeNative(request), promptForRequest,
           start: request => startLocalCodexInvocation({ ...request,
             command: isolation.nativeExecutable, evidenceDirectory }) });
         const trustedAdapter = Object.freeze({ ...boundAdapter, worktreeReceipt: isolation.receipt,

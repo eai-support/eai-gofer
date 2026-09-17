@@ -67,8 +67,8 @@ describe('native runtime workspace binding', () => {
         ledger: {
           authorize: async () => ({ allowed: false }),
           authorizeCommit: async () => ({ allowed: false }),
+          authorizeNative: async () => ({ allowed: false }),
         },
-        nativeLedger: async () => ({ allowed: false }),
         promptForRequest: async () => 'Approved task.',
         adapter: {
           bindWorkspace: ({ workspaceRoot }: { workspaceRoot: string }) => ({

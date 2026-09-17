@@ -20,6 +20,12 @@ describe('durable verified-runtime ledger', () => {
         attempt: 1,
         dependencies: [],
         worktreeReceipt: 'old-worktree',
+        allowedEditScope: ['src/'],
+        requiredChecks: ['test'],
+        capabilityReceiptHash: 'capability',
+        approvalReceipt: 'approved',
+        selectedModel: 'live-model',
+        benchmarkReceipt: 'benchmark-v1',
       };
       const reservation = await ledger.reserve(request);
       const lease = await ledger.lease(request);
@@ -136,7 +142,18 @@ describe('durable verified-runtime ledger', () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
     try {
       const ledger = await createRuntimeLedger({ ledgerPath: path.join(root, 'authority.jsonl') });
-      const request = { taskId: 'T007', revision: 'objective-v1', attempt: 1, dependencies: [] };
+      const request = {
+        taskId: 'T007',
+        revision: 'objective-v1',
+        attempt: 1,
+        dependencies: [],
+        allowedEditScope: ['src/'],
+        requiredChecks: ['npm test'],
+        capabilityReceiptHash: 'capability:verified',
+        approvalReceipt: 'approved:decision-1',
+        selectedModel: 'live-model',
+        benchmarkReceipt: 'benchmark-v1',
+      };
       const reservation = await ledger.reserve(request);
       const lease = await ledger.lease(request);
       const authority = await ledger.authorize({
@@ -165,12 +182,42 @@ describe('durable verified-runtime ledger', () => {
         approvalReceipt: 'approved:decision-1',
         inputRevision: 'input-v1',
         capabilityReceiptHash: 'capability:verified',
-        validation: [{ check: 'npm test', passed: true, receipt: 'test:verified' }],
+        validation: [
+          { check: 'npm test', passed: true, inputRevision: 'input-v1', receipt: 'test:verified' },
+        ],
       });
 
       expect([reservation, lease, authority, native, commit].every((item) => item.allowed)).toBe(
         true
       );
+      await expect(
+        ledger.authorizeNative({
+          ...request,
+          objectiveRevision: request.revision,
+          leaseId: lease.leaseId,
+          budgetReservation: reservation.budgetReservation,
+          approvalReceipt: request.approvalReceipt,
+          ledgerAuthorityReceipt: authority.receipt,
+          allowedWriteScope: request.allowedEditScope,
+          worktreeReceipt: request.worktreeReceipt,
+        })
+      ).resolves.toMatchObject({ allowed: false });
+      await expect(
+        ledger.authorizeCommit({
+          ...request,
+          leaseId: lease.leaseId,
+          budgetReservation: reservation.budgetReservation,
+          inputRevision: 'input-v1',
+          validation: [
+            {
+              check: 'npm test',
+              passed: true,
+              inputRevision: 'input-v1',
+              receipt: 'test:verified',
+            },
+          ],
+        })
+      ).resolves.toMatchObject({ allowed: false });
       await expect(
         ledger.inspectRecovery({
           revision: request.revision,
@@ -189,6 +236,7 @@ describe('durable verified-runtime ledger', () => {
               leaseId: lease.leaseId,
               receipt: commit.receipt,
               inputRevision: 'input-v1',
+              capabilityReceiptHash: 'capability:verified',
             },
           ],
         })
@@ -252,6 +300,84 @@ describe('durable verified-runtime ledger', () => {
       expect(
         events.every((event: { eventId: string; at: string }) => event.eventId && event.at)
       ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('denies forged reservations, cross-attempt authority, unverified checks and expired leases', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-runtime-ledger-'));
+    try {
+      let currentTime = Date.parse('2026-09-17T00:00:00.000Z');
+      const ledger = await createRuntimeLedger({
+        ledgerPath: path.join(root, 'authority.jsonl'),
+        now: () => new Date(currentTime),
+      });
+      const request = {
+        taskId: 'T007',
+        revision: 'objective-v1',
+        attempt: 1,
+        dependencies: [],
+        worktreeReceipt: 'worktree-v1',
+        allowedEditScope: ['src/'],
+        requiredChecks: ['npm test'],
+        capabilityReceiptHash: 'capability-v1',
+        approvalReceipt: 'approved-v1',
+        selectedModel: 'model-v1',
+        benchmarkReceipt: 'benchmark-v1',
+      };
+      const reservation = await ledger.reserve(request);
+      const lease = await ledger.lease(request);
+      const proposed = {
+        ...request,
+        leaseId: lease.leaseId,
+        budgetReservation: reservation.budgetReservation,
+      };
+      expect((await ledger.authorize({ ...proposed, budgetReservation: 'forged' })).allowed).toBe(
+        false
+      );
+      expect((await ledger.authorize({ ...proposed, attempt: 2 })).allowed).toBe(false);
+      expect(
+        (await ledger.authorize({ ...proposed, allowedEditScope: ['outside/'] })).allowed
+      ).toBe(false);
+      const authority = await ledger.authorize(proposed);
+      expect(authority.allowed).toBe(true);
+      expect((await ledger.authorize(proposed)).allowed).toBe(false);
+      const completion = {
+        ...proposed,
+        inputRevision: 'input-v1',
+        validation: [
+          { check: 'npm test', passed: true, inputRevision: 'input-v1', receipt: 'check-v1' },
+        ],
+      };
+      expect((await ledger.authorizeCommit(completion)).allowed).toBe(false);
+      const native = {
+        ...proposed,
+        objectiveRevision: request.revision,
+        ledgerAuthorityReceipt: authority.receipt,
+        allowedWriteScope: request.allowedEditScope,
+      };
+      expect((await ledger.authorizeNative(native)).allowed).toBe(true);
+      expect((await ledger.authorizeNative(native)).allowed).toBe(false);
+      expect((await ledger.authorizeCommit({ ...completion, validation: [] })).allowed).toBe(false);
+      expect(
+        (
+          await ledger.authorizeCommit({
+            ...completion,
+            validation: [{ ...completion.validation[0], passed: false }],
+          })
+        ).allowed
+      ).toBe(false);
+      expect(
+        (
+          await ledger.authorizeCommit({
+            ...completion,
+            validation: [{ ...completion.validation[0], inputRevision: 'stale' }],
+          })
+        ).allowed
+      ).toBe(false);
+      currentTime += 300001;
+      expect((await ledger.authorizeCommit(completion)).allowed).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -429,7 +429,8 @@ export async function invokeLedgerBoundNative({ request, capabilityReceipt, capa
       !text(request.objectiveRevision) || !Array.isArray(request.allowedWriteScope) || !text(request.leaseId) ||
       !text(request.budgetReservation) || !text(request.approvalReceipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
   if (capabilityReceipt?.isolationClass !== QUALIFIED_LOCAL_ISOLATION ||
-      !verifyCapabilityReceipt(capabilityReceipt, { publicKey: capabilityPublicKey, requiredCapabilities })) {
+      !verifyCapabilityReceipt(capabilityReceipt, { publicKey: capabilityPublicKey,
+        host: 'codex', requiredCapabilities })) {
     throw new Error('CAPABILITY_RECEIPT_REQUIRED');
   }
   const receiptHash = capabilityReceiptHash(capabilityReceipt);

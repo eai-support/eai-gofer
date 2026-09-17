@@ -66,8 +66,10 @@ export function gateBenchmark(candidate, baseline, { minReliability = 1, maxCost
   const findings = [];
   if (candidate.status !== 'pass' || candidate.reliability < minReliability) findings.push('FUNCTIONAL_RELIABILITY_REGRESSION');
   if (candidate.reliability < baseline.reliability) findings.push('BASELINE_RELIABILITY_REGRESSION');
-  if ((candidate.costUsd - baseline.costUsd) / baseline.costUsd > maxCostIncreasePct) findings.push('COST_REGRESSION');
-  if ((candidate.durationMs - baseline.durationMs) / baseline.durationMs > maxDurationIncreasePct) findings.push('DURATION_REGRESSION');
+  if (baseline.costUsd === 0 ? candidate.costUsd > 0 :
+      (candidate.costUsd - baseline.costUsd) / baseline.costUsd > maxCostIncreasePct) findings.push('COST_REGRESSION');
+  if (baseline.durationMs === 0 ? candidate.durationMs > 0 :
+      (candidate.durationMs - baseline.durationMs) / baseline.durationMs > maxDurationIncreasePct) findings.push('DURATION_REGRESSION');
   return Object.freeze({ status: findings.length ? 'fail' : 'pass', findings,
     candidate: { reliability: candidate.reliability, costUsd: candidate.costUsd, durationMs: candidate.durationMs },
     baseline: { reliability: baseline.reliability, costUsd: baseline.costUsd, durationMs: baseline.durationMs } });

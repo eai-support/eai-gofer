@@ -46,39 +46,69 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), 
       if (history.some(item => item.type === 'lease' && item.taskId === request.taskId &&
           !history.some(closed => closed.type === 'cancel-reconciled' && closed.leaseId === item.leaseId))) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, attempt: request.attempt,
+        budgetReservation: reserved.budgetReservation,
         leaseId: `lease:${randomUUID()}`, expiresAt: new Date(now().getTime() + 300000).toISOString() };
     }),
     authorize: request => transact({ type: 'authorize', request }, async history => {
       if (!text(request?.leaseId) || !text(request?.budgetReservation) || !text(request?.approvalReceipt) ||
           !Array.isArray(request?.dependencies)) return { allowed: false };
       const lease = history.find(item => item.type === 'lease' && item.leaseId === request.leaseId);
+      const reserved = history.find(item => item.type === 'reserve' &&
+        item.budgetReservation === request.budgetReservation);
       const replacement = history.filter(item => item.type === 'cancel-reconciled' &&
         item.taskId === request.taskId && item.revision === request.revision).at(-1);
-      if (!lease || lease.taskId !== request.taskId || lease.revision !== request.revision ||
+      if (!lease || !reserved || lease.taskId !== request.taskId || lease.revision !== request.revision ||
+          lease.attempt !== request.attempt || lease.budgetReservation !== request.budgetReservation ||
+          reserved.taskId !== request.taskId || reserved.revision !== request.revision ||
+          reserved.attempt !== request.attempt ||
+          digest(reserved.request?.dependencies) !== digest(request.dependencies) ||
+          reserved.request?.worktreeReceipt !== request.worktreeReceipt ||
+          !sameList(reserved.request?.allowedEditScope, request.allowedEditScope) ||
+          !sameList(reserved.request?.requiredChecks, request.requiredChecks) ||
+          reserved.request?.capabilityReceiptHash !== request.capabilityReceiptHash ||
+          reserved.request?.approvalReceipt !== request.approvalReceipt ||
+          reserved.request?.selectedModel !== request.selectedModel ||
+          reserved.request?.benchmarkReceipt !== request.benchmarkReceipt ||
           Date.parse(lease.expiresAt) <= now().getTime() ||
           (replacement && request.worktreeReceipt !== replacement.replacementWorktreeReceipt) ||
-          history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request.leaseId)) return { allowed: false };
+          history.some(item => item.leaseId === request.leaseId &&
+            ['authorize', 'cancel-reconciled'].includes(item.type))) return { allowed: false };
       return { allowed: true, ...request, receipt: `authority:${digest(request).slice(0, 32)}` };
     }),
     authorizeNative: request => transact({ type: 'native-authorize', request }, async history => {
       const authority = history.find(item => item.type === 'authorize' && item.leaseId === request?.leaseId && item.receipt === request?.ledgerAuthorityReceipt);
-      if (!authority || history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request?.leaseId) ||
+      const lease = history.find(item => item.type === 'lease' && item.leaseId === request?.leaseId);
+      if (!authority || !lease || Date.parse(lease.expiresAt) <= now().getTime() ||
+          history.some(item => item.leaseId === request?.leaseId &&
+            ['native-authorize', 'commit-authorize', 'cancel-reconciled'].includes(item.type)) ||
           authority.taskId !== request.taskId || authority.revision !== request.objectiveRevision ||
+          authority.attempt !== request.attempt ||
           authority.budgetReservation !== request.budgetReservation || authority.approvalReceipt !== request.approvalReceipt ||
           authority.worktreeReceipt !== request.worktreeReceipt ||
           authority.capabilityReceiptHash !== request.capabilityReceiptHash || digest(authority.dependencies) !== digest(request.dependencies) ||
+          authority.selectedModel !== request.selectedModel ||
           !sameList(authority.allowedEditScope, request.allowedWriteScope)) return { allowed: false };
       return { allowed: true, ...request, isolation: 'git-worktree+local-os-sandbox', receipt: authority.receipt };
     }),
     authorizeCommit: request => transact({ type: 'commit-authorize', request }, async history => {
       const authority = history.find(item => item.type === 'authorize' && item.leaseId === request?.leaseId);
-      if (!authority || history.some(item => item.type === 'cancel-reconciled' && item.leaseId === request?.leaseId) ||
+      const lease = history.find(item => item.type === 'lease' && item.leaseId === request?.leaseId);
+      const native = history.find(item => item.type === 'native-authorize' && item.leaseId === request?.leaseId);
+      const requiredChecks = authority?.requiredChecks;
+      const validation = request?.validation;
+      if (!authority || !lease || !native || Date.parse(lease.expiresAt) <= now().getTime() ||
+          history.some(item => item.leaseId === request?.leaseId &&
+            ['commit-authorize', 'cancel-reconciled'].includes(item.type)) ||
           authority.taskId !== request.taskId || authority.revision !== request.revision ||
           authority.attempt !== request.attempt || authority.budgetReservation !== request.budgetReservation ||
           authority.approvalReceipt !== request.approvalReceipt || authority.capabilityReceiptHash !== request.capabilityReceiptHash ||
           authority.worktreeReceipt !== request.worktreeReceipt ||
           digest(authority.dependencies) !== digest(request.dependencies) || !text(request.inputRevision) ||
-          !Array.isArray(request.validation)) return { allowed: false };
+          !Array.isArray(requiredChecks) || !requiredChecks.length ||
+          !Array.isArray(validation) || validation.length !== requiredChecks.length ||
+          new Set(validation.map(item => item?.check)).size !== requiredChecks.length ||
+          validation.some(item => !requiredChecks.includes(item?.check) || item?.passed !== true ||
+            item?.inputRevision !== request.inputRevision || !text(item?.receipt))) return { allowed: false };
       return { allowed: true, taskId: request.taskId, revision: request.revision, inputRevision: request.inputRevision,
         leaseId: request.leaseId, capabilityReceiptHash: request.capabilityReceiptHash, receipt: `commit:${digest(request).slice(0, 32)}` };
     }),
@@ -138,10 +168,11 @@ export async function createRuntimeLedger({ ledgerPath, now = () => new Date(), 
           event.leaseId === proof.leaseId && event.receipt === proof.receipt &&
           event.capabilityReceiptHash === proof.capabilityReceiptHash));
       const committed = request.commits.every(proof => text(proof?.taskId) && text(proof?.leaseId) &&
-        text(proof?.receipt) && text(proof?.inputRevision) && history.some(event =>
+        text(proof?.receipt) && text(proof?.inputRevision) && text(proof?.capabilityReceiptHash) && history.some(event =>
           event.type === 'commit-authorize' && event.taskId === proof.taskId && event.revision === request.revision &&
           event.leaseId === proof.leaseId && event.receipt === proof.receipt &&
-          event.inputRevision === proof.inputRevision));
+          event.inputRevision === proof.inputRevision &&
+          event.capabilityReceiptHash === proof.capabilityReceiptHash));
       return { allowed: authorized && committed, revision: request.revision, journalHash: request.journalHash };
     },
   });

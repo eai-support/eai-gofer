@@ -189,6 +189,17 @@ describe('Gofer benchmark contract', () => {
     );
   });
 
+  it('treats a rise from a zero baseline as a regression', () => {
+    const baseline = { status: 'pass', reliability: 1, costUsd: 0, durationMs: 0 };
+    expect(
+      gateBenchmark({ status: 'pass', reliability: 1, costUsd: 1, durationMs: 1 }, baseline)
+        .findings
+    ).toEqual(['COST_REGRESSION', 'DURATION_REGRESSION']);
+    expect(
+      gateBenchmark({ status: 'pass', reliability: 1, costUsd: 0, durationMs: 0 }, baseline).status
+    ).toBe('pass');
+  });
+
   it('rejects missing model binding and impossible reliability', async () => {
     await expect(
       runBenchmark({
