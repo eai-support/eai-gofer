@@ -19,6 +19,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-local-isolation.mjs',
   '.specify/scripts/node/gofer-native-adapter.mjs',
   '.specify/scripts/node/gofer-native-runtime.mjs',
+  '.specify/scripts/node/gofer-trusted-evaluator.mjs',
   '.specify/scripts/node/gofer-runtime-ledger.mjs',
   '.specify/scripts/node/gofer-verified-execution.mjs',
   '.specify/scripts/node/gofer-execution-recovery.mjs',

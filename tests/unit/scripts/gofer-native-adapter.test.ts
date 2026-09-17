@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import {
   createVerifiedWorktree,
@@ -16,6 +16,11 @@ import {
   createNativeCancellationVerifier,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
+
+const trustedKey = vi.hoisted(() => ({ value: null as KeyObject | null }));
+vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
+  resolveTrustedEvaluatorPublicKey: async () => trustedKey.value,
+}));
 
 type LedgerRequest = Record<string, unknown>;
 type NativeStartRequest = LedgerRequest & { capabilityReceiptHash: string };
@@ -52,6 +57,7 @@ describe('native adapter primitives', () => {
       execFileSync('git', ['-C', root, 'add', '.']);
       execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
       const keys = generateKeyPairSync('ed25519');
+      trustedKey.value = keys.publicKey;
       const receipt = createCapabilityReceipt({
         host: 'codex',
         evaluatorVersion: '2',
@@ -79,7 +85,6 @@ describe('native adapter primitives', () => {
         workspaceRoot: root,
         localIsolation,
         capabilityReceipt: receipt,
-        capabilityPublicKey: keys.publicKey,
         ledger: {
           authorize: async () => ({ allowed: false }),
           authorizeCommit: async () => ({ allowed: false }),
@@ -110,6 +115,17 @@ describe('native adapter primitives', () => {
           capabilityReceipt: { ...receipt, host: 'antigravity' },
         })
       ).rejects.toThrow('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
+      const attackerKeys = generateKeyPairSync('ed25519');
+      await expect(
+        createVerifiedNativeRuntime({
+          ...configuration,
+          capabilityReceipt: createCapabilityReceipt({
+            ...receipt,
+            signingKey: attackerKeys.privateKey,
+          }),
+          capabilityPublicKey: attackerKeys.publicKey,
+        })
+      ).rejects.toThrow('TRUSTED_CAPABILITY_RECEIPT_REQUIRED');
       await expect(
         createVerifiedNativeRuntime({
           ...configuration,

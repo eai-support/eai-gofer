@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -8,8 +8,12 @@ import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-ho
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 
 const runGraph = vi.hoisted(() => vi.fn());
+const trustedKey = vi.hoisted(() => ({ value: null as KeyObject | null }));
 vi.mock('../../../.specify/scripts/node/gofer-verified-execution.mjs', () => ({
   runVerifiedGraph: runGraph,
+}));
+vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
+  resolveTrustedEvaluatorPublicKey: async () => trustedKey.value,
 }));
 
 describe('native runtime workspace binding', () => {
@@ -27,6 +31,7 @@ describe('native runtime workspace binding', () => {
       await mkdir(featureDir, { recursive: true });
       await writeFile(path.join(featureDir, 'spec.md'), 'private controller direction');
       const keys = generateKeyPairSync('ed25519');
+      trustedKey.value = keys.publicKey;
       const receipt = createCapabilityReceipt({
         host: 'codex',
         evaluatorVersion: '2',
@@ -64,7 +69,6 @@ describe('native runtime workspace binding', () => {
           ],
         }),
         capabilityReceipt: receipt,
-        capabilityPublicKey: keys.publicKey,
         ledger: {
           authorize: async () => ({ allowed: false }),
           authorizeCommit: async () => ({ allowed: false }),

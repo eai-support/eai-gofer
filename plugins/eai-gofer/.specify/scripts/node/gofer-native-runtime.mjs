@@ -11,6 +11,8 @@ import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
 import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
 import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
+import { verifyCapabilityReceipt } from './gofer-host-capability.mjs';
+import { resolveTrustedEvaluatorPublicKey } from './gofer-trusted-evaluator.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const inside = (parent, child) => {
@@ -20,15 +22,18 @@ const inside = (parent, child) => {
 
 export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex',
   localIsolation = inspectEaiLocalIsolation,
-  capabilityReceipt, capabilityPublicKey, requiredCapabilities, ledger,
+  capabilityReceipt, requiredCapabilities, ledger,
   promptForRequest, adapter, baseRef } = {}) {
   if (!text(workspaceRoot) || host !== 'codex' || typeof localIsolation !== 'function' ||
-      capabilityReceipt?.host !== host || !capabilityPublicKey ||
+      capabilityReceipt?.host !== host ||
       typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' ||
       typeof ledger?.authorizeNative !== 'function' || typeof promptForRequest !== 'function' ||
       typeof adapter?.bindWorkspace !== 'function') {
     throw new Error('VERIFIED_NATIVE_RUNTIME_CONFIGURATION_REQUIRED');
   }
+  const capabilityPublicKey = await resolveTrustedEvaluatorPublicKey(capabilityReceipt, { workspaceRoot });
+  if (!verifyCapabilityReceipt(capabilityReceipt, { publicKey: capabilityPublicKey,
+    host, requiredCapabilities })) throw new Error('TRUSTED_CAPABILITY_RECEIPT_REQUIRED');
   const isolation = await createVerifiedWorktree({ workspaceRoot, host, localIsolation, baseRef });
   let boundAdapter;
   try {
