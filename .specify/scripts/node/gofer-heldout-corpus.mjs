@@ -1,7 +1,8 @@
 /** Load a private, integrity-pinned benchmark corpus without copying its cases
  * into Gofer's distributable source tree. */
 import { createHash } from 'node:crypto';
-import { readFile, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -35,12 +36,23 @@ export async function loadHeldOutCorpus({ corpusRoot, workspaceRoot } = {}) {
   const cases = [];
   for (const item of manifest.cases) {
     if (!text(item?.id) || !CATEGORIES.has(item?.category) || !text(item?.inputFile) ||
+        item.inputFile === '.' || item.inputFile === '..' || /[\\/]/.test(item.inputFile) ||
         !/^[a-f0-9]{64}$/i.test(item?.inputSha256 ?? '')) throw new Error('INVALID_HELDOUT_MANIFEST');
     const inputPath = path.resolve(root, item.inputFile);
     if (!within(root, inputPath) || !within(root, await realpath(inputPath))) {
       throw new Error('INVALID_HELDOUT_MANIFEST');
     }
-    const input = await readFile(inputPath, 'utf8');
+    let input;
+    try {
+      // A direct case file cannot become a symlink between validation and open.
+      const file = await open(inputPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+      try {
+        const info = await file.stat();
+        if (!info.isFile() || info.size < 1 || info.size > 1024 * 1024) throw new Error('INVALID_HELDOUT_MANIFEST');
+        input = await file.readFile('utf8');
+      } finally { await file.close(); }
+      if (!within(root, await realpath(inputPath))) throw new Error('INVALID_HELDOUT_MANIFEST');
+    } catch { throw new Error('INVALID_HELDOUT_MANIFEST'); }
     if (digest(input) !== item.inputSha256) throw new Error('HELDOUT_INPUT_INTEGRITY_REQUIRED');
     categories.add(item.category);
     cases.push(Object.freeze({ id: item.id, heldOut: true, category: item.category, input: JSON.parse(input) }));

@@ -13,7 +13,7 @@ const VERIFIER = 'gofer-heldout-benchmark-verifier';
  * verifier key may authorize this evidence for the native runtime.
  */
 export async function verifyTrustedBenchmarkEvidence({ host, receiptHash, evidence,
-  attestation, capabilityKeyId, capabilityPublicKey, workspaceRoot, now = Date.now(), trustRoot } = {}) {
+  attestation, capabilityKeyId, capabilityPublicKey, workspaceRoot, now = Date.now() } = {}) {
   if (!text(host) || !/^[a-f0-9]{64}$/.test(receiptHash ?? '') || !text(capabilityKeyId) ||
       !capabilityPublicKey || !text(workspaceRoot) || !Number.isFinite(now) || !attestation ||
       attestation.schemaVersion !== 1 || attestation.host !== host ||
@@ -33,7 +33,7 @@ export async function verifyTrustedBenchmarkEvidence({ host, receiptHash, eviden
   if (!text(bytes) || attestation.evidenceHash !== sha256(bytes)) throw denied();
   const { signature, ...payload } = attestation;
   const publicKey = await resolveTrustedEvaluatorPublicKey(attestation,
-    { workspaceRoot, ...(trustRoot ? { trustRoot } : {}) }).catch(() => { throw denied(); });
+    { workspaceRoot }).catch(() => { throw denied(); });
   try {
     const capabilityKey = capabilityPublicKey?.type === 'public'
       ? capabilityPublicKey : createPublicKey(capabilityPublicKey);

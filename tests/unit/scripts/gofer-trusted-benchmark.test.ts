@@ -1,19 +1,31 @@
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createHash, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { verifyTrustedBenchmarkEvidence } from '../../../.specify/scripts/node/gofer-trusted-benchmark.mjs';
+
+const trusted = vi.hoisted(() => ({ key: null as KeyObject | null, options: null as unknown }));
+vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', () => ({
+  resolveTrustedEvaluatorPublicKey: async (_receipt: unknown, options: unknown) => {
+    trusted.options = options;
+    if (!trusted.key) throw new Error('TRUSTED_EVALUATOR_REQUIRED');
+    return trusted.key;
+  },
+}));
+afterEach(() => {
+  trusted.key = null;
+  trusted.options = null;
+});
 
 const hash = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'gofer-benchmark-trust-'));
   const workspaceRoot = path.join(root, 'repository');
-  const trustRoot = path.join(root, 'trust');
   await mkdir(workspaceRoot);
-  await mkdir(trustRoot, { mode: 0o700 });
   const keys = generateKeyPairSync('ed25519');
+  trusted.key = keys.publicKey;
   const capabilityKeys = generateKeyPairSync('ed25519');
   const evidence = { schemaVersion: 2, runs: [{ receipt: 'worker-1', functionalVerified: true }] };
   const receiptHash = 'a'.repeat(64);
@@ -43,21 +55,6 @@ async function fixture() {
       ),
     },
   };
-  await writeFile(
-    path.join(trustRoot, 'trusted-evaluators.json'),
-    JSON.stringify({
-      schemaVersion: 1,
-      evaluators: [
-        {
-          host: 'codex',
-          evaluator: 'gofer-heldout-benchmark-verifier',
-          keyId: 'benchmark-key',
-          publicKeyPem: keys.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
-        },
-      ],
-    }),
-    { mode: 0o600 }
-  );
   const request = {
     host: 'codex',
     receiptHash,
@@ -66,7 +63,6 @@ async function fixture() {
     capabilityKeyId: 'capability-key',
     capabilityPublicKey: capabilityKeys.publicKey,
     workspaceRoot,
-    trustRoot,
     now,
   };
   return { root, request, benchmarkPublicKey: keys.publicKey };
@@ -80,6 +76,11 @@ describe.skipIf(process.platform === 'win32')('trusted benchmark evidence', () =
         valid: true,
         receiptHash: f.request.receiptHash,
       });
+      await verifyTrustedBenchmarkEvidence({
+        ...f.request,
+        trustRoot: path.join(f.root, 'untrusted'),
+      });
+      expect(trusted.options).toEqual({ workspaceRoot: f.request.workspaceRoot });
       await expect(
         verifyTrustedBenchmarkEvidence({
           ...f.request,
