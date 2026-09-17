@@ -5,8 +5,42 @@
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
-const validBenchmarkMetrics = result => Number.isFinite(result?.reliability) && result.reliability >= 0 && result.reliability <= 1 &&
-  Number.isFinite(result?.costUsd) && result.costUsd >= 0;
+function benchmarkResult(report, modelId, receiptHash) {
+  if (report?.schemaVersion !== 2 || report.repetitions !== 3 ||
+      report.provenance?.modelId !== modelId || report.provenance?.capabilityReceiptHash !== receiptHash ||
+      !Number.isInteger(report.caseCount) || report.caseCount < 1 ||
+      !Array.isArray(report.runs) || report.runs.length !== report.caseCount * 3) return null;
+  const cases = new Map();
+  const receipts = new Set();
+  const verifierReceipts = new Set();
+  let passes = 0;
+  let costUsd = 0;
+  let durationMs = 0;
+  for (const run of report.runs) {
+    if (run?.modelId !== modelId || !text(run.caseId) || ![1, 2, 3].includes(run.run) ||
+        !text(run.inputHash) || !text(run.receipt) || !text(run.verifierReceipt) ||
+        !text(run.verifierId) || !text(run.reviewReceipt) || !text(run.failureClassification) ||
+        typeof run.functionalVerified !== 'boolean' || !Number.isFinite(run.costUsd) || run.costUsd < 0 ||
+        !Number.isFinite(run.durationMs) || run.durationMs < 0 ||
+        receipts.has(run.receipt) || verifierReceipts.has(run.verifierReceipt)) return null;
+    receipts.add(run.receipt);
+    verifierReceipts.add(run.verifierReceipt);
+    const repetitions = cases.get(run.caseId) ?? new Set();
+    if (repetitions.has(run.run)) return null;
+    repetitions.add(run.run);
+    cases.set(run.caseId, repetitions);
+    if (run.functionalVerified) passes++;
+    costUsd += run.costUsd;
+    durationMs += run.durationMs;
+  }
+  if (cases.size !== report.caseCount || [...cases.values()].some(repetitions => repetitions.size !== 3) ||
+      report.functionalPasses !== passes || report.functionalRuns !== report.runs.length ||
+      Math.abs(report.reliability - passes / report.runs.length) > 1e-12 ||
+      Math.abs(report.costUsd - costUsd) > 1e-9 || report.durationMs !== durationMs ||
+      report.status !== (passes === report.runs.length ? 'pass' : 'fail')) return null;
+  return { modelId, receiptHash, functionalVerified: passes === report.runs.length,
+    reliability: report.reliability, costUsd: report.costUsd };
+}
 
 export async function selectCapabilityRoute({ receipt, publicKey, host, requiredCapabilities = {},
   advisoryConstraints = {}, benchmarkEvidence, verifyBenchmark, now = Date.now() } = {}) {
@@ -14,7 +48,9 @@ export async function selectCapabilityRoute({ receipt, publicKey, host, required
   if (!verifyCapabilityReceipt(receipt, { publicKey, host, requiredCapabilities: receiptRequirements, now })) {
     throw new Error('LIVE_RECEIPT_REQUIRED');
   }
-  if (typeof verifyBenchmark !== 'function' || !benchmarkEvidence || !Array.isArray(benchmarkEvidence.results)) {
+  const reports = Array.isArray(benchmarkEvidence) ? benchmarkEvidence : [benchmarkEvidence];
+  if (typeof verifyBenchmark !== 'function' || !reports.length ||
+      reports.some(report => report?.schemaVersion !== 2)) {
     throw new Error('INDEPENDENT_BENCHMARK_REQUIRED');
   }
   const receiptHash = capabilityReceiptHash(receipt);
@@ -30,9 +66,8 @@ export async function selectCapabilityRoute({ receipt, publicKey, host, required
     throw new Error('INDEPENDENT_BENCHMARK_REQUIRED');
   }
   const scored = candidates.map(model => {
-    const result = benchmarkEvidence.results.find(item => item?.modelId === model.id &&
-      item.receiptHash === receiptHash && item.functionalVerified === true &&
-      validBenchmarkMetrics(item));
+    const result = reports.map(report => benchmarkResult(report, model.id, receiptHash))
+      .find(item => item?.functionalVerified === true);
     return { model, result };
   }).filter(item => item.result);
   if (!scored.length) throw new Error('NO_VERIFIED_BENCHMARK_MATCH');

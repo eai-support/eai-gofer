@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, writeFile, rm, appendFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { executionRevision } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
@@ -11,7 +11,10 @@ import {
   reconcileCancelledExecution,
 } from '../../../.specify/scripts/node/gofer-execution-recovery.mjs';
 import { createRuntimeLedger } from '../../../.specify/scripts/node/gofer-runtime-ledger.mjs';
-import { createVerifiedWorktree } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
+import {
+  createVerifiedWorktree,
+  startLocalCodexInvocation,
+} from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { reconcileVerifiedNativeCancellation } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 
 const roots: string[] = [];
@@ -269,6 +272,7 @@ describe('Read-only interrupted execution reconciliation', () => {
       host: 'codex',
       localIsolation,
     });
+    let worker: Awaited<ReturnType<typeof startLocalCodexInvocation>> | undefined;
     try {
       await writeFile(path.join(oldWorktree.isolatedWorkspace, 'tracked.txt'), 'partial');
       f.events[0].approvalReceipt = 'approved';
@@ -321,32 +325,42 @@ describe('Read-only interrupted execution reconciliation', () => {
       await f.save();
       if (native) {
         const evidenceDirectory = path.join(f.root, '.native-worker-evidence');
-        await mkdir(evidenceDirectory);
-        const started = {
-          schemaVersion: 1,
-          event: 'started',
-          invocationId: 'codex-test',
+        let readyResolve!: () => void;
+        const ready = new Promise<void>((resolve) => {
+          readyResolve = resolve;
+        });
+        worker = await startLocalCodexInvocation({
+          isolatedWorkspace: oldWorktree.isolatedWorkspace,
+          prompt: 'Non-model cancellation proof',
+          modelId: 'local-process-test',
+          capabilityReceiptHash: 'capability-1',
+          allowedWriteScope: ['tracked.txt'],
           objectiveRevision: f.revision,
           leaseId: lease.leaseId,
           worktreeReceipt: oldWorktree.receipt,
-          capabilityReceiptHash: 'capability-1',
-          isolatedWorkspace: oldWorktree.isolatedWorkspace,
-          pid: 2147483647,
-          processGroupId: 2147483647,
-        };
-        const stopped = {
-          schemaVersion: 1,
-          event: 'stopped',
-          invocationId: 'codex-test',
-          pid: started.pid,
-          processGroupId: started.processGroupId,
-          cancelled: true,
-          receipt: 'stop-1',
-        };
-        await writeFile(
-          path.join(evidenceDirectory, 'native-worker-codex-a1.jsonl'),
-          `${JSON.stringify(started)}\n${JSON.stringify(stopped)}\n`
-        );
+          evidenceDirectory,
+          spawnProcess: (
+            _command: string,
+            _args: string[],
+            options: Parameters<typeof spawn>[2]
+          ) => {
+            const child = spawn(
+              process.execPath,
+              ['-e', "process.stdout.write('ready\\n'); setInterval(() => {}, 1000)"],
+              options
+            );
+            child.stdout?.once('data', () => readyResolve());
+            return child;
+          },
+        });
+        await Promise.race([
+          ready,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('PROCESS_NOT_READY')), 2000)
+          ),
+        ]);
+        await worker.cancel();
+        expect((await worker.inspect()).cancelled).toBe(true);
       }
       let currentInput = 'source-head';
       const reconcile = () => {
@@ -407,6 +421,7 @@ describe('Read-only interrupted execution reconciliation', () => {
       await writeFile(f.journal, raw);
       await expect(reconcile()).rejects.toThrow('CANCELLATION_RECONCILIATION_REQUIRED');
     } finally {
+      await worker?.cancel().catch(() => {});
       await git('worktree', 'remove', '--force', oldWorktree.isolatedWorkspace);
       await git('worktree', 'remove', '--force', newWorktree.isolatedWorkspace);
     }

@@ -5,6 +5,35 @@ import {
   createCapabilityReceipt,
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import { selectCapabilityRoute } from '../../../.specify/scripts/node/gofer-live-routing.mjs';
+import { runBenchmark } from '../../../.specify/scripts/node/gofer-benchmark.mjs';
+
+async function verifiedBenchmark(receipt: ReturnType<typeof createCapabilityReceipt>) {
+  return runBenchmark({
+    cases: [{ id: 'case-1', heldOut: true, input: { task: 'repair' } }],
+    provenance: {
+      harnessId: 'held-out',
+      modelId: 'model-high',
+      capabilityReceiptHash: capabilityReceiptHash(receipt),
+    },
+    execute: async ({ run }) => ({
+      modelId: 'model-high',
+      costUsd: 0.1,
+      durationMs: 10,
+      receipt: `execution-${run}`,
+    }),
+    verify: async ({ caseId, run, inputHash, execution }) => ({
+      caseId,
+      run,
+      inputHash,
+      executionReceipt: execution.receipt,
+      passed: true,
+      receipt: `verifier-${run}`,
+      verifierId: 'independent-verifier',
+      failureClassification: 'none',
+      reviewReceipt: `review-${run}`,
+    }),
+  });
+}
 
 describe('live capability routing', () => {
   it('routes only a signed, fresh receipt with independently verified benchmark evidence', async () => {
@@ -27,6 +56,7 @@ describe('live capability routing', () => {
         { id: 'model-high', reasoningEfforts: ['high'] },
       ],
     });
+    const benchmarkEvidence = await verifiedBenchmark(receipt);
     const route = await selectCapabilityRoute({
       receipt,
       publicKey: keys.publicKey,
@@ -34,19 +64,7 @@ describe('live capability routing', () => {
       now: Date.parse('2026-09-17T00:01:00Z'),
       requiredCapabilities: { reasoningEfforts: ['high'] },
       advisoryConstraints: { reasoningEfforts: ['high'] },
-      benchmarkEvidence: {
-        results: [
-          {
-            modelId: 'model-high',
-            receiptHash: (
-              await import('../../../.specify/scripts/node/gofer-host-capability.mjs')
-            ).capabilityReceiptHash(receipt),
-            functionalVerified: true,
-            reliability: 1,
-            costUsd: 0.1,
-          },
-        ],
-      },
+      benchmarkEvidence,
       verifyBenchmark: async ({ receiptHash }) => ({
         valid: true,
         receiptHash,
@@ -56,7 +74,9 @@ describe('live capability routing', () => {
     expect(route).toMatchObject({
       model: { id: 'model-high' },
       authority: 'live-capability-and-independent-benchmark',
+      benchmark: { reliability: 1 },
     });
+    expect(route.benchmark.costUsd).toBeCloseTo(0.3);
   });
 
   it('rejects a caller-supplied benchmark result without an independent verifier', async () => {
@@ -76,6 +96,7 @@ describe('live capability routing', () => {
       signingKey: keys.privateKey,
       models: [{ id: 'model-high', reasoningEfforts: ['high'] }],
     });
+    const benchmarkEvidence = await verifiedBenchmark(receipt);
     await expect(
       selectCapabilityRoute({
         receipt,
@@ -83,17 +104,17 @@ describe('live capability routing', () => {
         host: 'antigravity',
         now: Date.parse('2026-09-17T00:01:00Z'),
         requiredCapabilities: { reasoningEfforts: ['high'] },
-        benchmarkEvidence: {
-          results: [
-            {
-              modelId: 'model-high',
-              receiptHash: capabilityReceiptHash(receipt),
-              functionalVerified: true,
-              reliability: 1,
-              costUsd: 0.1,
-            },
-          ],
-        },
+        benchmarkEvidence,
+      })
+    ).rejects.toThrow('INDEPENDENT_BENCHMARK_REQUIRED');
+    await expect(
+      selectCapabilityRoute({
+        receipt,
+        publicKey: keys.publicKey,
+        host: 'antigravity',
+        now: Date.parse('2026-09-17T00:01:00Z'),
+        benchmarkEvidence: { results: [{ modelId: 'model-high', reliability: 1 }] },
+        verifyBenchmark: async () => ({ valid: true, receiptHash, receipt: 'claimed-verifier' }),
       })
     ).rejects.toThrow('INDEPENDENT_BENCHMARK_REQUIRED');
   });
@@ -115,8 +136,7 @@ describe('live capability routing', () => {
       signingKey: keys.privateKey,
       models: [{ id: 'model-high', reasoningEfforts: ['high'] }],
     });
-    const { capabilityReceiptHash } =
-      await import('../../../.specify/scripts/node/gofer-host-capability.mjs');
+    const benchmarkEvidence = await verifiedBenchmark(receipt);
     await expect(
       selectCapabilityRoute({
         receipt,
@@ -124,17 +144,7 @@ describe('live capability routing', () => {
         host: 'antigravity',
         now: Date.parse('2026-09-17T00:01:00Z'),
         requiredCapabilities: { reasoningEfforts: ['high'] },
-        benchmarkEvidence: {
-          results: [
-            {
-              modelId: 'model-high',
-              receiptHash: capabilityReceiptHash(receipt),
-              functionalVerified: true,
-              reliability: 1.1,
-              costUsd: -1,
-            },
-          ],
-        },
+        benchmarkEvidence: { ...benchmarkEvidence, reliability: 1.1, costUsd: -1 },
         verifyBenchmark: async ({ receiptHash }) => ({
           valid: true,
           receiptHash,

@@ -35,7 +35,9 @@ export async function loadHeldOutCorpus({ corpusRoot, workspaceRoot } = {}) {
     if (!text(item?.id) || !CATEGORIES.has(item?.category) || !text(item?.inputFile) ||
         !/^[a-f0-9]{64}$/i.test(item?.inputSha256 ?? '')) throw new Error('INVALID_HELDOUT_MANIFEST');
     const inputPath = path.resolve(root, item.inputFile);
-    if (!within(root, inputPath)) throw new Error('INVALID_HELDOUT_MANIFEST');
+    if (!within(root, inputPath) || !within(root, await realpath(inputPath))) {
+      throw new Error('INVALID_HELDOUT_MANIFEST');
+    }
     const input = await readFile(inputPath, 'utf8');
     if (digest(input) !== item.inputSha256) throw new Error('HELDOUT_INPUT_INTEGRITY_REQUIRED');
     categories.add(item.category);

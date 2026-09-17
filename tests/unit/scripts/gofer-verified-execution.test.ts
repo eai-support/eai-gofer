@@ -18,6 +18,7 @@ import {
   capabilityReceiptHash,
   createCapabilityReceipt,
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import { runBenchmark } from '../../../.specify/scripts/node/gofer-benchmark.mjs';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -111,6 +112,31 @@ async function fixture({ parallel = false, conflict = false } = {}) {
     provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
     signingKey: keys.privateKey,
   });
+  const benchmarkEvidence = await runBenchmark({
+    cases: [{ id: 'fixture-case', heldOut: true, input: { task: 'fixture' } }],
+    provenance: {
+      harnessId: 'graph-fixture',
+      modelId: 'fixture-model',
+      capabilityReceiptHash: capabilityReceiptHash(capabilityReceipt),
+    },
+    execute: async ({ run }) => ({
+      modelId: 'fixture-model',
+      costUsd: 0,
+      durationMs: 1,
+      receipt: `fixture-execution-${run}`,
+    }),
+    verify: async ({ caseId, run, inputHash, execution }) => ({
+      caseId,
+      run,
+      inputHash,
+      executionReceipt: execution.receipt,
+      passed: true,
+      receipt: `fixture-verifier-${run}`,
+      verifierId: 'fixture-independent-check',
+      failureClassification: 'none',
+      reviewReceipt: `fixture-review-${run}`,
+    }),
+  });
   const ledger = {
     authorize: vi.fn(async (request: any) => ({
       allowed: true,
@@ -143,17 +169,7 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       capabilityReceipt,
       capabilityPublicKey: keys.publicKey,
       approvalReceipt: 'fixture-approval',
-      benchmarkEvidence: {
-        results: [
-          {
-            modelId: 'fixture-model',
-            receiptHash: capabilityReceiptHash(capabilityReceipt),
-            functionalVerified: true,
-            reliability: 1,
-            costUsd: 0,
-          },
-        ],
-      },
+      benchmarkEvidence,
       verifyBenchmark: async ({ receiptHash }: any) => ({
         valid: true,
         receiptHash,
