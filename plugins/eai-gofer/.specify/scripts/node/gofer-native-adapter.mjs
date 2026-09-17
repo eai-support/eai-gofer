@@ -1,7 +1,8 @@
 /** Native adapter primitives. They create real Git worktree isolation and
  * require a ledger authority record before a host integration can start work. */
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, readFile, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, open, readFile, readdir, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -12,6 +13,10 @@ import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const QUALIFIED_LOCAL_ISOLATION = 'git-worktree+local-os-sandbox';
+function processGroupAlive(processGroupId) {
+  try { process.kill(-processGroupId, 0); return true; }
+  catch (error) { return error?.code !== 'ESRCH'; }
+}
 const sameScope = (left, right) => Array.isArray(left) && Array.isArray(right) &&
   left.length === right.length && left.every((value, index) => value === right[index]);
 const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
@@ -64,12 +69,31 @@ function extractTokenUsage(jsonl) {
  */
 export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, modelId,
   capabilityReceiptHash, allowedWriteScope, command = 'codex', spawnProcess = spawn,
-  receiptDirectory = tmpdir(), usageReporting = false } = {}) {
+  receiptDirectory = tmpdir(), evidenceDirectory, objectiveRevision, leaseId,
+  worktreeReceipt, signalProcessGroup = (pid, signal) => process.kill(-pid, signal),
+  usageReporting = false } = {}) {
   if (!text(isolatedWorkspace) || !text(prompt) || !text(modelId) || !text(capabilityReceiptHash) ||
       !Array.isArray(allowedWriteScope) || !allowedWriteScope.length ||
-      allowedWriteScope.some(scope => !safeScope(scope)) || !text(command)) throw new Error('INVALID_NATIVE_REQUEST');
+      allowedWriteScope.some(scope => !safeScope(scope)) || !text(command) ||
+      (evidenceDirectory && (![objectiveRevision, leaseId, worktreeReceipt].every(text)))) throw new Error('INVALID_NATIVE_REQUEST');
   const workspace = await realpath(isolatedWorkspace);
   const outputRoot = await realpath(receiptDirectory);
+  let evidenceRoot;
+  if (evidenceDirectory) {
+    if (process.platform === 'win32') throw new Error('NATIVE_PROCESS_GROUP_UNAVAILABLE');
+    const requested = path.join(await realpath(path.dirname(path.resolve(evidenceDirectory))),
+      path.basename(evidenceDirectory));
+    const requestedRelative = path.relative(workspace, requested);
+    if (requestedRelative === '' || (!requestedRelative.startsWith('..') && !path.isAbsolute(requestedRelative))) {
+      throw new Error('NATIVE_EVIDENCE_INSIDE_WORKTREE');
+    }
+    await mkdir(evidenceDirectory, { recursive: true, mode: 0o700 });
+    evidenceRoot = await realpath(evidenceDirectory);
+    const relative = path.relative(workspace, evidenceRoot);
+    if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+      throw new Error('NATIVE_EVIDENCE_INSIDE_WORKTREE');
+    }
+  }
   const outputPath = path.join(outputRoot, `gofer-codex-${randomUUID()}.md`);
   const args = ['exec', '--sandbox', 'workspace-write', '--json', '--output-last-message', outputPath,
     '--model', modelId, prompt];
@@ -80,39 +104,94 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
   let cancelRequested = false;
   let completion;
   const invocationId = `codex-${randomUUID()}`;
+  const evidencePath = evidenceRoot ? path.join(evidenceRoot, `native-worker-${invocationId}.jsonl`) : null;
   const receiptFor = async () => {
     const message = await readFile(outputPath, 'utf8').catch(() => '');
     return createHash('sha256').update(JSON.stringify({ invocationId, capabilityReceiptHash, modelId,
       allowedWriteScope, exit, stdout: stdout.value(), stderr: stderr.value(), message })).digest('hex');
   };
   try {
-    child = spawnProcess(command, args, { cwd: workspace, shell: false, detached: false,
+    child = spawnProcess(command, args, { cwd: workspace, shell: false, detached: Boolean(evidenceRoot),
       stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   } catch (error) {
     throw new Error(`NATIVE_HOST_START_FAILED:${error.message}`);
   }
   if (!child || typeof child.once !== 'function' || typeof child.kill !== 'function') throw new Error('NATIVE_HOST_START_FAILED');
+  if (evidencePath && (!Number.isSafeInteger(child.pid) || child.pid <= 0)) {
+    child.kill('SIGTERM');
+    throw new Error('NATIVE_PROCESS_ID_REQUIRED');
+  }
+  const startEvidence = evidencePath ? (async () => {
+    const file = await open(evidencePath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    try {
+      await file.writeFile(`${JSON.stringify({ schemaVersion: 1, event: 'started', invocationId,
+        objectiveRevision, leaseId, worktreeReceipt, capabilityReceiptHash, modelId,
+        isolatedWorkspace: workspace, pid: child.pid, processGroupId: child.pid,
+        at: new Date().toISOString() })}\n`);
+      await file.sync();
+    } finally { await file.close(); }
+  })() : Promise.resolve();
   child.stdout?.on('data', chunk => stdout.add(chunk));
   child.stderr?.on('data', chunk => stderr.add(chunk));
   completion = new Promise((resolve, reject) => {
     child.once('error', error => reject(new Error(`NATIVE_HOST_START_FAILED:${error.message}`)));
-    child.once('close', (code, signal) => { exit = { code, signal }; resolve(); });
+    child.once('close', async (code, signal) => {
+      exit = { code, signal };
+      try {
+        await startEvidence;
+        if (evidencePath) {
+          const file = await open(evidencePath, constants.O_WRONLY | constants.O_APPEND | constants.O_NOFOLLOW);
+          try {
+            await file.writeFile(`${JSON.stringify({ schemaVersion: 1, event: 'stopped', invocationId,
+              pid: child.pid, processGroupId: child.pid, cancelled: cancelRequested, exit, receipt: await receiptFor(),
+              at: new Date().toISOString() })}\n`);
+            await file.sync();
+          } finally { await file.close(); }
+        }
+        resolve();
+      } catch (error) { reject(error); }
+    });
+  });
+  await startEvidence.catch(error => {
+    if (evidencePath) signalProcessGroup(child.pid, 'SIGTERM');
+    else child.kill('SIGTERM');
+    throw new Error(`NATIVE_EVIDENCE_UNAVAILABLE:${error.message}`);
   });
   return Object.freeze({
     invocationId,
+    evidencePath,
     async cancel() {
+      if (exit !== null) throw new Error('CANCELLATION_ALREADY_EXITED');
       cancelRequested = true;
-      if (exit === null && child.kill('SIGTERM') === false) throw new Error('CANCELLATION_DELIVERY_REQUIRED');
+      if (exit === null) {
+        try {
+          if (evidencePath) signalProcessGroup(child.pid, 'SIGTERM');
+          else if (child.kill('SIGTERM') === false) throw new Error('CANCELLATION_DELIVERY_REQUIRED');
+        } catch { throw new Error('CANCELLATION_DELIVERY_REQUIRED'); }
+      }
       await completion;
+      if (evidencePath) {
+        for (let attempt = 0; attempt < 20 && processGroupAlive(child.pid); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        if (processGroupAlive(child.pid)) throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+      }
     },
     async inspect() {
       if (exit === null) return { invocationId, cancelled: false, receipt: null, state: 'running' };
+      await completion;
+      if (evidencePath && processGroupAlive(child.pid)) {
+        return { invocationId, cancelled: false, receipt: null, state: 'unresolved' };
+      }
       return { invocationId, cancelled: cancelRequested, receipt: await receiptFor(), state: 'exited', exit: { ...exit } };
     },
     async wait() {
       await completion;
       const receipt = await receiptFor();
-      if (cancelRequested) return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
+      if (cancelRequested) {
+        if (evidencePath && processGroupAlive(child.pid)) throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
+        return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
+      }
       if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
       const changedFiles = (await git(workspace, ['diff', '--name-only', '--no-renames', 'HEAD'])).stdout
         .split(/\r?\n/).filter(Boolean);
@@ -124,6 +203,56 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
         usage: usageReporting ? extractTokenUsage(stdout.value()) : undefined });
     },
   });
+}
+
+/** A missing, incomplete, or still-running process never becomes a stop proof. */
+export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision, journalHash,
+  authorizations, probeProcess = processGroupId => {
+    if (process.platform === 'win32') return true;
+    return processGroupAlive(processGroupId);
+  } } = {}) {
+  const denied = { allStopped: false, revision, journalHash, receipt: null };
+  if (![evidenceDirectory, revision, journalHash].every(text) || !Array.isArray(authorizations) ||
+      !authorizations.length || typeof probeProcess !== 'function') return denied;
+  let root;
+  try { root = await realpath(evidenceDirectory); } catch { return denied; }
+  const names = await readdir(root);
+  if (names.length > 1000 || names.some(name => !/^native-worker-codex-[0-9a-f-]+\.jsonl$/.test(name))) return denied;
+  const records = [];
+  for (const name of names) {
+    const file = await open(path.join(root, name), constants.O_RDONLY | constants.O_NOFOLLOW).catch(() => null);
+    if (!file) return denied;
+    let raw;
+    try {
+      const stat = await file.stat();
+      if (!stat.isFile() || stat.size > 65536) return denied;
+      raw = await file.readFile('utf8');
+    } finally { await file.close(); }
+    if (!raw.endsWith('\n')) return denied;
+    let events;
+    try { events = raw.trimEnd().split('\n').map(line => JSON.parse(line)); }
+    catch { return denied; }
+    if (events.length !== 2 || events[0]?.schemaVersion !== 1 || events[0].event !== 'started' ||
+        events[1]?.schemaVersion !== 1 || events[1].event !== 'stopped' ||
+        events[0].invocationId !== events[1].invocationId ||
+        events[0].pid !== events[1].pid || !Number.isSafeInteger(events[0].pid) || events[0].pid <= 0 ||
+        events[0].processGroupId !== events[0].pid || events[1].processGroupId !== events[0].pid ||
+        !text(events[1].receipt) || events[0].objectiveRevision !== revision) return denied;
+    if (await probeProcess(events[0].processGroupId) !== false) return denied;
+    records.push({ started: events[0], stopped: events[1] });
+  }
+  if (!records.length || authorizations.some(authority =>
+    !text(authority?.leaseId) || !text(authority?.worktreeReceipt) ||
+    records.filter(record => record.started.leaseId === authority.leaseId &&
+      record.started.capabilityReceiptHash === authority.capabilityReceiptHash &&
+      record.started.worktreeReceipt === authority.worktreeReceipt).length !== 1)) return denied;
+  const receipt = `worker-stop:${createHash('sha256').update(JSON.stringify({ revision, journalHash,
+    records: records.map(record => ({ invocationId: record.started.invocationId,
+      leaseId: record.started.leaseId, pid: record.started.pid,
+      cancelled: record.stopped.cancelled, receipt: record.stopped.receipt }))
+      .sort((left, right) => left.invocationId.localeCompare(right.invocationId)) })).digest('hex')}`;
+  return { allStopped: true, revision, journalHash, receipt,
+    cancelledLeases: records.filter(record => record.stopped.cancelled === true).map(record => record.started.leaseId) };
 }
 
 /**

@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFileSync, spawn } from 'node:child_process';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
@@ -12,6 +12,7 @@ import {
   createLedgerBoundCodexExecutor,
   invokeLedgerBoundNative,
   startLocalCodexInvocation,
+  inspectNativeWorkerEvidence,
 } from '../../../.specify/scripts/node/gofer-native-adapter.mjs';
 import { createVerifiedNativeRuntime } from '../../../.specify/scripts/node/gofer-native-runtime.mjs';
 
@@ -319,6 +320,195 @@ describe('native adapter primitives', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'durably records a local worker start and confirmed cancellation outside its worktree',
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-native-evidence-'));
+      try {
+        const child = Object.assign(new EventEmitter(), {
+          pid: 99999999,
+          stdout: new EventEmitter(),
+          stderr: new EventEmitter(),
+          kill: vi.fn(() => true),
+        });
+        const signalProcessGroup = vi.fn(() => {
+          setTimeout(() => child.emit('close', null, 'SIGTERM'), 0);
+          return true;
+        });
+        const invocation = await startLocalCodexInvocation({
+          isolatedWorkspace: root,
+          prompt: 'Stop safely',
+          modelId: 'live-model',
+          capabilityReceiptHash: 'capability',
+          allowedWriteScope: ['tracked.txt'],
+          objectiveRevision: 'objective-v1',
+          leaseId: 'lease-v1',
+          worktreeReceipt: 'worktree-v1',
+          evidenceDirectory,
+          spawnProcess: () => child,
+          signalProcessGroup,
+        });
+        const [name] = await readdir(evidenceDirectory);
+        expect(name).toMatch(/^native-worker-codex-.+\.jsonl$/);
+        const started = (await readFile(path.join(evidenceDirectory, name), 'utf8'))
+          .trimEnd()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+        expect(started).toHaveLength(1);
+        expect(started[0]).toMatchObject({
+          event: 'started',
+          pid: child.pid,
+          objectiveRevision: 'objective-v1',
+          leaseId: 'lease-v1',
+          worktreeReceipt: 'worktree-v1',
+        });
+        const inspection = {
+          evidenceDirectory,
+          revision: 'objective-v1',
+          journalHash: 'journal-v1',
+          authorizations: [
+            {
+              leaseId: 'lease-v1',
+              worktreeReceipt: 'worktree-v1',
+              capabilityReceiptHash: 'capability',
+            },
+          ],
+          probeProcess: () => false,
+        };
+        expect((await inspectNativeWorkerEvidence(inspection)).allStopped).toBe(false);
+        await invocation.cancel();
+        expect(signalProcessGroup).toHaveBeenCalledWith(child.pid, 'SIGTERM');
+        const records = (await readFile(path.join(evidenceDirectory, name), 'utf8'))
+          .trimEnd()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+        expect(records).toHaveLength(2);
+        expect(records[1]).toMatchObject({
+          event: 'stopped',
+          invocationId: started[0].invocationId,
+          pid: child.pid,
+          cancelled: true,
+          exit: { code: null, signal: 'SIGTERM' },
+          receipt: expect.any(String),
+        });
+        expect(await inspectNativeWorkerEvidence(inspection)).toMatchObject({
+          allStopped: true,
+          cancelledLeases: ['lease-v1'],
+          receipt: expect.stringMatching(/^worker-stop:/),
+        });
+        expect(
+          (await inspectNativeWorkerEvidence({ ...inspection, probeProcess: () => true }))
+            .allStopped
+        ).toBe(false);
+        expect(
+          (
+            await inspectNativeWorkerEvidence({
+              ...inspection,
+              authorizations: [{ ...inspection.authorizations[0], worktreeReceipt: 'forged' }],
+            })
+          ).allStopped
+        ).toBe(false);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+        await rm(evidenceDirectory, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'does not place worker-stop evidence inside the model worktree',
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const spawnProcess = vi.fn();
+      try {
+        await expect(
+          startLocalCodexInvocation({
+            isolatedWorkspace: root,
+            prompt: 'Stop safely',
+            modelId: 'live-model',
+            capabilityReceiptHash: 'capability',
+            allowedWriteScope: ['tracked.txt'],
+            objectiveRevision: 'objective-v1',
+            leaseId: 'lease-v1',
+            worktreeReceipt: 'worktree-v1',
+            evidenceDirectory: path.join(root, 'evidence'),
+            spawnProcess,
+          })
+        ).rejects.toThrow('NATIVE_EVIDENCE_INSIDE_WORKTREE');
+        expect(spawnProcess).not.toHaveBeenCalled();
+        expect(await readdir(root)).toEqual([]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'stops a real local process group before issuing a worker-stop proof',
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
+      const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-native-evidence-'));
+      let readyResolve: (value: string) => void;
+      const ready = new Promise<string>((resolve) => {
+        readyResolve = resolve;
+      });
+      const script =
+        "const { spawn } = require('node:child_process');" +
+        "const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });" +
+        "process.stdout.write('ready:' + child.pid + '\\n'); setInterval(() => {}, 1000);";
+      let invocation: Awaited<ReturnType<typeof startLocalCodexInvocation>> | undefined;
+      try {
+        invocation = await startLocalCodexInvocation({
+          isolatedWorkspace: root,
+          prompt: 'No model call',
+          modelId: 'local-test',
+          capabilityReceiptHash: 'capability',
+          allowedWriteScope: ['tracked.txt'],
+          objectiveRevision: 'objective-v1',
+          leaseId: 'lease-v1',
+          worktreeReceipt: 'worktree-v1',
+          evidenceDirectory,
+          spawnProcess: (
+            _command: string,
+            _args: string[],
+            options: Parameters<typeof spawn>[2]
+          ) => {
+            const child = spawn(process.execPath, ['-e', script], options);
+            child.stdout?.once('data', (chunk) => readyResolve(String(chunk)));
+            return child;
+          },
+        });
+        await expect(
+          Promise.race([
+            ready,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('PROCESS_NOT_READY')), 2000)
+            ),
+          ])
+        ).resolves.toMatch(/^ready:\d+/);
+        await invocation.cancel();
+        const proof = await inspectNativeWorkerEvidence({
+          evidenceDirectory,
+          revision: 'objective-v1',
+          journalHash: 'journal-v1',
+          authorizations: [
+            {
+              leaseId: 'lease-v1',
+              worktreeReceipt: 'worktree-v1',
+              capabilityReceiptHash: 'capability',
+            },
+          ],
+        });
+        expect(proof.allStopped).toBe(true);
+      } finally {
+        await invocation?.cancel().catch(() => {});
+        await rm(root, { recursive: true, force: true });
+        await rm(evidenceDirectory, { recursive: true, force: true });
+      }
+    }
+  );
 
   it('creates a detached worktree at the verified source revision', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));

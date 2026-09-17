@@ -140,7 +140,7 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, veri
       if (!report.attemptsConsumed[event.task] || !text(event.leaseId) || !text(event.receipt) ||
           !text(event.capabilityReceiptHash)) { reasons.push('INVALID_LEDGER_AUTHORIZATION'); break; }
       authorizations.push({ taskId: event.task, leaseId: event.leaseId, receipt: event.receipt,
-        capabilityReceiptHash: event.capabilityReceiptHash });
+        capabilityReceiptHash: event.capabilityReceiptHash, worktreeReceipt: event.worktreeReceipt });
       authorizedTasks.set(event.task, event);
     }
     if (event.event === 'check') {
@@ -195,7 +195,8 @@ export async function inspectExecutionRecovery({ featureDir, verifyReceipt, veri
   if (typeof inspectWorkers !== 'function') reasons.push('WORKER_INSPECTION_REQUIRED');
   else {
     try {
-      const workers = await bounded(() => inspectWorkers({ revision: first.revision, journalHash }));
+      const workers = await bounded(() => inspectWorkers({ revision: first.revision, journalHash,
+        authorizations: structuredClone(authorizations) }));
       if (workers?.allStopped !== true || workers.revision !== first.revision ||
           workers.journalHash !== journalHash || !text(workers.receipt)) reasons.push('WORKERS_NOT_RECONCILED');
       else report.workerStopReceipt = workers.receipt;
