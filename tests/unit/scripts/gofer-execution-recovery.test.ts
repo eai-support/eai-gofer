@@ -235,7 +235,11 @@ describe('Read-only interrupted execution reconciliation', () => {
     expect(forged.status).toBe('blocked');
     expect(forged.reasons).toContain('INVALID_CANCELLATION_RECONCILIATION');
   });
-  it('writes a ledger-bound restart record only after both worktrees are inspected', async () => {
+  // The native worktree profile is not qualified on Windows; portable recovery cases above still run there.
+  const nativeCase = it.skipIf(process.platform === 'win32');
+  const restartTitle =
+    'writes a ledger-bound restart record only after both worktrees are inspected';
+  nativeCase(restartTitle, async () => {
     const f = await fixture();
     const source = await mkdtemp(path.join(tmpdir(), 'gofer-recovery-source-'));
     roots.push(source);
