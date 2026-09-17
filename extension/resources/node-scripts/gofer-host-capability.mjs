@@ -91,6 +91,7 @@ export function verifyCapabilityReceipt(receipt, { publicKey, now = Date.now(), 
   if (!receipt || receipt.schemaVersion !== 2 || receipt.host !== canonical ||
       !text(receipt.evaluatorVersion) || !text(receipt.evaluationId) || !text(receipt.hostVersion) ||
       parseTime(receipt.evaluatedAt) === null || parseTime(receipt.expiresAt) === null ||
+      parseTime(receipt.evaluatedAt) > now || parseTime(receipt.expiresAt) <= parseTime(receipt.evaluatedAt) ||
       parseTime(receipt.expiresAt) <= now || !Array.isArray(receipt.models) || !receipt.models.every(safeModel) ||
       new Set(receipt.models.map(model => model.id)).size !== receipt.models.length ||
       !Array.isArray(receipt.reasoningCapabilities) || !receipt.reasoningCapabilities.every(text) ||

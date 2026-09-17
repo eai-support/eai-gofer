@@ -92,6 +92,13 @@ describe('Gofer host capability discovery', () => {
       })
     ).toBe(true);
     expect(
+      verifyCapabilityReceipt(receipt, {
+        publicKey: keys.publicKey,
+        host: 'codex',
+        now: Date.parse('2026-09-16T23:59:59Z'),
+      })
+    ).toBe(false);
+    expect(
       selectLiveModel(receipt, {
         host: 'codex',
         modelId: 'gpt-current',

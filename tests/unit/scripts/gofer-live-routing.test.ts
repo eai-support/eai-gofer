@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
-import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import {
+  capabilityReceiptHash,
+  createCapabilityReceipt,
+} from '../../../.specify/scripts/node/gofer-host-capability.mjs';
 import { selectCapabilityRoute } from '../../../.specify/scripts/node/gofer-live-routing.mjs';
 
 describe('live capability routing', () => {
@@ -57,9 +60,42 @@ describe('live capability routing', () => {
   });
 
   it('rejects a caller-supplied benchmark result without an independent verifier', async () => {
-    await expect(selectCapabilityRoute({ benchmarkEvidence: { results: [] } })).rejects.toThrow(
-      'LIVE_RECEIPT_REQUIRED'
-    );
+    const keys = generateKeyPairSync('ed25519');
+    const receipt = createCapabilityReceipt({
+      host: 'antigravity',
+      evaluatorVersion: '2.0.0',
+      evaluationId: 'eval-2',
+      evaluatedAt: '2026-09-17T00:00:00.000Z',
+      expiresAt: '2026-09-17T01:00:00.000Z',
+      hostVersion: 'agy 1.2.4',
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'worktree',
+      provenance: { evaluator: 'native', source: 'agy models', keyId: 'key-2' },
+      signingKey: keys.privateKey,
+      models: [{ id: 'model-high', reasoningEfforts: ['high'] }],
+    });
+    await expect(
+      selectCapabilityRoute({
+        receipt,
+        publicKey: keys.publicKey,
+        host: 'antigravity',
+        now: Date.parse('2026-09-17T00:01:00Z'),
+        requiredCapabilities: { reasoningEfforts: ['high'] },
+        benchmarkEvidence: {
+          results: [
+            {
+              modelId: 'model-high',
+              receiptHash: capabilityReceiptHash(receipt),
+              functionalVerified: true,
+              reliability: 1,
+              costUsd: 0.1,
+            },
+          ],
+        },
+      })
+    ).rejects.toThrow('INDEPENDENT_BENCHMARK_REQUIRED');
   });
 
   it('rejects impossible caller-supplied benchmark metrics', async () => {
