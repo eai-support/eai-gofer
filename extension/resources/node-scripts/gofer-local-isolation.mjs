@@ -10,11 +10,7 @@ const text = value => typeof value === 'string' && value.trim().length > 0;
 export const LOCAL_ISOLATION_CONTRACT = 'eai.local-isolation/v1';
 
 const HOST_SURFACES = Object.freeze({
-  antigravity: 'antigravity-cli',
-  claude: 'claude-cli',
   codex: 'codex-cli',
-  copilot: 'copilot-cli',
-  grok: 'grok-cli',
 });
 
 function hasQualifiedHostArguments(host, args) {
@@ -30,7 +26,9 @@ export function verifyLocalIsolationReport(report, { host, workspaceRoot } = {})
   if (!surfaceId || !text(workspaceRoot) || !report || report.contractVersion !== LOCAL_ISOLATION_CONTRACT ||
       report.cloudExecution !== 'prohibited' || report.gitRepository !== true || !text(report.projectDirectory) ||
       !Array.isArray(report.assessments)) return false;
-  const assessment = report.assessments.find(item => item?.surfaceId === surfaceId);
+  const matchingAssessments = report.assessments.filter(item => item?.surfaceId === surfaceId);
+  if (matchingAssessments.length !== 1) return false;
+  const assessment = matchingAssessments[0];
   if (!assessment || assessment.status !== 'ready' || assessment.localOnly !== true ||
       assessment.requiresGitWorktree !== true || assessment.requiresOsSandbox !== true ||
       !hasQualifiedHostArguments(host, assessment.hostArguments) ||

@@ -29,6 +29,24 @@ describe('EAI local isolation contract', () => {
     expect(verifyLocalIsolationReport(readyReport, { host: 'codex', workspaceRoot })).toBe(true);
   });
 
+  it('rejects duplicate selected assessments and hosts without qualified arguments', () => {
+    expect(
+      verifyLocalIsolationReport(
+        {
+          ...readyReport,
+          assessments: [
+            readyReport.assessments[0],
+            { ...readyReport.assessments[0], status: 'missing-prerequisite' },
+          ],
+        },
+        { host: 'codex', workspaceRoot }
+      )
+    ).toBe(false);
+    for (const host of ['antigravity', 'claude', 'copilot', 'grok']) {
+      expect(verifyLocalIsolationReport(readyReport, { host, workspaceRoot })).toBe(false);
+    }
+  });
+
   it('rejects cloud, bypassable, or mismatched reports', () => {
     expect(
       verifyLocalIsolationReport(
