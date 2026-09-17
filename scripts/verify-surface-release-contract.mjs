@@ -28,6 +28,24 @@ const packagedRuntimeRoots = [
   'plugins/eai-gofer/plugins/eai-gofer',
   'extension/resources',
 ];
+const currentSurfaceRoots = [
+  'README.md',
+  'skills',
+  'plugin-skills',
+  '.claude',
+  '.github',
+  '.grok',
+  '.agents',
+  '.codex-plugin',
+  'extension/resources/claude-commands',
+  'extension/resources/claude-skills',
+  'extension/resources/copilot-prompts',
+  'extension/resources/github-skills',
+  'extension/resources/grok-skills',
+  'extension/resources/node-scripts',
+  'extension/resources/specify-commands',
+  'plugins/eai-gofer',
+];
 
 function parseArgs(argv) {
   const versionIndex = argv.indexOf('--version');
@@ -146,6 +164,27 @@ async function verifyCanonicalHostIdentity() {
     const currentHostGemini = content.split(/\r?\n/).find(line => prohibited.test(line) &&
       !/\bGemini\b[^\n]{0,50}\b(?:legacy|not|never)\b/i.test(line));
     if (currentHostGemini) throw new Error(`Current-host Gemini reference in ${relative}.`);
+  }
+
+  const files = [];
+  const walk = async relative => {
+    const absolute = path.join(repoRoot, relative);
+    const entry = await fs.stat(absolute);
+    if (entry.isFile()) {
+      files.push(relative);
+      return;
+    }
+    for (const child of await fs.readdir(absolute)) await walk(path.join(relative, child));
+  };
+  for (const root of currentSurfaceRoots) await walk(root);
+  const currentGemini = /\b(?:supported|current)\s+(?:AI\s+)?hosts?\s+(?:are|:)[^\n]*\bgemini\b/i;
+  for (const relative of files) {
+    const content = await fs.readFile(path.join(repoRoot, relative), 'utf8');
+    for (const line of content.split(/\r?\n/)) {
+      if (currentGemini.test(line) && !/\blegacy\b/i.test(line)) {
+        throw new Error(`Current-host Gemini reference in distributable surface ${relative}.`);
+      }
+    }
   }
 }
 
