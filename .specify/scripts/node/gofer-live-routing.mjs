@@ -50,6 +50,9 @@ function benchmarkResult(report, modelId, receiptHash) {
     durationMs += run.durationMs;
   }
   if (cases.size !== report.caseCount || [...cases.values()].some(repetitions => repetitions.size !== 3) ||
+      !Number.isFinite(report.reliability) || report.reliability < 0 || report.reliability > 1 ||
+      !Number.isFinite(report.costUsd) || report.costUsd < 0 ||
+      !Number.isFinite(report.durationMs) || report.durationMs < 0 ||
       report.functionalPasses !== passes || report.functionalRuns !== report.runs.length ||
       Math.abs(report.reliability - passes / report.runs.length) > 1e-12 ||
       Math.abs(report.costUsd - costUsd) > 1e-9 || report.durationMs !== durationMs ||

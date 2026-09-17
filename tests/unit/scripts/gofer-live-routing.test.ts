@@ -195,5 +195,21 @@ describe('live capability routing', () => {
         }),
       })
     ).rejects.toThrow('NO_VERIFIED_BENCHMARK_MATCH');
+    for (const metric of ['reliability', 'costUsd', 'durationMs']) {
+      await expect(
+        selectCapabilityRoute({
+          receipt,
+          publicKey: keys.publicKey,
+          host: 'antigravity',
+          now: Date.parse('2026-09-17T00:01:00Z'),
+          benchmarkEvidence: { ...benchmarkEvidence, [metric]: Number.NaN },
+          verifyBenchmark: async ({ receiptHash }) => ({
+            valid: true,
+            receiptHash,
+            receipt: 'benchmark-verifier-receipt',
+          }),
+        })
+      ).rejects.toThrow('NO_VERIFIED_BENCHMARK_MATCH');
+    }
   });
 });
