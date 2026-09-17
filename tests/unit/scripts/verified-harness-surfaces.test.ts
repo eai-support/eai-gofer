@@ -64,4 +64,16 @@ describe('Verified harness instruction and release preservation (not native exec
       '--retry 0'
     );
   });
+  it('ships the observed Antigravity isolation failure as a qualification block', () => {
+    for (const file of [
+      '.specify/references/verified-agent-execution.md',
+      'extension/resources/references/verified-agent-execution.md',
+    ]) {
+      const guidance = read(file);
+      expect(guidance).toContain('`agy` 1.2.4');
+      expect(guidance).toContain('global Antigravity scratch');
+      expect(guidance).toContain('directory instead of that workspace');
+      expect(guidance).toContain('Do not qualify Antigravity native delegation');
+    }
+  });
 });
