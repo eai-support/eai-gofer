@@ -214,6 +214,5 @@ After bootstrap, each repository gets a user-owned model policy at:
 The shipped default is copied from `.specify/templates/gofer-model-policy.yaml`
 and is not overwritten by bootstrap. Use it only to constrain cost, quality, and
 capability classes. Fresh signed host receipts and independent benchmark evidence
-select the model for Claude, Codex/OpenAI, Google Antigravity, and Copilot. Copilot
-defaults to `Auto` for simple/default work because exact model availability is
-controlled by the Copilot client, plan, and organization policy.
+select the model for Claude, Codex/OpenAI, Google Antigravity, Copilot, Grok,
+and VS Code. No static provider default qualifies a model for execution.
