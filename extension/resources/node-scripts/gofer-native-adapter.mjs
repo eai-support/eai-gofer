@@ -33,6 +33,29 @@ function boundedCollector(limit = 1024 * 1024) {
   };
 }
 
+function tokenUsage(value) {
+  if (!value || typeof value !== 'object') return null;
+  const inputTokens = value.input_tokens ?? value.inputTokens;
+  const cachedInputTokens = value.cached_input_tokens ?? value.cachedInputTokens ?? 0;
+  const outputTokens = value.output_tokens ?? value.outputTokens;
+  if (![inputTokens, cachedInputTokens, outputTokens].every(item => Number.isInteger(item) && item >= 0)) return null;
+  return Object.freeze({ inputTokens, cachedInputTokens, outputTokens });
+}
+
+function extractTokenUsage(jsonl) {
+  const findings = [];
+  const visit = value => {
+    if (!value || typeof value !== 'object') return;
+    const direct = tokenUsage(value);
+    if (direct) findings.push(direct);
+    for (const item of Object.values(value)) visit(item);
+  };
+  for (const line of jsonl.split(/\r?\n/)) {
+    try { visit(JSON.parse(line)); } catch { /* Non-JSON host diagnostics are not usage evidence. */ }
+  }
+  return findings.at(-1) ?? null;
+}
+
 /**
  * Start a real local Codex process in a pre-created isolated worktree. This
  * primitive deliberately has no fallback host or cloud mode. Its receipt is
@@ -41,7 +64,7 @@ function boundedCollector(limit = 1024 * 1024) {
  */
 export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, modelId,
   capabilityReceiptHash, allowedWriteScope, command = 'codex', spawnProcess = spawn,
-  receiptDirectory = tmpdir() } = {}) {
+  receiptDirectory = tmpdir(), usageReporting = false } = {}) {
   if (!text(isolatedWorkspace) || !text(prompt) || !text(modelId) || !text(capabilityReceiptHash) ||
       !Array.isArray(allowedWriteScope) || !allowedWriteScope.length ||
       allowedWriteScope.some(scope => !safeScope(scope)) || !text(command)) throw new Error('INVALID_NATIVE_REQUEST');
@@ -97,7 +120,8 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
         throw new Error('NATIVE_SCOPE_VIOLATION');
       }
       return Object.freeze({ invocationId, capabilityReceiptHash, receipt, changedFiles,
-        outputPath, isolation: QUALIFIED_LOCAL_ISOLATION });
+        outputPath, isolation: QUALIFIED_LOCAL_ISOLATION,
+        usage: usageReporting ? extractTokenUsage(stdout.value()) : undefined });
     },
   });
 }
@@ -128,6 +152,7 @@ export function createLedgerBoundCodexExecutor({ isolatedWorkspace, capabilityRe
           leaseId: request.leaseId,
           budgetReservation: request.budgetReservation,
           approvalReceipt: request.approvalReceipt,
+          usageReporting: request.usageReporting === true,
         },
         capabilityReceipt,
         capabilityPublicKey,

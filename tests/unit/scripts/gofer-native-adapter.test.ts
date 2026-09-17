@@ -150,6 +150,7 @@ describe('native adapter primitives', () => {
         approvalReceipt: 'approval-1',
         ledgerAuthorityReceipt: 'graph-ledger-receipt',
         selectedModel: 'live',
+        usageReporting: true,
       })
     ).resolves.toMatchObject({ invocationId: 'native-1', receipt: 'complete' });
     expect(start).toHaveBeenCalledWith(
@@ -159,6 +160,7 @@ describe('native adapter primitives', () => {
         prompt: 'Complete the approved task.',
         objectiveRevision: 'objective-1',
         allowedWriteScope: ['src/'],
+        usageReporting: true,
       })
     );
   });
@@ -225,6 +227,15 @@ describe('native adapter primitives', () => {
           kill: vi.fn(() => true),
         });
         setTimeout(async () => {
+          child.stdout.emit(
+            'data',
+            Buffer.from(
+              JSON.stringify({
+                type: 'turn.completed',
+                usage: { input_tokens: 120, cached_input_tokens: 40, output_tokens: 30 },
+              }) + '\n'
+            )
+          );
           await writeFile(path.join(root, 'tracked.txt'), 'changed');
           child.emit('close', 0, null);
         }, 0);
@@ -236,6 +247,7 @@ describe('native adapter primitives', () => {
         modelId: 'live-model',
         capabilityReceiptHash: 'receipt-hash',
         allowedWriteScope: ['tracked.txt'],
+        usageReporting: true,
         spawnProcess,
       });
       await expect(invocation.wait()).resolves.toMatchObject({
@@ -243,6 +255,7 @@ describe('native adapter primitives', () => {
         capabilityReceiptHash: 'receipt-hash',
         changedFiles: ['tracked.txt'],
         isolation: 'git-worktree+local-os-sandbox',
+        usage: { inputTokens: 120, cachedInputTokens: 40, outputTokens: 30 },
       });
       expect(spawnProcess).toHaveBeenCalledOnce();
       expect(spawnProcess.mock.calls[0][0]).toBe('codex');
