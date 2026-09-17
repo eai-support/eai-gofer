@@ -88,7 +88,7 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         // adapter performs input reads, checks, and commits in the task worktree.
         const evidenceDirectory = path.join(controllerRoot, '.native-worker-evidence');
         const executor = createLedgerBoundCodexExecutor({ isolatedWorkspace: isolation.isolatedWorkspace,
-          worktreeReceipt: isolation.receipt,
+          worktreeReceipt: isolation.receipt, expectedHead: isolation.revision,
           capabilityReceipt, capabilityPublicKey, requiredCapabilities,
           assertLedger: request => ledger.authorizeNative(request), promptForRequest,
           start: request => startLocalCodexInvocation({ ...request,

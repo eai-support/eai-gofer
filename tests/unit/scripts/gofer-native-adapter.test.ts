@@ -184,6 +184,7 @@ describe('native adapter primitives', () => {
     const executor = createLedgerBoundCodexExecutor({
       isolatedWorkspace: '/isolated',
       worktreeReceipt: 'worktree-1',
+      expectedHead: 'approved-head',
       capabilityReceipt: receipt,
       capabilityPublicKey: keys.publicKey,
       requiredCapabilities: { reasoningEfforts: ['high'] },
@@ -213,6 +214,7 @@ describe('native adapter primitives', () => {
     expect(start).toHaveBeenCalledWith(
       expect.objectContaining({
         isolatedWorkspace: '/isolated',
+        expectedHead: 'approved-head',
         modelId: 'live',
         prompt: 'Complete the approved task.',
         objectiveRevision: 'objective-1',
@@ -338,6 +340,93 @@ describe('native adapter primitives', () => {
           shell: false,
         })
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a worker commit even when Git reports a clean worktree', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-commit-'));
+    try {
+      execFileSync('git', ['init', root]);
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+      await writeFile(path.join(root, 'tracked.txt'), 'base');
+      execFileSync('git', ['-C', root, 'add', '.']);
+      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const expectedHead = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
+        encoding: 'utf8',
+      }).trim();
+      const deniedSpawn = vi.fn();
+      await expect(
+        startLocalCodexInvocation({
+          isolatedWorkspace: root,
+          expectedHead: 'not-the-approved-head',
+          prompt: 'Change tracked.txt',
+          modelId: 'live-model',
+          capabilityReceiptHash: 'receipt-hash',
+          allowedWriteScope: ['tracked.txt'],
+          spawnProcess: deniedSpawn,
+        })
+      ).rejects.toThrow('NATIVE_GIT_BASELINE_MISMATCH');
+      expect(deniedSpawn).not.toHaveBeenCalled();
+      const child = Object.assign(new EventEmitter(), {
+        stdout: new EventEmitter(),
+        stderr: new EventEmitter(),
+        kill: vi.fn(() => true),
+      });
+      const invocation = await startLocalCodexInvocation({
+        isolatedWorkspace: root,
+        expectedHead,
+        prompt: 'Change tracked.txt',
+        modelId: 'live-model',
+        capabilityReceiptHash: 'receipt-hash',
+        allowedWriteScope: ['tracked.txt'],
+        spawnProcess: () => {
+          setTimeout(async () => {
+            await writeFile(path.join(root, 'tracked.txt'), 'changed');
+            execFileSync('git', ['-C', root, 'add', 'tracked.txt']);
+            execFileSync('git', ['-C', root, 'commit', '-m', 'unauthorized']);
+            child.emit('close', 0, null);
+          }, 0);
+          return child;
+        },
+      });
+      await expect(invocation.wait()).rejects.toThrow('NATIVE_UNAUTHORIZED_GIT_CHANGE');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a new worker branch even when HEAD and file status do not change', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-ref-'));
+    try {
+      execFileSync('git', ['init', root]);
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'test@example.com']);
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Test']);
+      await writeFile(path.join(root, 'tracked.txt'), 'base');
+      execFileSync('git', ['-C', root, 'add', '.']);
+      execFileSync('git', ['-C', root, 'commit', '-m', 'base']);
+      const child = Object.assign(new EventEmitter(), {
+        stdout: new EventEmitter(),
+        stderr: new EventEmitter(),
+        kill: vi.fn(() => true),
+      });
+      const invocation = await startLocalCodexInvocation({
+        isolatedWorkspace: root,
+        prompt: 'Do not change files',
+        modelId: 'live-model',
+        capabilityReceiptHash: 'receipt-hash',
+        allowedWriteScope: ['tracked.txt'],
+        spawnProcess: () => {
+          setTimeout(() => {
+            execFileSync('git', ['-C', root, 'branch', 'unauthorized']);
+            child.emit('close', 0, null);
+          }, 0);
+          return child;
+        },
+      });
+      await expect(invocation.wait()).rejects.toThrow('NATIVE_UNAUTHORIZED_GIT_CHANGE');
     } finally {
       await rm(root, { recursive: true, force: true });
     }

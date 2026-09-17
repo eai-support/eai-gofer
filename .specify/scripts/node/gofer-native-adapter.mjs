@@ -70,7 +70,7 @@ function extractTokenUsage(jsonl) {
 export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, modelId,
   capabilityReceiptHash, allowedWriteScope, command = 'codex', spawnProcess = spawn,
   receiptDirectory = tmpdir(), evidenceDirectory, objectiveRevision, leaseId,
-  worktreeReceipt, signalProcessGroup = (pid, signal) => process.kill(-pid, signal),
+  worktreeReceipt, expectedHead, signalProcessGroup = (pid, signal) => process.kill(-pid, signal),
   usageReporting = false } = {}) {
   if (!text(isolatedWorkspace) || !text(prompt) || !text(modelId) || !text(capabilityReceiptHash) ||
       !Array.isArray(allowedWriteScope) || !allowedWriteScope.length ||
@@ -78,6 +78,13 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       (evidenceDirectory && (![objectiveRevision, leaseId, worktreeReceipt].every(text)))) throw new Error('INVALID_NATIVE_REQUEST');
   const workspace = await realpath(isolatedWorkspace);
   const outputRoot = await realpath(receiptDirectory);
+  // A clean file-status result does not reveal a commit or a new branch made
+  // by the worker. Capture both HEAD and shared refs before native execution.
+  const gitBaseline = await Promise.all([
+    git(workspace, ['rev-parse', 'HEAD']),
+    git(workspace, ['for-each-ref', '--format=%(refname) %(objectname)']),
+  ]).then(([head, refs]) => ({ head: head.stdout.trim(), refs: refs.stdout })).catch(() => null);
+  if (expectedHead && gitBaseline?.head !== expectedHead) throw new Error('NATIVE_GIT_BASELINE_MISMATCH');
   let evidenceRoot;
   if (evidenceDirectory) {
     if (process.platform === 'win32') throw new Error('NATIVE_PROCESS_GROUP_UNAVAILABLE');
@@ -194,6 +201,14 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
         return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
       }
       if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
+      if (!gitBaseline) throw new Error('NATIVE_GIT_BASELINE_REQUIRED');
+      const [head, refs] = await Promise.all([
+        git(workspace, ['rev-parse', 'HEAD']),
+        git(workspace, ['for-each-ref', '--format=%(refname) %(objectname)']),
+      ]);
+      if (head.stdout.trim() !== gitBaseline.head || refs.stdout !== gitBaseline.refs) {
+        throw new Error('NATIVE_UNAUTHORIZED_GIT_CHANGE');
+      }
       const status = await git(workspace, ['-c', 'status.renames=false', 'status', '--porcelain=v1', '-z',
         '--untracked-files=all', '--ignored=matching']);
       const entries = status.stdout.split('\0').filter(Boolean);
@@ -267,7 +282,7 @@ export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision,
  * prevents a caller from substituting a safe-looking local launcher after
  * the graph has authorised a different task, scope, lease, or approval.
  */
-export function createLedgerBoundCodexExecutor({ isolatedWorkspace, worktreeReceipt, capabilityReceipt, capabilityPublicKey,
+export function createLedgerBoundCodexExecutor({ isolatedWorkspace, worktreeReceipt, expectedHead, capabilityReceipt, capabilityPublicKey,
   requiredCapabilities, assertLedger, promptForRequest, start = startLocalCodexInvocation } = {}) {
   if (!text(isolatedWorkspace) || !text(worktreeReceipt) || !capabilityReceipt || !capabilityPublicKey ||
       typeof assertLedger !== 'function' || typeof promptForRequest !== 'function' || typeof start !== 'function') {
@@ -299,7 +314,7 @@ export function createLedgerBoundCodexExecutor({ isolatedWorkspace, worktreeRece
           if (authority?.receipt !== request.ledgerAuthorityReceipt) throw new Error('LEDGER_AUTHORITY_REQUIRED');
           return authority;
         },
-        start: nativeRequest => start({ isolatedWorkspace, prompt, modelId: request.selectedModel,
+        start: nativeRequest => start({ isolatedWorkspace, expectedHead, prompt, modelId: request.selectedModel,
           allowedWriteScope: request.allowedEditScope, ...nativeRequest }),
         signal: request.signal,
       });
