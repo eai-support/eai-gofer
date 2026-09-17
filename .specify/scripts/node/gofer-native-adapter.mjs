@@ -367,7 +367,7 @@ export function createNativeCancellationVerifier({ workspaceRoot, abandonedWorks
     if (![request?.taskId, request?.revision, request?.leaseId, request?.journalHash,
       request?.workerStopReceipt, request?.abandonedWorktreeReceipt,
       request?.replacementWorktreeReceipt, request?.capabilityReceiptHash,
-      request?.inputRevision].every(text) || request.revision !== worktreeRevision) return denied;
+      request?.inputRevision].every(text)) return denied;
     try {
       const [oldWorktree, newWorktree, evidenceRoot] = await Promise.all([
         inspectVerifiedWorktree({ workspaceRoot, isolatedWorkspace: abandonedWorkspace,

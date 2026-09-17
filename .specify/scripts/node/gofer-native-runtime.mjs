@@ -5,7 +5,9 @@
  */
 import path from 'node:path';
 import { createVerifiedWorktree, createLedgerBoundCodexExecutor, startLocalCodexInvocation,
-  inspectNativeWorkerEvidence } from './gofer-native-adapter.mjs';
+  inspectNativeWorkerEvidence, createNativeCancellationVerifier } from './gofer-native-adapter.mjs';
+import { createRuntimeLedger } from './gofer-runtime-ledger.mjs';
+import { reconcileCancelledExecution } from './gofer-execution-recovery.mjs';
 import { runVerifiedGraph } from './gofer-verified-execution.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -38,4 +40,23 @@ export async function createVerifiedNativeRuntime({ workspaceRoot, host = 'codex
         advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent, deadlineMs, signal, recovery: trustedRecovery });
     },
   });
+}
+
+/** Reopen the dispatch ledger with native cancellation proof after a controller restart. */
+export async function reconcileVerifiedNativeCancellation({ featureDir, ledgerPath, workspaceRoot,
+  abandonedWorkspace, replacementWorkspace, worktreeRevision, replacementWorktreeReceipt,
+  inputRevision, inspectInputRevision, verifyReceipt, timeoutMs } = {}) {
+  if (![featureDir, ledgerPath, workspaceRoot, abandonedWorkspace, replacementWorkspace,
+    worktreeRevision, replacementWorktreeReceipt, inputRevision].every(text) ||
+    !path.isAbsolute(ledgerPath) || typeof inspectInputRevision !== 'function' ||
+    typeof verifyReceipt !== 'function') throw new Error('NATIVE_RECOVERY_CONFIGURATION_REQUIRED');
+  const evidenceDirectory = path.join(featureDir, '.native-worker-evidence');
+  const verifyCancellation = createNativeCancellationVerifier({ workspaceRoot,
+    abandonedWorkspace, replacementWorkspace, worktreeRevision,
+    evidenceDirectory, inspectInputRevision });
+  const ledger = await createRuntimeLedger({ ledgerPath, verifyCancellation });
+  return reconcileCancelledExecution({ featureDir, workspaceRoot, abandonedWorkspace,
+    replacementWorkspace, worktreeRevision, replacementWorktreeReceipt, inputRevision,
+    ledger, verifyReceipt, timeoutMs,
+    inspectWorkers: request => inspectNativeWorkerEvidence({ ...request, evidenceDirectory }) });
 }

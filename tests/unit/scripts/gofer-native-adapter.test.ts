@@ -611,11 +611,12 @@ describe('native adapter primitives', () => {
           host: 'codex',
           localIsolation: localIsolation(root),
         });
+        const objectiveRevision = 'objective-v1';
         const started = {
           schemaVersion: 1,
           event: 'started',
           invocationId: 'codex-test',
-          objectiveRevision: abandoned.revision,
+          objectiveRevision,
           leaseId: 'lease-1',
           worktreeReceipt: abandoned.receipt,
           capabilityReceiptHash: 'capability-1',
@@ -636,7 +637,7 @@ describe('native adapter primitives', () => {
         await writeFile(evidencePath, `${JSON.stringify(started)}\n${JSON.stringify(stopped)}\n`);
         const workers = await inspectNativeWorkerEvidence({
           evidenceDirectory,
-          revision: abandoned.revision,
+          revision: objectiveRevision,
           journalHash: 'journal-1',
           authorizations: [
             {
@@ -659,7 +660,7 @@ describe('native adapter primitives', () => {
         });
         const request = {
           taskId: 'T001',
-          revision: abandoned.revision,
+          revision: objectiveRevision,
           leaseId: 'lease-1',
           journalHash: 'journal-1',
           workerStopReceipt: workers.receipt,
@@ -671,7 +672,7 @@ describe('native adapter primitives', () => {
         expect((await verify(request)).valid).toBe(true);
         expect(inspectInputRevision).toHaveBeenCalledWith({
           taskId: 'T001',
-          revision: abandoned.revision,
+          revision: objectiveRevision,
           isolatedWorkspace: replacement.isolatedWorkspace,
           worktreeReceipt: replacement.receipt,
         });
