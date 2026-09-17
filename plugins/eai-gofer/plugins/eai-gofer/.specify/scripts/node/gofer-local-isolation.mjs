@@ -4,7 +4,7 @@
 import { execFile, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { accessSync, constants, existsSync, mkdtempSync, realpathSync, rmSync, rmdirSync, statSync } from 'node:fs';
-import { delimiter, dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -13,6 +13,30 @@ const text = value => typeof value === 'string' && value.trim().length > 0;
 // closed until the host contract is reviewed.
 const CODEX_MACOS_SIGNATURE_REQUIREMENT =
   '=anchor apple generic and certificate leaf[subject.OU] = "2DC432GLL2"';
+const CODEX_PROFILE = 'gofer-isolated';
+
+/** Build one policy for both the no-model probe and the native invocation. */
+export function codexIsolatedPermissionArgs(workspaceRoot) {
+  if (!text(workspaceRoot)) return null;
+  const git = spawnSync('/usr/bin/git', ['-C', workspaceRoot, 'rev-parse',
+    '--path-format=absolute', '--git-common-dir'],
+  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000,
+    env: Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))) });
+  if (git.status !== 0 || !git.stdout?.trim()) return null;
+  let common;
+  let workspace;
+  try {
+    common = realpathSync(git.stdout.trim());
+    workspace = realpathSync(workspaceRoot);
+  } catch { return null; }
+  if (common === workspace) return null;
+  return Object.freeze({ common,
+    config: Object.freeze([
+      `permissions.${CODEX_PROFILE}.extends=":workspace"`,
+      `permissions.${CODEX_PROFILE}.filesystem={ ":tmpdir" = "read", ":slash_tmp" = "read", ${JSON.stringify(common)} = "read" }`,
+      `default_permissions="${CODEX_PROFILE}"`,
+    ]) });
+}
 
 function signedCodexExecutable() {
   if (process.platform !== 'darwin') return null;
@@ -40,27 +64,17 @@ function signedCodexExecutable() {
 export function probeMacCodexSandboxBoundary({ workspaceRoot, executable, runSandbox = spawnSync } = {}) {
   if (!workspaceRoot || !executable || !existsSync('/usr/bin/touch') ||
       typeof runSandbox !== 'function') return null;
-  const git = spawnSync('/usr/bin/git', ['-C', workspaceRoot, 'rev-parse',
-    '--path-format=absolute', '--git-common-dir'],
-  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000,
-    env: Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))) });
-  if (git.status !== 0 || !git.stdout?.trim()) return null;
-  let common;
-  try { common = realpathSync(git.stdout.trim()); }
-  catch { return null; }
-  let commonRelative;
-  try { commonRelative = relative(realpathSync(workspaceRoot), common); }
-  catch { return null; }
-  if (commonRelative === '' || (commonRelative !== '..' &&
-      !commonRelative.startsWith(`..${sep}`) && !isAbsolute(commonRelative))) return null;
+  const policy = codexIsolatedPermissionArgs(workspaceRoot);
+  if (!policy) return null;
   let sibling;
   try { sibling = mkdtempSync(join(dirname(workspaceRoot), '.gofer-isolation-probe-')); }
   catch { return null; }
   const inside = join(workspaceRoot, `.gofer-isolation-probe-${randomUUID()}`);
   const outside = join(sibling, 'outside');
-  const sharedGit = join(common, `.gofer-isolation-probe-${randomUUID()}`);
+  const sharedGit = join(policy.common, `.gofer-isolation-probe-${randomUUID()}`);
   const probe = target => runSandbox(executable,
-    ['sandbox', '-P', ':workspace', '-C', workspaceRoot, '--', '/usr/bin/touch', target],
+    ['sandbox', '-P', CODEX_PROFILE, ...policy.config.flatMap(value => ['-c', value]),
+      '-C', workspaceRoot, '--', '/usr/bin/touch', target],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000, maxBuffer: 16384 });
   const denied = result => result.status !== 0 && !result.error &&
     /Operation not permitted|Permission denied/i.test(`${result.stderr}\n${result.stdout}`);

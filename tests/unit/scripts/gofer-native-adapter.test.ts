@@ -325,8 +325,12 @@ describe('native adapter primitives', () => {
         'never',
         'exec',
         '--ignore-user-config',
-        '--sandbox',
-        'workspace-write',
+        '-c',
+        'permissions.gofer-isolated.extends=":workspace"',
+        '-c',
+        expect.stringContaining('permissions.gofer-isolated.filesystem='),
+        '-c',
+        'default_permissions="gofer-isolated"',
         '--json',
         '--output-last-message',
         expect.stringMatching(/gofer-codex-.*\.md$/),
@@ -482,6 +486,7 @@ describe('native adapter primitives', () => {
   it('confirms the Codex process has exited before treating cancellation as complete', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-adapter-'));
     try {
+      execFileSync('git', ['init', root]);
       const child = Object.assign(new EventEmitter(), {
         stdout: new EventEmitter(),
         stderr: new EventEmitter(),
@@ -519,6 +524,7 @@ describe('native adapter primitives', () => {
       const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
       const evidenceDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-native-evidence-'));
       try {
+        execFileSync('git', ['init', root]);
         const child = Object.assign(new EventEmitter(), {
           pid: 99999999,
           stdout: new EventEmitter(),
@@ -615,6 +621,7 @@ describe('native adapter primitives', () => {
       const root = await mkdtemp(path.join(tmpdir(), 'gofer-native-worktree-'));
       const spawnProcess = vi.fn();
       try {
+        execFileSync('git', ['init', root]);
         await expect(
           startLocalCodexInvocation({
             isolatedWorkspace: root,
@@ -630,7 +637,7 @@ describe('native adapter primitives', () => {
           })
         ).rejects.toThrow('NATIVE_EVIDENCE_INSIDE_WORKTREE');
         expect(spawnProcess).not.toHaveBeenCalled();
-        expect(await readdir(root)).toEqual([]);
+        expect(await readdir(root)).toEqual(['.git']);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -652,6 +659,7 @@ describe('native adapter primitives', () => {
         "process.stdout.write('ready:' + child.pid + '\\n'); setInterval(() => {}, 1000);";
       let invocation: Awaited<ReturnType<typeof startLocalCodexInvocation>> | undefined;
       try {
+        execFileSync('git', ['init', root]);
         invocation = await startLocalCodexInvocation({
           isolatedWorkspace: root,
           prompt: 'No model call',

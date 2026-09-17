@@ -8,7 +8,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
-import { verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
+import { codexIsolatedPermissionArgs, verifyLocalIsolationReport } from './gofer-local-isolation.mjs';
 
 const execFileAsync = promisify(execFile);
 const text = value => typeof value === 'string' && value.trim().length > 0;
@@ -77,6 +77,8 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       allowedWriteScope.some(scope => !safeScope(scope)) || !text(command) ||
       (evidenceDirectory && (![objectiveRevision, leaseId, worktreeReceipt].every(text)))) throw new Error('INVALID_NATIVE_REQUEST');
   const workspace = await realpath(isolatedWorkspace);
+  const sandboxPolicy = codexIsolatedPermissionArgs(workspace);
+  if (!sandboxPolicy) throw new Error('LOCAL_SANDBOX_REQUIRED');
   const outputRoot = await realpath(receiptDirectory);
   // A clean file-status result does not reveal a commit or a new branch made
   // by the worker. Capture both HEAD and shared refs before native execution.
@@ -103,7 +105,8 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
   }
   const outputPath = path.join(outputRoot, `gofer-codex-${randomUUID()}.md`);
   const args = ['--ask-for-approval', 'never', 'exec', '--ignore-user-config',
-    '--sandbox', 'workspace-write', '--json', '--output-last-message', outputPath,
+    ...sandboxPolicy.config.flatMap(value => ['-c', value]),
+    '--json', '--output-last-message', outputPath,
     '--model', modelId, prompt];
   const stdout = boundedCollector();
   const stderr = boundedCollector();

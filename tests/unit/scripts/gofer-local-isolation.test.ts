@@ -62,6 +62,12 @@ describe('EAI local isolation contract', () => {
         });
         const common = realpathSync(path.join(repository, '.git'));
         const sandbox = (sharedGitWritable: boolean) => (_command: string, args: string[]) => {
+          expect(args).toContain('gofer-isolated');
+          expect(args).toContain('default_permissions="gofer-isolated"');
+          expect(
+            args.find((value) => value.includes('permissions.gofer-isolated.filesystem='))
+          ).toContain('":tmpdir" = "read"');
+          expect(args).not.toContain('--sandbox');
           const target = args.at(-1)!;
           if (
             target.startsWith(worker + path.sep) ||
