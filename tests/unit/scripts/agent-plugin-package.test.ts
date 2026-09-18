@@ -361,6 +361,13 @@ describe('Gofer agent plugin package', () => {
       expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
     }
     for (const prefix of ['plugins/eai-gofer', 'plugins/eai-gofer/plugins/eai-gofer']) {
+      const eaiAgent = fs.readFileSync(
+        path.join(REPO_ROOT, prefix, '.github', 'agents', 'eai.agent.md'),
+        'utf8'
+      );
+      expect(eaiAgent).toContain('Use `.github/prompts/eai.prompt.md` as the canonical');
+      expect(eaiAgent).toContain('.specify/commands/*.md');
+
       for (const suffix of ['.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']) {
         const marketplace = readJson<{ plugins: Array<{ tags: string[] }> }>(
           path.join(REPO_ROOT, prefix, suffix)
