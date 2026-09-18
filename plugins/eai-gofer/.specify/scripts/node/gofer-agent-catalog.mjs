@@ -156,7 +156,9 @@ function validateScope(scope) {
 
 function proofMatches(proof, binding) {
   return isRecord(proof) && proof.kind === 'native-proof' && isRecord(proof.binding) &&
-    Object.keys(binding).every(key => JSON.stringify(proof.binding[key]) === JSON.stringify(binding[key])) &&
+    Object.keys(proof.binding).length === Object.keys(binding).length &&
+    Object.keys(binding).every(key => Object.hasOwn(proof.binding, key) &&
+      JSON.stringify(proof.binding[key]) === JSON.stringify(binding[key])) &&
     CAPABILITIES.every(key => typeof proof[key] === 'boolean') &&
     Array.isArray(proof.evidence) && proof.evidence.length > 0 &&
     proof.evidence.every(ref => typeof ref === 'string' && ref.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(ref));

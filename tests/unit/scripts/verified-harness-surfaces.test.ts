@@ -39,6 +39,38 @@ describe('Verified harness instruction and release preservation (not native exec
       );
     }
   });
+  it('selects model identity from live evidence in every packaged command', () => {
+    for (const directory of [
+      '.specify/commands',
+      'plugins/eai-gofer/.specify/commands',
+      'plugins/eai-gofer/plugins/eai-gofer/.specify/commands',
+      'tests/fixtures/golden/claude-commands',
+    ]) {
+      for (const file of readdirSync(path.join(root, directory)).filter((name) =>
+        name.endsWith('.md')
+      )) {
+        const body = read(`${directory}/${file}`);
+        const policy = body.match(
+          /<!-- gofer:token-cost-policy:start -->([\s\S]*?)<!-- gofer:token-cost-policy:end -->/
+        )?.[1];
+        expect(policy, `${directory}/${file}`).toBeDefined();
+        expect(policy).toContain('live router qualifies for this task');
+        expect(policy).toContain('signed host receipt and independent benchmark evidence');
+        expect(policy).not.toMatch(/Haiku|GPT mini|Opus|Flash|prefer Auto/);
+      }
+    }
+  });
+  it('does not override live selection with a static Copilot default', () => {
+    for (const file of [
+      '.github/copilot-instructions.md',
+      '.github/instructions/gofer-cost.instructions.md',
+      'extension/resources/copilot-instructions/gofer-cost.instructions.md',
+    ]) {
+      const guidance = read(file);
+      expect(guidance).toContain('fresh signed host receipt and independent');
+      expect(guidance).not.toContain('Use Copilot `Auto` for simple/default work');
+    }
+  });
   it('preserves all six required validation specialties without a forced native Task invocation', () => {
     const body = read('.specify/commands/6_gofer_validate.md');
     for (const role of [
@@ -63,5 +95,23 @@ describe('Verified harness instruction and release preservation (not native exec
     expect(JSON.parse(read('package.json')).scripts['test:verified-harness']).toContain(
       '--retry 0'
     );
+  });
+  it('ships the observed Antigravity isolation failure as a qualification block', () => {
+    for (const file of [
+      '.specify/references/verified-agent-execution.md',
+      'extension/resources/references/verified-agent-execution.md',
+    ]) {
+      const guidance = read(file);
+      expect(guidance).toContain('`agy` 1.2.4');
+      expect(guidance).toContain('global Antigravity scratch');
+      expect(guidance).toContain('directory instead of that workspace');
+      expect(guidance).toContain('Do not qualify Antigravity native delegation');
+    }
+  });
+  it('requires local OS sandboxing as well as a dedicated worktree', () => {
+    const guidance = read('.specify/references/verified-agent-execution.md');
+    expect(guidance).toContain('dedicated Git worktree and an operating-\nsystem sandbox');
+    expect(guidance).toContain('Cloud execution cannot substitute');
+    expect(guidance).toContain('ordinary workspace-opening command');
   });
 });

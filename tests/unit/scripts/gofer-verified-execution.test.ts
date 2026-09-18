@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the trusted-adapter seam accepts host-defined payloads. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import * as filesystem from 'node:fs/promises';
@@ -5,12 +6,19 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { generateKeyPairSync } from 'node:crypto';
 import { applyBlockerEvent } from '../../../.specify/scripts/node/gofer-blocker-control.mjs';
 import { createAcceptanceChecker } from '../../../.specify/scripts/node/gofer-acceptance-check.mjs';
 import {
   runVerifiedGraph,
   validateWorkGraph,
 } from '../../../.specify/scripts/node/gofer-verified-execution.mjs';
+import { inspectExecutionRecovery } from '../../../.specify/scripts/node/gofer-execution-recovery.mjs';
+import {
+  capabilityReceiptHash,
+  createCapabilityReceipt,
+} from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import { runBenchmark } from '../../../.specify/scripts/node/gofer-benchmark.mjs';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -65,8 +73,11 @@ async function fixture({ parallel = false, conflict = false } = {}) {
   };
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(root, name), body);
   const adapter = {
-    reserve: vi.fn(async () => ({ allowed: true })),
-    lease: vi.fn(async () => ({ leaseId: 'fixture-lease', expiresAt: new Date(Date.now() + 5000).toISOString() })),
+    reserve: vi.fn(async () => ({ allowed: true, budgetReservation: 'fixture-budget' })),
+    lease: vi.fn(async () => ({
+      leaseId: 'fixture-lease',
+      expiresAt: new Date(Date.now() + 5000).toISOString(),
+    })),
     execute: vi.fn(async () => ({ changedFiles: [] })),
     inputRevision: vi.fn(async () => 'input-1'),
     check: vi.fn(async (request: any) => ({
@@ -85,15 +96,85 @@ async function fixture({ parallel = false, conflict = false } = {}) {
       return { committed: true, taskId, revision, inputRevision, receipt: 'local-commit' };
     }),
   };
+  const keys = generateKeyPairSync('ed25519');
+  const capabilityReceipt = createCapabilityReceipt({
+    host: 'codex',
+    evaluatorVersion: '2',
+    evaluationId: 'fixture',
+    evaluatedAt: new Date(Date.now() - 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+    hostVersion: 'codex fixture',
+    models: [{ id: 'fixture-model', reasoningEfforts: ['high'] }],
+    reasoningCapabilities: ['high'],
+    toolCapabilities: ['shell'],
+    grantedPermissions: ['workspace-write'],
+    isolationClass: 'git-worktree+local-os-sandbox',
+    provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
+    signingKey: keys.privateKey,
+  });
+  const benchmarkEvidence = await runBenchmark({
+    cases: [{ id: 'fixture-case', heldOut: true, input: { task: 'fixture' } }],
+    provenance: {
+      harnessId: 'graph-fixture',
+      modelId: 'fixture-model',
+      capabilityReceiptHash: capabilityReceiptHash(capabilityReceipt),
+    },
+    execute: async ({ run }) => ({
+      modelId: 'fixture-model',
+      costUsd: 0,
+      durationMs: 1,
+      receipt: `fixture-execution-${run}`,
+    }),
+    verify: async ({ caseId, run, inputHash, execution }) => ({
+      caseId,
+      run,
+      inputHash,
+      executionReceipt: execution.receipt,
+      passed: true,
+      receipt: `fixture-verifier-${run}`,
+      verifierId: 'fixture-independent-check',
+      failureClassification: 'none',
+      reviewReceipt: `fixture-review-${run}`,
+    }),
+  });
+  const ledger = {
+    authorize: vi.fn(async (request: any) => ({
+      allowed: true,
+      ...request,
+      receipt: 'fixture-ledger-authority',
+    })),
+    authorizeCommit: vi.fn(
+      async ({ taskId, revision, inputRevision, leaseId, capabilityReceiptHash }: any) => ({
+        allowed: true,
+        taskId,
+        revision,
+        inputRevision,
+        leaseId,
+        capabilityReceiptHash,
+        receipt: 'fixture-ledger-commit-authority',
+      })
+    ),
+  };
   return {
     root,
     plan,
     adapter,
+    keys,
     options: {
       featureDir: root,
       workspaceRoot: root,
       checks: { T001: ['acceptance'], T002: ['acceptance'] },
       adapter,
+      ledger,
+      capabilityReceipt,
+      capabilityPublicKey: keys.publicKey,
+      approvalReceipt: 'fixture-approval',
+      benchmarkEvidence,
+      verifyBenchmark: async ({ receiptHash }: any) => ({
+        valid: true,
+        receiptHash,
+        receipt: 'fixture-benchmark',
+      }),
       maxCalls: 40,
       deadlineMs: Date.now() + 10000,
       maxConcurrent: 2,
@@ -102,6 +183,156 @@ async function fixture({ parallel = false, conflict = false } = {}) {
 }
 
 describe('Verified execution kernel (local adapters, not native model qualification)', () => {
+  it('accepts a live model reasoning-effort requirement through graph routing', async () => {
+    const f = await fixture();
+    const result = await runVerifiedGraph({
+      ...f.options,
+      requiredCapabilities: { reasoningEfforts: ['high'] },
+    });
+    expect(result.status).toBe('verified');
+    expect(f.adapter.execute).toHaveBeenCalled();
+  });
+  it('continues pending work after a real controller interruption at a verified boundary', async () => {
+    const f = await fixture();
+    const controller = new AbortController();
+    const originalVerified = f.adapter.verified.getMockImplementation()!;
+    const originalInputRevision = f.adapter.inputRevision.getMockImplementation()!;
+    let firstTaskCommitted = false;
+    let readsAfterCommit = 0;
+    f.adapter.verified.mockImplementation(async (request: any) => {
+      const result = await originalVerified(request);
+      if (request.taskId === 'T001') firstTaskCommitted = true;
+      return result;
+    });
+    f.adapter.inputRevision.mockImplementation(async (request: any) => {
+      if (request.taskId === 'T001' && firstTaskCommitted && ++readsAfterCommit === 2) {
+        controller.abort();
+      }
+      return originalInputRevision(request);
+    });
+    await expect(runVerifiedGraph({ ...f.options, signal: controller.signal })).rejects.toThrow(
+      'CANCELLED'
+    );
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T001']);
+    f.adapter.execute.mockClear();
+    const recovery = {
+      inspectWorkers: async (request: any) => ({
+        ...request,
+        allStopped: true,
+        receipt: 'stopped',
+      }),
+      inspectLedger: async (request: any) => ({ ...request, allowed: true }),
+      verifyReceipt: async (request: any) => ({ ...request, valid: true }),
+    };
+    expect(
+      (await inspectExecutionRecovery({ featureDir: f.root, ...recovery })).resumeAllowed
+    ).toBe(true);
+    const result = await runVerifiedGraph({ ...f.options, recovery });
+    expect(result.status).toBe('verified');
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T002']);
+  });
+  it('resumes only pending work after independent reconciliation of a verified checkpoint', async () => {
+    const f = await fixture();
+    expect((await runVerifiedGraph(f.options)).status).toBe('verified');
+    const journalPath = path.join(f.root, 'verified-execution.jsonl');
+    const original = (await readFile(journalPath, 'utf8')).trimEnd().split('\n').map(JSON.parse);
+    const partial = original.filter(
+      (event: any) => event.task !== 'T002' && event.event !== 'finished'
+    );
+    await writeFile(
+      journalPath,
+      `${partial.map((event: any) => JSON.stringify(event)).join('\n')}\n`
+    );
+    await writeFile(path.join(f.root, 'tasks.md'), '- [x] T001: First\n- [ ] T002: Second\n');
+    f.adapter.execute.mockClear();
+    const recovery = {
+      inspectWorkers: async (request: any) => ({
+        ...request,
+        allStopped: true,
+        receipt: 'stopped',
+      }),
+      inspectLedger: async (request: any) => ({ ...request, allowed: true }),
+      verifyReceipt: async (request: any) => ({ ...request, valid: true }),
+    };
+    const resumeLockPath = path.join(f.root, 'verified-execution.resume.lock');
+    await writeFile(resumeLockPath, '');
+    await expect(runVerifiedGraph({ ...f.options, recovery })).rejects.toThrow('RESUME_LOCKED');
+    await rm(resumeLockPath);
+    const result = await runVerifiedGraph({ ...f.options, recovery });
+    expect(result.status).toBe('verified');
+    expect((await readFile(resumeLockPath)).subarray(0, 16).toString()).toBe('SQLite format 3\0');
+    expect(result.verified).toEqual(['T001', 'T002']);
+    expect(f.adapter.execute.mock.calls.map(([request]: any) => request.taskId)).toEqual(['T002']);
+    const resumed = (await readFile(journalPath, 'utf8')).trimEnd().split('\n').map(JSON.parse);
+    expect(resumed.filter((event: any) => event.event === 'resumed')).toHaveLength(1);
+    expect(resumed.filter((event: any) => event.event === 'verified')).toHaveLength(2);
+    const reconciled = await inspectExecutionRecovery({ featureDir: f.root, ...recovery });
+    expect(reconciled.status).toBe('reconciled');
+    expect(reconciled.reusableTasks).toEqual(['T001', 'T002']);
+  });
+  it('fails closed without signed capability evidence and ledger authority', async () => {
+    const f = await fixture();
+    const untrusted = {
+      ...f.options,
+      ledger: undefined,
+      capabilityReceipt: undefined,
+      capabilityPublicKey: undefined,
+    };
+    await expect(runVerifiedGraph(untrusted)).rejects.toThrow(
+      'LEDGER_CAPABILITY_AUTHORITY_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch without independently verified benchmark evidence', async () => {
+    const f = await fixture();
+    await expect(runVerifiedGraph({ ...f.options, verifyBenchmark: undefined })).rejects.toThrow(
+      'INDEPENDENT_BENCHMARK_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch without an approval receipt', async () => {
+    const f = await fixture();
+    await expect(runVerifiedGraph({ ...f.options, approvalReceipt: undefined })).rejects.toThrow(
+      'APPROVAL_RECEIPT_REQUIRED'
+    );
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not dispatch when the receipt lacks an OS sandbox', async () => {
+    const f = await fixture();
+    const unsafeReceipt = createCapabilityReceipt({
+      host: 'codex',
+      evaluatorVersion: '2',
+      evaluationId: 'unsafe',
+      evaluatedAt: new Date(Date.now() - 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      hostVersion: 'codex fixture',
+      models: [{ id: 'fixture-model', reasoningEfforts: ['high'] }],
+      reasoningCapabilities: ['high'],
+      toolCapabilities: ['shell'],
+      grantedPermissions: ['workspace-write'],
+      isolationClass: 'git-worktree',
+      provenance: { evaluator: 'fixture', source: 'fixture', keyId: 'fixture-key' },
+      signingKey: f.keys.privateKey,
+    });
+    await expect(
+      runVerifiedGraph({ ...f.options, capabilityReceipt: unsafeReceipt })
+    ).rejects.toThrow('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
+    expect(f.adapter.execute).not.toHaveBeenCalled();
+  });
+  it('does not commit when the ledger refuses completion authority', async () => {
+    const f = await fixture();
+    f.options.ledger.authorizeCommit.mockResolvedValue({ allowed: false });
+    const result = await runVerifiedGraph(f.options);
+    expect(result.states.T001).toBe('blocked');
+    expect(f.options.ledger.authorizeCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'T001',
+        inputRevision: 'input-1',
+        leaseId: 'fixture-lease',
+      })
+    );
+    expect(f.adapter.verified).not.toHaveBeenCalled();
+  });
   it('retains all scope protection by aborting the run after unresolved cleanup', async () => {
     const f = await fixture({ parallel: true, conflict: true });
     f.adapter.check.mockImplementation(async (r: any) => ({
@@ -214,10 +445,22 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     expect(result.featureComplete).toBe(false);
     expect(result.cost).toBeNull();
     expect(f.adapter.execute.mock.calls.map(([r]: any) => r.taskId)).toEqual(['T001', 'T002']);
+    expect(f.options.ledger.authorize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attempt: 1,
+        budgetReservation: 'fixture-budget',
+        leaseId: 'fixture-lease',
+        allowedEditScope: ['a.txt'],
+        requiredChecks: ['acceptance'],
+      })
+    );
   });
   it('does not execute a task without a finite, unexpired lease and writes a delta checkpoint', async () => {
     const f = await fixture();
-    f.adapter.lease.mockResolvedValueOnce({ leaseId: 'expired', expiresAt: new Date(Date.now() - 1).toISOString() });
+    f.adapter.lease.mockResolvedValueOnce({
+      leaseId: 'expired',
+      expiresAt: new Date(Date.now() - 1).toISOString(),
+    });
     const blocked = await runVerifiedGraph(f.options);
     expect(blocked.states.T001).toBe('blocked');
     expect(f.adapter.execute).not.toHaveBeenCalled();
@@ -225,8 +468,15 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     const fresh = await fixture();
     const result = await runVerifiedGraph(fresh.options);
     expect(result.status).toBe('verified');
-    expect(JSON.parse(await readFile(path.join(fresh.root, 'verified-execution.checkpoint.json'), 'utf8')))
-      .toMatchObject({ revision: result.revision, delta: { event: 'finished' }, states: { T001: 'verified', T002: 'verified' } });
+    expect(
+      JSON.parse(
+        await readFile(path.join(fresh.root, 'verified-execution.checkpoint.json'), 'utf8')
+      )
+    ).toMatchObject({
+      revision: result.revision,
+      delta: { event: 'finished' },
+      states: { T001: 'verified', T002: 'verified' },
+    });
   });
   it('does not accept a good worker answer when acceptance fails', async () => {
     const f = await fixture();
@@ -322,11 +572,50 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     );
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });
-  it('stops waiting at the deadline without pretending the child was killed', async () => {
+  it('reports an unsettled child only if the deadline reached a running adapter', async () => {
     const f = await fixture();
     f.adapter.execute.mockImplementation(() => new Promise(() => {}));
-    const result = await runVerifiedGraph({ ...f.options, deadlineMs: Date.now() + 150 });
+    const result = await runVerifiedGraph({
+      ...f.options,
+      deadlineMs: Date.now() + 150,
+      adapterDrainMs: 50,
+    });
     expect(result.states.T001).toBe('cancelled');
+    expect(result.status).toBe('incomplete');
+    // Under a busy CI runner, the deadline can expire before execute starts.
+    // In that case there is no child call to drain.
+    expect(result.adapterCallsSettled).toBe(f.adapter.execute.mock.calls.length === 0);
+  });
+  it('waits for a cancelled trusted adapter call to settle before returning', async () => {
+    const f = await fixture();
+    const abort = new AbortController();
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let cleanupFinished = false;
+    f.adapter.execute.mockImplementation(async (request: any) => {
+      started();
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener(
+          'abort',
+          () => {
+            setTimeout(() => {
+              cleanupFinished = true;
+              resolve();
+            }, 40);
+          },
+          { once: true }
+        )
+      );
+      return { changedFiles: [] };
+    });
+    const run = runVerifiedGraph({ ...f.options, signal: abort.signal, adapterDrainMs: 1000 });
+    await entered;
+    abort.abort();
+    const result = await run;
+    expect(cleanupFinished).toBe(true);
+    expect(result.adapterCallsSettled).toBe(true);
     expect(result.status).toBe('incomplete');
   });
   it('serializes overlapping write scopes', async () => {
@@ -347,13 +636,27 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     const f = await fixture({ parallel: true });
     let active = 0;
     let peak = 0;
+    let releaseBoth = () => {};
+    const bothStarted = new Promise<void>((resolve) => { releaseBoth = resolve; });
     const run = promisify(execFile);
     f.adapter.execute.mockImplementation(async () => {
       active++;
       peak = Math.max(active, peak);
-      await run(process.execPath, ['-e', 'setTimeout(() => process.stdout.write("worked"), 80)']);
-      active--;
-      return { changedFiles: [] };
+      if (active === 2) releaseBoth();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          bothStarted,
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Independent tasks did not overlap')), 3000);
+          }),
+        ]);
+        await run(process.execPath, ['-e', 'process.stdout.write("worked")']);
+        return { changedFiles: [] };
+      } finally {
+        if (timer) clearTimeout(timer);
+        active--;
+      }
     });
     f.adapter.check.mockImplementation(async (r: any) => {
       const { stdout } = await run(process.execPath, ['-e', 'process.stdout.write("PASS")']);
@@ -408,7 +711,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     f.plan.tasks.T001.dependsOn = Array.from({ length: 257 }, () => 'T002');
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
     f.plan.tasks.T001.dependsOn = [];
-    f.plan.tasks.T001.allowedEditScope = Array.from({ length: 257 }, (_, index) => `safe-${index}.txt`);
+    f.plan.tasks.T001.allowedEditScope = Array.from(
+      { length: 257 },
+      (_, index) => `safe-${index}.txt`
+    );
     expect(() => validateWorkGraph(f.plan, f.options.checks)).toThrow('INVALID_WORK_ORDER');
   });
   it('rejects missing limits and unsupported spend caps', async () => {
@@ -507,9 +813,10 @@ describe('Verified execution kernel (local adapters, not native model qualificat
         const sync = handle.sync.bind(handle);
         const close = handle.close.bind(handle);
         handle.sync = async () => {
-          // Lease grants add durable records before dispatch. Fail only after
-          // both independently scheduled workers have observed cancellation.
-          if (++writes > 12) throw new Error('disk failure');
+          // Admission, ledger authority, and lease grants add durable records
+          // before dispatch. Fail only after both independently scheduled
+          // workers have started and can observe cancellation.
+          if (++writes > 16) throw new Error('disk failure');
           await sync();
         };
         handle.close = async () => {

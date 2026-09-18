@@ -88,7 +88,7 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
-  it('packages a zip with Claude, Codex, Copilot, and Gemini install metadata', (): void => {
+  it('packages a zip with current-host metadata and Gemini legacy compatibility', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
       execFileSync('node', [SCRIPT_PATH, '--version', VERSION, '--out-dir', outDir], {
@@ -99,6 +99,18 @@ describe('Gofer agent plugin package', () => {
       const zipPath = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}.zip`);
       const pluginRoot = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
+      expect(readme).toContain('Copilot, Grok,\nand VS Code');
+      expect(readme).toContain('No static provider default qualifies a model');
+      expect(readme).not.toContain('Copilot\ndefaults to `Auto`');
+      for (const manifest of [
+        'plugin.json',
+        '.github/plugin/plugin.json',
+        '.codex-plugin/plugin.json',
+      ]) {
+        expect(readJson<{ keywords: string[] }>(path.join(pluginRoot, manifest)).keywords).toContain(
+          'grok'
+        );
+      }
       const umbrellaSkill = fs.readFileSync(
         path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'),
         'utf8'
@@ -151,6 +163,13 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/.specify/scripts/node/gofer-acceptance-check.mjs',
         'eai-gofer/.specify/scripts/node/gofer-execution-recovery.mjs',
         'eai-gofer/.specify/scripts/node/gofer-execution-metrics.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-benchmark.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-host-capability.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-live-routing.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-local-isolation.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-native-adapter.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-native-runtime.mjs',
+        'eai-gofer/.specify/scripts/node/gofer-heldout-corpus.mjs',
         'eai-gofer/.specify/references/agent-catalog.json',
         'eai-gofer/.specify/references/verified-agent-execution.md',
         'eai-gofer/.specify/scripts/node/gofer-ui-preview.mjs',
@@ -180,7 +199,7 @@ describe('Gofer agent plugin package', () => {
       );
       const claudeMarketplace = readJson<{
         name: string;
-        plugins: Array<{ name: string; source: string; version: string }>;
+        plugins: Array<{ name: string; source: string; version: string; tags: string[] }>;
       }>(path.join(pluginRoot, '.claude-plugin', 'marketplace.json'));
       const codexMarketplace = readJson<{
         name: string;
@@ -201,6 +220,7 @@ describe('Gofer agent plugin package', () => {
       expect(codexManifest).not.toHaveProperty('gofer');
       expect(claudeMarketplace.name).toBe('eai-gofer');
       expect(claudeMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
+      expect(claudeMarketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
       expect(codexMarketplace.name).toBe('eai-gofer');
       expect(codexMarketplace.plugins[0].source).toEqual({
         source: 'local',
@@ -215,9 +235,9 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain(
         'copilot plugin marketplace add https://github.com/eai-support/eai-gofer'
       );
-      expect(readme).toContain(
-        'gemini extensions install https://github.com/eai-support/eai-gofer'
-      );
+      expect(readme).toContain('Google Antigravity');
+      expect(readme).toContain('Gemini files remain only for legacy compatibility');
+      expect(readme).not.toContain('Gemini CLI | `gemini extensions install');
       expect(readme).toContain('eai agent guide --format json');
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain('does not invent EAI CLI commands');
@@ -319,10 +339,10 @@ describe('Gofer agent plugin package', () => {
 
   it('repo root exposes marketplace files for repo-based CLI installs', (): void => {
     const claudeMarketplace = readJson<{
-      plugins: Array<{ source: string }>;
+      plugins: Array<{ source: string; tags: string[] }>;
     }>(path.join(REPO_ROOT, '.claude-plugin', 'marketplace.json'));
     const copilotMarketplace = readJson<{
-      plugins: Array<{ source: string }>;
+      plugins: Array<{ source: string; tags: string[] }>;
     }>(path.join(REPO_ROOT, '.github', 'plugin', 'marketplace.json'));
     const codexMarketplace = readJson<{
       plugins: Array<{ source: { source: string; path: string } }>;
@@ -330,6 +350,17 @@ describe('Gofer agent plugin package', () => {
 
     expect(claudeMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
     expect(copilotMarketplace.plugins[0].source).toBe('./plugins/eai-gofer');
+    for (const marketplace of [claudeMarketplace, copilotMarketplace]) {
+      expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
+    }
+    for (const prefix of ['plugins/eai-gofer', 'plugins/eai-gofer/plugins/eai-gofer']) {
+      for (const suffix of ['.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']) {
+        const marketplace = readJson<{ plugins: Array<{ tags: string[] }> }>(
+          path.join(REPO_ROOT, prefix, suffix)
+        );
+        expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
+      }
+    }
     expect(codexMarketplace.plugins[0].source).toEqual({
       source: 'local',
       path: './plugins/eai-gofer',

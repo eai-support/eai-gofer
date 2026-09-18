@@ -203,6 +203,9 @@ describe('Gofer workspace bootstrap scripts', () => {
     expect(fs.readFileSync(path.join(workspaceRoot, 'GEMINI.md'), 'utf8')).toContain(
       'gofer:always-on-eai:start'
     );
+    const workspaceReadme = fs.readFileSync(path.join(workspaceRoot, '.specify/README.md'), 'utf8');
+    expect(workspaceReadme).toContain('Copilot, Grok, and VS Code');
+    expect(workspaceReadme).toContain('Fresh signed capability receipts select models');
 
     const post = runJson(CHECK_SCRIPT, [
       '--workspace',

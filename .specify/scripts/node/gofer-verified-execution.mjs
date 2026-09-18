@@ -8,11 +8,17 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { reviewPriority } from './gofer-priority-check.mjs';
 import { inspectBlockers } from './gofer-blocker-control.mjs';
+import { capabilityReceiptHash, verifyCapabilityReceipt } from './gofer-host-capability.mjs';
+import { selectCapabilityRoute } from './gofer-live-routing.mjs';
+import { acquireLedgerLock } from './gofer-runtime-ledger.mjs';
 
 const contractFiles = ['spec.md', 'plan.md', 'decisions.md', 'priority-plan.json', 'loop-contract.json'];
 const MAX_CONTRACT_FILE_BYTES = 1024 * 1024;
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const text = value => typeof value === 'string' && value.trim().length > 0;
+function releaseResumeLock(lock) {
+  try { lock.exec('ROLLBACK'); } finally { lock.close(); }
+}
 
 export async function executionRevision(featureDir) {
   return (await snapshot(featureDir)).revision;
@@ -113,15 +119,25 @@ function overlaps(a, b) {
  * An existing journal is a reconciliation gate, not permission to replay work.
  */
 export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adapter,
-  maxCalls, maxConcurrent = 1, deadlineMs, signal }) {
+  ledger, capabilityReceipt, capabilityPublicKey, requiredCapabilities, benchmarkEvidence, verifyBenchmark,
+  advisoryConstraints, approvalReceipt, maxCalls, maxConcurrent = 1, deadlineMs, signal, recovery,
+  adapterDrainMs = 5000 }) {
   // Copy before any await: a caller or worker must not remove required checks.
   checks = freeze(structuredClone(checks));
   const journalName = 'verified-execution.jsonl';
   if (!positive(maxCalls) || !positive(maxConcurrent) || maxConcurrent > 8 ||
+      !positive(adapterDrainMs) || adapterDrainMs > 10000 ||
       !Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) throw new Error('FINITE_LIMITS_REQUIRED');
+  if (!text(approvalReceipt)) throw new Error('APPROVAL_RECEIPT_REQUIRED');
   for (const method of ['execute', 'check', 'inputRevision', 'reserve', 'lease', 'verified']) {
     if (typeof adapter?.[method] !== 'function') throw new Error(`TRUSTED_ADAPTER_REQUIRED:${method}`);
   }
+  if (capabilityReceipt?.isolationClass !== 'git-worktree+local-os-sandbox' ||
+      typeof ledger?.authorize !== 'function' || typeof ledger?.authorizeCommit !== 'function' || !verifyCapabilityReceipt(capabilityReceipt, {
+    publicKey: capabilityPublicKey, requiredCapabilities,
+  })) throw new Error('LEDGER_CAPABILITY_AUTHORITY_REQUIRED');
+  const route = await selectCapabilityRoute({ receipt: capabilityReceipt, publicKey: capabilityPublicKey,
+    host: capabilityReceipt.host, requiredCapabilities, benchmarkEvidence, verifyBenchmark, advisoryConstraints });
   const root = await realpath(featureDir);
   const captured = await snapshot(root);
   const plan = freeze(JSON.parse(captured.files['priority-plan.json']));
@@ -136,28 +152,76 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   const initial = await reviewPriority(root);
   if (initial.status !== 'pass') throw new Error(`PRIORITY_BLOCKED:${initial.findings.join(',')}`);
   const revision = captured.revision;
+  const receiptHash = capabilityReceiptHash(capabilityReceipt);
   if (await executionRevision(root) !== revision) throw new Error('STALE_DIRECTION');
   const tasksText = await readFile(path.join(root, 'tasks.md'), 'utf8');
   const previouslyComplete = new Set([...tasksText.matchAll(/^\s*-\s+\[[xX]\]\s+(?:\*\*)?(T\d+)\b/gm)].map(m => m[1]));
-  if (previouslyComplete.size) throw new Error('BASELINE_EVIDENCE_RECONCILIATION_REQUIRED');
   const scopes = {};
   for (const id of ids) scopes[id] = await canonicalScopes(workspaceRoot, plan.tasks[id].allowedEditScope);
-  const states = Object.fromEntries(ids.map(id => [id, 'pending']));
-  const attempts = Object.fromEntries(ids.map(id => [id, 0]));
-  const verifiedInputs = new Map();
+  let resumeReport;
+  let resumeLock;
+  const lockPath = path.join(root, 'verified-execution.resume.lock');
+  if (recovery) {
+    // The transaction excludes other controllers and the operating system
+    // releases it if this controller exits before reconciliation finishes.
+    resumeLock = await acquireLedgerLock(lockPath).catch(() => { throw new Error('RESUME_LOCKED'); });
+    try {
+      const { inspectExecutionRecovery } = await import('./gofer-execution-recovery.mjs');
+      resumeReport = await inspectExecutionRecovery({ ...recovery, featureDir: root });
+      const run = resumeReport.run;
+      if (resumeReport.status !== 'reconciled' || !resumeReport.resumeAllowed ||
+          resumeReport.uncertainTasks.length || !run ||
+          run.revision !== revision || run.maxCalls !== maxCalls || run.maxConcurrent !== maxConcurrent ||
+          run.maxIterations !== loop.maxIterations || deadlineMs !== run.deadlineMs ||
+          run.capabilityReceiptHash !== receiptHash || run.selectedModel !== route.model.id ||
+          run.benchmarkReceipt !== route.benchmarkReceipt || run.approvalReceipt !== approvalReceipt ||
+          JSON.stringify(run.requiredChecks) !== JSON.stringify(checks) ||
+          (resumeReport.restartableTasks.length > 0 &&
+            (resumeReport.restartableTasks.length !== 1 ||
+              resumeReport.replacementWorktreeReceipt !== adapter.worktreeReceipt)) ||
+          previouslyComplete.size !== resumeReport.reusableTasks.length ||
+          [...previouslyComplete].some(id => !resumeReport.reusableTasks.includes(id)) ||
+          resumeReport.reusableTasks.length === ids.length) throw new Error('RESUME_RECONCILIATION_REQUIRED');
+      for (const taskId of resumeReport.reusableTasks) {
+        const input = await adapter.inputRevision({ taskId, revision,
+          allowedEditScope: plan.tasks[taskId].allowedEditScope, requiredChecks: checks[taskId] });
+        if (input !== resumeReport.verifiedInputs[taskId]) throw new Error('STALE_PREREQUISITE_EVIDENCE');
+      }
+    } catch (error) {
+      releaseResumeLock(resumeLock);
+      throw error;
+    }
+  } else if (previouslyComplete.size) throw new Error('BASELINE_EVIDENCE_RECONCILIATION_REQUIRED');
+  const states = Object.fromEntries(ids.map(id => [id, resumeReport?.reusableTasks.includes(id) ? 'verified' : 'pending']));
+  const attempts = Object.fromEntries(ids.map(id => [id, resumeReport?.attemptsConsumed[id] || 0]));
+  const verifiedInputs = new Map(Object.entries(resumeReport?.verifiedInputs || {}));
   const controller = new AbortController();
   const cancel = () => controller.abort(new Error('CANCELLED'));
   if (signal?.aborted) cancel();
   signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => controller.abort(new Error('DEADLINE')), Math.min(deadlineMs - Date.now(), 2147483647));
-  const file = await open(path.join(root, journalName), 'wx', 0o600).catch(error => {
+  const file = await open(path.join(root, journalName), recovery ? constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW : 'wx', 0o600).catch(async error => {
     clearTimeout(timer); signal?.removeEventListener('abort', cancel);
+    if (resumeLock) releaseResumeLock(resumeLock);
     throw new Error(error.code === 'EEXIST' ? 'RECONCILIATION_REQUIRED' : 'JOURNAL_UNAVAILABLE');
   });
-  let calls = 0;
+  let calls = resumeReport?.callsConsumed || 0;
   let write = Promise.resolve();
   let checkpointWrite = Promise.resolve();
   let checkpointSequence = 0;
+  const pendingAdapterCalls = new Set();
+  let drainAttempted = false;
+  async function drainAdapterCalls() {
+    drainAttempted = true;
+    if (!pendingAdapterCalls.size) return true;
+    let drainTimer;
+    const settled = await Promise.race([
+      Promise.allSettled([...pendingAdapterCalls]).then(() => true),
+      new Promise(resolve => { drainTimer = setTimeout(() => resolve(false), adapterDrainMs); }),
+    ]);
+    clearTimeout(drainTimer);
+    return settled;
+  }
   const record = event => {
     write = write.then(async () => { await file.writeFile(`${JSON.stringify({ schemaVersion: 1, revision, time: new Date().toISOString(), ...event })}\n`); await file.sync(); })
       .catch(() => { controller.abort(new Error('JOURNAL_FAILURE')); throw new Error('JOURNAL_FAILURE'); });
@@ -206,8 +270,11 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     let listener;
     try {
       await current();
+      const operation = Promise.resolve().then(() => { abortCheck(); return adapter[method]({ ...request, signal: controller.signal }); });
+      const settled = operation.then(() => {}, () => {}).finally(() => pendingAdapterCalls.delete(settled));
+      pendingAdapterCalls.add(settled);
       return await Promise.race([
-        Promise.resolve().then(() => { abortCheck(); return adapter[method]({ ...request, signal: controller.signal }); }),
+        operation,
         new Promise((_, reject) => {
           listener = () => reject(controller.signal.reason);
           controller.signal.addEventListener('abort', listener, { once: true });
@@ -220,7 +287,12 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
   }
   async function runTask(taskId) {
     const task = plan.tasks[taskId];
-    const request = { taskId, revision, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId] };
+    const dependencies = task.dependsOn.map(dependency => ({ taskId: dependency,
+      inputRevision: verifiedInputs.get(dependency) ?? null }));
+    if (dependencies.some(dependency => !text(dependency.inputRevision))) throw new Error('DEPENDENCY_INPUT_REQUIRED');
+    const request = { taskId, revision, dependencies, allowedEditScope: task.allowedEditScope, requiredChecks: checks[taskId], approvalReceipt,
+      ...(text(adapter.worktreeReceipt) ? { worktreeReceipt: adapter.worktreeReceipt } : {}),
+      capabilityReceiptHash: receiptHash, selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt };
     let previousChecks = [];
     try {
       while (attempts[taskId] < loop.maxIterations) {
@@ -232,20 +304,32 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
         await canonicalScopes(workspaceRoot, task.allowedEditScope);
         const attempt = ++attempts[taskId];
         await record({ event: 'attempt_reserved', task: taskId, attempt });
-        // Connect to the caller's stable blocker register; denied repairs stop.
         const reservation = await invoke('reserve', { ...request, attempt });
-        if (reservation?.allowed !== true) throw new Error('BLOCKER_OR_BUDGET_DENIED');
+        if (reservation?.allowed !== true || !text(reservation.budgetReservation)) throw new Error('BLOCKER_OR_BUDGET_DENIED');
         const lease = await invoke('lease', { ...request, attempt });
         const leaseExpiry = Date.parse(lease?.expiresAt);
         if (!text(lease?.leaseId) || !Number.isFinite(leaseExpiry) || leaseExpiry <= Date.now()) {
           throw new Error('TASK_LEASE_REQUIRED');
         }
         await record({ event: 'lease_granted', task: taskId, attempt, leaseId: lease.leaseId, expiresAt: lease.expiresAt });
+        const leasedRequest = { ...request, attempt, budgetReservation: reservation.budgetReservation,
+          leaseId: lease.leaseId, leaseExpiresAt: lease.expiresAt };
+        const authority = await ledger.authorize(leasedRequest);
+        if (authority?.allowed !== true || authority.taskId !== taskId || authority.revision !== revision ||
+            authority.attempt !== attempt || authority.capabilityReceiptHash !== receiptHash ||
+            authority.budgetReservation !== reservation.budgetReservation || authority.leaseId !== lease.leaseId ||
+            authority.worktreeReceipt !== request.worktreeReceipt ||
+            authority.leaseExpiresAt !== lease.expiresAt || authority.allowedEditScope?.join('\0') !== request.allowedEditScope.join('\0') ||
+            authority.requiredChecks?.join('\0') !== request.requiredChecks.join('\0') || authority.approvalReceipt !== approvalReceipt ||
+            !text(authority.receipt)) throw new Error('LEDGER_AUTHORITY_REQUIRED');
+        await record({ event: 'ledger_authorized', task: taskId, attempt, leaseId: lease.leaseId,
+          budgetReservation: reservation.budgetReservation, receipt: authority.receipt, capabilityReceiptHash: receiptHash,
+          worktreeReceipt: request.worktreeReceipt ?? null });
         states[taskId] = 'running';
         await checkpoint('running', taskId);
         // Repair sees measured failures, never just "try again" or prior reasoning.
-        const leasedRequest = { ...request, attempt, leaseId: lease.leaseId, leaseExpiresAt: lease.expiresAt };
-        const result = await invoke('execute', { ...leasedRequest, previousChecks: freeze(structuredClone(previousChecks)) });
+        const result = await invoke('execute', { ...leasedRequest, ledgerAuthorityReceipt: authority.receipt,
+          previousChecks: freeze(structuredClone(previousChecks)) });
         await current();
         if (!result || !Array.isArray(result.changedFiles) || result.changedFiles.some(f => !text(f))) throw new Error('INVALID_WORKER_RESULT');
         const scope = await reviewPriority(root, { task: taskId, changedFiles: result.changedFiles, workspaceRoot });
@@ -289,8 +373,17 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
             await current();
           };
           await assertCurrent();
+          const commitAuthority = await ledger.authorizeCommit({ ...leasedRequest, inputRevision,
+            validation: freeze(structuredClone(previousChecks)) });
+          if (commitAuthority?.allowed !== true || commitAuthority.taskId !== taskId ||
+              commitAuthority.revision !== revision || commitAuthority.inputRevision !== inputRevision ||
+              commitAuthority.leaseId !== lease.leaseId || commitAuthority.capabilityReceiptHash !== receiptHash ||
+              !text(commitAuthority.receipt)) throw new Error('LEDGER_COMMIT_AUTHORITY_REQUIRED');
+          await record({ event: 'commit_authorized', task: taskId, attempt, leaseId: lease.leaseId,
+            inputRevision, receipt: commitAuthority.receipt, capabilityReceiptHash: receiptHash });
           // The trusted adapter must compare-and-set, not unconditionally tick tasks.
-          const commit = await invoke('verified', { ...leasedRequest, inputRevision, assertCurrent });
+          const commit = await invoke('verified', { ...leasedRequest, inputRevision,
+            commitAuthorityReceipt: commitAuthority.receipt, assertCurrent });
           if (commit?.committed !== true || commit.taskId !== taskId || commit.revision !== revision ||
               commit.inputRevision !== inputRevision || !text(commit.receipt)) throw new Error('COMMIT_RECONCILIATION_REQUIRED');
           await assertCurrent();
@@ -312,9 +405,19 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     }
   }
   try {
-    await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations,
-      requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete] });
-    await checkpoint('started');
+    if (resumeReport) {
+      const contents = await file.readFile('utf8');
+      if (createHash('sha256').update(contents).digest('hex') !== resumeReport.journalHash) throw new Error('RECOVERY_INPUT_CHANGED');
+      await record({ event: 'resumed', previousJournalHash: resumeReport.journalHash,
+        callsConsumed: calls, attemptsConsumed: resumeReport.attemptsConsumed });
+      await checkpoint('resumed');
+    } else {
+      await record({ event: 'started', maxCalls, maxConcurrent, maxIterations: loop.maxIterations, capabilityReceiptHash: receiptHash,
+        selectedModel: route.model.id, benchmarkReceipt: route.benchmarkReceipt, approvalReceipt,
+        requiredChecks: checks, deadlineMs, baselineTasks: [...previouslyComplete],
+        worktreeReceipt: adapter.worktreeReceipt ?? null });
+      await checkpoint('started');
+    }
     const active = new Map();
     while (!controller.signal.aborted) {
       let scheduled = false;
@@ -351,23 +454,31 @@ export async function runVerifiedGraph({ featureDir, workspaceRoot, checks, adap
     // its journal and checkpoint operations. Do not close the runtime ledger
     // or return while a sibling can still write into the feature directory.
     if (active.size) await Promise.allSettled([...active.values()]);
+    // The abort race stops scheduling promptly, but a trusted adapter may
+    // still be delivering cancellation. Give it a bounded drain window and
+    // report when it has not settled; recovery must then inspect the worker.
+    const adapterCallsSettled = await drainAdapterCalls();
     const verified = ids.filter(id => states[id] === 'verified');
     const status = !controller.signal.aborted && ids.every(id => states[id] === 'verified') ? 'verified' : 'incomplete';
     // Task verification is not the feature/release outcome gate.
-    const result = { status, states, verified, calls, attempts, revision, cost: null,
+    const result = { status, states, verified, calls, attempts, revision, cost: null, adapterCallsSettled,
       nativeQualification: 'not-established', featureComplete: false };
     await record({ event: 'finished', ...result });
     await checkpoint('finished');
     return result;
   } finally {
     controller.abort(new Error('RUN_CLOSED'));
+    if (!drainAttempted) await drainAdapterCalls();
     clearTimeout(timer);
     signal?.removeEventListener('abort', cancel);
     // A journal failure must still drain checkpoint writes before callers or
     // tests can remove the feature directory. Preserve the journal failure
     // while ensuring no asynchronous checkpoint writer survives teardown.
     try { await write; } finally {
-      try { await checkpointWrite; } finally { await file.close(); }
+      try { await checkpointWrite; } finally {
+        await file.close();
+        if (resumeLock) releaseResumeLock(resumeLock);
+      }
     }
   }
 }
