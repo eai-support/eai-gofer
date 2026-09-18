@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Added
 
+- Added a generated public `eai` GitHub Copilot agent that reuses the canonical
+  prompt and internal Gofer stage contracts without creating a second command
+  pipeline.
 - **CLI Innovations + Multi-Persona Visual Artifacts** (feature
   001-cli-innovations-visuals):
   - Source-of-truth generator at `.specify/scripts/node/generate-commands.mjs` —

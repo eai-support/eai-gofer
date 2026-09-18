@@ -146,6 +146,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
         'eai-gofer/.claude/skills/eai/SKILL.md',
+        'eai-gofer/.github/agents/eai.agent.md',
         'eai-gofer/.github/agents/gofer-business.agent.md',
         'eai-gofer/.github/skills/eai/SKILL.md',
         'eai-gofer/.specify/references/platform/README.md',
@@ -213,6 +214,12 @@ describe('Gofer agent plugin package', () => {
       expect(copilotManifest.skills).toBe('./plugin-skills/');
       expect(copilotManifest.agents).toBe('./agents/');
       expect(copilotManifest.commands).toBe('./commands/');
+      const copilotAgent = fs.readFileSync(
+        path.join(pluginRoot, '.github', 'agents', 'eai.agent.md'),
+        'utf8'
+      );
+      expect(copilotAgent).toContain('Use `.github/prompts/eai.prompt.md` as the canonical');
+      expect(copilotAgent).toContain('.specify/commands/*.md');
       expect(claudeManifest.skills).toBe('./skills/');
       expect(claudeManifest.agents).toBeUndefined();
       expect(claudeManifest.commands).toBeUndefined();
