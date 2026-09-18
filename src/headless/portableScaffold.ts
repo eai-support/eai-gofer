@@ -251,6 +251,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-trusted-benchmark.mjs',
       'node/gofer-trust-bootstrap.mjs',
       'node/gofer-local-capability-issuer.mjs',
+      'node/gofer-run-verified-task.mjs',
       'node/gofer-runtime-ledger.mjs',
       'node/gofer-verified-execution.mjs',
       'node/gofer-execution-recovery.mjs',

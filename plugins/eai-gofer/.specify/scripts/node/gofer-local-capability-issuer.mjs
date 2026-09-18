@@ -9,15 +9,11 @@ import { inspectEaiLocalIsolation } from './gofer-local-isolation.mjs';
 import { loadActiveCodexEvaluatorKey,
   resolveTrustedEvaluatorPublicKey } from './gofer-trusted-evaluator.mjs';
 
-async function main(args) {
-  if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: node gofer-local-capability-issuer.mjs --workspace <absolute-task-worktree>\n');
-    return;
-  }
-  if (args.length !== 2 || args[0] !== '--workspace' || !path.isAbsolute(args[1])) {
-    throw new Error('TRUSTED_EVALUATOR_REQUIRED');
-  }
-  const workspaceRoot = args[1];
+/** Issue and verify a live Codex capability receipt for one workspace. This is
+ * the same production path `main` exposes as a CLI, extracted so a runtime
+ * composition root can call it directly instead of shelling out. */
+export async function issueLocalCapabilityReceipt({ workspaceRoot }) {
+  if (!path.isAbsolute(workspaceRoot)) throw new Error('TRUSTED_EVALUATOR_REQUIRED');
   const isolation = await inspectEaiLocalIsolation({ host: 'codex', workspaceRoot });
   const session = await createCodexAppServerRuntime({ workspaceRoot,
     localIsolation: isolation }).inspect();
@@ -40,6 +36,18 @@ async function main(args) {
     requiredCapabilities: { isolationClass: 'git-worktree+local-os-sandbox' } })) {
     throw new Error('TRUSTED_EVALUATOR_REQUIRED');
   }
+  return receipt;
+}
+
+async function main(args) {
+  if (args.length === 1 && args[0] === '--help') {
+    process.stdout.write('Usage: node gofer-local-capability-issuer.mjs --workspace <absolute-task-worktree>\n');
+    return;
+  }
+  if (args.length !== 2 || args[0] !== '--workspace' || !path.isAbsolute(args[1])) {
+    throw new Error('TRUSTED_EVALUATOR_REQUIRED');
+  }
+  const receipt = await issueLocalCapabilityReceipt({ workspaceRoot: args[1] });
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 }
 
