@@ -152,7 +152,12 @@ describe('Gofer host capability discovery', () => {
       })
     ).toThrow('unavailable');
     expect(() =>
-      selectLiveModel(receipt, { host: 'codex', modelId: 'missing', publicKey: keys.publicKey })
+      selectLiveModel(receipt, {
+        host: 'codex',
+        modelId: 'missing',
+        publicKey: keys.publicKey,
+        now: Date.parse('2026-09-17T12:00:00Z'),
+      })
     ).toThrow('current host receipt');
   });
 
