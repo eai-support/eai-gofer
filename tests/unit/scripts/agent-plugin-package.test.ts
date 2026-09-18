@@ -146,6 +146,7 @@ describe('Gofer agent plugin package', () => {
         'eai-gofer/README.md',
         'eai-gofer/assets/eai-gofer-icon.png',
         'eai-gofer/.claude/skills/eai/SKILL.md',
+        'eai-gofer/.github/agents/eai.agent.md',
         'eai-gofer/.github/agents/gofer-business.agent.md',
         'eai-gofer/.github/skills/eai/SKILL.md',
         'eai-gofer/.specify/references/platform/README.md',
@@ -213,6 +214,12 @@ describe('Gofer agent plugin package', () => {
       expect(copilotManifest.skills).toBe('./plugin-skills/');
       expect(copilotManifest.agents).toBe('./agents/');
       expect(copilotManifest.commands).toBe('./commands/');
+      const copilotAgent = fs.readFileSync(
+        path.join(pluginRoot, '.github', 'agents', 'eai.agent.md'),
+        'utf8'
+      );
+      expect(copilotAgent).toContain('Use `.github/prompts/eai.prompt.md` as the canonical');
+      expect(copilotAgent).toContain('.specify/commands/*.md');
       expect(claudeManifest.skills).toBe('./skills/');
       expect(claudeManifest.agents).toBeUndefined();
       expect(claudeManifest.commands).toBeUndefined();
@@ -354,6 +361,13 @@ describe('Gofer agent plugin package', () => {
       expect(marketplace.plugins[0].tags).toEqual(expect.arrayContaining(['grok', 'vscode']));
     }
     for (const prefix of ['plugins/eai-gofer', 'plugins/eai-gofer/plugins/eai-gofer']) {
+      const eaiAgent = fs.readFileSync(
+        path.join(REPO_ROOT, prefix, '.github', 'agents', 'eai.agent.md'),
+        'utf8'
+      );
+      expect(eaiAgent).toContain('Use `.github/prompts/eai.prompt.md` as the canonical');
+      expect(eaiAgent).toContain('.specify/commands/*.md');
+
       for (const suffix of ['.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']) {
         const marketplace = readJson<{ plugins: Array<{ tags: string[] }> }>(
           path.join(REPO_ROOT, prefix, suffix)
