@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const denied = () => new Error('LOCAL_TRUST_SETUP_REQUIRES_REVIEW');
 
-function accountHome() {
+export function accountHome() {
   if (typeof process.getuid !== 'function') throw denied();
   if (process.platform === 'darwin') {
     const name = execFileSync('/usr/bin/id', ['-un'], { encoding: 'utf8', timeout: 3000 }).trim();
@@ -63,6 +63,16 @@ export async function initializeStagedTrust(root) {
     `${JSON.stringify({ schemaVersion: 1, evaluators: [] }, null, 2)}\n`);
   await writeExclusive(path.join(staged, 'identities.json'), `${JSON.stringify(records, null, 2)}\n`);
   return { root, identities: records.map(({ name, keyId }) => ({ name, keyId })), active: false };
+}
+
+/** Idempotent wrapper for automatic setup: stage identities only if this
+ * account has none yet. Never replaces or activates existing material, and
+ * never throws for the ordinary case of an already-staged account. */
+export async function ensureStagedTrust(root) {
+  const alreadyExists = await lstat(root).then(() => true, () => false);
+  if (alreadyExists) return { root, staged: false, alreadyExists: true, active: false };
+  const result = await initializeStagedTrust(root);
+  return { ...result, alreadyExists: false };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

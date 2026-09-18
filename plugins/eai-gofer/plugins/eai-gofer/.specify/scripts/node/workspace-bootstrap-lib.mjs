@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { SUPPORTED_HOSTS } from './gofer-surface-update.mjs';
 import { parseStageCommand } from './parse-stage-command.mjs';
+import { accountHome, ensureStagedTrust } from './gofer-trust-bootstrap.mjs';
 
 export const GOFER_VERSION_FILE = path.join('.specify', '.gofer-version');
 export const CORE_SENTINELS = [
@@ -1551,12 +1552,34 @@ async function installClaudeHooksSettings(workspaceRoot, dryRun) {
   );
 }
 
+/** Stage this machine's local trust identities once, the first time Gofer
+ * bootstraps any workspace for this account. Staging only generates two
+ * Ed25519 keypairs and an empty trust registry; it never activates a key or
+ * grants any runtime authority (see gofer-trust-bootstrap.mjs). Unsupported
+ * platforms and any other failure are reported, never fatal to bootstrap.
+ * `trustRoot` is a test-only seam; production callers never pass it and
+ * always stage under the real account home. */
+async function stageAccountTrustIdentity({ trustRoot } = {}) {
+  try {
+    const root = trustRoot ?? (() => {
+      const home = accountHome();
+      return home && path.isAbsolute(home) ? path.join(home, '.eai-gofer-trust') : null;
+    })();
+    if (!root) return { attempted: false };
+    const result = await ensureStagedTrust(root);
+    return { attempted: true, ...result };
+  } catch (error) {
+    return { attempted: true, error: error.message };
+  }
+}
+
 export async function bootstrapWorkspace({
   workspaceRoot,
   host = 'auto',
   sourceRoot,
   dryRun = false,
   includeMirrors = false,
+  trustRoot,
 }) {
   const normalizedHost = normalizeHost(host);
   await assertSafeWorkspaceRoot(workspaceRoot);
@@ -1696,6 +1719,8 @@ export async function bootstrapWorkspace({
     sourceRoot,
   });
 
+  const trustIdentity = dryRun ? { attempted: false } : await stageAccountTrustIdentity({ trustRoot });
+
   return {
     workspaceRoot,
     host: normalizedHost,
@@ -1705,6 +1730,7 @@ export async function bootstrapWorkspace({
     changed,
     status: postCheck.status,
     check: postCheck,
+    trustIdentity,
   };
 }
 
