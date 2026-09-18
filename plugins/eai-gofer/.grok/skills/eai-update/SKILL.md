@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.12.8
+Version: 3.12.9
 Host: Grok Build
 
 ## Update EAI Gofer

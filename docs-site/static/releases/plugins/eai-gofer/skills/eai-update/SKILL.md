@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.12.8
+Version: 3.12.9
 
 Use this skill to install or update the user-level EAI Gofer plugin or extension. It works before a repository has Gofer files.
 
@@ -18,7 +18,7 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 7. Update only the current host unless the user explicitly asks for `--host all`.
 8. Complete the host reload step from the helper result before saying the update is ready.
 
-Supported hosts are `claude`, `codex`, `copilot`, `gemini`, and `vscode`.
+Current hosts are `claude`, `codex`, `copilot`, `antigravity`, `grok`, and `vscode`. Gemini is a legacy alias only.
 
 This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create `.specify/`. After the host update, use `/eai add or refresh the Gofer scaffold for this repo` when a repository needs Gofer files.
 

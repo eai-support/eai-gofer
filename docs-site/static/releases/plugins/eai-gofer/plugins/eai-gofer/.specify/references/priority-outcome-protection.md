@@ -8,8 +8,34 @@ These rules extend the existing pipeline, not replace it.
 Record material changes to the goal, priority, scope or permission in the
 private feature decisions.md before acting. Resolve what a short instruction
 such as "do it" refers to. Do not copy secrets or every routine chat message.
-Update spec.md, plan.md, tasks.md and traceability when affected. Never infer
-approval.
+Update spec.md, plan.md, tasks.md and traceability when affected. Do not invent
+approval where approval is required.
+
+## Goal-Led Autonomy
+
+The stated goal authorizes Gofer to make ordinary delivery decisions. Gofer
+must choose the next safe task, design, investigation, repair, test, and
+reversible repository change without asking the user to manage the process.
+Record each material Gofer decision with its identifier, chosen path, reason,
+scope, and business effect. Tell the user what changed in concise progress
+updates. A recorded Gofer decision is sufficient for independent work that the
+priority plan proves is safe.
+
+Ask the user only when Gofer cannot safely own the decision:
+
+- The goal, success measure, or target environment is unclear or changes.
+- The action causes irreversible loss, external spending, legal commitment,
+  production/public exposure, or a security/access change.
+- Required authority, credentials, an account action, or a host permission is
+  missing.
+- A safe in-scope diagnosis and repair cannot remove a blocker within the
+  retry limit.
+- The proposed action conflicts with an explicit user constraint.
+
+Do not ask for ordinary technology choices, task order, safe repair choices,
+or evidence collection. Do not present several technical options when one
+safe option best advances the goal. Use the chosen option, record why, and
+continue.
 
 Create priority-plan.json from the template by the tasks stage. Include every
 task ID, its prerequisites and an explicit allowedEditScope. Paths are relative
@@ -38,9 +64,11 @@ dependencies. Split larger work into reviewed features.
 
 Follow `nextTask`. It resolves the first open priority task and its unfinished
 prerequisites. Independent parallel work requires `parallelFor`, a reason and
-the recorded approval ID. A blocked priority never authorizes unrelated chores.
-Changing scope requires updating the plan and user understanding, not bypassing
-the check. Preserve all release/security gates even for unrelated failures.
+a recorded decision ID. The decision can be a Gofer decision when the work is
+within the goal, declared scopes, limits, and safety rules. A blocked priority
+never authorizes unrelated chores. Changing scope requires updating the plan and
+user understanding, not bypassing the check. Preserve all release/security gates
+even for unrelated failures.
 
 On resume, read the saved direction, goal, tasks and evidence before acting.
 Say: "We are proving sign-in works. I will first check the failed login." Do not
