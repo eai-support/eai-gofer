@@ -1,12 +1,12 @@
 # Gofer Agent Plugin
 
-Version: 3.12.8
+Version: 3.12.9
 
-This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
+This package is the portable Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code workflow layer for Gofer. Gemini files remain only for legacy compatibility. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
 ## Public Sources
 
-Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, and Gemini CLI:
+Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, Google Antigravity, Grok, and VS Code:
 
 ```text
 https://github.com/eai-support/eai-gofer
@@ -22,8 +22,8 @@ That host publishes:
 
 - Latest VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Latest agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip`
-- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.12.8.vsix`
-- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.12.8.zip`
+- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.12.9.vsix`
+- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.12.9.zip`
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
@@ -48,7 +48,7 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 | Codex App / Codex IDE | `eai` plugin skill when a workspace is open | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/` |
 | GitHub Copilot app / VS Code agent mode | `#eai`, plus custom Gofer agents where supported | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/` |
 | Claude Code app | `/eai` plugin/repo command | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/` |
-| Gemini CLI / Gemini Code Assist | `/eai` Gemini extension command | `.gemini/`, `.specify/scripts/` |
+| Legacy Gemini file format | Existing compatibility command only | `.gemini/`, `.specify/scripts/` |
 | Grok Build | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/` |
 
 The clean UX rule is: users see only `eai`; Gofer keeps numbered stages and helpers as internal contracts under `.specify/commands/`.
@@ -117,7 +117,7 @@ Optional helpers like problem validation, save, branding, tests, stakeholder com
 | Claude Code | `claude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer` then `claude plugin install eai-gofer@eai-gofer --scope user` | Unzip to `~/plugins/eai-gofer`, then `claude plugin marketplace add ~/plugins/eai-gofer --scope user` |
 | Codex | `codex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer` then `codex plugin add eai-gofer@eai-gofer` | Unzip to `~/plugins/eai-gofer`, then `codex plugin marketplace add ~/plugins/eai-gofer` |
 | GitHub Copilot CLI | `copilot plugin marketplace add https://github.com/eai-support/eai-gofer` then `copilot plugin install eai-gofer@eai-gofer` | Unzip to `~/plugins/eai-gofer`, then `copilot plugin marketplace add ~/plugins/eai-gofer` |
-| Gemini CLI | `gemini extensions install https://github.com/eai-support/eai-gofer --auto-update` | Unzip to `~/plugins/eai-gofer`, then `gemini extensions install ~/plugins/eai-gofer` |
+| Google Antigravity | `agy plugin install https://github.com/eai-support/eai-gofer` | Start a new Antigravity session after installation |
 
 ## Download And Replace The Local Bundle Folder
 
@@ -197,19 +197,11 @@ copilot plugin marketplace add ~/plugins/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
-## Gemini CLI
+## Legacy Gemini File-Format Compatibility
 
-Recommended public install:
+Existing Gemini file-format repositories can retain the generated `.gemini/` files. New installation and update actions use Google Antigravity and `agy`.
 
-```bash
-gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
-```
-
-Downloaded bundle install:
-
-```bash
-gemini extensions install ~/plugins/eai-gofer
-```
+Do not identify Gemini as a current Gofer host in new documentation or metadata.
 
 ## Model Policy
 
@@ -220,7 +212,7 @@ After bootstrap, each repository gets a user-owned model policy at:
 ```
 
 The shipped default is copied from `.specify/templates/gofer-model-policy.yaml`
-and is not overwritten by bootstrap. Use it to tune simple, medium, hard, and
-arbiter model routes for Claude, Codex/OpenAI, Gemini, and Copilot. Copilot
-defaults to `Auto` for simple/default work because exact model availability is
-controlled by the Copilot client, plan, and organization policy.
+and is not overwritten by bootstrap. Use it only to constrain cost, quality, and
+capability classes. Fresh signed host receipts and independent benchmark evidence
+select the model for Claude, Codex/OpenAI, Google Antigravity, Copilot, Grok,
+and VS Code. No static provider default qualifies a model for execution.

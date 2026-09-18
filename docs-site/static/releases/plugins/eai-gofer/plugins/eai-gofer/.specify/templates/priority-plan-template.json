@@ -1,10 +1,18 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "revision": "replace-with-approved-direction-revision",
   "objective": "Replace with the current business outcome",
   "lastInstruction": {
     "id": "D001",
     "text": "Replace with the material approved direction recorded in decisions.md"
+  },
+  "decisionPolicy": {
+    "mode": "goal-led",
+    "askOnlyFor": [
+      "goal-change",
+      "irreversible-action",
+      "missing-authority"
+    ]
   },
   "criticalPath": ["T001", "T002"],
   "tasks": {
