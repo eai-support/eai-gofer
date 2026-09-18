@@ -1442,7 +1442,7 @@ export function getGithubAgentSpecs() {
     {
       id: 'eai',
       description: 'Gofer public entrypoint. Use for EAI delivery, research, planning, implementation, validation, and workspace setup.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [],
       body: `
 You are the public EAI entrypoint for Gofer.
