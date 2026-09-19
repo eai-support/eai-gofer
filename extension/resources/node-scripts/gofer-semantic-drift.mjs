@@ -166,7 +166,10 @@ async function readArtifact(target) {
     const hash = createHash('sha256');
     const sentChunks = [];
     let sentBytes = 0;
-    for await (const chunk of handle.createReadStream()) {
+    // autoClose defaults to true, which would close the handle at EOF and
+    // make the finally block's own close() below fail on an already-closed
+    // handle. The finally block owns the close; the stream must not race it.
+    for await (const chunk of handle.createReadStream({ autoClose: false })) {
       hash.update(chunk);
       if (sentBytes < MAX_ARTIFACT_BYTES) {
         const remaining = MAX_ARTIFACT_BYTES - sentBytes;
