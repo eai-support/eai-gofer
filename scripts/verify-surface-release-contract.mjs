@@ -31,7 +31,28 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
   '.specify/scripts/node/gofer-heldout-snapshot.mjs',
+  '.specify/scripts/node/gofer-run-verified-task.mjs',
+  '.specify/scripts/node/gofer-semantic-drift.mjs',
+  '.specify/scripts/node/gofer-typesafe-credentials.mjs',
+  '.specify/config/typesafe-semantic-review.json',
 ];
+// extension/resources mirrors .specify/<category>/ under a differently named
+// sibling directory (see sync-extension-resources.mjs); the plugin roots keep
+// the .specify/<category>/ path as-is. Both prefixes must be covered, or a
+// non-script asset (e.g. a policy config) silently skips the extension/resources
+// half of the parity check.
+const EXTENSION_RESOURCE_CATEGORY_DIRS = {
+  'scripts/node/': 'node-scripts/',
+  'config/': 'specify-config/',
+};
+function packagedAssetPath(asset, root) {
+  if (!root.endsWith('resources')) return asset;
+  for (const [specifyCategory, resourcesDir] of Object.entries(EXTENSION_RESOURCE_CATEGORY_DIRS)) {
+    const prefix = `.specify/${specifyCategory}`;
+    if (asset.startsWith(prefix)) return asset.replace(prefix, resourcesDir);
+  }
+  throw new Error(`No extension/resources mapping known for release runtime asset: ${asset}`);
+}
 const packagedRuntimeRoots = [
   'plugins/eai-gofer',
   'plugins/eai-gofer/plugins/eai-gofer',
@@ -151,10 +172,7 @@ async function verifyRuntimeAssetParity() {
   for (const asset of requiredRuntimeAssets) {
     const canonical = await fs.readFile(path.join(repoRoot, asset));
     for (const root of packagedRuntimeRoots) {
-      const packaged = asset.replace(
-        '.specify/scripts/node/',
-        root.endsWith('resources') ? 'node-scripts/' : '.specify/scripts/node/'
-      );
+      const packaged = packagedAssetPath(asset, root);
       let packagedContent;
       try {
         packagedContent = await fs.readFile(path.join(repoRoot, root, packaged));

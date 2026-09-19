@@ -49,6 +49,10 @@ const additions = [
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
   '.specify/scripts/node/gofer-heldout-snapshot.mjs',
+  '.specify/scripts/node/gofer-run-verified-task.mjs',
+  '.specify/scripts/node/gofer-semantic-drift.mjs',
+  '.specify/scripts/node/gofer-typesafe-credentials.mjs',
+  '.specify/config/typesafe-semantic-review.json',
 ];
 const temporaryDirectories: string[] = [];
 afterEach(() => {
@@ -93,8 +97,8 @@ describe('release-pinned portable inventories', () => {
     expect(getGoferPortableScaffoldPaths(candidateRelease)).toBe(
       GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS
     );
-    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(204);
-    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(204);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(207);
+    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(207);
     expect(Object.isFrozen(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS)).toBe(true);
     const bundle = createGoferExportBundle(candidateRequest());
     for (const file of additions) {

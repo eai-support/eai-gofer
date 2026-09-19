@@ -260,7 +260,10 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-heldout-corpus.mjs',
       'node/gofer-heldout-verifier.mjs',
       'node/gofer-heldout-snapshot.mjs',
+      'node/gofer-semantic-drift.mjs',
+      'node/gofer-typesafe-credentials.mjs',
     ]),
+    ...under('config', ['typesafe-semantic-review.json']),
   ].sort()
 );
 

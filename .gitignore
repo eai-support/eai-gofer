@@ -45,6 +45,7 @@ docs-site/.docusaurus/
 docs-site/node_modules/
 release-assets/
 .env
+.specify/secrets/
 *.zip
 *.tar.gz
 *.vsix
