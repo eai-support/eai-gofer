@@ -324,6 +324,17 @@ describe('human-gated signing command', () => {
     ]) expect(() => parseSignArguments(bad)).toThrow('BENCHMARK_SIGN_COMMAND_REQUIRED');
   });
 
+  it('accepts an optional attestation lifetime of 1 to 240 minutes, and nothing else', () => {
+    expect(parseSignArguments([...args, '--ttl-minutes', '240']).ttlMs).toBe(240 * 60 * 1000);
+    expect(parseSignArguments(args).ttlMs).toBeUndefined();
+    for (const bad of ['0', '241', '-5', '1.5', 'abc', '']) {
+      expect(() => parseSignArguments([...args, '--ttl-minutes', bad])).toThrow('BENCHMARK_SIGN_COMMAND_REQUIRED');
+    }
+    expect(() => parseSignArguments([...args, '--ttl-minutes', '60', '--ttl-minutes', '60'])).toThrow(
+      'BENCHMARK_SIGN_COMMAND_REQUIRED'
+    );
+  });
+
   it('refuses to run without a terminal and writes nothing', async () => {
     const out = path.join(await temp('gofer-sign-out-'), 'attestation.json');
     const script = path.resolve('.specify/scripts/node/gofer-benchmark-sign.mjs');

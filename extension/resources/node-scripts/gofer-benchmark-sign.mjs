@@ -17,13 +17,18 @@ const denied = () => new Error('BENCHMARK_SIGN_COMMAND_REQUIRED');
 export function parseSignArguments(argv) {
   const flags = new Map();
   for (let index = 0; index < argv.length; index += 2) {
-    if (!['--workspace-root', '--snapshot-id', '--capability-receipt', '--out'].includes(argv[index]) ||
+    if (!['--workspace-root', '--snapshot-id', '--capability-receipt', '--out', '--ttl-minutes'].includes(argv[index]) ||
         typeof argv[index + 1] !== 'string' || flags.has(argv[index])) throw denied();
     flags.set(argv[index], argv[index + 1]);
   }
   const args = { workspaceRoot: flags.get('--workspace-root'), snapshotId: flags.get('--snapshot-id'),
     receiptPath: flags.get('--capability-receipt'), out: flags.get('--out') };
-  if (flags.size !== 4 || !path.isAbsolute(args.workspaceRoot) || !path.isAbsolute(args.receiptPath) ||
+  // Optional: how long the attestation stays valid. The signer allows up to 24
+  // hours; this command allows up to 4, never more than a receipt's own life.
+  const lifetime = flags.get('--ttl-minutes');
+  if (lifetime !== undefined && (!/^\d{1,3}$/.test(lifetime) || Number(lifetime) < 1 || Number(lifetime) > 240)) throw denied();
+  args.ttlMs = lifetime === undefined ? undefined : Number(lifetime) * 60 * 1000;
+  if (flags.size !== (lifetime === undefined ? 4 : 5) || !path.isAbsolute(args.workspaceRoot) || !path.isAbsolute(args.receiptPath) ||
       !path.isAbsolute(args.out) || !/^[a-f0-9]{64}$/.test(args.snapshotId)) throw denied();
   return args;
 }
@@ -43,6 +48,7 @@ async function main() {
     { workspaceRoot: args.workspaceRoot });
   const signed = await signHeldOutBenchmarkAttestation({ workspaceRoot: args.workspaceRoot,
     capabilityReceipt, capabilityPublicKey, snapshotId: args.snapshotId,
+    ...(args.ttlMs === undefined ? {} : { ttlMs: args.ttlMs }),
     getPassphrase: () => promptHidden('Verifier passphrase: ') });
   const out = await open(args.out, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL |
     constants.O_NOFOLLOW, 0o600);

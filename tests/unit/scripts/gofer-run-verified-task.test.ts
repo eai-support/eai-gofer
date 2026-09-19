@@ -161,7 +161,7 @@ describe('verified native runtime command entrypoint', () => {
       const feature = path.join(source, '.specify', 'specs', 'native-runtime-smoke');
       expect(await readFile(path.join(feature, 'plan.md'), 'utf8')).toContain('Plan');
       expect(JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))).toMatchObject({
-        maxIterations: 1,
+        maxIterations: 2,
       });
     } finally {
       cleanup();
