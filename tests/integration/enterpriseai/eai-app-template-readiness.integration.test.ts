@@ -105,6 +105,29 @@ describe('EAI app-template readiness gate', () => {
     expect(run(customRoot).report.status).toBe('unsupported_template');
   });
 
+  it('accepts a release-tagged template on manifests that predate the repo field', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    // Legacy manifests carry no template.repo, so displaySource is the only
+    // provenance available and its ref must normalize away whether the template
+    // was pinned by release tag or by commit SHA.
+    write(
+      root,
+      '.eai-manifest.json',
+      validManifest({
+        template: {
+          displaySource: 'eai-support/eai-app-template@v1.10.2',
+          initializedAt: '2026-08-18T00:00:00.000Z',
+        },
+      })
+    );
+
+    const result = run(root);
+
+    expect(result.report.status).not.toBe('unsupported_template');
+    expect(result.report.ready).toBe(true);
+  });
+
   it('blocks a damaged app even when the provenance manifest is valid', () => {
     const root = makeRoot();
     writeReadyProject(root);

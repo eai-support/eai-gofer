@@ -50,7 +50,9 @@ function isCanonicalTemplateSource(value) {
     .replace(/^https?:\/\//, '')
     .replace(/\/+$/, '')
     .replace(/\.git(?=@|$)/, '')
-    .replace(/@[0-9a-f]{7,40}$/i, '')
+    // The template is pinned by release tag as well as by commit SHA, so both
+    // ref shapes must normalize away before the canonical-source comparison.
+    .replace(/@(?:v\d+\.\d+\.\d+|[0-9a-f]{7,40})$/i, '')
     .replace(/\s+\(legacy scaffold inferred\)$/i, '')
     .replace(/\/+$/, '');
 

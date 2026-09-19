@@ -5,7 +5,7 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 # Eai
 
-Version: 3.12.8
+Version: 3.12.9
 
 Apply this skill to every request when the plugin is enabled. The user does not need to type a Gofer command. Keep the user's request unchanged and route it through Gofer internally. Use the separate update skill only when the user explicitly asks to install or update Gofer.
 
@@ -255,7 +255,7 @@ For app delivery, make EAI Platform choices for the business user.
 
 ## Token And Cost Policy
 
-- Treat `.specify/memory/gofer-model-policy.yaml` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.
+- Treat `.specify/memory/gofer-model-policy.yaml` as advisory capability, cost, and quality constraints. A fresh signed host receipt and independently verified benchmark evidence select the model. Run the internal bootstrap contract if it is missing.
 - Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.
 - Keep raw search, build, and test output out of the main chat context. Write stable findings to `.specify/specs/{feature}/context-bundle.md` and continue from summaries.
 - Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -304,4 +304,4 @@ The public release feed is available at:
 https://eai-support.github.io/eai-gofer/releases.json
 ```
 
-Gemini CLI users can also copy the bundled `.gemini/` directory into a repository root to activate the same public command set there.
+Legacy Gemini file-format users can copy the bundled `.gemini/` directory into an existing repository. New installations use Google Antigravity and `agy`.

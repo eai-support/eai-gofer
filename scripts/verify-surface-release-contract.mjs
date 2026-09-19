@@ -13,6 +13,48 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..');
 const hosts = ['claude', 'codex', 'copilot', 'antigravity', 'grok', 'vscode'];
+const requiredRuntimeAssets = [
+  '.specify/scripts/node/gofer-host-capability.mjs',
+  '.specify/scripts/node/gofer-live-routing.mjs',
+  '.specify/scripts/node/gofer-local-isolation.mjs',
+  '.specify/scripts/node/gofer-native-adapter.mjs',
+  '.specify/scripts/node/gofer-native-runtime.mjs',
+  '.specify/scripts/node/gofer-trusted-evaluator.mjs',
+  '.specify/scripts/node/gofer-trusted-benchmark.mjs',
+  '.specify/scripts/node/gofer-trust-bootstrap.mjs',
+  '.specify/scripts/node/gofer-local-capability-issuer.mjs',
+  '.specify/scripts/node/gofer-runtime-ledger.mjs',
+  '.specify/scripts/node/gofer-verified-execution.mjs',
+  '.specify/scripts/node/gofer-execution-recovery.mjs',
+  '.specify/scripts/node/gofer-execution-metrics.mjs',
+  '.specify/scripts/node/gofer-benchmark.mjs',
+  '.specify/scripts/node/gofer-heldout-corpus.mjs',
+  '.specify/scripts/node/gofer-heldout-verifier.mjs',
+  '.specify/scripts/node/gofer-heldout-snapshot.mjs',
+];
+const packagedRuntimeRoots = [
+  'plugins/eai-gofer',
+  'plugins/eai-gofer/plugins/eai-gofer',
+  'extension/resources',
+];
+const currentSurfaceRoots = [
+  'README.md',
+  'skills',
+  'plugin-skills',
+  '.claude',
+  '.github',
+  '.grok',
+  '.agents',
+  '.codex-plugin',
+  'extension/resources/claude-commands',
+  'extension/resources/claude-skills',
+  'extension/resources/copilot-prompts',
+  'extension/resources/github-skills',
+  'extension/resources/grok-skills',
+  'extension/resources/node-scripts',
+  'extension/resources/specify-commands',
+  'plugins/eai-gofer',
+];
 
 function parseArgs(argv) {
   const versionIndex = argv.indexOf('--version');
@@ -34,10 +76,12 @@ async function assertBundleVersion(expectedVersion) {
     'plugins/eai-gofer/.codex-plugin/plugin.json',
     'plugins/eai-gofer/.github/plugin/plugin.json',
   ];
-  const versions = await Promise.all(manifests.map(async (manifest) => ({
-    manifest,
-    version: (await readJson(manifest)).version,
-  })));
+  const versions = await Promise.all(
+    manifests.map(async (manifest) => ({
+      manifest,
+      version: (await readJson(manifest)).version,
+    }))
+  );
   const mismatched = versions.filter((entry) => entry.version !== expectedVersion);
   if (mismatched.length > 0) {
     throw new Error(
@@ -69,7 +113,9 @@ async function verifyInstructions() {
     });
     const failures = results.filter((result) => !result.ok);
     if (failures.length > 0) {
-      throw new Error(`Always-on instruction setup failed: ${failures.map((result) => result.host).join(', ')}`);
+      throw new Error(
+        `Always-on instruction setup failed: ${failures.map((result) => result.host).join(', ')}`
+      );
     }
 
     for (const host of hosts) {
@@ -89,7 +135,10 @@ async function verifyInstructions() {
         env: { XDG_CONFIG_HOME: configHome },
       });
       const content = await fs.readFile(targetPath, 'utf8');
-      if (!content.includes('gofer:always-on-eai:start') || !content.includes('Apply Gofer to every request.')) {
+      if (
+        !content.includes('gofer:always-on-eai:start') ||
+        !content.includes('Apply Gofer to every request.')
+      ) {
         throw new Error(`Always-on EAI contract is missing for ${host}.`);
       }
     }
@@ -98,8 +147,73 @@ async function verifyInstructions() {
   }
 }
 
+async function verifyRuntimeAssetParity() {
+  for (const asset of requiredRuntimeAssets) {
+    const canonical = await fs.readFile(path.join(repoRoot, asset));
+    for (const root of packagedRuntimeRoots) {
+      const packaged = asset.replace(
+        '.specify/scripts/node/',
+        root.endsWith('resources') ? 'node-scripts/' : '.specify/scripts/node/'
+      );
+      let packagedContent;
+      try {
+        packagedContent = await fs.readFile(path.join(repoRoot, root, packaged));
+      } catch {
+        throw new Error(`Release runtime asset is missing from ${root}: ${asset}`);
+      }
+      if (!canonical.equals(packagedContent)) {
+        throw new Error(`Release runtime asset differs in ${root}: ${asset}`);
+      }
+    }
+  }
+}
+
+async function verifyCanonicalHostIdentity() {
+  const currentHostSurfaces = [
+    '.specify/scripts/node/gofer-host-capability.mjs',
+    '.specify/scripts/node/gofer-surface-update.mjs',
+    '.specify/scripts/node/package-agent-plugin.mjs',
+    'README.md',
+  ];
+  const prohibited =
+    /(?:supported|current|install|update)\s+(?:AI\s+)?(?:host|hosts|workflows?|surface)\b[^\n]{0,100}\bGemini\b(?![^\n]{0,30}\blegacy\b)|\bGemini\b(?![^\n]{0,30}\blegacy\b)[^\n]{0,100}(?:supported|current|install|update)\s+(?:AI\s+)?(?:host|hosts|workflows?|surface)\b/i;
+  for (const relative of currentHostSurfaces) {
+    const content = await fs.readFile(path.join(repoRoot, relative), 'utf8');
+    const currentHostGemini = content
+      .split(/\r?\n/)
+      .find(
+        (line) =>
+          prohibited.test(line) && !/\bGemini\b[^\n]{0,50}\b(?:legacy|not|never)\b/i.test(line)
+      );
+    if (currentHostGemini) throw new Error(`Current-host Gemini reference in ${relative}.`);
+  }
+
+  const files = [];
+  const walk = async (relative) => {
+    const absolute = path.join(repoRoot, relative);
+    const entry = await fs.stat(absolute);
+    if (entry.isFile()) {
+      files.push(relative);
+      return;
+    }
+    for (const child of await fs.readdir(absolute)) await walk(path.join(relative, child));
+  };
+  for (const root of currentSurfaceRoots) await walk(root);
+  const currentGemini = /\b(?:supported|current)\s+(?:AI\s+)?hosts?\s+(?:are|:)[^\n]*\bgemini\b/i;
+  for (const relative of files) {
+    const content = await fs.readFile(path.join(repoRoot, relative), 'utf8');
+    for (const line of content.split(/\r?\n/)) {
+      if (currentGemini.test(line) && !/\blegacy\b/i.test(line)) {
+        throw new Error(`Current-host Gemini reference in distributable surface ${relative}.`);
+      }
+    }
+  }
+}
+
 const { version } = parseArgs(process.argv.slice(2));
 const expectedVersion = version || (await readJson('package.json')).version;
 await assertBundleVersion(expectedVersion);
 await verifyInstructions();
+await verifyRuntimeAssetParity();
+await verifyCanonicalHostIdentity();
 console.log(`Gofer release surface contract passed for v${expectedVersion}.`);

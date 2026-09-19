@@ -218,8 +218,8 @@ export const GOFER_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   ].sort()
 );
 
-/** Current inventory includes the priority checks and their runtime dependencies. */
-export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+/** Previous inventory stays pinned for releases that already declared its digest. */
+const GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   [
     ...GOFER_PORTABLE_SCAFFOLD_PATHS,
     ...under('references', [
@@ -237,12 +237,40 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
   ].sort()
 );
 
+/** Current inventory includes the verified runtime and its full import chain. */
+export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [
+    ...GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS,
+    ...under('scripts', [
+      'node/gofer-host-capability.mjs',
+      'node/gofer-live-routing.mjs',
+      'node/gofer-local-isolation.mjs',
+      'node/gofer-native-adapter.mjs',
+      'node/gofer-native-runtime.mjs',
+      'node/gofer-trusted-evaluator.mjs',
+      'node/gofer-trusted-benchmark.mjs',
+      'node/gofer-trust-bootstrap.mjs',
+      'node/gofer-local-capability-issuer.mjs',
+      'node/gofer-run-verified-task.mjs',
+      'node/gofer-runtime-ledger.mjs',
+      'node/gofer-verified-execution.mjs',
+      'node/gofer-execution-recovery.mjs',
+      'node/gofer-execution-metrics.mjs',
+      'node/gofer-benchmark.mjs',
+      'node/gofer-heldout-corpus.mjs',
+      'node/gofer-heldout-verifier.mjs',
+      'node/gofer-heldout-snapshot.mjs',
+    ]),
+  ].sort()
+);
+
 const PORTABLE_PATHS = new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS);
 const RELEASE_INVENTORIES = new Map(
-  [GOFER_PORTABLE_SCAFFOLD_PATHS, GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS].map((paths) => [
-    createGoferScaffoldInventoryDigest(paths),
-    paths,
-  ])
+  [
+    GOFER_PORTABLE_SCAFFOLD_PATHS,
+    GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS,
+    GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS,
+  ].map((paths) => [createGoferScaffoldInventoryDigest(paths), paths])
 );
 
 /** Hash the sorted newline-delimited path inventory used by scaffold consumers. */

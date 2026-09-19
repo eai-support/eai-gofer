@@ -32,6 +32,23 @@ const additions = [
   '.specify/scripts/node/gofer-priority-check.mjs',
   '.specify/scripts/node/gofer-response-check.mjs',
   '.specify/templates/priority-plan-template.json',
+  '.specify/scripts/node/gofer-host-capability.mjs',
+  '.specify/scripts/node/gofer-live-routing.mjs',
+  '.specify/scripts/node/gofer-local-isolation.mjs',
+  '.specify/scripts/node/gofer-native-adapter.mjs',
+  '.specify/scripts/node/gofer-native-runtime.mjs',
+  '.specify/scripts/node/gofer-trusted-evaluator.mjs',
+  '.specify/scripts/node/gofer-trusted-benchmark.mjs',
+  '.specify/scripts/node/gofer-trust-bootstrap.mjs',
+  '.specify/scripts/node/gofer-local-capability-issuer.mjs',
+  '.specify/scripts/node/gofer-runtime-ledger.mjs',
+  '.specify/scripts/node/gofer-verified-execution.mjs',
+  '.specify/scripts/node/gofer-execution-recovery.mjs',
+  '.specify/scripts/node/gofer-execution-metrics.mjs',
+  '.specify/scripts/node/gofer-benchmark.mjs',
+  '.specify/scripts/node/gofer-heldout-corpus.mjs',
+  '.specify/scripts/node/gofer-heldout-verifier.mjs',
+  '.specify/scripts/node/gofer-heldout-snapshot.mjs',
 ];
 const temporaryDirectories: string[] = [];
 afterEach(() => {
@@ -76,8 +93,8 @@ describe('release-pinned portable inventories', () => {
     expect(getGoferPortableScaffoldPaths(candidateRelease)).toBe(
       GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS
     );
-    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(186);
-    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(186);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(204);
+    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(204);
     expect(Object.isFrozen(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS)).toBe(true);
     const bundle = createGoferExportBundle(candidateRequest());
     for (const file of additions) {

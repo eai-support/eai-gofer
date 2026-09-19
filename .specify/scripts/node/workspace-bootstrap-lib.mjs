@@ -1486,8 +1486,9 @@ Each feature should also keep a running stakeholder review pack:
 
 ## Model Policy
 
-Edit \`.specify/memory/gofer-model-policy.yaml\` to tune simple, medium, hard,
-and arbiter model routes for Claude, Codex/OpenAI, Gemini, and Copilot. The
+Edit \`.specify/memory/gofer-model-policy.yaml\` to set advisory simple, medium, hard,
+and arbiter capability constraints for Claude, Codex/OpenAI, Google Antigravity,
+Copilot, Grok, and VS Code. Fresh signed capability receipts select models. The
 file is copied from \`.specify/templates/gofer-model-policy.yaml\` when missing
 and is not overwritten by bootstrap.
 `;

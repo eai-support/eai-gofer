@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.9] - 2026-09-19
+
+Accept release-tagged eai-app-template provenance in readiness checks (#364)
+
 ## [3.12.8] - 2026-09-15
 
 Preserve current AI surfaces and release hardening

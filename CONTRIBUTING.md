@@ -70,5 +70,6 @@ Good public contributions usually look like:
 - docs and onboarding improvements
 - better examples and screenshots
 - pipeline wording and command-surface polish
-- host-install validation across Claude, Codex, Copilot, Gemini, and VS Code
+- host-install validation across Claude, Codex, Copilot, Google Antigravity,
+  Grok, and VS Code; Gemini file-format compatibility only
 - test coverage for packaging, generation, and release behavior

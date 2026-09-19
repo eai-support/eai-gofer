@@ -1,23 +1,219 @@
-import { describe, expect, it } from 'vitest';
-import { gateBenchmark, runBenchmark } from '../../../.specify/scripts/node/gofer-benchmark.mjs';
+/* eslint-disable @typescript-eslint/no-explicit-any -- dynamic host receipts are intentionally untyped test inputs. */
+import { describe, expect, it, vi } from 'vitest';
+import {
+  ablateBenchmark,
+  gateBenchmark,
+  runBenchmark,
+} from '../../../.specify/scripts/node/gofer-benchmark.mjs';
 
 const cases = [{ id: 'held-out-runtime-recovery', heldOut: true, input: { fixture: 'recovery' } }];
+const provenance = { harnessId: 'independent-local-verifier', modelId: 'fixture-model' };
+const execute = async ({ run }: any) => ({
+  modelId: 'fixture-model',
+  costUsd: run,
+  durationMs: run * 10,
+  receipt: `execution-${run}`,
+  output: { repaired: true },
+});
+const verify = async ({ caseId, run, inputHash, execution }: any) => ({
+  caseId,
+  run,
+  inputHash,
+  executionReceipt: execution.receipt,
+  passed: true,
+  receipt: `verifier-${run}`,
+  verifierId: 'independent-local-verifier',
+  failureClassification: 'none',
+  reviewReceipt: `review-${run}`,
+});
 
 describe('Gofer benchmark contract', () => {
-  it('requires three functionally verified runs of every held-out case', async () => {
-    const report = await runBenchmark({ cases, execute: async ({ run }) => ({ functional: true, costUsd: run, durationMs: run * 10, receipt: `receipt-${run}` }) });
-    expect(report).toMatchObject({ status: 'pass', reliability: 1, functionalRuns: 3, costUsd: 6, durationMs: 60 });
+  it('requires three independently verified runs of every held-out case', async () => {
+    const report = await runBenchmark({ cases, execute, verify, provenance });
+    expect(report).toMatchObject({
+      status: 'pass',
+      reliability: 1,
+      functionalRuns: 3,
+      costUsd: 6,
+      durationMs: 60,
+    });
+    expect(report.confidenceInterval).toMatchObject({ level: 0.95 });
+    expect(report.runs.every((run) => run.functionalVerified && run.verifierReceipt)).toBe(true);
   });
 
-  it('does not turn a fluent but unverifiable result into a benchmark pass', async () => {
-    const report = await runBenchmark({ cases, execute: async ({ run }) => ({ functional: run !== 2, costUsd: 1, durationMs: 10, receipt: `receipt-${run}` }) });
+  it('does not turn a caller-supplied functional flag into a benchmark pass', async () => {
+    const verifier = vi.fn(async ({ caseId, run, inputHash, execution }: any) => ({
+      caseId,
+      run,
+      inputHash,
+      executionReceipt: execution.receipt,
+      passed: run !== 2,
+      receipt: `verifier-${run}`,
+      verifierId: 'independent-local-verifier',
+      failureClassification: run === 2 ? 'functional-failure' : 'none',
+      reviewReceipt: `review-${run}`,
+    }));
+    const report = await runBenchmark({
+      cases,
+      execute: async (request: any) => ({ ...(await execute(request)), functional: true }),
+      verify: verifier,
+      provenance,
+    });
     expect(report).toMatchObject({ status: 'fail', reliability: 2 / 3 });
+    expect(verifier).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects repeated execution or verification receipts across repetitions', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async (request: any) => ({
+          ...(await execute(request)),
+          receipt: 'reused-execution',
+        }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('NON_INDEPENDENT_BENCHMARK_RUNS');
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, inputHash, execution }: any) => ({
+          ...(await verify({ caseId, run, inputHash, execution })),
+          receipt: 'reused-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('NON_INDEPENDENT_BENCHMARK_RUNS');
+  });
+
+  it('rejects executions whose model differs from the report provenance', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async (request: { run: number }) => ({
+          ...(await execute(request)),
+          modelId: 'other-model',
+        }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_RESULT');
+  });
+
+  it('rejects a verifier verdict not bound to the worker receipt', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run }: any) => ({
+          caseId,
+          run,
+          executionReceipt: 'forged',
+          passed: true,
+          receipt: 'v',
+          verifierId: 'independent-local-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_VERDICT');
+  });
+
+  it('rejects a verifier verdict bound to a different held-out input', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, execution }: any) => ({
+          caseId,
+          run,
+          inputHash: 'forged',
+          executionReceipt: execution.receipt,
+          passed: true,
+          receipt: 'v',
+          verifierId: 'independent-local-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_VERDICT');
+  });
+
+  it('requires independent review and a failure classification for every run', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute,
+        verify: async ({ caseId, run, inputHash, execution }: any) => ({
+          caseId,
+          run,
+          inputHash,
+          executionReceipt: execution.receipt,
+          passed: true,
+          receipt: `verifier-${run}`,
+          verifierId: 'independent-local-verifier',
+        }),
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_VERDICT');
+  });
+
+  it('reports model and harness ablations without conflating them', () => {
+    expect(
+      ablateBenchmark([
+        { status: 'pass', reliability: 1, costUsd: 1, durationMs: 10, provenance },
+        {
+          status: 'pass',
+          reliability: 1,
+          costUsd: 2,
+          durationMs: 20,
+          provenance: { harnessId: 'independent-local-verifier', modelId: 'other-model' },
+        },
+      ])
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ modelId: 'fixture-model' })]));
   });
 
   it('fails reliability, cost and duration regressions independently', () => {
     const baseline = { status: 'pass', reliability: 1, costUsd: 10, durationMs: 100 };
     const candidate = { status: 'fail', reliability: 2 / 3, costUsd: 12, durationMs: 120 };
-    expect(gateBenchmark(candidate, baseline, { maxCostIncreasePct: 0.05, maxDurationIncreasePct: 0.05 }).findings)
-      .toEqual(expect.arrayContaining(['FUNCTIONAL_RELIABILITY_REGRESSION', 'BASELINE_RELIABILITY_REGRESSION', 'COST_REGRESSION', 'DURATION_REGRESSION']));
+    expect(
+      gateBenchmark(candidate, baseline, { maxCostIncreasePct: 0.05, maxDurationIncreasePct: 0.05 })
+        .findings
+    ).toEqual(
+      expect.arrayContaining([
+        'FUNCTIONAL_RELIABILITY_REGRESSION',
+        'BASELINE_RELIABILITY_REGRESSION',
+        'COST_REGRESSION',
+        'DURATION_REGRESSION',
+      ])
+    );
+  });
+
+  it('treats a rise from a zero baseline as a regression', () => {
+    const baseline = { status: 'pass', reliability: 1, costUsd: 0, durationMs: 0 };
+    expect(
+      gateBenchmark({ status: 'pass', reliability: 1, costUsd: 1, durationMs: 1 }, baseline)
+        .findings
+    ).toEqual(['COST_REGRESSION', 'DURATION_REGRESSION']);
+    expect(
+      gateBenchmark({ status: 'pass', reliability: 1, costUsd: 0, durationMs: 0 }, baseline).status
+    ).toBe('pass');
+  });
+
+  it('rejects missing model binding and impossible reliability', async () => {
+    await expect(
+      runBenchmark({
+        cases,
+        execute: async ({ run }: any) => ({ costUsd: run, durationMs: run, receipt: `r-${run}` }),
+        verify,
+        provenance,
+      })
+    ).rejects.toThrow('INVALID_BENCHMARK_RESULT');
+    expect(() =>
+      gateBenchmark(
+        { status: 'pass', reliability: 1.1, costUsd: 1, durationMs: 1 },
+        { status: 'pass', reliability: 1, costUsd: 1, durationMs: 1 }
+      )
+    ).toThrow('INVALID_BENCHMARK_GATE');
   });
 });
