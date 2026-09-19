@@ -10,7 +10,17 @@ const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-
 const MAX_ARTIFACT_BYTES = 64 * 1024;
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
-function confined(workspace, value) { return path.isAbsolute(value) ? value : path.resolve(workspace, value); }
+// Reject any feature directory outside the workspace instead of trusting the
+// caller: an escaping path would read arbitrary files, send their contents to
+// the external provider, and write the receipt outside the workspace.
+function confined(workspace, value) {
+  const target = path.resolve(workspace, value);
+  const relative = path.relative(workspace, target);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('Gofer feature directory must remain inside the workspace.');
+  }
+  return target;
+}
 function parseArgs(argv) {
   const args = { workspace: process.cwd(), featureDir: '', event: '', json: false };
   for (let index = 0; index < argv.length; index += 1) {
@@ -25,7 +35,18 @@ function parseArgs(argv) {
   args.workspace = path.resolve(args.workspace); args.featureDir = confined(args.workspace, args.featureDir); return args;
 }
 async function readJson(target) { return JSON.parse(await fs.readFile(target, 'utf8')); }
-async function readArtifact(target) { try { const value = await fs.readFile(target, 'utf8'); return value.slice(0, MAX_ARTIFACT_BYTES); } catch (error) { if (error?.code === 'ENOENT') return ''; throw error; } }
+// The hash must bind the full file, not the truncated slice sent to the
+// provider: hashing only the truncated content would leave drift past
+// MAX_ARTIFACT_BYTES invisible to the receipt.
+async function readArtifact(target) {
+  try {
+    const full = await fs.readFile(target, 'utf8');
+    return { full, sent: full.slice(0, MAX_ARTIFACT_BYTES) };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { full: '', sent: '' };
+    throw error;
+  }
+}
 function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCase(); }
 // A response outside this set is unexpected (a provider bug, a new API
 // version, a malformed payload) and must not be read as a silent pass.
@@ -33,13 +54,15 @@ const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
 const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 
 export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
-  const policyPath = path.join(workspace, POLICY_RELATIVE_PATH);
+  const resolvedWorkspace = path.resolve(workspace);
+  featureDir = confined(resolvedWorkspace, featureDir);
+  const policyPath = path.join(resolvedWorkspace, POLICY_RELATIVE_PATH);
   const policy = await readJson(policyPath);
   if (!policy.enabled || !policy.events.includes(event)) return { status: 'disabled', event };
   const credentials = await credentialStatus({ workspace, env });
   if (!credentials.configured) return { status: 'not_configured', event };
   const artifacts = await Promise.all(['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md', 'decisions.md', 'traceability.md'].map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
-  const state = Object.fromEntries(artifacts.map(([name, content]) => [name, { sha256: digest(content), content }]));
+  const state = Object.fromEntries(artifacts.map(([name, { full, sent }]) => [name, { sha256: digest(full), content: sent }]));
   const { apiKey } = await resolveApiKey({ workspace, env });
   let response;
   try {
@@ -74,7 +97,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const status = alignment === 'conflict' || action === 'ask_user' ? 'conflict'
     : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
     : 'aligned';
-  const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, content]) => [name, digest(content)])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
+  const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { full }]) => [name, digest(full)])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
   const receiptPath = path.join(featureDir, 'evidence', 'semantic-review', `${event}.json`);
   await fs.mkdir(path.dirname(receiptPath), { recursive: true }); await fs.writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
   return receipt;

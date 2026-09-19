@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -102,5 +103,48 @@ describe('TypeSafe semantic governance', () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
     const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
     expect(result.status).toBe('aligned');
+  });
+
+  it('rejects a feature directory that escapes the workspace', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-outside-'));
+    directories.push(outside);
+    await writeFile(path.join(outside, 'secret.txt'), 'do not read this');
+    const fetchImpl = vi.fn();
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir: outside, event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('must remain inside the workspace');
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir: path.join(workspace, '..', 'escape'), event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('must remain inside the workspace');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('binds the receipt hash to the full artifact content, not the truncated slice sent to the provider', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const oversized = `${'a'.repeat(64 * 1024)}TAIL_DRIFT_MARKER`;
+    await writeFile(path.join(featureDir, 'spec.md'), oversized);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.artifacts['spec.md']).toBe(createHash('sha256').update(oversized).digest('hex'));
+    const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    const sentState = JSON.parse(sentBody.state);
+    expect(sentState['spec.md'].content.length).toBe(64 * 1024);
+    expect(sentState['spec.md'].content).not.toContain('TAIL_DRIFT_MARKER');
+  });
+
+  it('rejects a credential path routed through a symlinked directory', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-secrets-'));
+    directories.push(outside);
+    await symlink(outside, path.join(workspace, '.specify', 'secrets'));
+    await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
 });

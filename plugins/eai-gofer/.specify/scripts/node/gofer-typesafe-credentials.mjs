@@ -13,13 +13,35 @@ function parseArgs(argv) {
   return action.slice(2);
 }
 
-function confinedPath(workspace, relativePath) {
+// A lexical check alone does not stop a symlinked intermediate directory
+// (e.g. .specify/secrets) from redirecting the confined path outside the
+// workspace. Walk every component from the workspace root and reject any
+// that is a symlink, matching gofer-surface-update.mjs's existing check.
+async function assertNoSymlinkComponents(root, relativeTarget) {
+  const components = relativeTarget.split(path.sep).filter(Boolean);
+  let currentPath = root;
+  for (const component of components) {
+    currentPath = path.join(currentPath, component);
+    try {
+      const status = await fs.lstat(currentPath);
+      if (status.isSymbolicLink()) {
+        throw new Error('Gofer credential path must not pass through a symbolic link.');
+      }
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      throw error;
+    }
+  }
+}
+
+async function confinedPath(workspace, relativePath) {
   const root = path.resolve(workspace);
   const target = path.resolve(root, relativePath);
   const relative = path.relative(root, target);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error('Gofer credential path must remain inside the workspace.');
   }
+  await assertNoSymlinkComponents(root, relative);
   return target;
 }
 
@@ -41,7 +63,7 @@ async function readSecretFile(secretPath) {
 }
 
 async function writePolicyEnabled(workspace, enabled) {
-  const policyPath = confinedPath(workspace, POLICY_RELATIVE_PATH);
+  const policyPath = await confinedPath(workspace, POLICY_RELATIVE_PATH);
   const current = JSON.parse(await fs.readFile(policyPath, 'utf8'));
   current.enabled = enabled;
   await fs.writeFile(policyPath, `${JSON.stringify(current, null, 2)}\n`, { mode: 0o600 });
@@ -86,12 +108,12 @@ export async function credentialStatus({ workspace = process.cwd(), env = proces
 export async function resolveApiKey({ workspace = process.cwd(), env = process.env } = {}) {
   const environmentKey = String(env.TYPESAFE_API_KEY || '').trim();
   if (environmentKey) return { apiKey: environmentKey, source: 'environment' };
-  const fileKey = await readSecretFile(confinedPath(workspace, SECRET_RELATIVE_PATH));
+  const fileKey = await readSecretFile(await confinedPath(workspace, SECRET_RELATIVE_PATH));
   return { apiKey: fileKey, source: fileKey ? 'project_secret_file' : 'none' };
 }
 
 export async function connect({ workspace = process.cwd(), key } = {}) {
-  const secretPath = confinedPath(workspace, SECRET_RELATIVE_PATH);
+  const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
   if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
   await fs.mkdir(path.dirname(secretPath), { recursive: true, mode: 0o700 });
@@ -103,7 +125,7 @@ export async function connect({ workspace = process.cwd(), key } = {}) {
 }
 
 export async function disconnect({ workspace = process.cwd() } = {}) {
-  const secretPath = confinedPath(workspace, SECRET_RELATIVE_PATH);
+  const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const existed = await existingFile(secretPath);
   if (existed) await fs.unlink(secretPath);
   await writePolicyEnabled(workspace, false);
