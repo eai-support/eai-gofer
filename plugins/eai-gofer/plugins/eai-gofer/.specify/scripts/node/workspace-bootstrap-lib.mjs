@@ -12,6 +12,7 @@ export const CORE_SENTINELS = [
   GOFER_VERSION_FILE,
   path.join('.specify', 'commands', '0_gofer_start.md'),
   path.join('.specify', 'config', 'object-type-routing.json'),
+  path.join('.specify', 'config', 'typesafe-semantic-review.json'),
   path.join('.specify', 'templates', 'spec-template.md'),
   path.join('.specify', 'templates', 'build-map-template.md'),
   path.join('.specify', 'templates', 'loop-contract-template.json'),
@@ -28,6 +29,8 @@ export const CORE_SENTINELS = [
   path.join('.specify', 'scripts', 'node', 'parse-stage-command.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-local-settings-cleanup.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-loop-audit.mjs'),
+  path.join('.specify', 'scripts', 'node', 'gofer-typesafe-credentials.mjs'),
+  path.join('.specify', 'scripts', 'node', 'gofer-semantic-drift.mjs'),
   path.join('.specify', 'scripts', 'node', 'gofer-ui-preview.mjs'),
   path.join('.specify', 'scripts', 'hooks', 'post-tool-use.mjs'),
   path.join('.specify', 'scripts', 'powershell', 'install-optional-tools.ps1'),
@@ -131,6 +134,7 @@ const GOFER_GITIGNORE_ENTRIES = [
   '.specify/memory/context-health-state.json',
   '.specify/memory/observation-cache/',
   '.specify/specs/*/research-index.json',
+  '.specify/secrets/',
 ];
 
 const CLAUDE_HOOKS_CONFIG = {

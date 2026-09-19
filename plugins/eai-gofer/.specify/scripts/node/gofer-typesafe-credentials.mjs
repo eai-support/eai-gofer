@@ -1,0 +1,119 @@
+#!/usr/bin/env node
+
+import { promises as fs } from 'fs';
+import path from 'path';
+import process from 'process';
+
+const SECRET_RELATIVE_PATH = path.join('.specify', 'secrets', 'typesafe.env');
+const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-review.json');
+
+function parseArgs(argv) {
+  const action = argv.find((value) => value === '--connect' || value === '--disconnect' || value === '--status');
+  if (!action || argv.length !== 1) throw new Error('Usage: --connect | --disconnect | --status');
+  return action.slice(2);
+}
+
+function confinedPath(workspace, relativePath) {
+  const root = path.resolve(workspace);
+  const target = path.resolve(root, relativePath);
+  const relative = path.relative(root, target);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('Gofer credential path must remain inside the workspace.');
+  }
+  return target;
+}
+
+async function existingFile(target) {
+  try {
+    const stat = await fs.lstat(target);
+    if (stat.isSymbolicLink() || !stat.isFile()) throw new Error('Gofer credential path must be a regular file.');
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+async function readSecretFile(secretPath) {
+  if (!(await existingFile(secretPath))) return '';
+  const match = (await fs.readFile(secretPath, 'utf8')).match(/^TYPESAFE_API_KEY=([^\r\n]+)$/m);
+  return match?.[1]?.trim() || '';
+}
+
+async function writePolicyEnabled(workspace, enabled) {
+  const policyPath = confinedPath(workspace, POLICY_RELATIVE_PATH);
+  const current = JSON.parse(await fs.readFile(policyPath, 'utf8'));
+  current.enabled = enabled;
+  await fs.writeFile(policyPath, `${JSON.stringify(current, null, 2)}\n`, { mode: 0o600 });
+}
+
+async function promptForKey() {
+  if (!process.stdin.isTTY) throw new Error('Set TYPESAFE_API_KEY, then run --connect from an interactive terminal.');
+  process.stdout.write('TypeSafe API key: ');
+  const key = await new Promise((resolve, reject) => {
+    let value = '';
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on('data', (chunk) => {
+      const character = chunk.toString('utf8');
+      if (character === '\r' || character === '\n') {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdout.write('\n');
+        resolve(value);
+      } else if (character === '\u0003') {
+        process.stdin.setRawMode(false);
+        reject(new Error('Credential setup cancelled.'));
+      } else if (character === '\u007f') {
+        value = value.slice(0, -1);
+      } else {
+        value += character;
+      }
+    });
+  });
+  return String(key).trim();
+}
+
+export async function credentialStatus({ workspace = process.cwd(), env = process.env } = {}) {
+  const { source } = await resolveApiKey({ workspace, env });
+  return {
+    configured: source !== 'none',
+    source,
+    secretPath: SECRET_RELATIVE_PATH,
+  };
+}
+
+export async function resolveApiKey({ workspace = process.cwd(), env = process.env } = {}) {
+  const environmentKey = String(env.TYPESAFE_API_KEY || '').trim();
+  if (environmentKey) return { apiKey: environmentKey, source: 'environment' };
+  const fileKey = await readSecretFile(confinedPath(workspace, SECRET_RELATIVE_PATH));
+  return { apiKey: fileKey, source: fileKey ? 'project_secret_file' : 'none' };
+}
+
+export async function connect({ workspace = process.cwd(), key } = {}) {
+  const secretPath = confinedPath(workspace, SECRET_RELATIVE_PATH);
+  const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
+  if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
+  await fs.mkdir(path.dirname(secretPath), { recursive: true, mode: 0o700 });
+  if (await existingFile(secretPath)) await fs.chmod(secretPath, 0o600);
+  await fs.writeFile(secretPath, `TYPESAFE_API_KEY=${resolvedKey}\n`, { mode: 0o600 });
+  await fs.chmod(secretPath, 0o600);
+  await writePolicyEnabled(workspace, true);
+  return { configured: true, source: process.env.TYPESAFE_API_KEY ? 'environment' : 'project_secret_file', secretPath: SECRET_RELATIVE_PATH };
+}
+
+export async function disconnect({ workspace = process.cwd() } = {}) {
+  const secretPath = confinedPath(workspace, SECRET_RELATIVE_PATH);
+  const existed = await existingFile(secretPath);
+  if (existed) await fs.unlink(secretPath);
+  await writePolicyEnabled(workspace, false);
+  return { removedProjectSecret: existed, environmentStillConfigured: Boolean(process.env.TYPESAFE_API_KEY), secretPath: SECRET_RELATIVE_PATH };
+}
+
+async function main() {
+  const action = parseArgs(process.argv.slice(2));
+  const result = action === 'connect' ? await connect() : action === 'disconnect' ? await disconnect() : await credentialStatus();
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
