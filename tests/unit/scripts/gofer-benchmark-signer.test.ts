@@ -1,4 +1,4 @@
-import { createHash, generateKeyPairSync, verify, type KeyObject } from 'node:crypto';
+import { createHash, generateKeyPairSync, verify } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -7,10 +7,14 @@ import { signHeldOutBenchmarkAttestation } from '../../../.specify/scripts/node/
 import { runBenchmark } from '../../../.specify/scripts/node/gofer-benchmark.mjs';
 import { captureHeldOutResultSnapshot } from '../../../.specify/scripts/node/gofer-heldout-snapshot.mjs';
 import { capabilityReceiptHash } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import { installVerifier, type VerifierInstall } from '../../helpers/verifierCustody';
 
 // verifyTrustedBenchmarkEvidence deliberately has no trust-root override, so
 // route its registry lookup to the isolated test root and nowhere else.
-const seam = vi.hoisted(() => ({ trustRoot: null as string | null }));
+const seam = vi.hoisted(() => ({
+  trustRoot: null as string | null,
+  protectedRegistry: null as { path: string; ownerUid: number } | null,
+}));
 vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', async (importOriginal) => {
   const original =
     await importOriginal<
@@ -19,7 +23,11 @@ vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', async (imp
   return {
     ...original,
     resolveTrustedEvaluatorPublicKey: (receipt: unknown, options: Record<string, unknown>) =>
-      original.resolveTrustedEvaluatorPublicKey(receipt, { ...options, trustRoot: seam.trustRoot }),
+      original.resolveTrustedEvaluatorPublicKey(receipt, {
+        ...options,
+        trustRoot: seam.trustRoot,
+        protectedRegistry: seam.protectedRegistry,
+      }),
   };
 });
 
@@ -28,16 +36,13 @@ const jsonHash = (value: unknown) => sha(JSON.stringify(value));
 const roots: string[] = [];
 afterEach(async () => {
   seam.trustRoot = null;
+  seam.protectedRegistry = null;
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 const VERIFY =
   "import assert from 'node:assert/strict'; import { value } from './src/value.mjs'; assert.equal(value, 1);\n";
 const EVALUATOR = 'gofer-heldout-benchmark-verifier';
-
-function publicPem(key: KeyObject) {
-  return key.export({ type: 'spki', format: 'pem' }).toString();
-}
 
 async function fixture({ activate = true, signerKeyId = 'verifier-key', worktreeValue = 1 } = {}) {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'gofer-signer-workspace-'));
@@ -155,36 +160,9 @@ async function fixture({ activate = true, signerKeyId = 'verifier-key', worktree
     JSON.stringify({ corpusHash, report })
   );
 
-  const verifierKeys = generateKeyPairSync('ed25519');
-  await writeFile(
-    path.join(trustRoot, 'trusted-evaluators.json'),
-    JSON.stringify({
-      schemaVersion: 1,
-      evaluators: [
-        {
-          keyId: signerKeyId,
-          host: 'codex',
-          evaluator: EVALUATOR,
-          publicKeyPem: publicPem(verifierKeys.publicKey),
-        },
-      ],
-    }),
-    { mode: 0o600 }
-  );
-  if (activate) {
-    const active = path.join(trustRoot, 'active-keys');
-    await mkdir(active, { mode: 0o700 });
-    await writeFile(
-      path.join(active, 'heldout-verifier.json'),
-      JSON.stringify({ schemaVersion: 1, host: 'codex', evaluator: EVALUATOR, keyId: signerKeyId }),
-      { mode: 0o600 }
-    );
-    await writeFile(
-      path.join(active, 'heldout-verifier.private.pem'),
-      verifierKeys.privateKey.export({ type: 'pkcs8', format: 'pem' }),
-      { mode: 0o600 }
-    );
-  }
+  const verifier: VerifierInstall = await installVerifier({ trustRoot, keyId: signerKeyId, activate });
+  roots.push(verifier.protectedDirectory);
+  seam.protectedRegistry = verifier.protectedRegistry;
   const snapshot = await captureHeldOutResultSnapshot({ corpusRoot, workspaceRoot, trustRoot });
   return {
     workspaceRoot,
@@ -194,7 +172,9 @@ async function fixture({ activate = true, signerKeyId = 'verifier-key', worktree
     receiptHash,
     report,
     capabilityPublicKey: capabilityKeys.publicKey,
-    verifierPublicKey: verifierKeys.publicKey,
+    verifierPublicKey: verifier.keys.publicKey,
+    getPassphrase: verifier.getPassphrase,
+    protectedRegistry: verifier.protectedRegistry,
     snapshotId: snapshot.snapshotId,
   };
 }
@@ -206,6 +186,8 @@ function request(f: Awaited<ReturnType<typeof fixture>>, extra: Record<string, u
     capabilityReceipt: f.capabilityReceipt,
     capabilityPublicKey: f.capabilityPublicKey,
     snapshotId: f.snapshotId,
+    getPassphrase: f.getPassphrase,
+    protectedRegistry: f.protectedRegistry,
     ...extra,
   };
 }

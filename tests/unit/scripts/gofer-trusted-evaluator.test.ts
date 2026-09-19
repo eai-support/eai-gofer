@@ -26,6 +26,7 @@ import {
   createCapabilityReceipt,
   verifyCapabilityReceipt,
 } from '../../../.specify/scripts/node/gofer-host-capability.mjs';
+import { installVerifier } from '../../helpers/verifierCustody';
 import {
   loadActiveBenchmarkVerifierKey,
   loadActiveCodexEvaluatorKey,
@@ -73,7 +74,7 @@ async function fixture() {
     ],
   });
   await writeFile(registryPath, JSON.stringify(registry()), { mode: 0o600 });
-  return { root, workspaceRoot, trustRoot, registryPath, receipt, registry, keys };
+  return { root, workspaceRoot, trustRoot, registryPath, receipt, registry, keys, extra: [] as string[] };
 }
 
 describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', () => {
@@ -133,60 +134,32 @@ describe.skipIf(process.platform === 'win32')('locally trusted evaluator keys', 
       await rm(f.root, { recursive: true, force: true });
     }
   });
-  it('keeps benchmark signing inactive until a separate registered key is activated', async () => {
+  it('keeps benchmark signing inactive until an encrypted key is registered in the protected registry', async () => {
     const f = await fixture();
     try {
-      const verifierKeys = generateKeyPairSync('ed25519');
-      const registry = f.registry();
-      registry.evaluators.push({
-        keyId: 'heldout-key',
-        host: 'codex',
-        evaluator: 'gofer-heldout-benchmark-verifier',
-        publicKeyPem: verifierKeys.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
-      });
-      await writeFile(f.registryPath, JSON.stringify(registry));
+      const inactive = await installVerifier({ trustRoot: f.trustRoot, activate: false });
+      f.extra.push(inactive.protectedDirectory);
       await expect(
-        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
+        loadActiveBenchmarkVerifierKey({
+          workspaceRoot: f.workspaceRoot,
+          trustRoot: f.trustRoot,
+          getPassphrase: inactive.getPassphrase,
+          protectedRegistry: inactive.protectedRegistry,
+        })
       ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
-      const active = path.join(f.trustRoot, 'active-keys');
-      await mkdir(active, { mode: 0o700 });
-      const identity = path.join(active, 'heldout-verifier.json');
-      const privateFile = path.join(active, 'heldout-verifier.private.pem');
-      await writeFile(
-        identity,
-        JSON.stringify({
-          schemaVersion: 1,
-          host: 'codex',
-          evaluator: 'gofer-heldout-benchmark-verifier',
-          keyId: 'heldout-key',
-        }),
-        { mode: 0o600 }
-      );
-      await writeFile(
-        privateFile,
-        verifierKeys.privateKey.export({ type: 'pkcs8', format: 'pem' }),
-        { mode: 0o600 }
-      );
+      const active = await installVerifier({ trustRoot: f.trustRoot });
+      f.extra.push(active.protectedDirectory);
       const loaded = await loadActiveBenchmarkVerifierKey({
         workspaceRoot: f.workspaceRoot,
         trustRoot: f.trustRoot,
+        getPassphrase: active.getPassphrase,
+        protectedRegistry: active.protectedRegistry,
       });
-      expect(loaded.keyId).toBe('heldout-key');
+      expect(loaded.keyId).toBe('verifier-key');
       expect(loaded.privateKey.asymmetricKeyType).toBe('ed25519');
-      await writeFile(privateFile, f.keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
-      await expect(
-        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
-      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
-      await writeFile(
-        privateFile,
-        verifierKeys.privateKey.export({ type: 'pkcs8', format: 'pem' })
-      );
-      await chmod(privateFile, 0o644);
-      await expect(
-        loadActiveBenchmarkVerifierKey({ workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot })
-      ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
     } finally {
       await rm(f.root, { recursive: true, force: true });
+      await Promise.all(f.extra.map((d: string) => rm(d, { recursive: true, force: true })));
     }
   });
   it('requires an activated key matching the registered public identity', async () => {
