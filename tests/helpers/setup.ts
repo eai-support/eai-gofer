@@ -10,6 +10,12 @@
 import { vi } from 'vitest';
 import dotenv from 'dotenv';
 
+// A git hook exports GIT_DIR and related variables. Tests that create scratch
+// repositories would otherwise write into the real repository being committed.
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith('GIT_') && !name.startsWith('GIT_CONFIG_')) delete process.env[name];
+}
+
 // Load environment variables from .env file
 // This must happen before any other code runs
 dotenv.config();
