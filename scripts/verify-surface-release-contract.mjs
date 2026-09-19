@@ -31,6 +31,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-benchmark-signer.mjs',
   '.specify/scripts/node/gofer-benchmark-executor.mjs',
   '.specify/scripts/node/gofer-native-benchmark-dispatch.mjs',
+  '.specify/scripts/node/gofer-independent-reviewer.mjs',
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
   '.specify/scripts/node/gofer-heldout-snapshot.mjs',

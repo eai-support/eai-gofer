@@ -80,7 +80,7 @@ const fixed = async ({ worktree }: { worktree: string }) => {
   await writeFile(path.join(worktree, 'src/value.mjs'), 'export const value = 1;\n');
   return { modelId: 'test-model', costUsd: 0.01, durationMs: 10, isolation: ISOLATION };
 };
-const review = async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`review:${caseId}:${run}`) });
+const review = async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`review:${caseId}:${run}`), approved: true });
 
 function options(f: Awaited<ReturnType<typeof fixture>>, extra: Record<string, unknown> = {}) {
   return { workspaceRoot: f.workspaceRoot, trustRoot: f.trustRoot, capabilityReceipt: f.capabilityReceipt,
@@ -136,6 +136,21 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
       await expect(runHeldOutBenchmark(options(f, { review: undefined }))).rejects.toThrow('BENCHMARK_EXECUTOR_REQUIRED');
       const empty = async () => ({ receipt: 'not-a-digest' });
       await expect(runHeldOutBenchmark(options(f, { review: empty }))).rejects.toThrow('BENCHMARK_EXECUTOR_REQUIRED');
+    });
+
+    it('fails a case that passes the protected check but is rejected by review', async () => {
+      const f = await fixture();
+      const reject = async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`review:${caseId}:${run}`), approved: false });
+      const result = await runHeldOutBenchmark(options(f, { review: reject }));
+      roots.push(result.worktreesRoot);
+      expect(result.report).toMatchObject({ functionalPasses: 0, status: 'fail' });
+      expect(result.report.runs[0].failureClassification).toBe('review-rejected');
+    });
+
+    it('requires an explicit approval verdict from the reviewer', async () => {
+      const f = await fixture();
+      const silent = async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`review:${caseId}:${run}`) });
+      await expect(runHeldOutBenchmark(options(f, { review: silent }))).rejects.toThrow('BENCHMARK_EXECUTOR_REQUIRED');
     });
 
     it('will not overwrite an earlier run', async () => {
