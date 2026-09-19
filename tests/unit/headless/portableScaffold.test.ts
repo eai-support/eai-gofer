@@ -47,6 +47,7 @@ const additions = [
   '.specify/scripts/node/gofer-execution-metrics.mjs',
   '.specify/scripts/node/gofer-benchmark.mjs',
   '.specify/scripts/node/gofer-benchmark-signer.mjs',
+  '.specify/scripts/node/gofer-benchmark-executor.mjs',
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
   '.specify/scripts/node/gofer-heldout-snapshot.mjs',
@@ -98,8 +99,8 @@ describe('release-pinned portable inventories', () => {
     expect(getGoferPortableScaffoldPaths(candidateRelease)).toBe(
       GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS
     );
-    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(208);
-    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(208);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(209);
+    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(209);
     expect(Object.isFrozen(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS)).toBe(true);
     const bundle = createGoferExportBundle(candidateRequest());
     for (const file of additions) {
