@@ -28,8 +28,8 @@ const MAX_TTL_MS = 24 * 60 * 60 * 1000;
  * passes it and always resolves the fixed account trust root.
  */
 export async function signHeldOutBenchmarkAttestation({ workspaceRoot, trustRoot,
-  capabilityReceipt, capabilityPublicKey, snapshotId, ttlMs = DEFAULT_TTL_MS,
-  now = Date.now() } = {}) {
+  capabilityReceipt, capabilityPublicKey, snapshotId, getPassphrase, protectedRegistry,
+  ttlMs = DEFAULT_TTL_MS, now = Date.now() } = {}) {
   let materialized;
   try {
     if (!text(workspaceRoot) || !path.isAbsolute(workspaceRoot) ||
@@ -41,10 +41,11 @@ export async function signHeldOutBenchmarkAttestation({ workspaceRoot, trustRoot
     const corpusTrustRoot = path.dirname(path.dirname(corpus.corpusRoot));
 
     // The signing identity must exist and be active before any work is done.
-    const signer = await loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot });
+    const signer = await loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot, getPassphrase,
+      protectedRegistry });
     if (signer.keyId === capabilityReceipt.provenance.keyId) throw denied();
     const signerPublicKey = await resolveTrustedEvaluatorPublicKey({ host: 'codex',
-      provenance: { evaluator: EVALUATOR, keyId: signer.keyId } }, { workspaceRoot, trustRoot });
+      provenance: { evaluator: EVALUATOR, keyId: signer.keyId } }, { workspaceRoot, trustRoot, protectedRegistry });
     const capabilityKey = capabilityPublicKey?.type === 'public'
       ? capabilityPublicKey : createPublicKey(capabilityPublicKey);
     if (signerPublicKey.export({ type: 'spki', format: 'der' })
