@@ -144,7 +144,7 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-secrets-'));
     directories.push(outside);
-    await symlink(outside, path.join(workspace, '.specify', 'secrets'));
+    await symlink(outside, path.join(workspace, '.specify', 'secrets'), process.platform === 'win32' ? 'junction' : 'dir');
     await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
 
@@ -178,7 +178,7 @@ describe('TypeSafe semantic governance', () => {
     directories.push(outside);
     await writeFile(path.join(outside, 'typesafe-semantic-review.json'), JSON.stringify({ schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 0.85 }));
     await rm(path.join(workspace, '.specify', 'config'), { recursive: true, force: true });
-    await symlink(outside, path.join(workspace, '.specify', 'config'));
+    await symlink(outside, path.join(workspace, '.specify', 'config'), process.platform === 'win32' ? 'junction' : 'dir');
     const fetchImpl = vi.fn();
     await expect(
       semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })
@@ -226,7 +226,7 @@ describe('TypeSafe semantic governance', () => {
     directories.push(outside);
     await writeFile(path.join(outside, 'secret.txt'), 'do not read this');
     const linkedFeatureDir = path.join(workspace, '.specify', 'specs', 'linked-feature');
-    await symlink(outside, linkedFeatureDir);
+    await symlink(outside, linkedFeatureDir, process.platform === 'win32' ? 'junction' : 'dir');
     const fetchImpl = vi.fn();
     await expect(
       semantic.runSemanticReview({ workspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl })
@@ -301,7 +301,7 @@ describe('TypeSafe semantic governance', () => {
     const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-root-'));
     directories.push(outside);
     const linkedWorkspace = path.join(outside, 'workspace-link');
-    await symlink(workspace, linkedWorkspace);
+    await symlink(workspace, linkedWorkspace, process.platform === 'win32' ? 'junction' : 'dir');
     const semantic = await import(semanticUrl.href);
     const linkedFeatureDir = featureDir.replace(workspace, linkedWorkspace);
     await expect(
