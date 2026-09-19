@@ -1,4 +1,5 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -120,5 +121,68 @@ describe('verified native runtime command entrypoint', () => {
     } finally {
       cleanup();
     }
+  });
+
+  it('routes by a supplied receipt and signed benchmark, and does not issue its own receipt', async () => {
+    const { source, cleanup } = createIsolationRepository();
+    try {
+      const keys = generateKeyPairSync('ed25519');
+      trustedKey.value = keys.publicKey;
+      const now = Date.now();
+      const receipt = createCapabilityReceipt({
+        host: 'codex',
+        evaluatorVersion: '2',
+        evaluationId: 'supplied',
+        evaluatedAt: new Date(now - 1000).toISOString(),
+        expiresAt: new Date(now + 60000).toISOString(),
+        hostVersion: 'codex',
+        models: [{ id: 'live', reasoningEfforts: ['high'] }],
+        reasoningCapabilities: ['high'],
+        toolCapabilities: ['shell'],
+        grantedPermissions: ['workspace-write'],
+        isolationClass: 'git-worktree+local-os-sandbox',
+        provenance: { evaluator: 'native', source: 'session', keyId: 'key' },
+        signingKey: keys.privateKey,
+      });
+      issueReceipt.mockClear();
+      let seen: Record<string, unknown> = {};
+      runGraph.mockImplementationOnce(async (input) => {
+        seen = input;
+        return { status: 'verified', adapterCallsSettled: true };
+      });
+      const benchmark = { evidence: { schemaVersion: 2 }, attestation: { schemaVersion: 1 } };
+      const { runVerifiedSmokeTask } =
+        await import('../../../.specify/scripts/node/gofer-run-verified-task.mjs');
+      await runVerifiedSmokeTask({ workspace: source, capabilityReceipt: receipt, benchmark });
+      expect(issueReceipt).not.toHaveBeenCalled();
+      expect(seen.capabilityReceipt).toEqual(receipt);
+      expect(seen.benchmarkEvidence).toEqual(benchmark.evidence);
+      expect(seen.maxCalls).toBeGreaterThanOrEqual(9);
+      const feature = path.join(source, '.specify', 'specs', 'native-runtime-smoke');
+      expect(await readFile(path.join(feature, 'plan.md'), 'utf8')).toContain('Plan');
+      expect(JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))).toMatchObject({
+        maxIterations: 1,
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('refuses a receipt without a benchmark, and a benchmark without a receipt', () => {
+    const script = path.resolve('.specify/scripts/node/gofer-run-verified-task.mjs');
+    for (const flag of ['--capability-receipt', '--benchmark']) {
+      const result = spawnSync(process.execPath, [script, '--workspace', '/w', flag, '/x.json'], {
+        encoding: 'utf8',
+        timeout: 15000,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('must be given together');
+    }
+    const relative = spawnSync(
+      process.execPath,
+      [script, '--workspace', '/w', '--capability-receipt', 'r.json', '--benchmark', 'b.json'],
+      { encoding: 'utf8', timeout: 15000 }
+    );
+    expect(relative.stderr).toContain('absolute paths');
   });
 });
