@@ -50,6 +50,12 @@ export function priceUsage(usage, rateCard) {
     usage.outputTokens * rateCard.outputUsdPerMillion) / 1_000_000;
 }
 
+/** One cap shared by every dispatcher of a benchmark, workers and reviewers. */
+export function createSpendCap(maxTotalCostUsd) {
+  if (!(maxTotalCostUsd > 0)) throw denied('NATIVE_BENCHMARK_DISPATCH_REQUIRED');
+  return { spentUsd: 0, maxTotalCostUsd };
+}
+
 /**
  * `command` must be the pinned, absolute native executable, never a PATH
  * lookup. `maxRunCostUsd` bounds one run; `maxTotalCostUsd` bounds the whole
@@ -58,30 +64,31 @@ export function priceUsage(usage, rateCard) {
  */
 export async function createNativeBenchmarkDispatch({ ledgerPath, capabilityReceipt,
   capabilityPublicKey, requiredCapabilities, modelId, approvalReceipt, command, rateCard,
-  maxRunCostUsd, maxTotalCostUsd, timeoutMs = 600_000, start = startLocalCodexInvocation,
-  createLedger = createRuntimeLedger } = {}) {
+  maxRunCostUsd, spend, taskPrefix = 'benchmark', scratchRoot = os.tmpdir(), timeoutMs = 600_000,
+  start = startLocalCodexInvocation, createLedger = createRuntimeLedger } = {}) {
   if (!text(ledgerPath) || !path.isAbsolute(ledgerPath) || !text(modelId) ||
       !text(approvalReceipt) || !text(command) || !path.isAbsolute(command) ||
       capabilityReceipt?.host !== 'codex' || capabilityReceipt.isolationClass !== ISOLATION ||
+      !Array.isArray(capabilityReceipt.models) || !capabilityReceipt.models.some(model => model?.id === modelId) ||
       !capabilityPublicKey || !rate(rateCard?.inputUsdPerMillion) ||
       !rate(rateCard?.outputUsdPerMillion) || !(maxRunCostUsd > 0) ||
-      !(maxTotalCostUsd >= maxRunCostUsd) || !Number.isInteger(timeoutMs) || timeoutMs < 1 ||
+      !(spend?.maxTotalCostUsd >= maxRunCostUsd) || !/^[a-z]{3,16}$/.test(taskPrefix) ||
+      !text(scratchRoot) || !path.isAbsolute(scratchRoot) || !Number.isFinite(spend.spentUsd) || !Number.isInteger(timeoutMs) || timeoutMs < 1 ||
       typeof start !== 'function') throw denied('NATIVE_BENCHMARK_DISPATCH_REQUIRED');
   const ledger = await createLedger({ ledgerPath });
   const receiptHash = capabilityReceiptHash(capabilityReceipt);
-  let spentUsd = 0;
 
   return async function dispatchCase({ caseId, run: runNumber, prompt, allowedWriteScope, worktree }) {
     if (!text(caseId) || !Number.isInteger(runNumber) || !text(prompt) || !text(worktree) ||
         !path.isAbsolute(worktree) || !Array.isArray(allowedWriteScope) ||
         !allowedWriteScope.length) throw denied('NATIVE_BENCHMARK_DISPATCH_REQUIRED');
     // Checked before any process starts, so the cap cannot be exceeded.
-    if (spentUsd + maxRunCostUsd > maxTotalCostUsd) throw denied('BENCHMARK_SPEND_CAP_REACHED');
+    if (spend.spentUsd + maxRunCostUsd > spend.maxTotalCostUsd) throw denied('BENCHMARK_SPEND_CAP_REACHED');
 
     // The qualified sandbox needs a linked worktree whose shared git store lies
     // outside the workspace. Build a scratch base repository from the prepared
     // files, then check the case out into `worktree` as a linked worktree.
-    const base = await realpath(await mkdtemp(path.join(os.tmpdir(), 'gofer-benchmark-base-')));
+    const base = await realpath(await mkdtemp(path.join(scratchRoot, 'gofer-benchmark-base-')));
     try {
       await cp(worktree, base, { recursive: true });
       await git(base, ['init', '-q', '-b', 'main']);
@@ -94,12 +101,12 @@ export async function createNativeBenchmarkDispatch({ ledgerPath, capabilityRece
       await git(base, ['worktree', 'add', '-q', '--detach', worktree, head]);
 
       const worktreeReceipt = sha(JSON.stringify({ worktree, head }));
-      const taskId = `benchmark:${caseId}:${runNumber}`;
+      const taskId = `${taskPrefix}:${caseId}:${runNumber}`;
       const task = { taskId, revision: head, attempt: 1, dependencies: [],
         worktreeReceipt, allowedEditScope: [...allowedWriteScope],
         requiredChecks: ['protected-verify'], capabilityReceiptHash: receiptHash,
         approvalReceipt, selectedModel: modelId,
-        benchmarkReceipt: `bootstrap-benchmark:${sha(approvalReceipt).slice(0, 24)}` };
+        benchmarkReceipt: `bootstrap-${taskPrefix}:${sha(approvalReceipt).slice(0, 24)}` };
       const reserved = await ledger.reserve(task);
       const leased = reserved?.allowed === true ? await ledger.lease(task) : null;
       if (leased?.allowed !== true) throw denied('NATIVE_BENCHMARK_LEDGER_DENIED');
@@ -123,15 +130,16 @@ export async function createNativeBenchmarkDispatch({ ledgerPath, capabilityRece
           signal: AbortSignal.timeout(timeoutMs) });
       } catch (error) {
         // An unmetered or interrupted run is charged in full.
-        if (launched) spentUsd += maxRunCostUsd;
+        if (launched) spend.spentUsd += maxRunCostUsd;
         throw error;
       }
       let costUsd;
       try { costUsd = priceUsage(result.usage, rateCard); }
-      catch (error) { spentUsd += maxRunCostUsd; throw error; }
-      spentUsd += costUsd;
+      catch (error) { spend.spentUsd += maxRunCostUsd; throw error; }
+      spend.spentUsd += costUsd;
       if (costUsd > maxRunCostUsd) throw denied('BENCHMARK_RUN_COST_EXCEEDED');
-      return { modelId, costUsd, durationMs: Date.now() - startedAt, isolation: result.isolation };
+      return { modelId, costUsd, durationMs: Date.now() - startedAt, isolation: result.isolation,
+        receipt: result.receipt };
     } finally { await rm(base, { recursive: true, force: true }); }
   };
 }

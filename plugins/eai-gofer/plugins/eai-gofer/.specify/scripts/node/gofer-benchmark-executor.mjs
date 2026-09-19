@@ -43,8 +43,9 @@ async function materialize(worktree, files) {
  * `dispatchCase({ caseId, run, prompt, allowedWriteScope, worktree })` runs the
  * model against one prepared worktree and returns
  * `{ modelId, costUsd, durationMs, isolation }`. `review({ caseId, run,
- * inputHash, executionReceipt, passed })` returns `{ receipt }` from a party
- * other than the executor. `trustRoot` exists for isolated tests only.
+ * inputHash, executionReceipt, passed, prompt, worktree, baselineFiles })`
+ * returns `{ receipt, approved }` from a party other than the executor. A
+ * rejected review fails the case even when the protected check passed. `trustRoot` exists for isolated tests only.
  */
 export async function runHeldOutBenchmark({ workspaceRoot, trustRoot, capabilityReceipt,
   modelId, harnessId, dispatchCase, review } = {}) {
@@ -94,11 +95,15 @@ export async function runHeldOutBenchmark({ workspaceRoot, trustRoot, capability
           if (before !== after) { passed = false; failureClassification = 'check-mutated-worktree'; }
           else if (!passed) failureClassification = 'functional-check-failed';
         } catch { passed = false; failureClassification = 'scope-violation'; }
+        const reviewed = await review({ caseId, run, inputHash,
+          executionReceipt: execution.receipt, passed, prompt: input.prompt, worktree,
+          baselineFiles: { ...input.files } });
+        if (!/^[a-f0-9]{64}$/.test(reviewed?.receipt ?? '') ||
+            typeof reviewed.approved !== 'boolean') throw denied();
+        if (passed && !reviewed.approved) { passed = false; failureClassification = 'review-rejected'; }
+        // The verification receipt binds the final verdict, review included.
         const receipt = jsonHash({ caseId, run, inputHash, executionReceipt: execution.receipt,
           passed, kind: 'verification' });
-        const reviewed = await review({ caseId, run, inputHash,
-          executionReceipt: execution.receipt, passed });
-        if (!/^[a-f0-9]{64}$/.test(reviewed?.receipt ?? '')) throw denied();
         await writePrivate(path.join(receipts, `${caseId}-${run}.verification.json`),
           JSON.stringify({ caseId, run, inputHash, executionReceipt: execution.receipt,
             receipt, passed }));
