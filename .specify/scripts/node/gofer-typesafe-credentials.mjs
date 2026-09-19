@@ -35,8 +35,25 @@ async function assertNoSymlinkComponents(root, relativeTarget) {
   }
 }
 
+// assertNoSymlinkComponents only walks descendants of root; it never checks
+// root itself. A caller-supplied workspace that is a symlink (or missing, or
+// not a directory) would otherwise sail through every confinement check
+// below it. Matches workspace-bootstrap-lib.mjs's assertSafeWorkspaceRoot.
+async function assertSafeWorkspaceRoot(workspaceRoot) {
+  const resolvedRoot = path.resolve(workspaceRoot);
+  const rootStat = await fs.lstat(resolvedRoot).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!rootStat) throw new Error('Gofer workspace root does not exist.');
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error('Gofer workspace root must be a real directory, not a symbolic link.');
+  }
+  return resolvedRoot;
+}
+
 async function confinedPath(workspace, relativePath) {
-  const root = path.resolve(workspace);
+  const root = await assertSafeWorkspaceRoot(workspace);
   const target = path.resolve(root, relativePath);
   const relative = path.relative(root, target);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {

@@ -53,6 +53,33 @@ function truncateUtf8(buffer, maxBytes) {
   if (i + seqLen > maxBytes) cut = i;
   return buffer.subarray(0, cut);
 }
+// assertNoSymlinkComponents only walks descendants of root; it never checks
+// root itself. A caller-supplied workspace that is a symlink (or missing, or
+// not a directory) would otherwise sail through every confinement check
+// below it. Matches workspace-bootstrap-lib.mjs's assertSafeWorkspaceRoot.
+async function assertSafeWorkspaceRoot(workspaceRoot) {
+  const resolvedRoot = path.resolve(workspaceRoot);
+  const rootStat = await fs.lstat(resolvedRoot).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!rootStat) throw new Error('Gofer workspace root does not exist.');
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error('Gofer workspace root must be a real directory, not a symbolic link.');
+  }
+  return resolvedRoot;
+}
+// The event name is used verbatim to build the receipt file path. It is
+// checked against policy.events, but that list is itself external config
+// (or attacker-influenced if the config is compromised) and is never
+// restricted to a safe charset, so a value like "../../evil" would satisfy
+// the membership check while still escaping receiptDir on join. Restrict to
+// a safe charset before it ever reaches a path.
+function assertSafeEventName(event) {
+  if (!/^[A-Za-z0-9_-]+$/.test(event)) {
+    throw new Error('Gofer TypeSafe event name contains unsupported characters.');
+  }
+}
 // A lexical check alone does not stop a symlinked intermediate directory (or
 // the feature directory itself) from redirecting reads/writes outside the
 // workspace. Walk every component from the workspace root and reject any
@@ -100,7 +127,8 @@ async function parseArgs(argv) {
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!args.featureDir || !args.event) throw new Error('--feature-dir and --event are required');
-  args.workspace = path.resolve(args.workspace); args.featureDir = await confined(args.workspace, args.featureDir); return args;
+  assertSafeEventName(args.event);
+  args.workspace = await assertSafeWorkspaceRoot(args.workspace); args.featureDir = await confined(args.workspace, args.featureDir); return args;
 }
 // The policy path is fixed, but a symlinked .specify/config directory or the
 // policy file itself could still redirect this read outside the workspace,
@@ -158,7 +186,8 @@ const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
 const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 
 export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
-  const resolvedWorkspace = path.resolve(workspace);
+  assertSafeEventName(event);
+  const resolvedWorkspace = await assertSafeWorkspaceRoot(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
   const policy = await readConfinedJson(resolvedWorkspace, POLICY_RELATIVE_PATH);
   if (!policy.enabled) return { status: 'disabled', event };

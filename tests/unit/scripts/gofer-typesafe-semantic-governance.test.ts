@@ -295,4 +295,37 @@ describe('TypeSafe semantic governance', () => {
     const sentState = JSON.parse(sentBody.state);
     expect(Buffer.byteLength(sentState['spec.md'].content, 'utf8')).toBeLessThanOrEqual(64 * 1024);
   });
+
+  it('rejects a workspace root that is itself a symlink', async () => {
+    const { workspace, featureDir } = await fixture();
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-root-'));
+    directories.push(outside);
+    const linkedWorkspace = path.join(outside, 'workspace-link');
+    await symlink(workspace, linkedWorkspace);
+    const semantic = await import(semanticUrl.href);
+    const linkedFeatureDir = featureDir.replace(workspace, linkedWorkspace);
+    await expect(
+      semantic.runSemanticReview({ workspace: linkedWorkspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl: vi.fn() })
+    ).rejects.toThrow('must be a real directory, not a symbolic link');
+    const credentials = await import(credentialsUrl.href);
+    await expect(credentials.credentialStatus({ workspace: linkedWorkspace })).rejects.toThrow(
+      'must be a real directory, not a symbolic link'
+    );
+  });
+
+  it('fails closed on a nonexistent workspace root instead of silently resolving one', async () => {
+    const { featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    await expect(
+      semantic.runSemanticReview({ workspace: '/nonexistent/gofer-workspace-root', featureDir, event: 'before_validation', fetchImpl: vi.fn() })
+    ).rejects.toThrow('Gofer workspace root does not exist.');
+  });
+
+  it('rejects an event name that could traverse out of the receipt directory', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir, event: '../../evil', fetchImpl: vi.fn() })
+    ).rejects.toThrow('Gofer TypeSafe event name contains unsupported characters.');
+  });
 });
