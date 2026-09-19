@@ -9,13 +9,20 @@ import { credentialStatus, resolveApiKey } from './gofer-typesafe-credentials.mj
 
 const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-review.json');
 const MAX_ARTIFACT_BYTES = 64 * 1024;
+// A local artifact far larger than any real spec/plan/tasks file is treated
+// as a hard error rather than hashed in full: this bounds worst-case memory
+// use independent of the provider payload cap.
+const MAX_ARTIFACT_READ_BYTES = 8 * 1024 * 1024;
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 // A byte-count slice can land mid-sequence; decoding that with toString('utf8')
 // replaces the fragment with U+FFFD (3 bytes), which can grow back past the
 // bound it was meant to enforce. Back up to the sequence boundary instead.
 function truncateUtf8(buffer, maxBytes) {
-  if (buffer.length <= maxBytes) return buffer;
+  // Note: still checked when buffer.length === maxBytes exactly, since that
+  // is precisely the case a capped collector produces when the source has
+  // more data — the boundary byte may be mid-sequence.
+  if (buffer.length < maxBytes) return buffer;
   let cut = maxBytes;
   let i = maxBytes - 1;
   while (i > 0 && (buffer[i] & 0xc0) === 0x80) i--;
@@ -55,6 +62,12 @@ async function confined(workspace, value) {
     throw new Error('Gofer feature directory must remain inside the workspace.');
   }
   await assertNoSymlinkComponents(workspace, relative);
+  // A typo'd or nonexistent feature directory must fail closed here, not
+  // silently produce an all-empty state that could earn a false "aligned"
+  // verdict and then have the directory created out from under it by mkdir
+  // when the receipt is written.
+  const info = await fs.lstat(target).catch(() => null);
+  if (!info || !info.isDirectory()) throw new Error('Gofer feature directory does not exist.');
   return target;
 }
 async function parseArgs(argv) {
@@ -73,22 +86,41 @@ async function parseArgs(argv) {
 async function readJson(target) { return JSON.parse(await fs.readFile(target, 'utf8')); }
 // The hash must bind the full file, not the truncated slice sent to the
 // provider: hashing only the truncated content would leave drift past
-// MAX_ARTIFACT_BYTES invisible to the receipt. MAX_ARTIFACT_BYTES bounds the
-// actual UTF-8 payload sent, not the JS string's UTF-16 code-unit length, so
-// a non-ASCII file cannot exceed the advertised provider payload bound.
-// Opened with O_NOFOLLOW so a same-account symlink swap between validation
-// and read cannot redirect the artifact to a file outside the workspace.
+// MAX_ARTIFACT_BYTES invisible to the receipt. Hash incrementally rather than
+// materializing the whole file as one string, so a large local artifact
+// cannot exhaust memory even though only a bounded prefix is ever sent.
+// MAX_ARTIFACT_BYTES bounds the actual UTF-8 payload sent, not the JS
+// string's UTF-16 code-unit length, so a non-ASCII file cannot exceed the
+// advertised provider payload bound. Opened with O_NOFOLLOW so a same-account
+// symlink swap between validation and read cannot redirect the artifact to a
+// file outside the workspace. A missing artifact is reported as absent, not
+// silently treated as an empty file — the caller must fail closed on that,
+// not risk a false "aligned" verdict built from missing documents.
 async function readArtifact(target) {
   let handle;
   try { handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW); }
   catch (error) {
-    if (error?.code === 'ENOENT') return { full: '', sent: '' };
+    if (error?.code === 'ENOENT') return { present: false, sha256: digest(''), sent: '' };
     throw error;
   }
   try {
-    const full = await handle.readFile('utf8');
-    const sent = truncateUtf8(Buffer.from(full, 'utf8'), MAX_ARTIFACT_BYTES).toString('utf8');
-    return { full, sent };
+    const info = await handle.stat();
+    if (!info.isFile()) throw new Error('Gofer feature artifact must be a regular file.');
+    if (info.size > MAX_ARTIFACT_READ_BYTES) throw new Error('Gofer feature artifact exceeds the maximum readable size.');
+    const hash = createHash('sha256');
+    const sentChunks = [];
+    let sentBytes = 0;
+    for await (const chunk of handle.createReadStream()) {
+      hash.update(chunk);
+      if (sentBytes < MAX_ARTIFACT_BYTES) {
+        const remaining = MAX_ARTIFACT_BYTES - sentBytes;
+        const piece = chunk.length > remaining ? chunk.subarray(0, remaining) : chunk;
+        sentChunks.push(piece);
+        sentBytes += piece.length;
+      }
+    }
+    const sent = truncateUtf8(Buffer.concat(sentChunks), MAX_ARTIFACT_BYTES).toString('utf8');
+    return { present: true, sha256: hash.digest('hex'), sent };
   } finally { await handle.close(); }
 }
 function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCase(); }
@@ -106,7 +138,12 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const credentials = await credentialStatus({ workspace, env });
   if (!credentials.configured) return { status: 'not_configured', event };
   const artifacts = await Promise.all(['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md', 'decisions.md', 'traceability.md'].map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
-  const state = Object.fromEntries(artifacts.map(([name, { full, sent }]) => [name, { sha256: digest(full), content: sent }]));
+  // A missing artifact is not the same as an empty one: recorded so the
+  // receipt is auditable, even though an early-stage feature legitimately
+  // has not written every document yet (the feature directory itself
+  // already had to exist, per confined() above).
+  const missingArtifacts = artifacts.filter(([, info]) => !info.present).map(([name]) => name);
+  const state = Object.fromEntries(artifacts.map(([name, { present, sha256, sent }]) => [name, { present, sha256, content: sent }]));
   const { apiKey } = await resolveApiKey({ workspace, env });
   let response;
   try {
@@ -132,12 +169,13 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const actionAnswer = answers.required_action || {};
   const alignment = normalizeAnswer(alignmentAnswer.choice);
   const action = normalizeAnswer(actionAnswer.choice);
-  // An invalid confidence must count as zero, not be dropped: dropping it
-  // would let one bad value be outweighed by the other, silently passing the
+  // An invalid or out-of-range confidence must count as zero, not be
+  // dropped: dropping it would let one bad value be outweighed by the
+  // other, and an out-of-range value (e.g. 2) would otherwise satisfy the
   // minimum-confidence check on a malformed response.
   const confidences = [alignmentAnswer, actionAnswer].map((answer) => {
     const value = Number(answer.confidence);
-    return Number.isFinite(value) ? value : 0;
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
   });
   const confidence = Math.min(...confidences);
   // An answer outside the known choice set fails toward reconcile, not
@@ -147,7 +185,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const status = alignment === 'conflict' || action === 'ask_user' ? 'conflict'
     : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
     : 'aligned';
-  const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { full }]) => [name, digest(full)])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
+  const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, missingArtifacts, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { sha256 }]) => [name, sha256])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
   const receiptDir = path.join(featureDir, 'evidence', 'semantic-review');
   await fs.mkdir(receiptDir, { recursive: true });
   const receiptPath = path.join(receiptDir, `${event}.json`);

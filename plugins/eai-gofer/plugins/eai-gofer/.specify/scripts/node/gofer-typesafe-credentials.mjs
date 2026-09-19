@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { constants } from 'fs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import process from 'process';
@@ -56,17 +57,30 @@ async function existingFile(target) {
   }
 }
 
+// The static confinement check happens before the caller ever opens the file;
+// a same-account process could still swap a symlink in between. Opening with
+// O_NOFOLLOW closes that window instead of merely trusting the earlier check.
+async function readNoFollow(target) {
+  const handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try { return await handle.readFile('utf8'); } finally { await handle.close(); }
+}
+
+async function writeNoFollow(target, content, mode) {
+  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, mode);
+  try { await handle.writeFile(content); } finally { await handle.close(); }
+}
+
 async function readSecretFile(secretPath) {
   if (!(await existingFile(secretPath))) return '';
-  const match = (await fs.readFile(secretPath, 'utf8')).match(/^TYPESAFE_API_KEY=([^\r\n]+)$/m);
+  const match = (await readNoFollow(secretPath)).match(/^TYPESAFE_API_KEY=([^\r\n]+)$/m);
   return match?.[1]?.trim() || '';
 }
 
 async function writePolicyEnabled(workspace, enabled) {
   const policyPath = await confinedPath(workspace, POLICY_RELATIVE_PATH);
-  const current = JSON.parse(await fs.readFile(policyPath, 'utf8'));
+  const current = JSON.parse(await readNoFollow(policyPath));
   current.enabled = enabled;
-  await fs.writeFile(policyPath, `${JSON.stringify(current, null, 2)}\n`, { mode: 0o600 });
+  await writeNoFollow(policyPath, `${JSON.stringify(current, null, 2)}\n`, 0o600);
 }
 
 async function promptForKey() {
@@ -118,7 +132,7 @@ export async function connect({ workspace = process.cwd(), key } = {}) {
   if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
   await fs.mkdir(path.dirname(secretPath), { recursive: true, mode: 0o700 });
   if (await existingFile(secretPath)) await fs.chmod(secretPath, 0o600);
-  await fs.writeFile(secretPath, `TYPESAFE_API_KEY=${resolvedKey}\n`, { mode: 0o600 });
+  await writeNoFollow(secretPath, `TYPESAFE_API_KEY=${resolvedKey}\n`, 0o600);
   await fs.chmod(secretPath, 0o600);
   await writePolicyEnabled(workspace, true);
   return { configured: true, source: process.env.TYPESAFE_API_KEY ? 'environment' : 'project_secret_file', secretPath: SECRET_RELATIVE_PATH };

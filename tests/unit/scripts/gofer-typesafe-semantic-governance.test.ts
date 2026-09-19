@@ -148,6 +148,14 @@ describe('TypeSafe semantic governance', () => {
     await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
 
+  it('prefers the environment key over a conflicting project secret file', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    await credentials.connect({ workspace, key: 'project-secret-value' });
+    const result = await credentials.resolveApiKey({ workspace, env: { TYPESAFE_API_KEY: 'environment-value' } });
+    expect(result).toEqual({ apiKey: 'environment-value', source: 'environment' });
+  });
+
   it('treats an invalid confidence as zero instead of dropping it', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
@@ -186,6 +194,52 @@ describe('TypeSafe semantic governance', () => {
       semantic.runSemanticReview({ workspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl })
     ).rejects.toThrow('symbolic link');
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on a nonexistent feature directory instead of an empty state', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn();
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir: path.join(workspace, '.specify', 'specs', 'typo-d-feature'), event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('does not exist');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('treats an out-of-range confidence as zero, not a satisfied minimum', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 2 }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.confidence).toBe(0);
+    expect(result.status).toBe('reconcile');
+  });
+
+  it('rejects an artifact larger than the maximum readable size', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(9 * 1024 * 1024));
+    const fetchImpl = vi.fn();
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('exceeds the maximum readable size');
+  });
+
+  it('records missing artifacts in the receipt without blocking early-stage documents', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.missingArtifacts).toEqual(expect.arrayContaining(['plan.md', 'tasks.md', 'decisions.md', 'traceability.md']));
+    expect(result.status).toBe('aligned');
   });
 
   it('truncates the sent artifact by UTF-8 bytes, not UTF-16 code units', async () => {
