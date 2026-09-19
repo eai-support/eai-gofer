@@ -83,7 +83,16 @@ async function parseArgs(argv) {
   if (!args.featureDir || !args.event) throw new Error('--feature-dir and --event are required');
   args.workspace = path.resolve(args.workspace); args.featureDir = await confined(args.workspace, args.featureDir); return args;
 }
-async function readJson(target) { return JSON.parse(await fs.readFile(target, 'utf8')); }
+// The policy path is fixed, but a symlinked .specify/config directory or the
+// policy file itself could still redirect this read outside the workspace,
+// bypassing the same confinement invariant enforced for the feature
+// directory and its artifacts. Apply the same no-follow protection.
+async function readConfinedJson(workspace, relativePath) {
+  await assertNoSymlinkComponents(workspace, relativePath);
+  const target = path.join(workspace, relativePath);
+  const handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try { return JSON.parse(await handle.readFile('utf8')); } finally { await handle.close(); }
+}
 // The hash must bind the full file, not the truncated slice sent to the
 // provider: hashing only the truncated content would leave drift past
 // MAX_ARTIFACT_BYTES invisible to the receipt. Hash incrementally rather than
@@ -132,8 +141,7 @@ const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
   const resolvedWorkspace = path.resolve(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
-  const policyPath = path.join(resolvedWorkspace, POLICY_RELATIVE_PATH);
-  const policy = await readJson(policyPath);
+  const policy = await readConfinedJson(resolvedWorkspace, POLICY_RELATIVE_PATH);
   if (!policy.enabled || !policy.events.includes(event)) return { status: 'disabled', event };
   const credentials = await credentialStatus({ workspace, env });
   if (!credentials.configured) return { status: 'not_configured', event };

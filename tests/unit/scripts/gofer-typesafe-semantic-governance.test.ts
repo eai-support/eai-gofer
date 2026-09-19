@@ -148,6 +148,23 @@ describe('TypeSafe semantic governance', () => {
     await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
 
+  it('rejects a symlinked policy config directory', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-config-'));
+    directories.push(outside);
+    await writeFile(path.join(outside, 'typesafe-semantic-review.json'), JSON.stringify({ schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 0.85 }));
+    await rm(path.join(workspace, '.specify', 'config'), { recursive: true, force: true });
+    await symlink(outside, path.join(workspace, '.specify', 'config'));
+    const fetchImpl = vi.fn();
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('symbolic link');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('prefers the environment key over a conflicting project secret file', async () => {
     const { workspace } = await fixture();
     const credentials = await import(credentialsUrl.href);
