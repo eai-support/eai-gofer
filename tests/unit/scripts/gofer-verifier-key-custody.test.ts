@@ -16,7 +16,7 @@ import {
   loadActiveBenchmarkVerifierKey,
   resolveTrustedEvaluatorPublicKey,
 } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
-import { installVerifier, PASSPHRASE, VERIFIER } from '../../helpers/verifierCustody';
+import { installVerifier, makeProtectedDirectory, PASSPHRASE, VERIFIER } from '../../helpers/verifierCustody';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -230,8 +230,8 @@ describe('key ceremony', () => {
   it('creates an encrypted key that only loads after an administrator installs the registry', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
-    const protectedDirectory = await temp('gofer-ceremony-protected-');
-    await chmod(protectedDirectory, 0o755);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
     const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
     const result = await runVerifierKeyCeremony({
       trustRoot: t.root, getPassphrase: answers(PASSPHRASE, PASSPHRASE), keyId: 'ceremony-key-1', registryPath,

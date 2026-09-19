@@ -1,6 +1,6 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { encryptSigningKey } from '../../.specify/scripts/node/gofer-encrypted-key.mjs';
 
@@ -13,6 +13,17 @@ export type VerifierInstall = {
   protectedRegistry: { path: string; ownerUid: number };
   getPassphrase: () => Promise<string>;
 };
+
+/**
+ * Directory for a stand-in protected registry. `loadProtectedVerifierKey`
+ * walks every ancestor and refuses group/world-writable directories, so this
+ * cannot live under `os.tmpdir()` (`/tmp` is 1777 on Linux CI).
+ */
+export async function makeProtectedDirectory(): Promise<string> {
+  const directory = await mkdtemp(path.join(homedir(), '.gofer-protected-registry-'));
+  await chmod(directory, 0o755);
+  return directory;
+}
 
 /**
  * Builds the two custody pieces the production loader requires: an encrypted
@@ -33,8 +44,7 @@ export async function installVerifier({
   passphrase?: string;
 }): Promise<VerifierInstall> {
   const keys = generateKeyPairSync('ed25519');
-  const protectedDirectory = await mkdtemp(path.join(tmpdir(), 'gofer-protected-registry-'));
-  await chmod(protectedDirectory, 0o755);
+  const protectedDirectory = await makeProtectedDirectory();
   const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
   if (registered) {
     await writeFile(
