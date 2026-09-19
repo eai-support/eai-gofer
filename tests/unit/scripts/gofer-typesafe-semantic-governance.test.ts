@@ -147,4 +147,27 @@ describe('TypeSafe semantic governance', () => {
     await symlink(outside, path.join(workspace, '.specify', 'secrets'));
     await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
+
+  it('treats an invalid confidence as zero instead of dropping it', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    // A malformed confidence on one answer must not be outweighed by a high
+    // confidence on the other: the minimum must still fail closed to zero.
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 'not-a-number' }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
+    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    expect(result.confidence).toBe(0);
+    expect(result.status).toBe('reconcile');
+  });
+
+  it('maps each status to the exit code a CI caller must not read as a pass', async () => {
+    const semantic = await import(semanticUrl.href);
+    expect(semantic.exitCodeForStatus('conflict')).toBe(2);
+    expect(semantic.exitCodeForStatus('reconcile')).toBe(3);
+    expect(semantic.exitCodeForStatus('unavailable')).toBe(3);
+    expect(semantic.exitCodeForStatus('not_configured')).toBe(3);
+    expect(semantic.exitCodeForStatus('aligned')).toBe(0);
+    expect(semantic.exitCodeForStatus('disabled')).toBe(0);
+  });
 });

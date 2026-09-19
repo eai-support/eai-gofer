@@ -88,8 +88,14 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const actionAnswer = answers.required_action || {};
   const alignment = normalizeAnswer(alignmentAnswer.choice);
   const action = normalizeAnswer(actionAnswer.choice);
-  const confidences = [alignmentAnswer, actionAnswer].map((answer) => Number(answer.confidence ?? 0)).filter(Number.isFinite);
-  const confidence = confidences.length > 0 ? Math.min(...confidences) : 0;
+  // An invalid confidence must count as zero, not be dropped: dropping it
+  // would let one bad value be outweighed by the other, silently passing the
+  // minimum-confidence check on a malformed response.
+  const confidences = [alignmentAnswer, actionAnswer].map((answer) => {
+    const value = Number(answer.confidence);
+    return Number.isFinite(value) ? value : 0;
+  });
+  const confidence = Math.min(...confidences);
   // An answer outside the known choice set fails toward reconcile, not
   // toward a silent aligned pass: an unexpected label must not be read as
   // "everything is fine".
@@ -102,5 +108,18 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   await fs.mkdir(path.dirname(receiptPath), { recursive: true }); await fs.writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
   return receipt;
 }
-async function main() { const args = parseArgs(process.argv.slice(2)); const result = await runSemanticReview(args); process.stdout.write(`${JSON.stringify(result)}\n`); if (result.status === 'conflict') process.exitCode = 2; }
+// A CI/automation caller must not read "exit 0" as a pass for anything other
+// than a genuine alignment or an intentionally inactive review: reconcile,
+// unavailable, and not_configured all mean the checkpoint was not verified.
+export function exitCodeForStatus(status) {
+  if (status === 'conflict') return 2;
+  if (!['disabled', 'aligned'].includes(status)) return 3;
+  return 0;
+}
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const result = await runSemanticReview(args);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+  process.exitCode = exitCodeForStatus(result.status);
+}
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
