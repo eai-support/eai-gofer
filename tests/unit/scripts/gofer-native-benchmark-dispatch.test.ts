@@ -8,6 +8,7 @@ import { createCapabilityReceipt } from '../../../.specify/scripts/node/gofer-ho
 import { captureHeldOutResultSnapshot } from '../../../.specify/scripts/node/gofer-heldout-snapshot.mjs';
 import {
   createNativeBenchmarkDispatch,
+  createSpendCap,
   priceUsage,
 } from '../../../.specify/scripts/node/gofer-native-benchmark-dispatch.mjs';
 
@@ -49,7 +50,7 @@ async function receipt() {
     capabilityReceipt: createCapabilityReceipt({
       host: 'codex', evaluatorVersion: '1', evaluationId: 'evaluation-1', hostVersion: '1',
       evaluatedAt: new Date(now - 1000).toISOString(), expiresAt: new Date(now + 3_600_000).toISOString(),
-      models: [{ id: 'test-model' }], isolationClass: ISOLATION,
+      models: [{ id: 'test-model' }, { id: 'reviewer-model' }], isolationClass: ISOLATION,
       provenance: { evaluator: 'gofer-native-host-evaluator', source: 'test', keyId: 'capability-key' },
       signingKey: keys.privateKey,
     }),
@@ -57,13 +58,14 @@ async function receipt() {
 }
 
 async function dispatcher(command: string, extra: Record<string, unknown> = {}) {
+  const { maxTotalCostUsd = 50, ...rest } = extra;
   const { capabilityReceipt, capabilityPublicKey } = await receipt();
   const ledgerDirectory = await temp('gofer-native-ledger-');
   return createNativeBenchmarkDispatch({
     ledgerPath: path.join(ledgerDirectory, 'ledger.jsonl'), capabilityReceipt, capabilityPublicKey,
     requiredCapabilities: { isolationClass: ISOLATION }, modelId: 'test-model',
-    approvalReceipt: 'user-approval-1', command, rateCard: RATE, maxRunCostUsd: 20, maxTotalCostUsd: 50,
-    ...extra,
+    approvalReceipt: 'user-approval-1', command, rateCard: RATE, maxRunCostUsd: 20,
+    spend: createSpendCap(maxTotalCostUsd as number), ...rest,
   });
 }
 
@@ -83,12 +85,13 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
     it('runs a case through the ledger-bound launcher and prices the reported usage', async () => {
       const codex = await fakeCodex(FIX);
       const worktree = await caseWorktree();
-      const result = await call(await dispatcher(codex.script), worktree);
+      const scratchRoot = await temp('gofer-native-scratch-');
+      const result = await call(await dispatcher(codex.script, { scratchRoot }), worktree);
       expect(result).toMatchObject({ modelId: 'test-model', isolation: ISOLATION, costUsd: FIXED_COST });
+      expect((result as { receipt: string }).receipt).toMatch(/^[a-f0-9]{64}$/);
       expect(await readFile(path.join(worktree, 'src/value.mjs'), 'utf8')).toBe('export const value = 1;\n');
       expect(await codex.launches()).toBe(1);
-      const leftovers = (await readdir(tmpdir())).filter((name) => name.startsWith('gofer-benchmark-base-'));
-      expect(leftovers).toEqual([]);
+      expect(await readdir(scratchRoot)).toEqual([]);
     });
 
     it('refuses to launch once the next run could exceed the spend cap', async () => {
@@ -109,7 +112,7 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
 
     it('rejects a run whose measured cost exceeds the per-run bound', async () => {
       const codex = await fakeCodex(FIX);
-      const dispatch = await dispatcher(codex.script, { maxRunCostUsd: 10, maxTotalCostUsd: 50 });
+      const dispatch = await dispatcher(codex.script, { maxRunCostUsd: 10 });
       await expect(call(dispatch, await caseWorktree())).rejects.toThrow('BENCHMARK_RUN_COST_EXCEEDED');
     });
 
@@ -134,6 +137,11 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
       const dispatch = await dispatcher(codex.script, { capabilityPublicKey: wrongKey });
       await expect(call(dispatch, await caseWorktree())).rejects.toThrow('CAPABILITY_RECEIPT_REQUIRED');
       expect(await codex.launches()).toBe(0);
+    });
+
+    it('refuses a model that the signed capability receipt does not list', async () => {
+      const codex = await fakeCodex(FIX);
+      await expect(dispatcher(codex.script, { modelId: 'unlisted-model' })).rejects.toThrow('NATIVE_BENCHMARK_DISPATCH_REQUIRED');
     });
 
     it('prices cached input at its own rate only when one is given', () => {
@@ -170,11 +178,11 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
         ledgerPath: path.join(ledgerDirectory, 'ledger.jsonl'), capabilityReceipt, capabilityPublicKey,
         requiredCapabilities: { isolationClass: ISOLATION }, modelId: 'test-model',
         approvalReceipt: 'user-approval-1', command: codex.script, rateCard: RATE,
-        maxRunCostUsd: 20, maxTotalCostUsd: 11 * FIXED_COST + 20,
+        maxRunCostUsd: 20, spend: createSpendCap(11 * FIXED_COST + 20),
       });
       const result = await runHeldOutBenchmark({
         workspaceRoot, trustRoot, capabilityReceipt, modelId: 'test-model', harnessId: 'native-fixture',
-        dispatchCase, review: async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`r:${caseId}:${run}`) }),
+        dispatchCase, review: async ({ caseId, run }: { caseId: string; run: number }) => ({ receipt: sha(`r:${caseId}:${run}`), approved: true }),
       });
       roots.push(result.worktreesRoot);
       expect(result.report).toMatchObject({ functionalPasses: 12, status: 'pass', costUsd: 12 * FIXED_COST });
