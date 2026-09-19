@@ -148,6 +148,27 @@ describe('TypeSafe semantic governance', () => {
     await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
   });
 
+  it('fails closed when an enabled policy has a missing or invalid minimumConfidence', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const fetchImpl = vi.fn();
+    const policyPath = path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json');
+    for (const malformed of [
+      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'] },
+      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 'high' },
+      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 1.5 },
+      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: 'before_validation', minimumConfidence: 0.85 },
+    ]) {
+      await writeFile(policyPath, JSON.stringify(malformed));
+      await expect(
+        semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })
+      ).rejects.toThrow('malformed');
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('rejects a symlinked policy config directory', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);

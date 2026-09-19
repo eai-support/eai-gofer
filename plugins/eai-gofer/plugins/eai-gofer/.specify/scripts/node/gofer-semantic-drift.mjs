@@ -142,7 +142,17 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const resolvedWorkspace = path.resolve(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
   const policy = await readConfinedJson(resolvedWorkspace, POLICY_RELATIVE_PATH);
-  if (!policy.enabled || !policy.events.includes(event)) return { status: 'disabled', event };
+  if (!policy.enabled) return { status: 'disabled', event };
+  // A syntactically valid but malformed enabled policy must not silently
+  // bypass its own gate: `confidence < undefined` is always false in JS, so
+  // a missing/non-numeric minimumConfidence would otherwise let any
+  // confidence "pass" the threshold check regardless of its actual value.
+  if (!Array.isArray(policy.events) || !policy.events.every((value) => typeof value === 'string') ||
+      typeof policy.minimumConfidence !== 'number' || !Number.isFinite(policy.minimumConfidence) ||
+      policy.minimumConfidence < 0 || policy.minimumConfidence > 1) {
+    throw new Error('Gofer TypeSafe policy is enabled but malformed (events or minimumConfidence).');
+  }
+  if (!policy.events.includes(event)) return { status: 'disabled', event };
   const credentials = await credentialStatus({ workspace, env });
   if (!credentials.configured) return { status: 'not_configured', event };
   const artifacts = await Promise.all(['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md', 'decisions.md', 'traceability.md'].map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
