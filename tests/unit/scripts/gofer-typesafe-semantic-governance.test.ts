@@ -170,4 +170,37 @@ describe('TypeSafe semantic governance', () => {
     expect(semantic.exitCodeForStatus('aligned')).toBe(0);
     expect(semantic.exitCodeForStatus('disabled')).toBe(0);
   });
+
+  it('rejects a feature directory whose own path is a symlink', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-feature-'));
+    directories.push(outside);
+    await writeFile(path.join(outside, 'secret.txt'), 'do not read this');
+    const linkedFeatureDir = path.join(workspace, '.specify', 'specs', 'linked-feature');
+    await symlink(outside, linkedFeatureDir);
+    const fetchImpl = vi.fn();
+    await expect(
+      semantic.runSemanticReview({ workspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl })
+    ).rejects.toThrow('symbolic link');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('truncates the sent artifact by UTF-8 bytes, not UTF-16 code units', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    // Each euro sign is 1 UTF-16 code unit but 3 UTF-8 bytes: a code-unit
+    // truncation would let this through far past the 64 KiB byte bound.
+    const oversized = '€'.repeat(64 * 1024);
+    await writeFile(path.join(featureDir, 'spec.md'), oversized, 'utf8');
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
+    await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    const sentState = JSON.parse(sentBody.state);
+    expect(Buffer.byteLength(sentState['spec.md'].content, 'utf8')).toBeLessThanOrEqual(64 * 1024);
+  });
 });

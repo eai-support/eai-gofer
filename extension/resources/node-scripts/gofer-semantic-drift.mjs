@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'crypto';
+import { constants } from 'fs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import process from 'process';
@@ -10,18 +11,53 @@ const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-
 const MAX_ARTIFACT_BYTES = 64 * 1024;
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
+// A byte-count slice can land mid-sequence; decoding that with toString('utf8')
+// replaces the fragment with U+FFFD (3 bytes), which can grow back past the
+// bound it was meant to enforce. Back up to the sequence boundary instead.
+function truncateUtf8(buffer, maxBytes) {
+  if (buffer.length <= maxBytes) return buffer;
+  let cut = maxBytes;
+  let i = maxBytes - 1;
+  while (i > 0 && (buffer[i] & 0xc0) === 0x80) i--;
+  const lead = buffer[i];
+  let seqLen = 1;
+  if ((lead & 0xe0) === 0xc0) seqLen = 2;
+  else if ((lead & 0xf0) === 0xe0) seqLen = 3;
+  else if ((lead & 0xf8) === 0xf0) seqLen = 4;
+  if (i + seqLen > maxBytes) cut = i;
+  return buffer.subarray(0, cut);
+}
+// A lexical check alone does not stop a symlinked intermediate directory (or
+// the feature directory itself) from redirecting reads/writes outside the
+// workspace. Walk every component from the workspace root and reject any
+// that is a symlink, matching this repository's other protected readers.
+async function assertNoSymlinkComponents(root, relativeTarget) {
+  const components = relativeTarget.split(path.sep).filter(Boolean);
+  let currentPath = root;
+  for (const component of components) {
+    currentPath = path.join(currentPath, component);
+    try {
+      const status = await fs.lstat(currentPath);
+      if (status.isSymbolicLink()) throw new Error('Gofer feature directory must not pass through a symbolic link.');
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      throw error;
+    }
+  }
+}
 // Reject any feature directory outside the workspace instead of trusting the
 // caller: an escaping path would read arbitrary files, send their contents to
 // the external provider, and write the receipt outside the workspace.
-function confined(workspace, value) {
+async function confined(workspace, value) {
   const target = path.resolve(workspace, value);
   const relative = path.relative(workspace, target);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error('Gofer feature directory must remain inside the workspace.');
   }
+  await assertNoSymlinkComponents(workspace, relative);
   return target;
 }
-function parseArgs(argv) {
+async function parseArgs(argv) {
   const args = { workspace: process.cwd(), featureDir: '', event: '', json: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -32,20 +68,28 @@ function parseArgs(argv) {
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!args.featureDir || !args.event) throw new Error('--feature-dir and --event are required');
-  args.workspace = path.resolve(args.workspace); args.featureDir = confined(args.workspace, args.featureDir); return args;
+  args.workspace = path.resolve(args.workspace); args.featureDir = await confined(args.workspace, args.featureDir); return args;
 }
 async function readJson(target) { return JSON.parse(await fs.readFile(target, 'utf8')); }
 // The hash must bind the full file, not the truncated slice sent to the
 // provider: hashing only the truncated content would leave drift past
-// MAX_ARTIFACT_BYTES invisible to the receipt.
+// MAX_ARTIFACT_BYTES invisible to the receipt. MAX_ARTIFACT_BYTES bounds the
+// actual UTF-8 payload sent, not the JS string's UTF-16 code-unit length, so
+// a non-ASCII file cannot exceed the advertised provider payload bound.
+// Opened with O_NOFOLLOW so a same-account symlink swap between validation
+// and read cannot redirect the artifact to a file outside the workspace.
 async function readArtifact(target) {
-  try {
-    const full = await fs.readFile(target, 'utf8');
-    return { full, sent: full.slice(0, MAX_ARTIFACT_BYTES) };
-  } catch (error) {
+  let handle;
+  try { handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW); }
+  catch (error) {
     if (error?.code === 'ENOENT') return { full: '', sent: '' };
     throw error;
   }
+  try {
+    const full = await handle.readFile('utf8');
+    const sent = truncateUtf8(Buffer.from(full, 'utf8'), MAX_ARTIFACT_BYTES).toString('utf8');
+    return { full, sent };
+  } finally { await handle.close(); }
 }
 function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCase(); }
 // A response outside this set is unexpected (a provider bug, a new API
@@ -55,7 +99,7 @@ const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 
 export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
   const resolvedWorkspace = path.resolve(workspace);
-  featureDir = confined(resolvedWorkspace, featureDir);
+  featureDir = await confined(resolvedWorkspace, featureDir);
   const policyPath = path.join(resolvedWorkspace, POLICY_RELATIVE_PATH);
   const policy = await readJson(policyPath);
   if (!policy.enabled || !policy.events.includes(event)) return { status: 'disabled', event };
@@ -104,8 +148,14 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
     : 'aligned';
   const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { full }]) => [name, digest(full)])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
-  const receiptPath = path.join(featureDir, 'evidence', 'semantic-review', `${event}.json`);
-  await fs.mkdir(path.dirname(receiptPath), { recursive: true }); await fs.writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+  const receiptDir = path.join(featureDir, 'evidence', 'semantic-review');
+  await fs.mkdir(receiptDir, { recursive: true });
+  const receiptPath = path.join(receiptDir, `${event}.json`);
+  // O_NOFOLLOW plus O_TRUNC on an existing regular file: this refuses to
+  // write through a symlink while still allowing a normal re-run to replace
+  // this event's own prior receipt.
+  const receiptHandle = await fs.open(receiptPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600);
+  try { await receiptHandle.writeFile(`${JSON.stringify(receipt, null, 2)}\n`); } finally { await receiptHandle.close(); }
   return receipt;
 }
 // A CI/automation caller must not read "exit 0" as a pass for anything other
@@ -117,7 +167,7 @@ export function exitCodeForStatus(status) {
   return 0;
 }
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = await parseArgs(process.argv.slice(2));
   const result = await runSemanticReview(args);
   process.stdout.write(`${JSON.stringify(result)}\n`);
   process.exitCode = exitCodeForStatus(result.status);
