@@ -15,6 +15,25 @@ const MAX_ARTIFACT_BYTES = 64 * 1024;
 const MAX_ARTIFACT_READ_BYTES = 8 * 1024 * 1024;
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
+// O_NOFOLLOW is unavailable on Windows; the bitwise OR silently contributes
+// nothing there rather than erroring, which would otherwise look like
+// protection that isn't actually applied. lstat detects a symlink or
+// junction cross-platform (including Windows) and is the actual protection;
+// O_NOFOLLOW only closes the small remaining gap between that check and the
+// open, on platforms that support it.
+const noFollowFlag = process.platform === 'win32' ? 0 : constants.O_NOFOLLOW;
+async function assertNotSymlink(target) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (info?.isSymbolicLink()) throw new Error('Gofer path must not be a symbolic link.');
+  return info;
+}
+async function openExistingNoFollow(target, flags) {
+  await assertNotSymlink(target);
+  return fs.open(target, flags | noFollowFlag);
+}
 // A byte-count slice can land mid-sequence; decoding that with toString('utf8')
 // replaces the fragment with U+FFFD (3 bytes), which can grow back past the
 // bound it was meant to enforce. Back up to the sequence boundary instead.
@@ -90,7 +109,7 @@ async function parseArgs(argv) {
 async function readConfinedJson(workspace, relativePath) {
   await assertNoSymlinkComponents(workspace, relativePath);
   const target = path.join(workspace, relativePath);
-  const handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const handle = await openExistingNoFollow(target, constants.O_RDONLY);
   try { return JSON.parse(await handle.readFile('utf8')); } finally { await handle.close(); }
 }
 // The hash must bind the full file, not the truncated slice sent to the
@@ -107,7 +126,7 @@ async function readConfinedJson(workspace, relativePath) {
 // not risk a false "aligned" verdict built from missing documents.
 async function readArtifact(target) {
   let handle;
-  try { handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW); }
+  try { handle = await openExistingNoFollow(target, constants.O_RDONLY); }
   catch (error) {
     if (error?.code === 'ENOENT') return { present: false, sha256: digest(''), sent: '' };
     throw error;
@@ -204,13 +223,15 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
     : 'aligned';
   const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, missingArtifacts, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { sha256 }]) => [name, sha256])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
-  const receiptDir = path.join(featureDir, 'evidence', 'semantic-review');
+  const receiptRelativeDir = path.join('evidence', 'semantic-review');
+  await assertNoSymlinkComponents(featureDir, receiptRelativeDir);
+  const receiptDir = path.join(featureDir, receiptRelativeDir);
   await fs.mkdir(receiptDir, { recursive: true });
   const receiptPath = path.join(receiptDir, `${event}.json`);
-  // O_NOFOLLOW plus O_TRUNC on an existing regular file: this refuses to
-  // write through a symlink while still allowing a normal re-run to replace
-  // this event's own prior receipt.
-  const receiptHandle = await fs.open(receiptPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600);
+  // A prior run's own receipt may already exist and must be replaced; a
+  // symlink there must not be.
+  await assertNotSymlink(receiptPath);
+  const receiptHandle = await fs.open(receiptPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, 0o600);
   try { await receiptHandle.writeFile(`${JSON.stringify(receipt, null, 2)}\n`); } finally { await receiptHandle.close(); }
   return receipt;
 }

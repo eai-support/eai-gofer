@@ -57,16 +57,33 @@ async function existingFile(target) {
   }
 }
 
+// O_NOFOLLOW is unavailable on Windows; the bitwise OR silently contributes
+// nothing there rather than erroring. lstat detects a symlink or junction
+// cross-platform (including Windows) and is the actual protection;
+// O_NOFOLLOW only closes the small remaining gap between that check and the
+// open, on platforms that support it.
+const noFollowFlag = process.platform === 'win32' ? 0 : constants.O_NOFOLLOW;
+async function assertNotSymlink(target) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (info?.isSymbolicLink()) throw new Error('Gofer credential path must not be a symbolic link.');
+}
+
 // The static confinement check happens before the caller ever opens the file;
-// a same-account process could still swap a symlink in between. Opening with
-// O_NOFOLLOW closes that window instead of merely trusting the earlier check.
+// a same-account process could still swap a symlink in between. The lstat
+// check immediately before opening, plus O_NOFOLLOW where available, closes
+// that window instead of merely trusting the earlier confinedPath check.
 async function readNoFollow(target) {
-  const handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+  await assertNotSymlink(target);
+  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
   try { return await handle.readFile('utf8'); } finally { await handle.close(); }
 }
 
 async function writeNoFollow(target, content, mode) {
-  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, mode);
+  await assertNotSymlink(target);
+  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, mode);
   try { await handle.writeFile(content); } finally { await handle.close(); }
 }
 
