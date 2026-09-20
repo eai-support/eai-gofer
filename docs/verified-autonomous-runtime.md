@@ -232,10 +232,107 @@ the first lease and `commit-authorize` on the second lease only.
 | Resume refuses                                             | Loop allows one attempt                                              | The smoke feature allows two; a restart needs two   |
 | A verified run leaves a `gofer-isolated-worktree-*` folder | Known cleanup gap                                                    | `git worktree remove --force <path>`                |
 
+## Other coding apps
+
+Only Codex runs the full chain today. This is what was tested on 2026-09-20
+(macOS, one machine). Each host got a live boundary probe: a real agent tried a
+write inside the worktree, in a sibling folder and in the shared Git store, and
+the disk was checked. A no-sandbox control run showed the probe can see a leak.
+
+| App                | Result                                                                                                                                                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Codex              | Full chain proven.                                                                                                                                                                                                                                                                                                                    |
+| Claude Code        | **Execution adapter built** (`gofer-claude-adapter.mjs`). Its default sandbox lets a worker write the shared Git store, so the adapter adds a deny rule for it. With that rule the live probe held, three times. It can also hide the trust folder from a worker (the Codex sandbox cannot). Not yet in the routing chain, see below. |
+| Grok               | **Execution adapter built** (`gofer-grok-adapter.mjs`). Its built-in `strict` profile allows writes to the OS temp folder, so the adapter adds a deny rule for the temp folders and refuses worktrees inside them. With that, the live probe held. Not yet in the routing chain, see below.                                           |
+| GitHub Copilot CLI | No sandbox option exists, so it cannot meet the boundary. Could not be run live (plan quota reached).                                                                                                                                                                                                                                 |
+| VS Code            | `code chat` opens a window session. `code agent host` is a local server with stop, kill and logs but no isolation flags. Not run.                                                                                                                                                                                                     |
+
+The EAI CLI reports every one of these as needing manual setup or unsupported.
+Only Codex has a code path that can return `ready`, so none of them can pass the
+EAI isolation gate until the EAI CLI adds the matching checks.
+
+### The Claude adapter
+
+It reuses the Codex launcher's process-group evidence, Git baseline and scope
+checks, so a Claude worker is cancelled, reconciled and scope-checked the same
+way. What is Claude-specific:
+
+- **Sandbox policy, per task:** sandbox on, unsandboxed fallback off, writes to
+  the shared Git store denied, and optional read denial for folders such as
+  `~/.eai-gofer-trust` (both the shell and the file tools). The live test showed
+  a worker read a canary file with no policy and could not with it.
+- **Command:** `dontAsk` permission mode, only the tools you allow, file tools
+  scoped to the allowed write paths, a host-side budget cap
+  (`--max-budget-usd`), no session file, no MCP servers, and a clean
+  environment. The command must be an absolute path.
+- **Result:** Claude's own success flag is checked even when the exit code is 0.
+  Token usage is mapped to the same shape as Codex, with Claude's reported cost.
+- **Empty folder:** Claude's sandbox leaves an empty `.claude/.cc-writes`
+  folder. It is removed only if it is empty and alone. A file placed there is
+  still a scope violation.
+
+Try it against your own Claude install (small spend, throwaway repo):
+
+```bash
+node docs/examples/verified-runtime/claude-adapter.mjs probe
+node docs/examples/verified-runtime/claude-adapter.mjs task
+node docs/examples/verified-runtime/claude-adapter.mjs cancel
+```
+
+What it does **not** do yet, and why:
+
+- **No capability receipt.** Claude has no command that lists its models, and
+  Gofer never uses a static model list. A receipt could only vouch for a model
+  that was actually run.
+- **No no-model boundary test.** Codex has one. For Claude the probe needs a
+  real model call (about US$0.05). It never runs unless you call it.
+- **Not in the routed chain.** The runtime, receipt, signing and registry code
+  are built for one host (`codex`). Extending them to a second host is a
+  separate change, and the EAI isolation gate would still refuse Claude until
+  the EAI CLI is updated.
+
+### The Grok adapter
+
+It uses the same launcher as Codex and Claude. Grok has its own OS sandbox, and
+the live tests found four things that shape the adapter:
+
+- **Temp folders.** The built-in `strict` profile allows writes to the OS temp
+  folder, where Gofer normally puts worktrees. The adapter generates a per-task
+  profile that extends `strict` and denies every temp folder. It therefore
+  **refuses a worktree or shared Git store inside them**. Keep Grok worktrees
+  elsewhere, for example under your home folder.
+- **Fail open.** If a profile cannot be applied, Grok only prints a warning and
+  runs **without a sandbox**. The adapter kills the whole process group the
+  moment that warning appears (and keeps killing until the group is empty) and
+  rejects the run. Grok also silently ignores unknown profile keys, so the
+  adapter uses only `extends` and `deny`, which were verified live.
+- **Per-task profile.** It is written to `.grok/sandbox.toml` in the worktree
+  before start and removed after exit. The profile name is random each time. The
+  adapter refuses to start if that file already exists.
+- **Reads.** `strict` hides the rest of your home folder: a canary file was
+  refused to both the shell and the file tool. A worker **can read**
+  `~/.grok/auth.json`, and this cannot be hidden, because Grok cannot start
+  without it. It cannot write anywhere in `~/.grok`.
+
+Like Codex, the sandbox lets a worker write anywhere inside its worktree. An
+out-of-scope file is caught after the run, and the run fails. Grok has no spend
+flag, so cost is bounded by `--max-turns` and by your own spend cap. Grok's
+sandbox event log was not updated by these runs, so it is not used as proof.
+
+```bash
+node docs/examples/verified-runtime/grok-adapter.mjs probe    # about US$0.01
+node docs/examples/verified-runtime/grok-adapter.mjs task
+node docs/examples/verified-runtime/grok-adapter.mjs cancel
+```
+
+The same limits as Claude apply: no capability receipt, not in the routed chain,
+and the EAI CLI does not qualify Grok.
+
 ## Known limits
 
-- Only Codex on macOS is qualified. Claude, Copilot, Antigravity, Grok and VS
-  Code have no qualified adapter. Linux and Windows fail closed.
+- Only Codex on macOS runs the full chain. Claude and Grok have execution
+  adapters but are not in the routed chain. Copilot, Antigravity and VS Code have
+  no adapter. Linux and Windows fail closed.
 - The corpus is written inside this project. The reviewer is a model.
 - The capability key is plaintext in your account. A worker can read it and
   could forge a capability receipt. It cannot forge a benchmark attestation.

@@ -30,20 +30,22 @@ export function requireAbsolute(values, names) {
   }
 }
 
-/** The first `codex` on PATH, resolved to its real file. Version-specific
+/** The first `name` on PATH, resolved to its real file. Version-specific
  * install paths change on upgrade, so never hard-code one. The capability
- * issuer separately verifies that this executable is OpenAI-signed. */
-export function findCodex() {
+ * issuer separately verifies that the Codex executable is OpenAI-signed. */
+export function findExecutable(name) {
   for (const directory of (process.env.PATH ?? '').split(path.delimiter)) {
     if (!directory || !path.isAbsolute(directory)) continue;
-    const candidate = path.join(directory, 'codex');
+    const candidate = path.join(directory, name);
     try {
       accessSync(candidate, constants.X_OK);
       return realpathSync(candidate);
     } catch { /* try the next entry */ }
   }
-  throw new Error('codex was not found on PATH');
+  throw new Error(`${name} was not found on PATH`);
 }
+
+export const findCodex = () => findExecutable('codex');
 
 export function rate(text) {
   const [input, output] = String(text).split(',').map(Number);

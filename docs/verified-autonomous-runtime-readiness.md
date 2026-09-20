@@ -41,8 +41,10 @@ How to repeat any of this by hand:
 
 ## What blocks 100
 
-1. **More hosts (about 6 points).** Claude, Copilot, Antigravity, Grok and VS
-   Code have no qualified runtime. Linux and Windows fail closed.
+1. **More hosts (about 4 points).** Claude and Grok have execution adapters with
+   live-proven sandbox boundaries, but neither is in the routed chain (no
+   receipt, and the EAI CLI does not qualify them). Copilot, Antigravity and VS
+   Code have no adapter. Linux and Windows fail closed.
 2. **Benchmark independence and reach (about 5 points).** A corpus written
    outside the project, run against at least two models, with the regression
    gate and ablation report run for real and enforced in CI.
