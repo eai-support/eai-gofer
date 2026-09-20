@@ -265,6 +265,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-tty-prompt.mjs',
       'node/gofer-verifier-key-ceremony.mjs',
       'node/gofer-benchmark-sign.mjs',
+      'node/gofer-claude-adapter.mjs',
       'node/gofer-heldout-corpus.mjs',
       'node/gofer-heldout-verifier.mjs',
       'node/gofer-heldout-snapshot.mjs',

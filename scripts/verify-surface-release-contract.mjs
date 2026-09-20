@@ -36,6 +36,7 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-tty-prompt.mjs',
   '.specify/scripts/node/gofer-verifier-key-ceremony.mjs',
   '.specify/scripts/node/gofer-benchmark-sign.mjs',
+  '.specify/scripts/node/gofer-claude-adapter.mjs',
   '.specify/scripts/node/gofer-heldout-corpus.mjs',
   '.specify/scripts/node/gofer-heldout-verifier.mjs',
   '.specify/scripts/node/gofer-heldout-snapshot.mjs',

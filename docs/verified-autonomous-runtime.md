@@ -232,10 +232,70 @@ the first lease and `commit-authorize` on the second lease only.
 | Resume refuses                                             | Loop allows one attempt                                              | The smoke feature allows two; a restart needs two   |
 | A verified run leaves a `gofer-isolated-worktree-*` folder | Known cleanup gap                                                    | `git worktree remove --force <path>`                |
 
+## Other coding apps
+
+Only Codex runs the full chain today. This is what was tested on 2026-09-20
+(macOS, one machine). Each host got a live boundary probe: a real agent tried a
+write inside the worktree, in a sibling folder and in the shared Git store, and
+the disk was checked. A no-sandbox control run showed the probe can see a leak.
+
+| App                | Result                                                                                                                                                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Codex              | Full chain proven.                                                                                                                                                                                                                                                                                                                    |
+| Claude Code        | **Execution adapter built** (`gofer-claude-adapter.mjs`). Its default sandbox lets a worker write the shared Git store, so the adapter adds a deny rule for it. With that rule the live probe held, three times. It can also hide the trust folder from a worker (the Codex sandbox cannot). Not yet in the routing chain, see below. |
+| Grok               | `--sandbox strict` blocks sibling and Git-store writes, but allows writes to the OS temp folder by default, and Gofer's worktrees live there. Needs a profile with temp writes disabled. No adapter yet.                                                                                                                              |
+| GitHub Copilot CLI | No sandbox option exists, so it cannot meet the boundary. Could not be run live (plan quota reached).                                                                                                                                                                                                                                 |
+| VS Code            | `code chat` opens a window session. `code agent host` is a local server with stop, kill and logs but no isolation flags. Not run.                                                                                                                                                                                                     |
+
+The EAI CLI reports every one of these as needing manual setup or unsupported.
+Only Codex has a code path that can return `ready`, so none of them can pass the
+EAI isolation gate until the EAI CLI adds the matching checks.
+
+### The Claude adapter
+
+It reuses the Codex launcher's process-group evidence, Git baseline and scope
+checks, so a Claude worker is cancelled, reconciled and scope-checked the same
+way. What is Claude-specific:
+
+- **Sandbox policy, per task:** sandbox on, unsandboxed fallback off, writes to
+  the shared Git store denied, and optional read denial for folders such as
+  `~/.eai-gofer-trust` (both the shell and the file tools). The live test showed
+  a worker read a canary file with no policy and could not with it.
+- **Command:** `dontAsk` permission mode, only the tools you allow, file tools
+  scoped to the allowed write paths, a host-side budget cap
+  (`--max-budget-usd`), no session file, no MCP servers, and a clean
+  environment. The command must be an absolute path.
+- **Result:** Claude's own success flag is checked even when the exit code is 0.
+  Token usage is mapped to the same shape as Codex, with Claude's reported cost.
+- **Empty folder:** Claude's sandbox leaves an empty `.claude/.cc-writes`
+  folder. It is removed only if it is empty and alone. A file placed there is
+  still a scope violation.
+
+Try it against your own Claude install (small spend, throwaway repo):
+
+```bash
+node docs/examples/verified-runtime/claude-adapter.mjs probe
+node docs/examples/verified-runtime/claude-adapter.mjs task
+node docs/examples/verified-runtime/claude-adapter.mjs cancel
+```
+
+What it does **not** do yet, and why:
+
+- **No capability receipt.** Claude has no command that lists its models, and
+  Gofer never uses a static model list. A receipt could only vouch for a model
+  that was actually run.
+- **No no-model boundary test.** Codex has one. For Claude the probe needs a
+  real model call (about US$0.05). It never runs unless you call it.
+- **Not in the routed chain.** The runtime, receipt, signing and registry code
+  are built for one host (`codex`). Extending them to a second host is a
+  separate change, and the EAI isolation gate would still refuse Claude until
+  the EAI CLI is updated.
+
 ## Known limits
 
-- Only Codex on macOS is qualified. Claude, Copilot, Antigravity, Grok and VS
-  Code have no qualified adapter. Linux and Windows fail closed.
+- Only Codex on macOS runs the full chain. Claude has an execution adapter but
+  is not in the routed chain. Copilot, Antigravity, Grok and VS Code have no
+  adapter. Linux and Windows fail closed.
 - The corpus is written inside this project. The reviewer is a model.
 - The capability key is plaintext in your account. A worker can read it and
   could forge a capability receipt. It cannot forge a benchmark attestation.
