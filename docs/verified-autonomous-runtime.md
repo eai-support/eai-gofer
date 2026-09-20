@@ -243,7 +243,7 @@ the disk was checked. A no-sandbox control run showed the probe can see a leak.
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Codex              | Full chain proven.                                                                                                                                                                                                                                                                                                                    |
 | Claude Code        | **Execution adapter built** (`gofer-claude-adapter.mjs`). Its default sandbox lets a worker write the shared Git store, so the adapter adds a deny rule for it. With that rule the live probe held, three times. It can also hide the trust folder from a worker (the Codex sandbox cannot). Not yet in the routing chain, see below. |
-| Grok               | `--sandbox strict` blocks sibling and Git-store writes, but allows writes to the OS temp folder by default, and Gofer's worktrees live there. Needs a profile with temp writes disabled. No adapter yet.                                                                                                                              |
+| Grok               | **Execution adapter built** (`gofer-grok-adapter.mjs`). Its built-in `strict` profile allows writes to the OS temp folder, so the adapter adds a deny rule for the temp folders and refuses worktrees inside them. With that, the live probe held. Not yet in the routing chain, see below.                                           |
 | GitHub Copilot CLI | No sandbox option exists, so it cannot meet the boundary. Could not be run live (plan quota reached).                                                                                                                                                                                                                                 |
 | VS Code            | `code chat` opens a window session. `code agent host` is a local server with stop, kill and logs but no isolation flags. Not run.                                                                                                                                                                                                     |
 
@@ -291,11 +291,48 @@ What it does **not** do yet, and why:
   separate change, and the EAI isolation gate would still refuse Claude until
   the EAI CLI is updated.
 
+### The Grok adapter
+
+It uses the same launcher as Codex and Claude. Grok has its own OS sandbox, and
+the live tests found four things that shape the adapter:
+
+- **Temp folders.** The built-in `strict` profile allows writes to the OS temp
+  folder, where Gofer normally puts worktrees. The adapter generates a per-task
+  profile that extends `strict` and denies every temp folder. It therefore
+  **refuses a worktree or shared Git store inside them**. Keep Grok worktrees
+  elsewhere, for example under your home folder.
+- **Fail open.** If a profile cannot be applied, Grok only prints a warning and
+  runs **without a sandbox**. The adapter kills the whole process group the
+  moment that warning appears (and keeps killing until the group is empty) and
+  rejects the run. Grok also silently ignores unknown profile keys, so the
+  adapter uses only `extends` and `deny`, which were verified live.
+- **Per-task profile.** It is written to `.grok/sandbox.toml` in the worktree
+  before start and removed after exit. The profile name is random each time. The
+  adapter refuses to start if that file already exists.
+- **Reads.** `strict` hides the rest of your home folder: a canary file was
+  refused to both the shell and the file tool. A worker **can read**
+  `~/.grok/auth.json`, and this cannot be hidden, because Grok cannot start
+  without it. It cannot write anywhere in `~/.grok`.
+
+Like Codex, the sandbox lets a worker write anywhere inside its worktree. An
+out-of-scope file is caught after the run, and the run fails. Grok has no spend
+flag, so cost is bounded by `--max-turns` and by your own spend cap. Grok's
+sandbox event log was not updated by these runs, so it is not used as proof.
+
+```bash
+node docs/examples/verified-runtime/grok-adapter.mjs probe    # about US$0.01
+node docs/examples/verified-runtime/grok-adapter.mjs task
+node docs/examples/verified-runtime/grok-adapter.mjs cancel
+```
+
+The same limits as Claude apply: no capability receipt, not in the routed chain,
+and the EAI CLI does not qualify Grok.
+
 ## Known limits
 
-- Only Codex on macOS runs the full chain. Claude has an execution adapter but
-  is not in the routed chain. Copilot, Antigravity, Grok and VS Code have no
-  adapter. Linux and Windows fail closed.
+- Only Codex on macOS runs the full chain. Claude and Grok have execution
+  adapters but are not in the routed chain. Copilot, Antigravity and VS Code have
+  no adapter. Linux and Windows fail closed.
 - The corpus is written inside this project. The reviewer is a model.
 - The capability key is plaintext in your account. A worker can read it and
   could forge a capability receipt. It cannot forge a benchmark attestation.
