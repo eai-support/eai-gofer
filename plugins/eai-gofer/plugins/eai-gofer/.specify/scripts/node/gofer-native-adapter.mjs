@@ -127,6 +127,7 @@ export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt
   let child;
   let exit = null;
   let cancelRequested = false;
+  let fatal = null;
   let completion;
   const invocationId = `${host.name}-${randomUUID()}`;
   const evidencePath = evidenceRoot ? path.join(evidenceRoot, `native-worker-${invocationId}.jsonl`) : null;
@@ -135,6 +136,8 @@ export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt
     return createHash('sha256').update(JSON.stringify({ invocationId, capabilityReceiptHash, modelId,
       allowedWriteScope, exit, stdout: stdout.value(), stderr: stderr.value(), message })).digest('hex');
   };
+  // A host may write a per-task policy file before it starts.
+  await host.beforeStart?.({ workspace, sandboxPolicy, hostOptions });
   try {
     child = spawnProcess(command, args, { cwd: workspace, shell: false, detached: Boolean(evidenceRoot),
       stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
@@ -158,11 +161,28 @@ export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt
     } finally { await file.close(); }
   })() : Promise.resolve();
   child.stdout?.on('data', chunk => stdout.add(chunk));
-  child.stderr?.on('data', chunk => stderr.add(chunk));
+  child.stderr?.on('data', chunk => {
+    stderr.add(chunk);
+    // A sandbox that fails to apply must never be allowed to run unsandboxed.
+    if (!fatal && host.fatalStderr?.test(String(chunk))) {
+      fatal = 'NATIVE_HOST_SANDBOX_NOT_APPLIED';
+      // A single group signal can miss a child that was starting at that moment,
+      // so keep killing until the group is empty.
+      (async () => {
+        for (let attempt = 0; attempt < 30; attempt++) {
+          try { if (evidencePath) signalProcessGroup(child.pid, 'SIGKILL'); else child.kill('SIGKILL'); } catch { /* already gone */ }
+          await new Promise(resolve => setTimeout(resolve, 50));
+          if (evidencePath ? !processGroupAlive(child.pid) : exit !== null) return;
+        }
+      })();
+    }
+  });
   completion = new Promise((resolve, reject) => {
     child.once('error', error => reject(new Error(`NATIVE_HOST_START_FAILED:${error.message}`)));
     child.once('close', async (code, signal) => {
       exit = { code, signal };
+      // The host has stopped: remove anything it needed from the worktree.
+      try { await host.cleanup?.({ workspace, sandboxPolicy, hostOptions }); } catch { /* reported by the scope check */ }
       try {
         await startEvidence;
         if (evidencePath) {
@@ -218,8 +238,9 @@ export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt
         if (evidencePath && processGroupAlive(child.pid)) throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
         return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
       }
+      if (fatal) throw new Error(fatal);
       if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
-      host.assertSuccess?.(stdout.value());
+      host.assertSuccess?.(stdout.value(), stderr.value());
       if (!gitBaseline) throw new Error('NATIVE_GIT_BASELINE_REQUIRED');
       const [head, refs] = await Promise.all([
         git(workspace, ['rev-parse', 'HEAD']),
@@ -228,7 +249,7 @@ export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt
       if (head.stdout.trim() !== gitBaseline.head || refs.stdout !== gitBaseline.refs) {
         throw new Error('NATIVE_UNAUTHORIZED_GIT_CHANGE');
       }
-      await host.afterExit?.({ workspace });
+      await host.afterExit?.({ workspace, sandboxPolicy, hostOptions });
       const status = await git(workspace, ['-c', 'status.renames=false', 'status', '--porcelain=v1', '-z',
         '--untracked-files=all', '--ignored=matching']);
       const entries = status.stdout.split('\0').filter(Boolean);
@@ -261,7 +282,7 @@ export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision,
   let root;
   try { root = await realpath(evidenceDirectory); } catch { return denied; }
   const names = await readdir(root);
-  if (names.length > 1000 || names.some(name => !/^native-worker-(?:codex|claude)-[0-9a-f-]+\.jsonl$/.test(name))) return denied;
+  if (names.length > 1000 || names.some(name => !/^native-worker-(?:codex|claude|grok)-[0-9a-f-]+\.jsonl$/.test(name))) return denied;
   const records = [];
   for (const name of names) {
     const file = await open(path.join(root, name), constants.O_RDONLY | constants.O_NOFOLLOW).catch(() => null);
