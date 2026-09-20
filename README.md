@@ -150,7 +150,16 @@ The shipped default comes from `.specify/templates/gofer-model-policy.yaml`.
 Bootstrap creates the memory copy when it is missing and does not overwrite
 local edits.
 
-Default posture:
+This policy is **advisory**. It narrows what is allowed and sets cost and
+quality limits. It never chooses a model and never proves a capability. Gofer
+routes only by a fresh signed capability receipt plus a signed independent
+benchmark, and refuses when either is missing, stale or altered. See
+[Verified autonomous runtime](docs/verified-autonomous-runtime.md) for how to
+set this up and run it by hand, and the
+[readiness assessment](docs/verified-autonomous-runtime-readiness.md) for what
+is proven and what is not.
+
+Default advisory posture (a starting point, not an authority):
 
 - Claude: Haiku for simple scouting, Sonnet for normal work, Opus for hard
   security/architecture/release gates.
