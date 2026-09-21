@@ -50,11 +50,13 @@ export interface SkillDirectoryManager {
  * Searches multiple directories with priority:
  * 1. .claude/commands/ (Claude CLI - highest priority)
  * 2. .agents/skills/  (Codex CLI canonical path, with legacy .system fallback)
- * 3. .gemini/commands/gofer/ (Gemini CLI)
- * 4. .github/prompts/ (Copilot Chat - lowest priority)
+ * 3. .github/prompts/ (Copilot Chat)
+ * 4. .gemini/commands/gofer/ (legacy Antigravity compatibility input)
+ * 5. .grok/skills/ (Grok Build)
  */
 export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
   private commandCache: Map<string, CommandMetadata> = new Map();
+  private hasCompleteListing: boolean = false;
   private cacheExpiry: number = 0;
   private readonly CACHE_TTL_MS = 60000; // 1 minute cache
   private extractor: CommandMetadataExtractor;
@@ -79,38 +81,52 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
    * @returns Command metadata or null if not found
    */
   public findCommand(commandName: string): CommandMetadata | null {
-    // Check cache first
-    if (this.isCacheValid() && this.commandCache.has(commandName)) {
-      return this.commandCache.get(commandName)!;
+    if (!this.isCacheValid()) {
+      this.clearCache();
     }
 
-    // Search in priority order: Claude > Codex > Gemini > Copilot
+    // Check cache first
+    if (this.commandCache.has(commandName)) {
+      return this.commandCache.get(commandName)!;
+    }
+    if (this.hasCompleteListing) {
+      return null;
+    }
+
+    // Search native current formats first, then legacy compatibility input.
     // 1. Try Claude CLI
     const claudeMetadata = this.searchClaudeCommands(commandName);
     if (claudeMetadata) {
-      this.commandCache.set(commandName, claudeMetadata);
+      this.cacheCommand(commandName, claudeMetadata);
       return claudeMetadata;
     }
 
     // 2. Try Codex CLI
     const codexMetadata = this.searchCodexSkills(commandName);
     if (codexMetadata) {
-      this.commandCache.set(commandName, codexMetadata);
+      this.cacheCommand(commandName, codexMetadata);
       return codexMetadata;
     }
 
-    // 3. Try Gemini CLI
+    // 3. Try Copilot Chat
+    const copilotMetadata = this.searchCopilotPrompts(commandName);
+    if (copilotMetadata) {
+      this.cacheCommand(commandName, copilotMetadata);
+      return copilotMetadata;
+    }
+
+    // 4. Try legacy Gemini-format compatibility commands for Antigravity
     const geminiMetadata = this.searchGeminiCommands(commandName);
     if (geminiMetadata) {
-      this.commandCache.set(commandName, geminiMetadata);
+      this.cacheCommand(commandName, geminiMetadata);
       return geminiMetadata;
     }
 
-    // 4. Try Copilot Chat
-    const copilotMetadata = this.searchCopilotPrompts(commandName);
-    if (copilotMetadata) {
-      this.commandCache.set(commandName, copilotMetadata);
-      return copilotMetadata;
+    // 5. Try Grok Build
+    const grokMetadata = this.searchGrokSkills(commandName);
+    if (grokMetadata) {
+      this.cacheCommand(commandName, grokMetadata);
+      return grokMetadata;
     }
     return null;
   }
@@ -121,8 +137,12 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
    * @returns Array of command metadata
    */
   public listCommands(): CommandMetadata[] {
+    if (!this.isCacheValid()) {
+      this.clearCache();
+    }
+
     // Check cache first
-    if (this.isCacheValid() && this.commandCache.size > 0) {
+    if (this.hasCompleteListing) {
       return Array.from(this.commandCache.values());
     }
 
@@ -131,15 +151,21 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     // Collect from all platforms
     commands.push(...this.getAllClaudeCommands());
     commands.push(...this.getAllCodexSkills());
-    commands.push(...this.getAllGeminiCommands());
     commands.push(...this.getAllCopilotPrompts());
+    commands.push(...this.getAllGeminiCommands());
+    commands.push(...this.getAllGrokSkills());
 
     // Update cache
     this.commandCache.clear();
-    commands.forEach((cmd) => this.commandCache.set(cmd.name, cmd));
+    commands.forEach((cmd) => {
+      if (!this.commandCache.has(cmd.name)) {
+        this.commandCache.set(cmd.name, cmd);
+      }
+    });
+    this.hasCompleteListing = true;
     this.cacheExpiry = Date.now() + this.CACHE_TTL_MS;
 
-    return commands;
+    return Array.from(this.commandCache.values());
   }
 
   /**
@@ -212,7 +238,7 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     legacyCodexNamespaceWatcher.onDidDelete(() => this.onDirectoryChange(callback));
     watchers.push(legacyCodexNamespaceWatcher);
 
-    // Watch .gemini/commands/gofer/
+    // Watch legacy .gemini/commands/gofer/ compatibility resources.
     const geminiPattern = new vscode.RelativePattern(
       this.workspacePath,
       '.gemini/commands/gofer/*.toml'
@@ -234,6 +260,14 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     copilotWatcher.onDidDelete(() => this.onDirectoryChange(callback));
     watchers.push(copilotWatcher);
 
+    // Watch .grok/skills/
+    const grokPattern = new vscode.RelativePattern(this.workspacePath, '.grok/skills/*/SKILL.md');
+    const grokWatcher = vscode.workspace.createFileSystemWatcher(grokPattern);
+    grokWatcher.onDidChange(() => this.onDirectoryChange(callback));
+    grokWatcher.onDidCreate(() => this.onDirectoryChange(callback));
+    grokWatcher.onDidDelete(() => this.onDirectoryChange(callback));
+    watchers.push(grokWatcher);
+
     // Return disposable to stop all watchers
     return {
       dispose: () => {
@@ -247,7 +281,13 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
    */
   public clearCache(): void {
     this.commandCache.clear();
+    this.hasCompleteListing = false;
     this.cacheExpiry = 0;
+  }
+
+  private cacheCommand(commandName: string, metadata: CommandMetadata): void {
+    this.commandCache.set(commandName, metadata);
+    this.cacheExpiry = Date.now() + this.CACHE_TTL_MS;
   }
 
   /**
@@ -314,7 +354,7 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
   }
 
   /**
-   * Search for command in Gemini CLI directory
+   * Search legacy Gemini-format compatibility commands for Antigravity
    */
   private searchGeminiCommands(commandName: string): CommandMetadata | null {
     const geminiDir = path.join(this.workspacePath, '.gemini/commands/gofer');
@@ -353,6 +393,26 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
         } catch {
           return null;
         }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Search for a command in the Grok Build skill directory.
+   */
+  private searchGrokSkills(commandName: string): CommandMetadata | null {
+    for (const fileStem of this.getCommandFileStemCandidates(commandName)) {
+      const skillPath = path.join(this.workspacePath, '.grok', 'skills', fileStem, 'SKILL.md');
+      if (!fs.existsSync(skillPath)) {
+        continue;
+      }
+
+      try {
+        return this.extractor.extractFromSkillSync(skillPath, 'grok');
+      } catch {
+        continue;
       }
     }
 
@@ -423,7 +483,7 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
   }
 
   /**
-   * Get all commands from Gemini CLI directory
+   * Get all legacy Gemini-format compatibility commands
    */
   private getAllGeminiCommands(): CommandMetadata[] {
     const geminiDir = path.join(this.workspacePath, '.gemini/commands/gofer');
@@ -476,6 +536,33 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
     }
   }
 
+  /**
+   * Get all Grok Build skills.
+   */
+  private getAllGrokSkills(): CommandMetadata[] {
+    const grokRoot = path.join(this.workspacePath, '.grok', 'skills');
+    if (!fs.existsSync(grokRoot)) {
+      return [];
+    }
+
+    try {
+      const skillPaths = new Set<string>();
+      this.collectSkillPaths(grokRoot, skillPaths);
+
+      return Array.from(skillPaths)
+        .map((skillPath) => {
+          try {
+            return this.extractor.extractFromSkillSync(skillPath, 'grok');
+          } catch {
+            return null;
+          }
+        })
+        .filter((metadata): metadata is CommandMetadata => metadata !== null);
+    } catch {
+      return [];
+    }
+  }
+
   private getCodexSkillPathCandidates(commandName: string): string[] {
     return this.getCommandFileStemCandidates(commandName).flatMap((fileStem) => [
       path.join(this.workspacePath, '.agents/skills', fileStem, 'SKILL.md'),
@@ -486,6 +573,10 @@ export class DefaultSkillDirectoryManager implements SkillDirectoryManager {
   }
 
   private collectCodexSkillPaths(parentDir: string, skillPaths: Set<string>): void {
+    this.collectSkillPaths(parentDir, skillPaths);
+  }
+
+  private collectSkillPaths(parentDir: string, skillPaths: Set<string>): void {
     if (!fs.existsSync(parentDir)) {
       return;
     }

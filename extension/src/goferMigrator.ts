@@ -152,6 +152,13 @@ export class GoferMigrator {
   }
 
   /**
+   * Record the installed Gofer version after required resources are complete
+   */
+  public async writeGoferVersion(): Promise<void> {
+    await this.resourceSyncer.writeGoferVersion();
+  }
+
+  /**
    * Create Gofer folder structure
    */
   public async createGoferStructure(): Promise<void> {
@@ -215,6 +222,13 @@ export class GoferMigrator {
   }
 
   /**
+   * Setup Grok Build skills
+   */
+  public async setupGrokSkills(): Promise<void> {
+    await this.resourceSyncer.setupGrokSkills();
+  }
+
+  /**
    * Setup Gemini CLI extension commands
    */
   public async setupGeminiCommands(): Promise<void> {
@@ -237,7 +251,8 @@ export class GoferMigrator {
   }
 
   /**
-   * Setup default AI instruction files (AGENTS.md, CLAUDE.md, copilot-instructions.md)
+   * Setup default AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md,
+   * copilot-instructions.md)
    */
   public async setupDefaultInstructions(): Promise<void> {
     await this.resourceSyncer.setupDefaultInstructions();
@@ -382,8 +397,10 @@ export class GoferMigrator {
     await this.resourceSyncer.setupCopilotPrompts();
     await this.resourceSyncer.setupCopilotInstructions();
     await this.resourceSyncer.setupCopilotSkills();
+    await this.resourceSyncer.setupGrokSkills();
     await this.resourceSyncer.setupGeminiCommands();
     await this.resourceSyncer.setupCodexSkills(); // Generate repo-local Codex skills
+    await this.resourceSyncer.setupDefaultInstructions();
     await this.resourceSyncer.createBashScripts();
     await this.resourceSyncer.createPowerShellScripts();
     await this.resourceSyncer.createNodeScripts();
@@ -396,6 +413,7 @@ export class GoferMigrator {
     // Create documentation
     await this.resourceSyncer.createReadme();
     await this.resourceSyncer.updateGitignore();
+    await this.resourceSyncer.writeGoferVersion();
 
     this.logger.info('GoferMigrator', 'Manual structure creation complete');
   }
@@ -451,10 +469,17 @@ export class GoferMigrator {
         name: 'Copilot instructions',
       },
       { path: path.join(this.workspacePath, '.github', 'skills'), name: 'Copilot skills' },
-      { path: path.join(this.workspacePath, '.gemini', 'extension.json'), name: 'Gemini commands' },
+      {
+        path: path.join(this.workspacePath, '.grok', 'skills', 'eai', 'SKILL.md'),
+        name: 'Grok skills',
+      },
+      {
+        path: path.join(this.workspacePath, '.gemini', 'extension.json'),
+        name: 'Legacy Gemini-format compatibility commands',
+      },
       {
         path: path.join(this.workspacePath, '.gemini', 'commands', 'gofer'),
-        name: 'Gemini commands',
+        name: 'Legacy Gemini-format compatibility commands',
       },
       { path: path.join(this.workspacePath, '.agents', 'skills'), name: 'Codex skills' },
       {
@@ -478,6 +503,7 @@ export class GoferMigrator {
       { path: path.join(this.specifyPath, 'references', 'platform'), name: 'Public references' },
       { path: path.join(this.workspacePath, 'AGENTS.md'), name: 'AI instructions' },
       { path: path.join(this.workspacePath, 'CLAUDE.md'), name: 'AI instructions' },
+      { path: path.join(this.workspacePath, 'GEMINI.md'), name: 'AI instructions' },
     ];
 
     for (const { path: resourcePath, name } of criticalPaths) {
@@ -582,8 +608,13 @@ export class GoferMigrator {
           await this.resourceSyncer.setupCopilotSkills();
         }
 
-        if (missing.includes('Gemini commands')) {
-          reportProgress('Syncing Gemini commands');
+        if (missing.includes('Grok skills')) {
+          reportProgress('Syncing Grok skills');
+          await this.resourceSyncer.setupGrokSkills();
+        }
+
+        if (missing.includes('Legacy Gemini-format compatibility commands')) {
+          reportProgress('Syncing legacy Gemini-format compatibility commands');
           await this.resourceSyncer.setupGeminiCommands();
         }
 
@@ -625,7 +656,7 @@ export class GoferMigrator {
         if (missing.includes('AI instructions')) {
           if (!this.instructionPromptDeclined) {
             const response = await vscode.window.showInformationMessage(
-              'Missing AI instruction files (AGENTS.md, CLAUDE.md). Generate them?',
+              'Missing AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md). Generate them?',
               'Yes',
               'No'
             );

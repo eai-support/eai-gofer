@@ -72,13 +72,8 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
    * @returns Array of CLI arguments
    */
   protected buildCLIArgs(prompt: string): string[] {
-    // Claude CLI format: claude --model <model> --prompt "<prompt>"
-    const args = ['--model', this.model];
-
-    // Add prompt (pass as argument, not stdin)
-    args.push('--prompt', prompt);
-
-    return args;
+    // --print runs Claude non-interactively; the prompt itself is positional.
+    return ['--model', this.model, '--print', prompt];
   }
 
   /**
@@ -110,7 +105,7 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
   public translateError(error: string): string {
     // Authentication errors
     if (error.includes('API key') || error.includes('authentication') || error.includes('401')) {
-      return 'Authentication failed: run `claude login` and retry.';
+      return 'Authentication failed: run `claude auth login` and retry.';
     }
 
     // Rate limiting
@@ -144,7 +139,7 @@ export class ClaudeCodeCLIProvider extends CLIProviderAdapter {
 
     // Command not found
     if (error.includes('command not found') || error.includes('ENOENT')) {
-      return 'Claude CLI not found: Please install Claude Code CLI using: npm install -g @anthropic-ai/claude-code';
+      return 'Claude CLI not found: Install Claude Code from https://code.claude.com/docs/en/setup';
     }
 
     // Default: Return sanitized error (remove file paths and internal details)

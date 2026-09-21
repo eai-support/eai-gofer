@@ -28,6 +28,7 @@ import { ConfigValidator } from '../utils/ConfigValidator';
 import type { ProgressProvider } from '../progressProvider';
 import type { ContextHealthStatusBar } from '../ui/ContextHealthStatusBar';
 import type { ContextWindowProvider } from '../contextWindowProvider';
+import { normalizeAutonomousCLIProvider } from '../config/semanticHosts';
 
 /**
  * Dependencies required by InitializationService
@@ -236,7 +237,7 @@ export class InitializationService {
   ): Promise<void> {
     // T042: Auto-setup MCP configuration only if provider supports it
     const config = vscode.workspace.getConfiguration('gofer');
-    const cliProvider = config.get<string>('cliProvider', 'auto');
+    const cliProvider = normalizeAutonomousCLIProvider(config.get<string>('cliProvider', 'auto'));
 
     // Only setup MCP for Claude CLI or auto mode (Claude is preferred)
     if (cliProvider === 'claude' || cliProvider === 'auto') {

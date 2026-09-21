@@ -151,20 +151,22 @@ Task: subagent_type="validation-correctness"
   });
 
   describe('injectPlatformSections (T020)', () => {
-    it('injects codex pipeline continuation with next command', () => {
+    it('injects codex internal-file continuation without a manual command stop', () => {
       const base = '## Key Rules\n\nFollow rules.';
       const enhanced = generator.injectPlatformSections(base, 'codex', '1_gofer_research');
       expect(enhanced).toContain('## Pipeline Continuation');
-      expect(enhanced).toContain('**Next Command:** `/2_gofer_specify`');
-      expect(enhanced).toContain('Codex CLI does not support automatic command chaining');
+      expect(enhanced).toContain('.specify/commands/2_gofer_specify.md');
+      expect(enhanced).not.toContain('manually run');
+      expect(enhanced).toContain('Stop reason');
     });
 
     it('injects copilot pipeline continuation with next command', () => {
       const base = 'Body content';
       const enhanced = generator.injectPlatformSections(base, 'copilot', '1_gofer_research');
       expect(enhanced).toContain('## Pipeline Continuation');
-      expect(enhanced).toContain('**Next Command:** `#2_gofer_specify`');
-      expect(enhanced).toContain('Copilot Chat supports context preservation');
+      expect(enhanced).toContain('.specify/commands/2_gofer_specify.md');
+      expect(enhanced).not.toContain('**Next Command:**');
+      expect(enhanced).toContain('approved scope');
     });
 
     it('does not inject continuation for terminal pipeline stage', () => {
@@ -172,6 +174,27 @@ Task: subagent_type="validation-correctness"
       const enhanced = generator.injectPlatformSections(base, 'codex', '6_gofer_validate');
       expect(enhanced).toBe(base);
     });
+
+    it('keeps optional problem validation out of the default start route', () => {
+      expect(generator.injectPlatformSections('Body', 'copilot', '0_gofer_start')).toContain(
+        '.specify/commands/1_gofer_research.md'
+      );
+      expect(
+        generator.injectPlatformSections('Body', 'copilot', '0a_problem_validation')
+      ).toContain('.specify/commands/1_gofer_research.md');
+    });
+
+    it('does not duplicate continuation on repeated generation', () => {
+      const once = generator.injectPlatformSections('Body', 'copilot', '1_gofer_research');
+      expect(generator.injectPlatformSections(once, 'copilot', '1_gofer_research')).toBe(once);
+    });
+  });
+
+  it('lets Copilot inherit enabled native tools', async () => {
+    await generator.generateCopilotPrompt(sampleMetadata, false);
+    const content = String(vi.mocked(fs.promises.writeFile).mock.calls[0][1]);
+    expect(content.split('---')[1]).not.toMatch(/^tools:/m);
+    expect(content).toContain('agent: agent');
   });
 
   describe('validateGeneratedCommand', () => {

@@ -77,8 +77,8 @@ suite('enterpriseai non-eai routing regression (extension integration)', () => {
     assert.strictEqual(normalizeWorkflowProfile('unexpected-value'), 'standard');
 
     assert.strictEqual(standardClaude.syntax, '/eai');
-    assert.strictEqual(standardCodex.syntax, '/eai');
-    assert.strictEqual(standardCopilot.syntax, '#eai');
+    assert.strictEqual(standardCodex.syntax, '$eai');
+    assert.strictEqual(standardCopilot.syntax, '/eai');
     assert.strictEqual(standardClaude.filePath, enterpriseClaude.filePath);
     assert.strictEqual(standardClaude.profileMatched, true);
 

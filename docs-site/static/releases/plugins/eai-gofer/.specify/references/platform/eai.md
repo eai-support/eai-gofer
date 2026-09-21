@@ -4,6 +4,10 @@ Use this fallback when external CLI documentation is unavailable.
 
 ## Version Pinning Rule
 
+For authentication, use `.specify/references/platform/eai-auth-access.md`.
+Confirm workspace-only access (the default) or explicitly approved wider app
+access. Confirm client SSO separately; sign-in never replaces authorization.
+
 - Detect the installed CLI version.
 - Record the `major.minor` version in generated plan and task artifacts.
 - Avoid pinning implementation guidance to patch-specific behavior.

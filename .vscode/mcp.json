@@ -4,7 +4,9 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "${workspaceFolder}/language-server/dist/server.js"
+        "${workspaceFolder}/language-server/dist/mcpServer.js",
+        "--workspace-root",
+        "${workspaceFolder}"
       ],
       "description": "Gofer - Spec-driven development orchestrator"
     }

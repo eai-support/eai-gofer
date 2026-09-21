@@ -18,6 +18,10 @@ export class TestHarnessGenerator {
       // Does not exist, create it
     }
 
+    // Keep untrusted metadata inside the comment, including embedded comment terminators.
+    const metadata = JSON.stringify({ taskId, description, specId }).replace(/\//g, '\\u002f');
+    const suiteTitle = JSON.stringify(`${specId} - ${taskId}`);
+    const testTitle = JSON.stringify(`should fulfill acceptance criteria for ${taskId}`);
     const harnessCode = `
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
@@ -25,13 +29,11 @@ import * as path from 'path';
 import * as os from 'os';
 
 /**
- * Task: ${taskId}
- * Description: ${description}
- * Feature: ${specId}
+ * ${metadata}
  * 
  * REAL-WORLD TEST HARNESS (NO MOCKING ALLOWED)
  */
-describe('${specId} - ${taskId}', () => {
+describe(${suiteTitle}, () => {
     let tempDir: string;
 
     beforeEach(async () => {
@@ -47,7 +49,7 @@ describe('${specId} - ${taskId}', () => {
         await fs.rm(tempDir, { recursive: true, force: true });
     });
 
-    it('should fulfill acceptance criteria for ${taskId}', async () => {
+    it(${testTitle}, async () => {
         // TODO: Implement Logic Here
         // const result = await runLogic(tempDir);
         // expect(result).toBe(true);

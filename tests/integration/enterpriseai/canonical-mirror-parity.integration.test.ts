@@ -4,15 +4,35 @@ import * as path from 'path';
 import { propagateCanonicalMirrors } from '../../../extension/src/services/enterpriseai/internalApi/PropagateCanonicalMirrors';
 import { createMirrorPropagationEventHandlers } from '../../../extension/src/services/enterpriseai/events/MirrorPropagationEvents';
 
+function normalizeSharedAgentSkill(content: string): string {
+  return content
+    .replace(/^Host:.*$/m, 'Host: <semantic-host>')
+    .replace(/^This skill is shared by Codex and Google Antigravity\..*\n?/m, '')
+    .replace(
+      /^2\. This skill is shared by Codex and Google Antigravity\..*$/m,
+      '2. Select the current semantic host.'
+    )
+    .replace(
+      /^2\. Use `codex` as the current semantic host\.$/m,
+      '2. Select the current semantic host.'
+    )
+    .replace(/--host (?:codex|<current-host>)/g, '--host <semantic-host>')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 describe('enterpriseai canonical mirror parity (root integration)', () => {
-  it('keeps .system and .agents skill mirrors identical for generated commands', () => {
+  it('keeps .system and shared .agents skills equal apart from semantic host selection', () => {
     const commandName = 'eai';
     const codexPath = path.join(process.cwd(), '.system', 'skills', commandName, 'SKILL.md');
     const agentPath = path.join(process.cwd(), '.agents', 'skills', commandName, 'SKILL.md');
 
     expect(fs.existsSync(codexPath)).toBe(true);
     expect(fs.existsSync(agentPath)).toBe(true);
-    expect(fs.readFileSync(agentPath, 'utf8')).toBe(fs.readFileSync(codexPath, 'utf8'));
+    const agentSkill = fs.readFileSync(agentPath, 'utf8');
+    const codexSkill = fs.readFileSync(codexPath, 'utf8');
+    expect(agentSkill).toContain('Google Antigravity');
+    expect(codexSkill).toContain('Host: Codex');
+    expect(normalizeSharedAgentSkill(agentSkill)).toBe(normalizeSharedAgentSkill(codexSkill));
   });
 
   it('implements IAP-008 propagation with EVT-008 payload emission', async () => {

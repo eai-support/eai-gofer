@@ -47,7 +47,7 @@ describe('parseStageCommand', () => {
     expect(frontmatter.title).toBe('Gofer Research');
   });
 
-  it('returns surfaces as an array', async () => {
+  it('returns generator output targets, including legacy file-format mirrors', async () => {
     const { frontmatter } = await parseStageCommand(FIXTURE_PATH);
     expect(Array.isArray(frontmatter.surfaces)).toBe(true);
     expect(frontmatter.surfaces).toContain('claude');

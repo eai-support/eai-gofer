@@ -13,6 +13,10 @@ webpack.config.js
 !language-server/dist/**
 !language-server/package.json
 !language-server/node_modules/**
+# Keep published VSIX bytes cross-platform: optional macOS watcher binaries
+# are not required by the language server, and no native addon may ship.
+language-server/node_modules/fsevents/**
+**/*.node
 # Exclude Language Server source
 language-server/src/**
 # Exclude all node_modules by default

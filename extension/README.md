@@ -15,15 +15,15 @@ Gofer pipeline.
 - initializes the repo-owned EAI Gofer scaffold
 - surfaces specs, memory, and progress inside VS Code
 - helps launch and monitor supported AI CLI workflows
-- keeps the VS Code surface aligned with the portable
-  Claude/Codex/Copilot/Gemini bundle
+- keeps the VS Code surface aligned with the six current hosts: Claude Code,
+  OpenAI Codex, GitHub Copilot, Google Antigravity, Grok Build, and VS Code
 
 ## Quick Start
 
 1. Open the Command Palette and run **Gofer: Initialize Repository**.
 2. Optional: run **Gofer: Install Optional Developer Tools**.
-3. Start every feature or follow-up request with `/eai` in slash-command CLIs,
-   `#eai` in Copilot Chat, or `$eai` in hosts that use dollar-prefixed skills.
+3. Start every feature or follow-up request with `/eai` on Claude, Copilot,
+   Antigravity, Grok, or VS Code, or `$eai` on Codex.
 4. Gofer manages the internal pipeline for you:
    `start -> research -> specify -> plan -> tasks -> implement -> validate`. You
    do not need to run numbered stage commands.

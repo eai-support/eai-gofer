@@ -4,7 +4,7 @@ EAI Gofer is a business specification-driven delivery workflow for repositories.
 Users talk to `/eai`, and use `/eai-update` when they need to install or update
 Gofer. Gofer manages the pipeline that designs with you, builds with you, and
 validates the result. It keeps working artifacts in `.specify/` and ships across
-VS Code, Claude Code, Codex, GitHub Copilot, Gemini, and Grok Build.
+Claude Code, Codex, GitHub Copilot, Google Antigravity, Grok Build, and VS Code.
 
 EAI Gofer is designed to be easy to adopt in an existing repo:
 
@@ -25,8 +25,8 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
 
 1. Install the VS Code extension or add the public plugin marketplace for your
    preferred CLI.
-2. Start every request with `/eai`. Use `#eai` in Copilot-style prompts and
-   `$eai` in hosts that use dollar-prefixed skills.
+2. Start with `/eai` in Claude, Copilot, Antigravity, Grok, or VS Code. Use
+   `$eai` in Codex.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
    Repository** in VS Code, then refresh/restart the host command picker.
 4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
@@ -38,7 +38,8 @@ a first install, use the matching command in the
 [5-minute first run guide](./.tech-docs/first-run.md).
 
 The guide also includes a public Node.js bootstrap command. It installs Gofer
-without a repository for Claude, Codex, Copilot, Gemini, or VS Code.
+without a repository for all six current hosts: Claude, Codex, Copilot,
+Antigravity, Grok, and VS Code.
 
 ## App-Native Integration Model
 
@@ -48,13 +49,14 @@ references, specs, and memory. App plugins and app-native customizations provide
 thin entry points that check/bootstrap the repo and then route through the
 repo-owned internal contracts.
 
-| Surface                         | Clean entry point             | Repo integration                                                                                      |
-| ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Codex App / Codex IDE           | `eai` or `eai-update` skill   | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`                               |
-| VS Code / GitHub Copilot app    | `#eai` or `#eai-update`       | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/`, `.vscode/mcp.json` |
-| Claude Code app                 | `/eai` or `/eai-update`       | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`                        |
-| Gemini CLI / Gemini Code Assist | `/eai` or `/eai-update`       | `.gemini/`, `.specify/scripts/`, `.vscode/mcp.json`                                                   |
-| Grok Build                      | Ask Grok to use the EAI skill | `.grok/skills/`, `.specify/scripts/`                                                                  |
+| Surface               | Clean entry point           | Integration                                                                       |
+| --------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| Claude Code           | `/eai` or `/eai-update`     | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.specify/scripts/`    |
+| Codex App / Codex IDE | `eai` or `eai-update` skill | `AGENTS.md`, `.agents/skills/`, `.specify/scripts/`, `.vscode/mcp.json`           |
+| GitHub Copilot        | `/eai` or `/eai-update`     | `.github/agents/`, `.github/skills/`, `.github/prompts/`, `.github/instructions/` |
+| Google Antigravity    | `/eai` or `/eai-update`     | Installed `agy` plugin, `.agents/skills/`, and `~/.gemini/GEMINI.md`              |
+| Grok Build            | `/eai` or `/eai-update`     | Installed plugin `skills/eai/SKILL.md` and optional repo mirror `.grok/skills/`   |
+| VS Code               | `/eai` or `/eai-update`     | `EnterpriseAI.gofer`, `.github/` customizations, and `.vscode/mcp.json`           |
 
 The UX rule is: users start with `eai`; `eai-update` is the only support
 command. Gofer keeps numbered stages and helpers as internal contracts under
@@ -62,8 +64,11 @@ command. Gofer keeps numbered stages and helpers as internal contracts under
 state. The `gofer` entrypoint remains as a compatibility alias, but public
 instructions should teach `/eai`.
 
-For copy-paste commands across VS Code, Claude Code, Codex, Copilot, Gemini, and
-Grok, see the [5-minute first run guide](./.tech-docs/first-run.md).
+For copy-paste commands across all six current hosts, see the
+[5-minute first run guide](./.tech-docs/first-run.md).
+
+Generated `.gemini/` files remain only for legacy file-format compatibility.
+Gemini is not a current install or update host.
 
 ## How The Pipeline Works
 
@@ -145,15 +150,25 @@ The shipped default comes from `.specify/templates/gofer-model-policy.yaml`.
 Bootstrap creates the memory copy when it is missing and does not overwrite
 local edits.
 
-Default posture:
+This policy is **advisory**. It narrows what is allowed and sets cost and
+quality limits. It never chooses a model and never proves a capability. Gofer
+routes only by a fresh signed capability receipt plus a signed independent
+benchmark, and refuses when either is missing, stale or altered. See
+[Verified autonomous runtime](docs/verified-autonomous-runtime.md) for how to
+set this up and run it by hand, and the
+[readiness assessment](docs/verified-autonomous-runtime-readiness.md) for what
+is proven and what is not.
+
+Default advisory posture (a starting point, not an authority):
 
 - Claude: Haiku for simple scouting, Sonnet for normal work, Opus for hard
   security/architecture/release gates.
 - Codex/OpenAI: GPT mini for simple coding, GPT nano only for mechanical
   locate/classify/summarize work, GPT-5.3-Codex or flagship GPT for hard
   tool-heavy coding and arbitration.
-- Gemini: Flash-Lite for cheap large-context scanning, Flash for normal
-  synthesis, Pro for hard large-context architecture/research gates.
+- Google Antigravity (Gemini models): Flash-Lite for cheap large-context
+  scanning, Flash for normal synthesis, Pro for hard large-context
+  architecture/research gates.
 - Copilot: `Auto` for simple/default work; ask before selecting a paid/high-tier
   picker model for hard review.
 
@@ -244,17 +259,27 @@ References:
 - [Finding and installing Copilot CLI plugins](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing)
 - [Copilot CLI plugin marketplace](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-marketplace)
 
-### Gemini CLI
+### Google Antigravity
 
 Recommended install path:
 
 ```bash
-gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
+agy plugin install https://github.com/eai-support/eai-gofer
 ```
 
-Reference:
+The same command safely reinstalls the current plugin during an update.
 
-- [Gemini CLI extensions reference](https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md)
+### Grok Build
+
+Recommended install path:
+
+```bash
+grok plugin install --trust https://github.com/eai-support/eai-gofer
+```
+
+Update an existing install with `grok plugin update eai-gofer`. Grok reads the
+always-on contract from the installed plugin's `skills/eai/SKILL.md`; Gofer does
+not create a separate global Grok instruction file.
 
 ### Downloadable Bundle
 
@@ -280,8 +305,8 @@ tenant, template, or scaffold is not ready.
 
 When first-run setup is needed, Gofer:
 
-- detects Claude Code, Codex, Copilot, Gemini, VS Code, GitHub Codespaces, OS,
-  shell, and workspace folder
+- detects Claude Code, Codex, Copilot, Antigravity, Grok, VS Code, GitHub
+  Codespaces, OS, shell, and workspace folder
 - checks Git, Node.js, npm, the scoped EAI npm registry, and `eai --version`
 - asks before installing Git, Node.js, npm, EAI CLI, opening browser login, or
   changing tenant/project state
@@ -353,6 +378,37 @@ npm run gofer:generate
 npm run gofer:package-plugin -- --sync-repo
 ```
 
+### Optional TypeSafe semantic review
+
+TypeSafe adds an independent, bounded signal for long-running delivery work. It
+does not replace the specification, tests, priority controls, or human
+approval.
+
+From the repository where Gofer is installed, connect once:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect
+```
+
+The prompt stores the key only in the ignored private file
+`.specify/secrets/typesafe.env`, enables the non-secret policy, and does not
+print the key. A process-level `TYPESAFE_API_KEY` takes priority for CI or a
+managed surface. Remove the project key and disable review with:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --disconnect
+```
+
+Run a review at a Gofer delivery checkpoint with:
+
+```bash
+node .specify/scripts/node/gofer-semantic-drift.mjs --feature-dir .specify/specs/<feature> --event before_validation --json
+```
+
+The receipt contains only hashes and review outcomes. A conflict or uncertain
+outcome requires reconciliation; it cannot modify the specification or close a
+task.
+
 ## Community
 
 - Questions and usage help:
@@ -363,6 +419,10 @@ npm run gofer:package-plugin -- --sync-repo
 - Security guidance: [SECURITY.md](./SECURITY.md)
 - Contribution guidance: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Support policy: [SUPPORT.md](./SUPPORT.md)
+- Desktop pauses and continuation:
+  [Troubleshooting guide](./docs/desktop-continuation.md)
+- App access and company sign-in:
+  [Workspace access and SSO](./docs/app-access-and-sso.md)
 
 Roadmap-fit issues may also receive an automation-generated draft intake PR so a
 human reviewer can scope the work before implementation starts.

@@ -296,7 +296,8 @@ class LLMProviderFactory {
 
 **Usage:**
 
-- CLI provider routing across Claude, Codex, Copilot, and Gemini
+- Provider-model routing across Claude, Codex, Copilot, and legacy Gemini
+  settings; this is separate from the six current Gofer install hosts
 - Cost and model-policy guidance per provider
 - Rate-limit and credential-error handling
 

@@ -20,7 +20,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Every site deployment includes the public release directory, even docs-only pushes.
+  desktop-contracts:
+    uses: ./.github/workflows/desktop-contracts.yml
+    permissions:
+      contents: read
+    with:
+      source-sha: ${{ github.sha }}
+      verify-public-assets: true
+
   deploy:
+    needs: [desktop-contracts]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -28,6 +38,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

@@ -168,7 +168,7 @@ Usage: 100 input tokens, 50 output tokens`;
       const error = parser.detectErrors('authentication failed');
 
       expect(error).toContain('Authentication failed');
-      expect(error).toContain('claude login');
+      expect(error).toContain('claude auth login');
     });
 
     it('should detect authentication errors with "API key"', () => {

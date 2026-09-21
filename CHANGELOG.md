@@ -9,6 +9,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Standardized the current Gofer host contract on exactly Claude, Codex,
+  Copilot, Google Antigravity, Grok Build, and VS Code. Existing automation that
+  supplies `--host gemini` is mapped silently to `antigravity`; Gemini remains
+  only as a legacy file-format and input compatibility name.
+
 ### Documentation
 
 - Trimmed the root and extension READMEs plus the VS Code configuration guide to
@@ -18,6 +25,9 @@ and this project adheres to
 
 ### Added
 
+- Added a generated public `eai` GitHub Copilot agent that reuses the canonical
+  prompt and internal Gofer stage contracts without creating a second command
+  pipeline.
 - **CLI Innovations + Multi-Persona Visual Artifacts** (feature
   001-cli-innovations-visuals):
   - Source-of-truth generator at `.specify/scripts/node/generate-commands.mjs` —

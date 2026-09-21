@@ -10,6 +10,12 @@
 import { vi } from 'vitest';
 import dotenv from 'dotenv';
 
+// A git hook exports GIT_DIR and related variables. Tests that create scratch
+// repositories would otherwise write into the real repository being committed.
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith('GIT_') && !name.startsWith('GIT_CONFIG_')) delete process.env[name];
+}
+
 // Load environment variables from .env file
 // This must happen before any other code runs
 dotenv.config();
@@ -75,6 +81,26 @@ vi.mock('vscode', () => {
     }
   }
 
+  class MockProcessExecution {
+    constructor(
+      public readonly process: string,
+      public readonly args: string[] = [],
+      public readonly options?: { cwd?: string; env?: Record<string, string> }
+    ) {}
+  }
+
+  class MockTask {
+    public presentationOptions: Record<string, unknown> = {};
+
+    constructor(
+      public readonly definition: Record<string, unknown>,
+      public readonly scope: number,
+      public readonly name: string,
+      public readonly source: string,
+      public readonly execution: MockProcessExecution
+    ) {}
+  }
+
   return {
     window: {
       showInformationMessage: vi.fn(),
@@ -89,6 +115,7 @@ vi.mock('vscode', () => {
       })),
     },
     workspace: {
+      isTrusted: true,
       getConfiguration: vi.fn(() => ({
         get: vi.fn(),
         update: vi.fn(),
@@ -107,6 +134,10 @@ vi.mock('vscode', () => {
     extensions: {
       getExtension: vi.fn(),
     },
+    tasks: {
+      executeTask: vi.fn(async (task: MockTask) => ({ task })),
+      onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
+    },
     commands: {
       registerCommand: vi.fn(),
       executeCommand: vi.fn(),
@@ -123,6 +154,17 @@ vi.mock('vscode', () => {
         scheme: 'file',
         path,
       }),
+    },
+    ProcessExecution: MockProcessExecution,
+    Task: MockTask,
+    TaskScope: {
+      Workspace: 1,
+    },
+    TaskRevealKind: {
+      Always: 1,
+    },
+    TaskPanelKind: {
+      Dedicated: 2,
     },
     RelativePattern: class {
       constructor(
@@ -160,6 +202,7 @@ vi.mock('vscode', () => {
     })),
   },
   workspace: {
+    isTrusted: true,
     getConfiguration: vi.fn(() => ({
       get: vi.fn(),
       update: vi.fn(),
@@ -170,6 +213,10 @@ vi.mock('vscode', () => {
   commands: {
     registerCommand: vi.fn(),
     executeCommand: vi.fn(),
+  },
+  tasks: {
+    executeTask: vi.fn(),
+    onDidEndTaskProcess: vi.fn(() => ({ dispose: vi.fn() })),
   },
   TreeItem: class {},
   TreeItemCollapsibleState: {

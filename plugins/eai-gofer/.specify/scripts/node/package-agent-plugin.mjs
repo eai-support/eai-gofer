@@ -12,6 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
+import { buildAuthAccessDecisionContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -155,7 +156,7 @@ function buildCodexManifest(version, stages, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Gemini, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -169,7 +170,9 @@ function buildCodexManifest(version, stages, paths = {}) {
       'codex',
       'claude',
       'copilot',
-      'gemini',
+      'antigravity',
+      'grok',
+      'gemini-legacy',
       'spec-driven-development',
     ],
     skills: paths.skills ?? './skills/',
@@ -198,7 +201,7 @@ function buildGeminiManifest(version, paths = {}) {
   return {
     name: PLUGIN_NAME,
     version,
-    description: 'Gofer single-entry delivery command with internal pipeline routing',
+    description: 'Legacy Gemini CLI file-format compatibility for EAI Gofer',
     license: 'Apache-2.0',
     commands: paths.commands ?? '.gemini/commands/gofer/',
     gofer: {
@@ -218,7 +221,7 @@ function buildPluginManifest(version, paths = {}) {
     name: PLUGIN_NAME,
     version,
     description:
-      'Gofer single-entry delivery command with internal pipeline routing for Claude, Gemini, Codex, Copilot, and VS Code.',
+      'Gofer single-entry delivery command with internal pipeline routing for Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
     author: {
       name: 'EAI Tools',
       url: REPOSITORY_URL,
@@ -232,7 +235,9 @@ function buildPluginManifest(version, paths = {}) {
       'claude-code',
       'codex',
       'copilot',
-      'gemini',
+      'antigravity',
+      'grok',
+      'gemini-legacy',
       'spec-driven-development',
     ],
     skills: paths.skills ?? `./${UMBRELLA_SKILLS_DIR}/`,
@@ -268,7 +273,7 @@ function buildBundleMarketplace(version) {
     },
     metadata: {
       description:
-        'Public Gofer bundle for Claude Code, Gemini CLI, Codex, and Copilot workflows.',
+        'Public Gofer bundle for Claude, Codex, Copilot, Antigravity, Grok, and VS Code. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -291,7 +296,10 @@ function buildBundleMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
+          'grok',
+          'vscode',
+          'gemini-legacy',
           'spec-driven-development',
         ],
       },
@@ -308,7 +316,7 @@ function buildRepoMarketplace(version) {
     },
     metadata: {
       description:
-        'Install the Gofer repo marketplace for Claude Code, Gemini CLI, Codex, or Copilot CLI from the public GitHub repository.',
+        'Install Gofer for Claude, Codex, Copilot, Antigravity, Grok, and VS Code from this GitHub repository. Gemini files are legacy compatibility assets only.',
       version,
     },
     plugins: [
@@ -332,7 +340,10 @@ function buildRepoMarketplace(version) {
           'claude',
           'codex',
           'copilot',
-          'gemini',
+          'antigravity',
+          'grok',
+          'vscode',
+          'gemini-legacy',
           'spec-driven-development',
         ],
       },
@@ -390,14 +401,20 @@ function buildBundleCodexMarketplace(version) {
 
 function buildAlwaysEaiSection() {
   return `## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
 
-Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat that prefix as activation for this contract, not as business content.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\`, \`$eai\`, or \`#eai\`.
 
-1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
-2. Keep the reply short unless the user asks for detail.
-3. Explain the business effect first.
-4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit \`/eai\`, \`$eai\`, or \`#eai\` prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->`;
 }
 
 function buildUserFacingResponseGateSection() {
@@ -486,13 +503,14 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
 2. Use \`run.bat dev 3001\` on Windows.
 3. Use a different port only when the feature notes record the reason.
-4. The runner must stop any process on the selected port before it restarts the app.
+4. Restart only this app. Before stopping a process, verify its exact checkout, process ID, start time and command, then recheck immediately before stopping it. Never stop another app, an unknown process, or every process on a port. If ownership is uncertain, leave it running and ask the user. Inspect older runners before use; do not run one that kills by port alone.
 5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
 6. After every UI-facing change, run:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
 7. On Windows, use:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
-8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.`;
+8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.`;
 }
 
 function buildUmbrellaSkill(version, stages, entry = PUBLIC_ENTRYPOINTS[0]) {
@@ -513,7 +531,9 @@ description: "Run Gofer through one public entrypoint while preserving the full 
 
 Version: ${version}
 
-Use this skill when the user asks to run, install, update, or understand Gofer without the VS Code extension UI.
+Apply this skill to every request when the plugin is enabled. The user does not need to type a Gofer command. Keep the user's request unchanged and route it through Gofer internally. Use the separate update skill only when the user explicitly asks to install or update Gofer.
+
+${buildContinuationContractSection()}
 
 ## Clean Surface Contract
 
@@ -588,7 +608,7 @@ ${buildEaiPlatformDecisionSection()}
 
 ## Token And Cost Policy
 
-- Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. Run the internal bootstrap contract if it is missing.
+- Treat \`.specify/memory/gofer-model-policy.yaml\` as advisory capability, cost, and quality constraints. A fresh signed host receipt and independently verified benchmark evidence select the model. Run the internal bootstrap contract if it is missing.
 - Use the cheapest capable model first. Escalate only when a cheaper pass is low-confidence, contradictory, security-sensitive, release-critical, or blocking quality.
 - Keep raw search, build, and test output out of the main chat context. Write stable findings to \`.specify/specs/{feature}/context-bundle.md\` and continue from summaries.
 - Prefer provider prompt/context caching for stable non-secret prefixes: Gofer scaffold, repository instructions, constitution, repo map, stage contracts, and validation rubric.
@@ -612,7 +632,7 @@ The public release feed is available at:
 ${PUBLIC_SITE_URL}/releases.json
 \`\`\`
 
-Gemini CLI users can also copy the bundled \`.gemini/\` directory into a repository root to activate the same public command set there.
+Legacy Gemini file-format users can copy the bundled \`.gemini/\` directory into an existing repository. New installations use Google Antigravity and \`agy\`.
 `;
 }
 
@@ -633,13 +653,14 @@ Use this skill to install or update the user-level EAI Gofer plugin or extension
 3. Check status first with \`--action inspect --host <current-host> --json\`.
 4. Show the user the planned user-level install or update. Ask for approval before \`--execute\`.
 5. Run \`--action install\` when Gofer is missing. Run \`--action update\` when it is installed.
-6. After an actual install or update, the helper archives stale Gofer command and skill entries. It keeps the current \`eai\` and \`eai-update\` entries. A Codex local marketplace is inspected only, so local work remains unchanged. An unknown Codex marketplace source stops the update without changes.
+6. After an actual install or update, the helper archives stale Gofer command and skill entries. It also adds a small managed always-on instruction to the selected host. It keeps the current \`eai\` and \`eai-update\` entries. A clean official Codex local marketplace on \`main\` fast-forwards safely. A dirty, non-main, or unrecognised local marketplace remains unchanged and reports that its plugin update is incomplete while it still refreshes the always-on instruction. An unknown Codex marketplace source stops the update without changes.
 7. Update only the current host unless the user explicitly asks for \`--host all\`.
 8. Complete the host reload step from the helper result before saying the update is ready.
 
-Supported hosts are \`claude\`, \`codex\`, \`copilot\`, \`gemini\`, and \`vscode\`.
+Current hosts are \`claude\`, \`codex\`, \`copilot\`, \`antigravity\`, \`grok\`, and \`vscode\`. Gemini is a legacy alias only.
 
-This command archives known stale Gofer entries, but does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
+This command archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not create \`.specify/\`. After the host update, use \`/eai add or refresh the Gofer scaffold for this repo\` when a repository needs Gofer files.
+${buildBlockerMediationContract()}
 `;
 }
 
@@ -673,6 +694,10 @@ function withEaiAppTemplateGate(content) {
 - Do not report a release complete or score 100% if a required capability is on an open PR, absent from the release branch, missing traceability, or lacks deployed evidence.
 - Do not accept copied marker files, partial scaffolds, or custom templates as EAI readiness evidence.
 - Confirmed non-app work is exempt from app-only gates.
+
+${buildAuthAccessDecisionContract()}
+
+${buildDeliveryDisciplineContract()}
 
 ## EAI App Template Gate
 
@@ -820,11 +845,11 @@ function buildPluginReadmeBase(version) {
 
 Version: ${version}
 
-This package is the portable Claude, Gemini, Codex, and Copilot workflow layer for Gofer. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
+This package is the portable Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code workflow layer for Gofer. Gemini files remain only for legacy compatibility. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
 ## Public Sources
 
-Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, and Gemini CLI:
+Use the public GitHub repository as the install source for Claude Code, Codex, Copilot CLI, Google Antigravity, Grok, and VS Code:
 
 \`\`\`text
 ${REPOSITORY_URL}
@@ -863,13 +888,15 @@ Gofer keeps repo-owned scripts and canonical command files as the source of trut
 
 | Surface | Best entry point | Repo-owned files used |
 | ------- | ---------------- | --------------------- |
-| Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
-| GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\`, \`.vscode/mcp.json\` |
+| Codex App / Codex IDE | \`eai\` plugin skill when a workspace is open | \`AGENTS.md\`, \`.agents/skills/\`, \`.specify/scripts/\` |
+| GitHub Copilot app / VS Code agent mode | \`#eai\`, plus custom Gofer agents where supported | \`.github/agents/\`, \`.github/skills/\`, \`.github/prompts/\`, \`.github/instructions/\` |
 | Claude Code app | \`/eai\` plugin/repo command | \`.claude/skills/\`, \`.claude/commands/\`, \`.claude/agents/\`, \`.specify/scripts/\` |
-| Gemini CLI / Gemini Code Assist | \`/eai\` Gemini extension command | \`.gemini/\`, \`.specify/scripts/\`, \`.vscode/mcp.json\` |
+| Legacy Gemini file format | Existing compatibility command only | \`.gemini/\`, \`.specify/scripts/\` |
 | Grok Build | Ask Grok to use the EAI skill | \`.grok/skills/\`, \`.specify/scripts/\` |
 
 The clean UX rule is: users see only \`eai\`; Gofer keeps numbered stages and helpers as internal contracts under \`.specify/commands/\`.
+
+This lightweight plugin does not include a compiled MCP server. The VS Code extension supplies and configures that runtime separately. Repository skills do not require that optional connection.
 
 ## Update Cleanup
 
@@ -933,7 +960,7 @@ Optional helpers like problem validation, save, branding, tests, stakeholder com
 | Claude Code | \`claude plugin marketplace add ${REPOSITORY_URL} --scope user --sparse .claude-plugin --sparse plugins/eai-gofer\` then \`claude plugin install eai-gofer@eai-gofer --scope user\` | Unzip to \`~/plugins/eai-gofer\`, then \`claude plugin marketplace add ~/plugins/eai-gofer --scope user\` |
 | Codex | \`codex plugin marketplace add ${REPOSITORY_URL} --sparse .agents/plugins --sparse plugins/eai-gofer\` then \`codex plugin add eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`codex plugin marketplace add ~/plugins/eai-gofer\` |
 | GitHub Copilot CLI | \`copilot plugin marketplace add ${REPOSITORY_URL}\` then \`copilot plugin install eai-gofer@eai-gofer\` | Unzip to \`~/plugins/eai-gofer\`, then \`copilot plugin marketplace add ~/plugins/eai-gofer\` |
-| Gemini CLI | \`gemini extensions install ${REPOSITORY_URL} --auto-update\` | Unzip to \`~/plugins/eai-gofer\`, then \`gemini extensions install ~/plugins/eai-gofer\` |
+| Google Antigravity | \`agy plugin install ${REPOSITORY_URL}\` | Start a new Antigravity session after installation |
 
 ## Download And Replace The Local Bundle Folder
 
@@ -1013,19 +1040,11 @@ copilot plugin marketplace add ~/plugins/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 \`\`\`
 
-## Gemini CLI
+## Legacy Gemini File-Format Compatibility
 
-Recommended public install:
+Existing Gemini file-format repositories can retain the generated \`.gemini/\` files. New installation and update actions use Google Antigravity and \`agy\`.
 
-\`\`\`bash
-gemini extensions install ${REPOSITORY_URL} --auto-update
-\`\`\`
-
-Downloaded bundle install:
-
-\`\`\`bash
-gemini extensions install ~/plugins/eai-gofer
-\`\`\`
+Do not identify Gemini as a current Gofer host in new documentation or metadata.
 `;
 }
 
@@ -1041,10 +1060,10 @@ After bootstrap, each repository gets a user-owned model policy at:
 \`\`\`
 
 The shipped default is copied from \`.specify/templates/gofer-model-policy.yaml\`
-and is not overwritten by bootstrap. Use it to tune simple, medium, hard, and
-arbiter model routes for Claude, Codex/OpenAI, Gemini, and Copilot. Copilot
-defaults to \`Auto\` for simple/default work because exact model availability is
-controlled by the Copilot client, plan, and organization policy.
+and is not overwritten by bootstrap. Use it only to constrain cost, quality, and
+capability classes. Fresh signed host receipts and independent benchmark evidence
+select the model for Claude, Codex/OpenAI, Google Antigravity, Copilot, Grok,
+and VS Code. No static provider default qualifies a model for execution.
 `;
 }
 
@@ -1250,8 +1269,9 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
     '.github/agents',
     '.github/skills',
     '.claude/skills',
+    '.claude-plugin/hooks',
     '.gemini',
-    '.vscode/mcp.json',
+    '.grok',
     'AGENTS.md',
     'LICENSE',
     'NOTICE',

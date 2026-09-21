@@ -12,6 +12,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as os from 'os';
 import * as path from 'path';
 
 // Unmock fs module for integration tests
@@ -31,11 +32,13 @@ import { StageContextProfileLoader } from '../../../extension/src/autonomous/Sta
 import type { GoferStage } from '../../../extension/src/autonomous/StageContextProfile';
 
 describe('Context Management Pipeline Integration (T072-T075)', () => {
-  const testWorkspaceRoot = path.join(__dirname, 'test-workspace-context-pipeline');
-  const specsDir = path.join(testWorkspaceRoot, '.specify', 'specs');
-  const memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
-  const logsDir = path.join(testWorkspaceRoot, '.specify', 'logs');
-  const globalStoragePath = path.join(testWorkspaceRoot, 'global-storage');
+  let testWorkspaceRoot: string;
+  let specsDir: string;
+  let memoryDir: string;
+  let logsDir: string;
+  let globalStoragePath: string;
+  let pendingPersistence: Promise<void>[];
+  let cleanupPromise: Promise<void> | undefined;
 
   // Test components
   let contextBuilder: ContextBuilder;
@@ -45,19 +48,49 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
   let hintLoader: HintLoader;
   let profileLoader: StageContextProfileLoader;
 
-  const mockVSCodeContext = {
-    globalStoragePath,
-    globalState: {
-      get: vi.fn().mockReturnValue(undefined),
-      update: vi.fn().mockResolvedValue(undefined),
-    },
-  } as any;
+  let mockVSCodeContext: any;
+
+  function trackPersistence(operation: Promise<void>): Promise<void> {
+    pendingPersistence.push(operation);
+    return operation;
+  }
+
+  function disposeFixture(): Promise<void> {
+    return (cleanupPromise ??= (async () => {
+      healthMonitor?.dispose();
+      memoryManager?.stopConsolidationTimer();
+      // Dispose stops producers, but does not await their fire-and-forget writes.
+      const results = await Promise.allSettled(pendingPersistence);
+      contextBuilder?.dispose();
+      hintLoader?.dispose();
+      if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
+        fs.rmSync(testWorkspaceRoot, { recursive: true });
+      }
+      const errors = results.filter((result) => result.status === 'rejected');
+      if (errors.length) {
+        throw new AggregateError(
+          errors.map((result) => result.reason),
+          'Fixture persistence failed'
+        );
+      }
+    })());
+  }
 
   beforeEach(() => {
-    // Clean up and create test workspace
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
-    }
+    testWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-context-pipeline-'));
+    specsDir = path.join(testWorkspaceRoot, '.specify', 'specs');
+    memoryDir = path.join(testWorkspaceRoot, '.specify', 'memory');
+    logsDir = path.join(testWorkspaceRoot, '.specify', 'logs');
+    globalStoragePath = path.join(testWorkspaceRoot, 'global-storage');
+    pendingPersistence = [];
+    cleanupPromise = undefined;
+    mockVSCodeContext = {
+      globalStoragePath,
+      globalState: {
+        get: vi.fn().mockReturnValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+      },
+    } as any;
 
     // Create directories
     fs.mkdirSync(specsDir, { recursive: true });
@@ -88,6 +121,19 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
       effectiveContextLimit: 120000,
     });
 
+    const saveCache = observationMasker.saveCacheToDisk.bind(observationMasker);
+    vi.spyOn(observationMasker, 'saveCacheToDisk').mockImplementation(() =>
+      trackPersistence(saveCache())
+    );
+    const persistHealth = healthMonitor.persistState.bind(healthMonitor);
+    vi.spyOn(healthMonitor, 'persistState').mockImplementation((status) =>
+      trackPersistence(persistHealth(status))
+    );
+    const recordUsage = memoryManager.recordUsage.bind(memoryManager);
+    vi.spyOn(memoryManager, 'recordUsage').mockImplementation((...args) =>
+      trackPersistence(recordUsage(...args))
+    );
+
     contextBuilder = new ContextBuilder(
       testWorkspaceRoot,
       memoryManager,
@@ -103,13 +149,42 @@ describe('Context Management Pipeline Integration (T072-T075)', () => {
     );
   });
 
-  afterEach(() => {
-    // Clean up
-    hintLoader?.dispose();
-    healthMonitor?.dispose();
-    if (fs.existsSync(testWorkspaceRoot)) {
-      fs.rmSync(testWorkspaceRoot, { recursive: true });
+  afterEach(async () => {
+    try {
+      await disposeFixture();
+    } finally {
+      vi.restoreAllMocks();
     }
+  });
+
+  it('waits for delayed cache and health persistence before removing the workspace', async () => {
+    healthMonitor.setWorkspaceRoot(testWorkspaceRoot);
+    const status = healthMonitor.analyzeContext({ breakdown: { specArtifacts: 100 } });
+    await Promise.all(pendingPersistence);
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    trackPersistence(
+      barrier.then(async () => {
+        await observationMasker.saveCacheToDisk();
+        await healthMonitor.persistState({ ...status, utilizationPercent: 10 });
+      })
+    );
+    let disposed = false;
+    const cleanup = disposeFixture().then(() => {
+      disposed = true;
+    });
+    try {
+      await Promise.resolve();
+      expect(disposed).toBe(false);
+      expect(fs.existsSync(testWorkspaceRoot)).toBe(true);
+    } finally {
+      release();
+      await cleanup;
+    }
+    expect(disposed).toBe(true);
+    expect(fs.existsSync(testWorkspaceRoot)).toBe(false);
   });
 
   // ==========================================================================

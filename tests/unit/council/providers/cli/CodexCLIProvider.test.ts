@@ -35,6 +35,13 @@ describe('CodexCLIProvider', () => {
     it('should return the CLI command', () => {
       expect(provider.getCLICommand()).toBe(mockCommand);
     });
+
+    it('should build an exec command with a positional prompt', () => {
+      const prompt = 'Review this implementation';
+
+      expect(provider.getCLICommand()).toBe('codex');
+      expect(provider['buildCLIArgs'](prompt)).toEqual(['exec', '--model', mockModel, prompt]);
+    });
   });
 
   describe('formatPrompt', () => {
@@ -156,8 +163,8 @@ describe('CodexCLIProvider', () => {
   });
 
   describe('supportsMCPServers', () => {
-    it('should not support MCP servers', () => {
-      expect(provider.supportsMCPServers()).toBe(false);
+    it('should support MCP servers', () => {
+      expect(provider.supportsMCPServers()).toBe(true);
     });
   });
 

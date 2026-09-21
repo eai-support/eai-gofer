@@ -15,6 +15,7 @@ const ALL_SURFACES = [
   'github-prompts',
   'agents-skills',
   'system-skills',
+  'grok-skills',
   'agents-md',
   'codex-config',
   'unknown-surface',
