@@ -1,9 +1,0 @@
-{
-  "type": "response",
-  "content": "The data model uses a clear entity-relationship structure with well-defined boundaries. The CLI provider adapters implement a common interface, enabling transparent switching between Claude Code CLI and Codex CLI.\n\nKey features:\n- Base adapter handles process spawning and output parsing\n- Provider-specific parsers handle different output formats\n- Health checker validates installation and authentication\n- Configuration manager provides type-safe settings access\n\nThe architecture maintains 100% backward compatibility with existing API providers while adding CLI support through the adapter pattern.",
-  "model": "gpt-5.4",
-  "usage": {
-    "input_tokens": 8500,
-    "output_tokens": 2100
-  }
-}

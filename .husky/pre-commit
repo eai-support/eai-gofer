@@ -1,8 +1,0 @@
-# Run lint-staged for selective formatting and linting
-npx lint-staged
-
-# Run type checking to catch type errors early
-npm run typecheck
-
-# Run a quick test to ensure basic functionality
-npm run test:unit

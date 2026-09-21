@@ -1,9 +1,0 @@
-{
-  "type": "error",
-  "error": {
-    "code": "authentication_required",
-    "message": "Not authenticated. You must be logged in to use Codex CLI.",
-    "details": "No valid session found. Please run 'codex login' to authenticate with your OpenAI account."
-  },
-  "instructions": ["Run: codex login"]
-}
