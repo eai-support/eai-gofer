@@ -1,9 +1,8 @@
 ---
 generated: true
-generated_at: '2026-05-29T10:00:00.000Z'
-source_commit: 'public-launch-readiness'
+generated_at: "2026-09-21T22:04:18.799Z"
+source_commit: "a472e0f9103c75b5a5139db178f343e70efb8a03"
 ---
-
 # EAI Gofer
 
 EAI Gofer is a business specification-driven delivery workflow for repositories.

@@ -1,73 +1,28 @@
 ---
 generated: true
-generated_at: '2026-05-29T00:00:00.000Z'
-source_commit: 'public-launch-readiness'
+generated_at: "2026-09-21T22:04:18.799Z"
+source_commit: "a472e0f9103c75b5a5139db178f343e70efb8a03"
 ---
+# Documentation Changelog
 
-# Gofer - Changelog
+## 2026-09-21
 
-This changelog tracks notable public-facing releases, packaging changes, and
-documentation updates for Gofer.
+- Rebuilt the canonical documentation set from repository commit
+  `a472e0f9103c75b5a5139db178f343e70efb8a03`.
+- Updated the service identity from the older 3.7-era snapshot to version
+  `3.12.9` and recorded the 2026-09-20 Claude Code execution-adapter change.
+- Reconciled the MCP surface to the current 29-tool registry and documented
+  native stdio startup permissions and artifact restrictions.
+- Replaced stale database-like descriptions with the current file-backed
+  `.specify/` model and explicit “no database/no migrations” statement.
+- Updated CI, desktop-contract, release, and Pages topology to match current
+  workflow files and Docusaurus 3.10.1.
+- Preserved `.tech-docs/legacy-src/` and treated `_tech-docs-prompts/` as
+  excluded input per the documentation request.
 
-## v3.7.24 - 2026-07-17
+## Prior baseline
 
-### Changed
-
-- Updated public documentation to teach `/eai` as the single user-facing command
-  for design, build, and validation work.
-- Reframed numbered stage commands as internal pipeline contracts that Gofer
-  routes automatically.
-- Clarified that users should keep making business-language requests through
-  `/eai`, `#eai`, or `$eai` depending on the host.
-
-## v3.4.7 - 2026-05-29
-
-### Changed
-
-- Consolidated the core pipeline to internal contracts from Gofer Start through
-  validation
-- Removed the old standalone `6a_gofer_engineering_review` stage from the core
-  public flow
-- Updated public README, docs, plugin manifests, and release metadata to align
-  with the current seven-stage pipeline
-- Improved cross-host install guidance for VS Code, Claude Code, Codex, GitHub
-  Copilot, and Gemini
-
-### Fixed
-
-- Cleaned public packaging metadata so generated marketplace/plugin manifests
-  use generic Gofer branding instead of older internal naming
-- Reduced stale public documentation references to legacy install and rollback
-  commands
-
-### Public Launch Work In Progress
-
-- community files added: `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`,
-  `CODE_OF_CONDUCT.md`
-- GitHub Discussions, wiki, issues, and public repo metadata prepared
-- remaining launch blockers are tracked separately, including open-source
-  licensing and deeper legacy workflow cleanup
-
-## v3.4.5 - 2026-05-28
-
-### Changed
-
-- Added workspace bootstrap helpers for plugin-hosted workflows
-- Improved public install/update flows for Claude Code, Codex, Copilot, and
-  Gemini
-
-## v3.4.3 - 2026-05-22
-
-### Changed
-
-- Published shared public release artifacts for the VS Code extension and
-  portable agent bundle
-- Refreshed documentation for release distribution and generated command
-  surfaces
-
-## Release Notes Source
-
-- GitHub Releases:
-  [eai-support/eai-gofer/releases](https://github.com/eai-support/eai-gofer/releases)
-- Public release site:
-  [eai-support.github.io/eai-gofer/releases](https://eai-support.github.io/eai-gofer/releases)
+The previous generated snapshot was dated 2026-05-23 and referenced commit
+`047baa06f9bdd86354d43413563a98f893685fb3`. Its broad architecture remains
+valid, but version numbers, tool count, release workflow details, and several
+configuration claims were no longer current.

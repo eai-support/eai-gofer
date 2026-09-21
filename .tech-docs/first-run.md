@@ -1,9 +1,8 @@
 ---
-generated: false
-generated_at: '2026-06-01T00:00:00.000Z'
-source_commit: 'manual-public-onboarding'
+generated: true
+generated_at: "2026-09-21T22:04:18.799Z"
+source_commit: "a472e0f9103c75b5a5139db178f343e70efb8a03"
 ---
-
 # First Run In Five Minutes
 
 Use this path to verify that Gofer is installed, the repository scaffold exists,

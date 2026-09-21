@@ -1,243 +1,62 @@
 ---
 generated: true
-generated_at: '2026-05-23T17:54:39.953Z'
-source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
+generated_at: "2026-09-21T22:04:18.799Z"
+source_commit: "a472e0f9103c75b5a5139db178f343e70efb8a03"
 ---
+# Gofer Configuration
 
-# Gofer - Configuration
+## Configuration Sources
 
-## Executive Summary
+1. VS Code user/workspace settings from `extension/package.json`.
+2. Spec frontmatter and `.specify/memory/gofer-model-policy.yaml`.
+3. Environment variables and optional `.env`.
+4. Hardcoded component defaults.
 
-Gofer configuration is managed through VS Code settings (13 manifest-backed
-settings), environment variables (`.env` for secrets), and file-based config
-(`.specify/` directory). Configuration is layered: defaults → user settings →
-workspace settings, with workspace taking precedence.
-
-## Repo-Owned Model Policy
-
-Gofer bootstraps `.specify/memory/gofer-model-policy.yaml` from
-`.specify/templates/gofer-model-policy.yaml`. The memory copy is user-owned and
-is not overwritten by bootstrap. Use it to tune model routing:
-
-- `simple`: cheap capable defaults for routine work.
-- `mechanical`: ultra-cheap locate/classify/summarize routes where supported.
-- `medium`: normal implementation, synthesis, validation, and research.
-- `hard`: best available model for security, architecture, release-critical
-  review, or repeated failure.
-- `arbiter`: optional final frontier route for cross-model disagreements.
-
-Copilot uses `Auto` for simple/default work because Copilot model availability
-is controlled by the client, plan, and organization policy.
+Provider credentials are not Gofer settings. Use provider login/session state,
+shell environment, CI secret stores, or an ignored `.env`; never commit values.
 
 ## VS Code Settings
 
-### CLI Authentication
-
-Gofer no longer stores provider API keys in VS Code settings. Provider tools
-should use their normal login/session state. Google Antigravity is the current
-Google host. For CLIs that support environment fallback, set those variables in
-your shell or secret manager, not in repository files.
-
-**Security Notes:**
-
-- Never commit API keys, tokens, or credentials to version control.
-- Prefer `claude auth login`, `codex login`, and provider-owned app or CLI
-  sessions over direct SDK/API-key configuration.
-- Gofer usage panels read local CLI usage artifacts and logs; they do not use
-  Gofer-managed provider credentials.
-
-### Workflow Profile
-
-| Setting                 | Type    | Default      | Description                                                                                      |
-| ----------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------ |
-| `gofer.workflowProfile` | enum    | `"standard"` | Public baseline workflow. Use `enterpriseai` only for older workflow contracts during migration. |
-| `gofer.autoInitialize`  | boolean | `false`      | Auto-initialize `.specify/` on workspace open                                                    |
-| `gofer.preferredAI`     | enum    | `"ask"`      | Preferred send-task route: `ask`, `claude`, or `copilot`                                         |
-| `gofer.defaultCLI`      | enum    | `"auto"`     | Semantic host: `auto`, `claude`, `codex`, `copilot`, `antigravity`, `grok`, or `vscode`          |
-
-Retired or unknown persisted `gofer.defaultCLI` values reset to `auto`; they are
-not reassigned to a different provider or account. The hidden
-`gemini`-to-`antigravity` alias exists only at explicit legacy updater,
-workspace-bootstrap, and MCP migration input boundaries.
-
-### AI Usage and Billing
-
-| Setting                           | Type    | Default   | Description                                                  |
-| --------------------------------- | ------- | --------- | ------------------------------------------------------------ |
-| `gofer.aiUsage.statusBar.enabled` | boolean | `true`    | Show current session AI usage cost in the VS Code status bar |
-| `gofer.aiUsage.polling.interval`  | number  | `3600000` | Local usage polling interval when the watcher is not active  |
-
-### CLI and Workflow Selection
-
-| Setting                   | Type   | Default     | Description                                                 |
-| ------------------------- | ------ | ----------- | ----------------------------------------------------------- |
-| `gofer.cliProvider`       | enum   | `"auto"`    | Autonomous CLI backend: `claude`, `codex`, or `auto`        |
-| `gofer.claudeCodeCommand` | string | `"claude"`  | Command or path used when Gofer invokes the Claude Code CLI |
-| `gofer.codexCommand`      | string | `"codex"`   | Custom path to the Codex CLI executable                     |
-| `gofer.markdownViewer`    | enum   | `"preview"` | Markdown viewer integration to open when clicking files     |
-
-### Context and Memory
-
-| Setting                                | Type    | Default | Description                                                           |
-| -------------------------------------- | ------- | ------- | --------------------------------------------------------------------- |
-| `gofer.useLayeredMemory`               | boolean | `false` | Enable MemGPT-style layered memory (core, recall, archival)           |
-| `gofer.observationPreservePatterns`    | array   | `[]`    | Extra regex patterns whose observations must never be masked          |
-| `gofer.stageDetectionStalenessMinutes` | number  | `30`    | How long cached stage detection stays fresh before heuristic fallback |
+| Setting | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `gofer.autoInitialize` | boolean | `false` | Offer to create the Gofer scaffold on workspace open |
+| `gofer.preferredAI` | enum | `ask` | Preferred send-task route: `claude`, `copilot`, or `ask` |
+| `gofer.cliProvider` | enum | `auto` | Autonomous CLI: `claude`, `codex`, or `auto` |
+| `gofer.defaultCLI` | enum | `auto` | Host routing: `claude`, `codex`, `copilot`, `antigravity`, `grok`, `vscode`, or `auto` |
+| `gofer.workflowProfile` | enum | `standard` | Public workflow; `enterpriseai` is migration-only compatibility |
+| `gofer.claudeCodeCommand` | string | `claude` | Claude executable/path |
+| `gofer.codexCommand` | string | `codex` | Codex executable/path |
+| `gofer.markdownViewer` | enum | `preview` | `preview`, `mark-sharp`, `markdown-editor`, or `markdown-wysiwyg` |
+| `gofer.observationPreservePatterns` | string[] | `[]` | Case-insensitive patterns never masked during context compaction |
+| `gofer.useLayeredMemory` | boolean | `false` | Enable core/recall/archival memory |
+| `gofer.stageDetectionStalenessMinutes` | number | `30` | Cached stage freshness; allowed range 5–120 |
+| `gofer.aiUsage.statusBar.enabled` | boolean | `true` | Show usage cost status item |
+| `gofer.aiUsage.polling.interval` | number | `3600000` | Fallback usage polling interval in milliseconds; range 1000–7200000 |
 
 ## Environment Variables
 
-Configuration via `.env` file (never commit to Git):
+| Variable | Default | Used by | Description |
+| --- | --- | --- | --- |
+| `LOG_LEVEL` | `info` | root logger | `debug`, `info`, `warn`, or `error` |
+| `SPEC_DIR` | `<cwd>/.specify/specs` | `src/index.ts` | Orchestrator spec directory |
+| `WORKSPACE_DIR` | current directory | `src/index.ts` | Orchestrator workspace root |
+| `SPECS_DIR` | `.specify/specs` | `.env.example`/legacy config | Alternate documented spec-dir name |
+| `MAX_RETRIES` | `3` | `.env.example`/orchestrator config | Retry budget documented for local runtime |
+| `CLAUDE_PROJECT_DIR` | current directory | Claude hooks/UI | Project directory for host integration |
+| `GOFER_PROJECT_DIR` | current directory | hooks | Project directory override |
+| `GOFER_QUEUE_FILE` | derived path | queued-input hook | Queue file override |
+| `GOFER_LOG_FILE` | derived path | stage-launch hook | Stage log override |
+| `GOFER_STAGE` | CLI argument or `unknown` | stage-launch hook | Stage label |
+| `GOFER_MODE` | `numbered` | stage-launch hook | Invocation mode |
+| `GOFER_PERF_LOG` / `GOFER_PERF_MODE` | unset | hooks | Enable performance logging when `1` |
+| `RUN_LIVE_NETWORK_TESTS` | unset | extension E2E | Enable live network tests only when `1` |
+| `SKIP_NETWORK_TESTS` | unset | extension E2E | Disable network tests |
+| `VSCODE_TEST_VERSION` | `1.127.0` | extension test runner | VS Code test version |
+| `TYPESAFE_API_KEY` | unset | optional credential helper | Typesafe helper credential; value must not be documented or committed |
 
-| Variable            | Required | Default          | Description                                     |
-| ------------------- | -------- | ---------------- | ----------------------------------------------- |
-| `ANTHROPIC_API_KEY` | No       | -                | Optional Claude CLI auth fallback               |
-| `OPENAI_API_KEY`    | No       | -                | Optional Codex/OpenAI CLI auth fallback         |
-| `LOG_LEVEL`         | No       | `info`           | Logging level: `debug`, `info`, `warn`, `error` |
-| `SPECS_DIR`         | No       | `.specify/specs` | Specifications directory                        |
-| `MAX_RETRIES`       | No       | `3`              | Max retries for failed operations               |
+## Secrets and Feature Flags
 
-**Example `.env`:**
-
-```bash
-# Optional CLI auth fallback. Prefer provider CLI login state where possible.
-ANTHROPIC_API_KEY=<anthropic-api-key>
-OPENAI_API_KEY=<openai-api-key>
-
-# Logging
-LOG_LEVEL=info
-
-# Orchestrator
-SPECS_DIR=.specify/specs
-MAX_RETRIES=3
-```
-
-## File-Based Configuration
-
-### Constitution (`.specify/memory/constitution.md`)
-
-Project-specific coding principles and guidelines enforced by ScopeGuard and
-validation agents.
-
-**Example:**
-
-```markdown
-# Project Constitution
-
-## Coding Principles
-
-### Error Handling
-
-- All async functions must have try-catch blocks
-- User-facing errors must be translated to readable messages
-- Never log sensitive data (passwords, tokens)
-
-### Security
-
-- Never store passwords in plaintext
-- Use bcrypt for password hashing (min 10 rounds)
-- JWT tokens expire after 1 hour
-
-### Testing
-
-- All new functions require unit tests
-- Integration tests for API endpoints
-- Minimum 80% code coverage
-```
-
-### Spec Frontmatter Configuration
-
-Each spec can override global settings via YAML frontmatter:
-
-```yaml
----
-id: '001-login-feature'
-status: 'in_progress'
-protected_files:
-  - 'src/auth/*.ts'
-  - '.env'
-budget_override: 5.0 # Override global budget for this spec
----
-```
-
-## Configuration Precedence
-
-1. **Workspace Settings** (`.vscode/settings.json`)
-2. **User Settings** (VS Code global settings)
-3. **Spec Frontmatter** (spec-specific overrides)
-4. **Environment Variables** (`.env`)
-5. **Defaults** (hardcoded in extension)
-
-## Secrets Management
-
-### Where to Store Provider Credentials
-
-1. **Recommended:** Provider CLI login/session state
-   - Run each provider's login command, for example `claude auth login` or
-     `codex login`.
-   - Let the provider CLI manage credentials outside the repository.
-
-2. **Alternative:** Shell environment variables
-   - Use only when a provider CLI requires or supports them.
-   - Keep them in your shell profile, secret manager, or CI secret store.
-
-3. **Not Recommended:** Workspace settings or repository files
-   - `.vscode/settings.json`, `.env`, and scaffold files may be committed.
-   - Use workspace settings only for non-sensitive Gofer behavior.
-
-### Secret Rotation
-
-- Rotate credentials through the provider CLI, provider console, or CI secret
-  store.
-- Keys are never logged or committed by Gofer.
-
-## Required Configuration for Features
-
-### Minimum Configuration (VS Code Extension Only)
-
-```json
-{
-  "gofer.workflowProfile": "standard"
-}
-```
-
-### Full AI Assistant Integration
-
-```json
-{
-  "gofer.defaultCLI": "auto",
-  "gofer.claudeCodeCommand": "claude",
-  "gofer.codexCommand": "codex"
-}
-```
-
-## Troubleshooting
-
-### Issue: CLI Provider Not Authenticated
-
-- **Cause:** Provider CLI is not logged in or its environment is missing.
-- **Fix:** Run the provider login command, for example `claude auth login` or
-  `codex login`.
-- **Verify:** Check extension output: `View` → `Output` → Select "Gofer"
-
-### Issue: Layered Memory Not Loading
-
-- **Cause:** Layered memory is not enabled
-- **Fix:** Enable layered memory: `"gofer.useLayeredMemory": true`
-- **Verify:** Check that context assembly reports layered-memory use in the
-  Gofer output log.
-
-## Configuration Migration
-
-### From v2.x to v3.x
-
-- Review the manifest-backed settings above and remove any legacy workspace or
-  user settings that no longer appear in the current `gofer.*` manifest.
-- Refresh saved workspace examples to remove retired tuning keys and keep only
-  manifest-backed settings such as `gofer.useLayeredMemory`.
-
-### Legacy `enterpriseai` Compatibility
-
-- Set `"gofer.workflowProfile": "enterpriseai"` only if you need older legacy
-  workflow contracts during migration.
-- Public Gofer usage should prefer `"gofer.workflowProfile": "standard"`.
-- Track removal of legacy compatibility settings before a full public launch.
+Required credentials are host/provider-managed and names are intentionally not
+given values. CI release publishing uses GitHub's `GITHUB_TOKEN` and repository
+variables `VSCE_AZURE_CLIENT_ID`, `VSCE_AZURE_TENANT_ID`, and
+`VSCE_AZURE_SUBSCRIPTION_ID`. No runtime feature-flag service was found.

@@ -1,272 +1,75 @@
 ---
 generated: true
-generated_at: '2026-05-23T17:54:39.953Z'
-source_commit: '047baa06f9bdd86354d43413563a98f893685fb3'
+generated_at: "2026-09-21T22:04:18.799Z"
+source_commit: "a472e0f9103c75b5a5139db178f343e70efb8a03"
 ---
-
-# Gofer - API Reference
-
-## Executive Summary
-
-Gofer exposes three API surfaces:
-
-1. **Model Context Protocol (MCP) Tools** - 23+ tools for AI assistants to
-   manage specs, tasks, memory, and context
-2. **Language Server Protocol (LSP) Methods** - Custom LSP methods for
-   extension-to-server communication
-3. **VS Code Extension Commands** - 75+ commands registered in VS Code command
-   palette
-
-All APIs use JSON for request/response payloads and follow error handling
-conventions with typed error codes.
-
-## Model Context Protocol (MCP) Tools
-
-MCP tools are exposed via the language server and callable by Claude Code,
-GitHub Copilot, and other MCP-compatible AI assistants. Tools are invoked via
-LSP custom request `tools/call`.
-
-### Tool Categories
-
-- **Spec Management** - List, read, and manage specifications
-- **Task Execution** - Query and execute implementation tasks
-- **Validation** - Code quality checks and test execution
-- **Memory** - Store and retrieve project knowledge
-- **Context Management** - Progressive context compaction and observation
-  handling
-- **Health & Diagnostics** - Context health, slop detection, research chunking
-
-### Core MCP Tools
-
-| Tool Name                   | Purpose                                     | Required Params              | Auth |
-| --------------------------- | ------------------------------------------- | ---------------------------- | ---- |
-| `gofer_get_specs`           | List all specs                              | None                         | No   |
-| `gofer_get_next_task`       | Get next available task                     | None                         | No   |
-| `gofer_execute_task`        | Execute specific task with enriched context | `specId`, `taskId`           | No   |
-| `gofer_update_task_status`  | Update task status                          | `specId`, `taskId`, `status` | No   |
-| `gofer_validate_code`       | Validate code quality                       | `files`                      | No   |
-| `gofer_run_tests`           | Run specification tests                     | `specId`                     | No   |
-| `gofer_expand_observation`  | Retrieve full masked observation            | `observationId`              | No   |
-| `gofer_peek_observation`    | Get observation summary                     | `observationId`              | No   |
-| `gofer_fold_observation`    | Mask observation to save context            | `observationId`              | No   |
-| `gofer_grep_observations`   | Search observations                         | `pattern`                    | No   |
-| `gofer_context_peek`        | View context state                          | None                         | No   |
-| `gofer_context_repl`        | Interactive context management              | `command`                    | No   |
-| `gofer_get_context_health`  | Get context health status                   | None                         | No   |
-| `gofer_get_research_index`  | Get research chunk index                    | `specId`                     | No   |
-| `gofer_load_research_chunk` | Load specific research chunk                | `specId`, `chunkId`          | No   |
-| `gofer_trigger_handoff`     | Save session checkpoint                     | `specId`                     | No   |
-| `gofer_check_slop`          | Detect code slop                            | `files`                      | No   |
-
-See detailed parameter schemas in language-server/src/server.ts (line 175+).
-
-## Language Server Protocol (LSP) Methods
-
-Custom LSP methods for extension-to-server communication.
-
-### `gofer/listSpecs`
-
-List all specifications in workspace.
-
-**Request:**
-
-```json
-{
-  "method": "gofer/listSpecs",
-  "params": {}
-}
-```
-
-**Response:**
-
-```json
-{
-  "specs": [...]
-}
-```
-
-### `gofer/getSpec`
-
-Get a specific specification by ID.
-
-**Request:**
-
-```json
-{
-  "method": "gofer/getSpec",
-  "params": {
-    "specId": "001-login-feature"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "spec": {...}
-}
-```
-
-### `gofer/updateProgress`
-
-Update progress for a spec/task (extension → server notification).
-
-**Notification:**
-
-```json
-{
-  "method": "gofer/updateProgress",
-  "params": {
-    "specId": "001-login-feature",
-    "taskId": "T001",
-    "status": "completed"
-  }
-}
-```
-
-## VS Code Extension Commands
-
-Commands registered in the VS Code command palette (`Cmd/Ctrl+Shift+P`).
-
-### Repository Management
-
-| Command              | Title                           | Keybinding         | Description                         |
-| -------------------- | ------------------------------- | ------------------ | ----------------------------------- |
-| `gofer.initialize`   | Gofer: Initialize Repository    | `Ctrl+Shift+Alt+I` | Create `.specify/` folder structure |
-| `gofer.upgrade`      | Gofer: Upgrade to Gofer Format  | -                  | Migrate from legacy format          |
-| `gofer.fixSpecPaths` | Gofer: Fix Spec Path References | -                  | Fix paths after migration           |
-
-### Specification Management
-
-| Command                 | Title                             | Keybinding | Description                   |
-| ----------------------- | --------------------------------- | ---------- | ----------------------------- |
-| `gofer.openSpec`        | Gofer: Open Specification         | -          | Open spec file in editor      |
-| `gofer.createSpec`      | Gofer: Create New Specification   | -          | Create new spec with template |
-| `gofer.showSpecDetails` | Gofer: Show Specification Details | -          | Show spec metadata            |
-| `gofer.refreshSpecs`    | Gofer: Refresh Specifications     | -          | Reload specs from disk        |
-
-### UI Panels
-
-| Command                  | Title                          | Keybinding | Description                  |
-| ------------------------ | ------------------------------ | ---------- | ---------------------------- |
-| `gofer.showProgress`     | Gofer: Show Progress Panel     | -          | Show spec progress tree view |
-| `gofer.showAIUsage`      | Gofer: Show AI Usage Details   | -          | Show token usage and costs   |
-| `gofer.showConstitution` | Gofer: Show Constitution Panel | -          | Show project constitution    |
-| `gofer.viewMemories`     | Gofer: View Memories           | -          | Show memory panel            |
-
-### Memory Management
-
-| Command                          | Title                                     | Keybinding | Description                            |
-| -------------------------------- | ----------------------------------------- | ---------- | -------------------------------------- |
-| `gofer.remember`                 | Gofer: Remember                           | -          | Store new memory                       |
-| `gofer.searchMemory`             | Gofer: Search Memory                      | -          | Search memories by keyword             |
-| `gofer.forgetMemory`             | Gofer: Forget Memory                      | -          | Delete specific memory                 |
-| `gofer.clearMemory`              | Gofer: Clear Memory                       | -          | Clear all memories (with confirmation) |
-| `gofer.queryMemoryUsage`         | Gofer: Query Memory Usage                 | -          | Show memory stats                      |
-| `gofer.migrateMemoriesToLayered` | Gofer: Migrate Memories to Layered Format | -          | Migrate to 3-layer memory system       |
-| `gofer.viewCompactionHistory`    | Gofer: View Compaction History            | -          | Show memory compaction log             |
-
-### Context Management
-
-| Command                            | Title                                | Keybinding | Description                    |
-| ---------------------------------- | ------------------------------------ | ---------- | ------------------------------ |
-| `gofer.refreshContextWindow`       | Gofer: Refresh Context Window        | -          | Refresh context health status  |
-| `gofer.showContextCategoryContent` | Gofer: Show Context Category Content | -          | Show specific context category |
-
-### Updates & Maintenance
-
-| Command                 | Title                    | Keybinding | Description                 |
-| ----------------------- | ------------------------ | ---------- | --------------------------- |
-| `gofer.checkForUpdates` | Gofer: Check for Updates | -          | Check for extension updates |
-| `gofer.updateNow`       | Gofer: Update Now        | -          | Download and install update |
-| `gofer.updateTemplates` | Gofer: Update Templates  | -          | Download latest templates   |
-
-### Developer Tools
-
-| Command                      | Title                                   | Keybinding | Description                                      |
-| ---------------------------- | --------------------------------------- | ---------- | ------------------------------------------------ |
-| `gofer.installOptionalTools` | Gofer: Install Optional Developer Tools | -          | Install node-pty and other optional dependencies |
-| `gofer.createHintFile`       | Gofer: Create Hint File                 | -          | Create implementation hint file                  |
-
-## Error Handling
-
-### Error Response Format
-
-All MCP tools return errors in the following format:
-
-```json
-{
-  "success": false,
-  "error": "Human-readable error message",
-  "errorCode": "ERROR_CODE"
-}
-```
-
-### Common Error Codes
-
-| Code                    | Description                     | Recovery                                  |
-| ----------------------- | ------------------------------- | ----------------------------------------- |
-| `SPEC_NOT_FOUND`        | Specification not found         | Verify specId exists in `.specify/specs/` |
-| `TASK_NOT_FOUND`        | Task not found in specification | Verify taskId exists in `tasks.md`        |
-| `LOAD_ERROR`            | Failed to load file from disk   | Check file permissions and disk space     |
-| `VALIDATION_ERROR`      | Input validation failed         | Check parameter types and required fields |
-| `SEARCH_ERROR`          | Search operation failed         | Simplify search query                     |
-| `MEMORY_LOAD_ERROR`     | Failed to load memory store     | Check `.specify/memory/` permissions      |
-| `OBSERVATION_NOT_FOUND` | Observation ID not found        | Verify observation UUID is valid          |
-| `NO_TASKS_AVAILABLE`    | No tasks ready for execution    | Check task dependencies and status        |
-
-### Rate Limiting
-
-- **MCP Tools:** No rate limiting (local execution)
-- **Provider CLIs:** Subject to provider and account limits:
-  - Claude Code CLI: model route comes from
-    `.specify/memory/gofer-model-policy.yaml`
-  - Google Antigravity: Gemini model route comes from
-    `.specify/memory/gofer-model-policy.yaml`
-  - OpenAI Codex CLI: model route comes from
-    `.specify/memory/gofer-model-policy.yaml`
-
-### Authentication
-
-- **MCP Tools:** No authentication required (local workspace only)
-- **AI Providers:** Use each provider CLI's login/session state. Environment
-  variables such as `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` are optional CLI
-  fallback mechanisms only, not Gofer VS Code settings.
-
-## Versioning
-
-- **Current Version:** 3.4.0
-- **API Stability:** Experimental (MCP tools may change between minor versions)
-- **Breaking Changes:** Announced in CHANGELOG.md with migration guide
-- **Deprecation Policy:** 2 minor versions notice before removal
-
-## Usage Examples
-
-### Claude Code: Execute a Task
-
-```
-#gofer_execute_task specId="001-login-feature" taskId="T003"
-```
-
-### GitHub Copilot: Query Specs
-
-```
-#gofer_get_specs
-```
-
-### VS Code Extension: Refresh Progress
-
-```typescript
-vscode.commands.executeCommand('gofer.refreshSpecs');
-```
-
-### LSP Client: Update Task Status
-
-```typescript
-await lspClient.sendRequest('gofer/updateProgress', {
-  specId: '001-login-feature',
-  taskId: 'T001',
-  status: 'completed',
-});
-```
+# Gofer API Reference
+
+## API Surface Summary
+
+| Surface | Transport | Consumer | Authentication |
+| --- | --- | --- | --- |
+| Native MCP server | JSON-RPC over stdio | MCP-compatible AI hosts | Host process trust; no Gofer login |
+| Language server | LSP over stdio plus custom requests | VS Code extension | Local process/workspace trust |
+| VS Code commands | Extension command registry | VS Code users/extensions | VS Code workspace trust |
+| Node exports | ESM package exports `.` and `./headless` | Node automation | Local package access |
+
+## Native MCP Interface
+
+Start with `node dist/mcpServer.js --workspace-root /absolute/workspace`.
+`--help` documents `--allow-write`, `--allow-execution`, and
+`--allow-workspace-tools`. The server implements MCP `tools/list` and
+`tools/call`; input schemas are defined in
+`language-server/src/mcp/toolRegistry.ts` and exposed through
+`MCP_TOOL_DEFINITIONS`.
+
+All 29 tools are local-workspace operations. Required arguments are shown
+below; optional arguments are omitted only where the source marks them
+optional.
+
+| Category | Tools | Required arguments |
+| --- | --- | --- |
+| Specs/tasks | `gofer_get_specs`, `gofer_get_next_task` | none |
+| Task mutation | `gofer_execute_task`, `gofer_update_task_status` | `specId`, `taskId`; status is `pending`, `in_progress`, `testing`, `completed`, `failed`, or `blocked` |
+| Validation | `gofer_validate_code` | `files: string[]` |
+| Tests | `gofer_run_tests` | none; optional `path`, `filter`, backward-compatible `specId` |
+| Research | `gofer_get_research_index`, `gofer_load_research_chunk` | `specId`; chunk load also `chunkId` |
+| Handoff | `gofer_trigger_handoff` | `specId`; optional `reason` |
+| Observations | `gofer_expand_observation`, `gofer_peek_observation` | `observationId` |
+| Observation search/control | `gofer_fold_observation`, `gofer_grep_observations` | fold: `observationId`, `foldLevel`; grep: `pattern`, optional `maxResults` |
+| Context | `gofer_context_peek`, `gofer_context_fold`, `gofer_context_expand` | `section` |
+| Context search/history | `gofer_context_grep`, `gofer_context_undo`, `gofer_context_history` | grep: `pattern`; others none |
+| Context batch | `gofer_context_repl` | `operations[]` |
+| Diagnostics | `gofer_get_context_health`, `gofer_check_slop` | none; optional `includeBreakdown` or `path` |
+| Workspace | `gofer_check_workspace`, `gofer_bootstrap_workspace` | optional `host`; bootstrap also optional `includeMirrors`, `dryRun` |
+| Pipeline | `gofer_get_pipeline_state`, `gofer_start_stage` | start stage: `command`; optional `feature` |
+| Branch/errors | `gofer_validate_branch`, `gofer_explain_eai_error` | explain: `codeOrReason`; branch optional `base` |
+| Artifact read | `gofer_open_artifact` | `path`; optional `maxBytes` |
+
+The native runtime validates arguments before dispatch, rejects unknown tools,
+limits artifact reads to normalized documentation and Gofer spec/command paths,
+limits responses to 2 MiB, serializes active work, and returns explicit
+`isError` text results for permission, cancellation, and execution failures.
+
+## LSP Interface
+
+`language-server/src/server.ts` initializes incremental text-document sync,
+completion resolve support, workspace-folder support, and an experimental MCP
+tool list. Custom request and notification names are registered later in the
+same file; the stable operational contract is the MCP registry above. Errors
+use `ServerError`, `ValidationError`, and `NotFoundError` with codes such as
+`INIT_ERROR`, `VALIDATION_ERROR`, and `NOT_FOUND`.
+
+## VS Code Commands
+
+The extension manifest registers commands including `gofer.run`,
+`gofer.eai`, `gofer.initialize`, `gofer.upgrade`, `gofer.showProgress`,
+`gofer.showDeliveryLineage`, `gofer.createSpec`, `gofer.openSpec`,
+`gofer.executeAllPendingSpecs`, memory commands, context/usage commands,
+`gofer.checkForUpdates`, `gofer.updateNow`, and `gofer.regenerateInstructions`.
+The manifest is authoritative for the complete command list and titles.
+
+## WebSockets and REST
+
+No REST endpoints or WebSocket channels were found in the current source.
+Communication is local LSP/MCP stdio and file-based artifacts.
