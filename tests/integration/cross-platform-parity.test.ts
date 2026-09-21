@@ -1,7 +1,8 @@
 /**
  * Integration tests for cross-platform Gofer parity.
  *
- * Public surfaces intentionally expose only `eai`. The full
+ * Public surfaces intentionally expose `eai` plus the support-only `eai-update`.
+ * The full
  * numbered/helper pipeline remains available as internal `.specify/commands/*`
  * contracts routed by those public entrypoints.
  */
@@ -10,11 +11,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CrossPlatformCommandRouter } from '../../extension/src/council/CrossPlatformCommandRouter';
+import { buildContinuationContractSection } from '../../.specify/scripts/node/generate-commands.mjs';
 import {
   FULL_COMMAND_FILES,
   FULL_COMMAND_NAMES,
   PUBLIC_ENTRYPOINT_NAMES,
 } from '../helpers/goferCommandSet';
+import { CURRENT_SEMANTIC_HOSTS } from '../../extension/src/config/semanticHosts';
 
 describe('Cross-Platform Feature Parity', () => {
   const workspacePath = process.cwd();
@@ -33,10 +36,26 @@ describe('Cross-Platform Feature Parity', () => {
     );
   }
 
+  function normalizeSharedAgentSkill(content: string): string {
+    return content
+      .replace(/^Host:.*$/m, 'Host: <semantic-host>')
+      .replace(/^This skill is shared by Codex and Google Antigravity\..*\n?/m, '')
+      .replace(
+        /^2\. This skill is shared by Codex and Google Antigravity\..*$/m,
+        '2. Select the current semantic host.'
+      )
+      .replace(
+        /^2\. Use `codex` as the current semantic host\.$/m,
+        '2. Select the current semantic host.'
+      )
+      .replace(/--host (?:codex|<current-host>)/g, '--host <semantic-host>')
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
   describe('T078: Command Availability', () => {
     it('exposes only public entrypoints in host command surfaces', () => {
       for (const command of publicCommands) {
-        for (const platform of ['claude', 'copilot', 'codex', 'gemini'] as const) {
+        for (const platform of CURRENT_SEMANTIC_HOSTS) {
           const commandPath = router.getCommandPath(command, platform);
           expect(fs.existsSync(commandPath), `${command} missing on ${platform}`).toBe(true);
           expect(fs.readFileSync(commandPath, 'utf8').trim().length).toBeGreaterThan(20);
@@ -47,7 +66,9 @@ describe('Cross-Platform Feature Parity', () => {
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'claude'))).toBe(false);
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'copilot'))).toBe(false);
         expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'codex'))).toBe(false);
-        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'gemini'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'antigravity'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'grok'))).toBe(false);
+        expect(fs.existsSync(router.getCommandPath(hiddenCommand, 'vscode'))).toBe(false);
       }
     });
 
@@ -70,39 +91,143 @@ describe('Cross-Platform Feature Parity', () => {
 
     it('provides clean public command syntax for each platform', () => {
       expect(router.getCommandSyntax('eai', 'claude')).toBe('/eai');
-      expect(router.getCommandSyntax('eai', 'copilot')).toBe('#eai');
-      expect(router.getCommandSyntax('eai', 'codex')).toBe('/eai');
-      expect(router.getCommandSyntax('eai', 'gemini')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'copilot')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'codex')).toBe('$eai');
+      expect(router.getCommandSyntax('eai', 'antigravity')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'grok')).toBe('/eai');
+      expect(router.getCommandSyntax('eai', 'vscode')).toBe('/eai');
+      expect(router.getCommandSyntax('eai-update', 'claude')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'copilot')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'codex')).toBe('$eai-update');
+      expect(router.getCommandSyntax('eai-update', 'antigravity')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'grok')).toBe('/eai-update');
+      expect(router.getCommandSyntax('eai-update', 'vscode')).toBe('/eai-update');
     });
   });
 
-  describe('T079: Auto-Chain Functionality', () => {
-    it('keeps auto-chain instructions in each internal stage contract', () => {
-      const pipelineStages = [
-        '1_gofer_research',
-        '2_gofer_specify',
-        '3_gofer_plan',
-        '4_gofer_tasks',
-        '5_gofer_implement',
-        '6_gofer_validate',
-      ];
+  describe('T079: Internal-File Continuation', () => {
+    const pipelineStages = [
+      '0_gofer_start',
+      '0a_problem_validation',
+      '1_gofer_research',
+      '2_gofer_specify',
+      '3_gofer_plan',
+      '4_gofer_tasks',
+      '5_gofer_implement',
+      '6_gofer_validate',
+    ];
+    const compact = (content: string) => content.replace(/\s+/g, ' ');
 
-      pipelineStages.forEach((stage, index) => {
-        const content = readInternalContract(stage);
+    function expectSharedContinuation(content: string): void {
+      expect(content.match(/<!-- gofer:continuation:start -->/g)).toHaveLength(1);
+      expect(content.match(/<!-- gofer:continuation:end -->/g)).toHaveLength(1);
+      expect(content).toContain(buildContinuationContractSection());
+      expect(content).not.toMatch(/Skill tool|skill=["`]\/?\d/);
+      expect(content).toContain('read and follow the next internal file in .specify/commands/');
+      expect(content).toContain('in the same conversation');
+      expect(content).toContain('Progress, Stop reason and Next action');
+      expect(content).toContain('missing or ambiguous approval is not approval');
+      expect(content).toContain('ordinary planning, task ordering, design, diagnosis, repair, testing');
+      expect(content).toContain(
+        'Pause for material scope, security, cost, deployment, destructive'
+      );
+      expect(content).toContain('A business goal does not authorize publishing');
+      expect(content).toContain('A tool proposal is not execution');
+      expect(content).toContain('If host consent is required, wait for it');
+    }
 
-        if (index < pipelineStages.length - 1) {
-          expect(content.toLowerCase()).toContain('auto-chain');
-          expect(content).toContain(pipelineStages[index + 1]);
-        }
-      });
+    it.each(pipelineStages)('preserves shared continuation and approval gates in %s', (stage) => {
+      expectSharedContinuation(readInternalContract(stage));
     });
 
-    it('keeps continuation guidance in the public entrypoint wrappers', () => {
-      for (const command of publicCommands) {
-        const content = fs.readFileSync(router.getCommandPath(command, 'claude'), 'utf8');
+    it.each([
+      ['0a_problem_validation', '1_gofer_research'],
+      ['1_gofer_research', '2_gofer_specify'],
+      ['2_gofer_specify', '3_gofer_plan'],
+      ['3_gofer_plan', '4_gofer_tasks'],
+      ['4_gofer_tasks', '5_gofer_implement'],
+      ['5_gofer_implement', '6_gofer_validate'],
+    ])('continues %s by reading the existing %s contract', (stage, next) => {
+      const content = compact(readInternalContract(stage)).toLowerCase();
+      expect(content).toContain(`read and follow \`.specify/commands/${next}.md\``);
+      expect(fs.existsSync(path.join(workspacePath, '.specify/commands', `${next}.md`))).toBe(true);
+    });
+
+    it('routes kickoff internally and keeps problem validation optional', () => {
+      expect(readInternalContract('0_gofer_start')).toContain(
+        'Read the selected internal contract from `.specify/commands/{stage}.md`'
+      );
+      expect(compact(readInternalContract('0a_problem_validation'))).toContain(
+        'This helper remains optional in the full pipeline'
+      );
+    });
+
+    it('honors requested research-only work rather than stopping every research stage', () => {
+      const content = compact(readInternalContract('1_gofer_research'));
+      expect(content).toContain(
+        'Unless the user explicitly asks to stop after research or a real gate blocks progress'
+      );
+      expect(content).toContain(
+        'For requested research-only work, report that scope complete without claiming the delivery pipeline is complete'
+      );
+    });
+
+    it('uses the stated goal for routine delivery and asks only for exceptions', () => {
+      expect(compact(readInternalContract('2_gofer_specify'))).toContain(
+        'The stated business goal authorizes normal planning from this specification'
+      );
+      const tasks = compact(readInternalContract('4_gofer_tasks'));
+      expect(tasks).toContain(
+        'The stated business goal authorizes normal task sequencing, implementation planning, safe repairs, testing and reversible repository work'
+      );
+      expect(tasks).toContain('Record the Gofer decision and its scope');
+      expect(tasks).toContain(
+        'Missing, ambiguous, rejected or revoked approval is not authorization when one of these approval boundaries applies'
+      );
+      expect(tasks).toContain(
+        'For normal delivery work, record `decisionId`, the delivery reason and the covered scope'
+      );
+      expect(tasks).toContain('Do not fabricate user approval, approver or timestamp');
+    });
+
+    it('keeps validation terminal only when the requested evidence passes', () => {
+      const content = readInternalContract('6_gofer_validate');
+      expect(content).toContain(
+        "At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work"
+      );
+      expect(content).toContain('Stage completion alone is not pipeline completion');
+      expect(content).toContain('budget, context and retry limits');
+      expect(content).not.toContain('Next internal contract:');
+    });
+
+    it.each(['claude', 'copilot', 'codex', 'gemini'] as const)(
+      'preserves the same continuation and approval contract in the %s public wrapper',
+      (platform) => {
+        const wrapperPath =
+          platform === 'gemini'
+            ? path.join(workspacePath, '.gemini/commands/gofer/eai.md')
+            : router.getCommandPath('eai', platform);
+        const content = fs.readFileSync(wrapperPath, 'utf8');
         expect(content).toContain('.specify/commands/*.md');
-        expect(content.toLowerCase()).toMatch(/route|continue|internal/);
+        expectSharedContinuation(content);
       }
+    );
+
+    it('keeps the update entrypoint independent of a repository scaffold', () => {
+      for (const platform of CURRENT_SEMANTIC_HOSTS) {
+        const content = fs.readFileSync(router.getCommandPath('eai-update', platform), 'utf8');
+        expect(content).toContain('works without an EAI project');
+        expect(content).toContain('Do not run workspace checks');
+        expect(content).toContain('gofer-surface-update.mjs');
+      }
+      const geminiContent = fs.readFileSync(
+        path.join(workspacePath, '.gemini', 'commands', 'gofer', 'eai-update.md'),
+        'utf8'
+      );
+      expect(geminiContent).toContain('Legacy Gemini File-Format Compatibility');
+      expect(geminiContent).toContain('Gemini is not a current Gofer host');
+      expect(geminiContent).toContain('agy plugin install');
+      expect(geminiContent).toContain('--host antigravity');
     });
   });
 
@@ -146,7 +271,7 @@ describe('Cross-Platform Feature Parity', () => {
   });
 
   describe('US-006: Public Mirror Parity Assertions', () => {
-    it('keeps .agents skills in parity with .system skills for public entrypoints', () => {
+    it('keeps shared .agents and Codex .system skills in parity apart from host selection', () => {
       publicCommands.forEach((commandName) => {
         const agentSkillPath = router.getCommandPath(commandName, 'codex');
         const relativeSkillPath = path.relative(
@@ -157,9 +282,11 @@ describe('Cross-Platform Feature Parity', () => {
 
         expect(fs.existsSync(agentSkillPath)).toBe(true);
         expect(fs.existsSync(systemSkillPath)).toBe(true);
-        expect(fs.readFileSync(systemSkillPath, 'utf8')).toBe(
-          fs.readFileSync(agentSkillPath, 'utf8')
-        );
+        const agentSkill = fs.readFileSync(agentSkillPath, 'utf8');
+        const systemSkill = fs.readFileSync(systemSkillPath, 'utf8');
+        expect(agentSkill).toContain('Google Antigravity');
+        expect(systemSkill).toContain('Host: Codex');
+        expect(normalizeSharedAgentSkill(systemSkill)).toBe(normalizeSharedAgentSkill(agentSkill));
       });
     });
   });

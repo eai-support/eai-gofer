@@ -2,6 +2,55 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.12.9] - 2026-09-19
+
+Accept release-tagged eai-app-template provenance in readiness checks (#364)
+
+## [3.12.8] - 2026-09-15
+
+Preserve current AI surfaces and release hardening
+
+## [3.12.7] - 2026-09-10
+
+Keep delivery on the agreed priority, verify blockers and outcomes, preserve
+headless compatibility, and guard release publication.
+
+## [3.12.6] - 2026-09-10
+
+Safer app restarts, verified previews, bounded retries and clearer delivery
+updates
+
+## [3.12.5] - 2026-09-08
+
+Fix desktop pipeline continuation, restore standards-compliant MCP connections,
+preserve permission controls, and require full repository and packaged-extension
+tests before release.
+
+## [3.12.4] - 2026-09-05
+
+Allow normal Visual Studio Marketplace indexing before release verification
+fails
+
+## [3.12.3] - 2026-09-05
+
+Ensure reliable all-surface Gofer updates and release verification
+
+## [3.12.2] - 2026-09-04
+
+Auto-release
+
+## [3.12.1] - 2026-09-02
+
+Fix safe Codex local marketplace updates
+
+## [3.12.0] - 2026-09-01
+
+Add cross-surface EAI Gofer update and safe cleanup support
+
+## [3.11.0] - 2026-08-31
+
+Add capability-based validation and release-completeness controls
+
 ## [3.10.9] - 2026-08-27
 
 Require Node 24 runtime

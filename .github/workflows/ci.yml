@@ -18,10 +18,15 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        # actions/checkout v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        # actions/setup-node v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -37,6 +42,9 @@ jobs:
 
       - name: TypeScript Type Check
         run: npm run typecheck
+
+      - name: Verified harness regression checks without retries
+        run: npm run test:verified-harness
 
       - name: Verify Generated Commands in Sync
         run: |
@@ -310,6 +318,11 @@ jobs:
         env:
           CI: true
 
+      - name: Verify safe and truthful app previews
+        run: npx playwright test tests/e2e/safe-preview.spec.ts --project chromium --workers 1 --retries 0 --reporter=line
+        env:
+          CI: true
+
       - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v7
@@ -324,7 +337,9 @@ jobs:
   lint:
     name: Lint & Format Check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # This job installs three Node workspaces before it can run any checks.
+    # Five minutes can expire during a cold dependency restore.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
@@ -358,7 +373,8 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Allow a cold dependency restore to finish before the audit begins.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository

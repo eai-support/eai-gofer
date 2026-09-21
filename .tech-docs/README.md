@@ -10,7 +10,7 @@ EAI Gofer is a business specification-driven delivery workflow for repositories.
 Users start with one command, `/eai`, and Gofer manages the design, build, and
 validation pipeline with them. It provides repo-owned artifacts in `.specify/`,
 a VS Code extension, and portable plugin surfaces for Claude Code, Codex, GitHub
-Copilot, and Gemini.
+Copilot, Google Antigravity, Grok Build, and VS Code.
 
 ## How Users Run Gofer
 
@@ -57,13 +57,17 @@ Internally, Gofer still runs a staged pipeline:
 
 ## Install Surfaces
 
-| Surface            | Recommended source                         |
-| ------------------ | ------------------------------------------ |
-| VS Code            | Marketplace first, VSIX as fallback        |
-| Claude Code        | `eai-support/eai-gofer` GitHub marketplace |
-| Codex              | GitHub repo marketplace                    |
-| GitHub Copilot CLI | GitHub repo marketplace                    |
-| Gemini CLI         | GitHub repo install with `--auto-update`   |
+| Surface            | Recommended source                                             |
+| ------------------ | -------------------------------------------------------------- |
+| Claude Code        | `eai-support/eai-gofer` GitHub marketplace                     |
+| Codex              | GitHub repo marketplace                                        |
+| GitHub Copilot CLI | GitHub repo marketplace                                        |
+| Google Antigravity | `agy plugin install https://github.com/eai-support/eai-gofer`  |
+| Grok Build         | `grok plugin install https://github.com/eai-support/eai-gofer` |
+| VS Code            | Marketplace first, VSIX as fallback                            |
+
+Generated `.gemini/` files are legacy file-format compatibility only. Gemini is
+not a current install or update host.
 
 ## Model And Cost Policy
 
@@ -71,7 +75,8 @@ Bootstrap creates a user-owned model policy at
 `.specify/memory/gofer-model-policy.yaml` from the shipped
 `.specify/templates/gofer-model-policy.yaml` template. Edit the memory copy to
 tune simple, medium, hard, and arbiter routes across Claude, Codex/OpenAI,
-Gemini, and Copilot. Copilot uses `Auto` for simple/default work by default
+GitHub Copilot, Google Antigravity (Gemini models), Grok Build, and VS Code.
+Copilot uses `Auto` for simple/default work by default
 because exact model availability depends on client, plan, and organization
 policy.
 
@@ -95,7 +100,6 @@ policy.
 - [GitHub repository best practices](https://docs.github.com/en/repositories/creating-and-managing-repositories/best-practices-for-repositories)
 - [GitHub Discussions quickstart](https://docs.github.com/discussions/quickstart)
 - [Claude Code plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
-- [Gemini CLI extensions reference](https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md)
 - [VS Code publishing extensions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
 
 ## Public Launch Notes

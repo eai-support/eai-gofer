@@ -1,6 +1,6 @@
 {
   "name": "eai-gofer",
-  "version": "3.10.9",
+  "version": "3.12.9",
   "description": "Spec-driven delivery workflow for VS Code and AI coding CLIs",
   "author": "EAI Tools",
   "license": "Apache-2.0",
@@ -33,9 +33,12 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:mcp-protocol": "npm --prefix language-server run build && node scripts/test-mcp-protocol.mjs",
+    "test:packaged-protocol": "node scripts/test-packaged-protocol.mjs",
     "test:e2e": "npm --prefix extension test",
     "test:e2e:playwright": "playwright test",
     "test:performance": "vitest run tests/performance --reporter=verbose",
+    "test:verified-harness": "vitest run tests/unit/scripts/gofer-verified-execution.test.ts tests/unit/scripts/gofer-acceptance-check.test.ts tests/unit/scripts/gofer-execution-recovery.test.ts tests/unit/scripts/gofer-execution-metrics.test.ts tests/unit/scripts/gofer-agent-catalog.test.ts tests/unit/scripts/gofer-host-capability.test.ts tests/unit/scripts/verified-harness-surfaces.test.ts tests/integration/autonomous/TaskExecutionFlow.integration.test.ts tests/unit/orchestrator --retry 0",
     "test:coverage": "vitest run --coverage",
     "test:coverage-report": "vitest run --coverage --reporter=verbose",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:performance",
@@ -63,6 +66,7 @@
     "gofer:perf-baseline": "node .specify/scripts/node/gofer-performance-report.mjs",
     "gofer:version-check": "node .specify/scripts/node/check-version-alignment.mjs",
     "gofer:eai-refresh-layout:check": "node scripts/verify-eai-refresh-layout.mjs",
+    "gofer:surface-release:check": "node scripts/verify-surface-release-contract.mjs",
     "gofer:validate-v4-resource-contract": "node .specify/scripts/node/validate-v4-resource-contract.mjs",
     "prepack": "npm run build",
     "prepare": "husky"
@@ -79,6 +83,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@playwright/test": "1.58.2",
     "@types/chokidar": "1.7.5",
     "@types/graphlib": "2.1.12",
@@ -101,7 +106,8 @@
     "typescript-eslint": "8.56.1",
     "uuid": "11.1.1",
     "vitest": "4.1.8",
-    "vitest-ctrf-json-reporter": "0.0.3"
+    "vitest-ctrf-json-reporter": "0.0.3",
+    "vscode-languageclient": "9.0.1"
   },
   "overrides": {
     "diff": "^8.0.3",

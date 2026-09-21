@@ -1,0 +1,16 @@
+{
+  "description": "Apply the EAI Gofer operating contract to every Claude Code prompt while the plugin is enabled.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/.specify/scripts/hooks/user-prompt-submit.mjs"]
+          }
+        ]
+      }
+    ]
+  }
+}

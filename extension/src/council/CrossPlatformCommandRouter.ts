@@ -1,11 +1,12 @@
 /**
  * Cross-Platform Command Router
- * Routes commands across Claude CLI, Codex CLI, GitHub Copilot Chat, and Gemini CLI
+ * Routes commands across the six current semantic AI host surfaces.
  * Feature 028: Cross-platform command parity
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import type { Disposable } from 'vscode';
 import { pathExistsSafe, readDirectorySafe } from './CommandFileAccess';
 import { validateCommandName } from './CommandNameValidation';
 import { PlatformDetector } from './PlatformDetector';
@@ -18,8 +19,9 @@ import {
 } from './WorkflowProfileGuidance';
 import { type WorkflowProfile, getWorkflowProfile } from '../config/workflowProfile';
 import { Logger } from '../utils/logger';
+import { CURRENT_SEMANTIC_HOSTS, SEMANTIC_HOST_INVOCATION_PREFIX } from '../config/semanticHosts';
 
-const PUBLIC_ENTRYPOINTS = new Set(['eai']);
+const PUBLIC_ENTRYPOINTS = new Set(['eai', 'eai-update']);
 const RETIRED_PUBLIC_ENTRYPOINTS = new Set(['gofer']);
 
 /**
@@ -45,8 +47,8 @@ interface CommandSelectionResult {
 /**
  * Routes commands across different AI platforms with priority fallback
  *
- * Priority: .claude/commands/ > .agents/skills/ (with legacy .system fallback)
- * > .gemini/commands/gofer/ > .github/prompts/
+ * Priority follows the canonical six-host semantic contract. Legacy
+ * `.gemini/**` files are accepted only as an Antigravity compatibility fallback.
  *
  * Security: Validates all paths to prevent directory traversal attacks
  */
@@ -102,9 +104,15 @@ export class CrossPlatformCommandRouter {
       return cachedResult;
     }
 
+    const detectionContext = targetPlatform ? null : this.platformDetector.getDetectionContext();
+    const detectedPreference =
+      detectionContext?.detectionMethod === 'execution-context' ||
+      detectionContext?.detectionMethod === 'fallback'
+        ? 'auto'
+        : (detectionContext?.platform ?? 'auto');
     const searchOrder = targetPlatform
       ? [targetPlatform]
-      : this.getPlatformSearchOrder(this.platformDetector.getDefaultPlatform());
+      : this.getPlatformSearchOrder(detectedPreference);
 
     this.logger.debug('Routing command', {
       commandName,
@@ -220,7 +228,7 @@ export class CrossPlatformCommandRouter {
     );
     copilotMetadata.filter(Boolean).forEach((metadata) => commands.add(metadata!.name));
 
-    // Scan Gemini command TOML files
+    // Scan legacy Gemini-format command files as Antigravity compatibility input.
     const geminiDir = path.join(this.workspacePath, '.gemini', 'commands', 'gofer');
     const geminiFiles = await readDirectorySafe(geminiDir, 'listCommands.gemini', this.logWarning);
     const geminiMetadata = await Promise.all(
@@ -237,6 +245,11 @@ export class CrossPlatformCommandRouter {
         })
     );
     geminiMetadata.filter(Boolean).forEach((metadata) => commands.add(metadata!.name));
+
+    // Scan Grok Build skills. This must work even when Grok is the only
+    // provisioned command surface in the workspace.
+    const grokNames = await this.listGrokCommandNames();
+    grokNames.forEach((name) => commands.add(name));
 
     return Array.from(commands)
       .filter((commandName) => PUBLIC_ENTRYPOINTS.has(commandName))
@@ -279,21 +292,10 @@ export class CrossPlatformCommandRouter {
    *
    * @param commandName Command name
    * @param platform Target platform
-   * @returns Invocation syntax (e.g., "/1_gofer_research" or "#1_gofer_research")
+   * @returns Invocation syntax (for example, "/1_gofer_research")
    */
   public getCommandSyntax(commandName: string, platform: PlatformType): string {
-    const geminiCommand =
-      PUBLIC_ENTRYPOINTS.has(commandName) || commandName.startsWith('gofer:')
-        ? commandName
-        : `gofer:${commandName}`;
-    const syntaxMap: Record<PlatformType, string> = {
-      claude: `/${commandName}`,
-      codex: `/${commandName}`,
-      copilot: `#${commandName}`,
-      gemini: `/${geminiCommand}`,
-    };
-
-    return syntaxMap[platform];
+    return `${SEMANTIC_HOST_INVOCATION_PREFIX[platform]}${commandName}`;
   }
 
   /**
@@ -307,6 +309,17 @@ export class CrossPlatformCommandRouter {
   }
 
   /**
+   * Watch every command surface and invalidate both discovery and routing
+   * caches when a file changes.
+   */
+  public watchDirectories(callback: () => void = (): void => undefined): Disposable {
+    return this.skillDirectoryManager.watchDirectories(() => {
+      this.clearCache();
+      callback();
+    });
+  }
+
+  /**
    * Check if cache is still valid
    */
   private isCacheValid(): boolean {
@@ -314,7 +327,7 @@ export class CrossPlatformCommandRouter {
   }
 
   private getPlatformSearchOrder(preferred: PlatformType | 'auto'): PlatformType[] {
-    const defaultPriority: PlatformType[] = ['claude', 'codex', 'gemini', 'copilot'];
+    const defaultPriority: PlatformType[] = [...CURRENT_SEMANTIC_HOSTS];
     if (preferred === 'auto') {
       return defaultPriority;
     }
@@ -413,16 +426,17 @@ export class CrossPlatformCommandRouter {
     }
 
     try {
+      let metadata: CommandMetadata;
       if (platform === 'claude') {
-        return await this.metadataExtractor.extractFromClaudeCommand(commandPath);
+        metadata = await this.metadataExtractor.extractFromClaudeCommand(commandPath);
+      } else if (commandPath.endsWith('.toml')) {
+        metadata = await this.metadataExtractor.extractFromGeminiCommand(commandPath);
+      } else if (platform === 'codex' || platform === 'antigravity' || platform === 'grok') {
+        metadata = await this.metadataExtractor.extractFromSkill(commandPath, platform);
+      } else {
+        metadata = await this.metadataExtractor.extractFromCopilotPrompt(commandPath);
       }
-      if (platform === 'codex') {
-        return await this.metadataExtractor.extractFromCodexSkill(commandPath);
-      }
-      if (platform === 'gemini') {
-        return await this.metadataExtractor.extractFromGeminiCommand(commandPath);
-      }
-      return await this.metadataExtractor.extractFromCopilotPrompt(commandPath);
+      return this.withSemanticPlatform(metadata, platform);
     } catch (error) {
       this.logger.warn('Failed to extract command metadata', {
         commandName,
@@ -457,14 +471,27 @@ export class CrossPlatformCommandRouter {
       return this.getCodexCommandPathCandidates(commandName);
     }
 
+    if (platform === 'antigravity') {
+      return [
+        ...this.getCurrentSkillPathCandidates(commandName),
+        ...this.getLegacyGeminiCommandPathCandidates(commandName),
+      ];
+    }
+
+    if (platform === 'grok') {
+      return this.getCommandFileStemCandidates(commandName).map((fileStem) =>
+        path.join(this.workspacePath, '.grok', 'skills', fileStem, 'SKILL.md')
+      );
+    }
+
     return this.getCommandFileStemCandidates(commandName).map((fileStem) => {
-      const platformPaths: Record<Exclude<PlatformType, 'codex'>, string> = {
+      const platformPaths: Record<'claude' | 'copilot' | 'vscode', string> = {
         claude: path.join(this.workspacePath, '.claude', 'commands', `${fileStem}.md`),
         copilot: path.join(this.workspacePath, '.github', 'prompts', `${fileStem}.prompt.md`),
-        gemini: path.join(this.workspacePath, '.gemini', 'commands', 'gofer', `${fileStem}.toml`),
+        vscode: path.join(this.workspacePath, '.github', 'prompts', `${fileStem}.prompt.md`),
       };
 
-      return platformPaths[platform];
+      return platformPaths[platform as 'claude' | 'copilot' | 'vscode'];
     });
   }
 
@@ -482,6 +509,35 @@ export class CrossPlatformCommandRouter {
       path.join(this.workspacePath, '.system', 'skills', fileStem, 'SKILL.md'),
       path.join(this.workspacePath, '.system', 'skills', 'gofer', fileStem, 'SKILL.md'),
     ]);
+  }
+
+  private getCurrentSkillPathCandidates(commandName: string): string[] {
+    return this.getCommandFileStemCandidates(commandName).flatMap((fileStem) => [
+      path.join(this.workspacePath, '.agents', 'skills', fileStem, 'SKILL.md'),
+      path.join(this.workspacePath, '.agents', 'skills', 'gofer', fileStem, 'SKILL.md'),
+    ]);
+  }
+
+  private getLegacyGeminiCommandPathCandidates(commandName: string): string[] {
+    return this.getCommandFileStemCandidates(commandName).map((fileStem) =>
+      path.join(this.workspacePath, '.gemini', 'commands', 'gofer', `${fileStem}.toml`)
+    );
+  }
+
+  private withSemanticPlatform(metadata: CommandMetadata, platform: PlatformType): CommandMetadata {
+    const example = this.getCommandSyntax(metadata.name, platform);
+    const escapedExample = example.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return {
+      ...metadata,
+      platform,
+      invocationSyntax: {
+        ...metadata.invocationSyntax,
+        platform,
+        prefix: this.getCommandSyntax('', platform),
+        example,
+        pattern: `^${escapedExample}(\\s+.*)?$`,
+      },
+    };
   }
 
   private resolveExistingCommandPath(candidates: string[]): string {
@@ -550,5 +606,27 @@ export class CrossPlatformCommandRouter {
     }
 
     return Array.from(commandNames).sort();
+  }
+
+  private async listGrokCommandNames(): Promise<string[]> {
+    const grokRoot = path.join(this.workspacePath, '.grok', 'skills');
+    const rootEntries = await readDirectorySafe(grokRoot, 'listCommands.grok', this.logWarning);
+    const commandNames = await Promise.all(
+      rootEntries.map(async (entry) => {
+        const skillPath = path.join(grokRoot, entry, 'SKILL.md');
+        if (!(await pathExistsSafe(skillPath, 'listCommands.grokSkill', this.logWarning))) {
+          return null;
+        }
+
+        try {
+          const metadata = await this.metadataExtractor.extractFromSkill(skillPath, 'grok');
+          return metadata.name;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return commandNames.filter((name): name is string => name !== null).sort();
   }
 }

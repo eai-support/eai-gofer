@@ -15,6 +15,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { validateDescriptions } from './canonical-descriptions.mjs';
+import { SUPPORTED_HOSTS } from './gofer-surface-update.mjs';
 import { parseStageCommand } from './parse-stage-command.mjs';
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,12 @@ const PUBLIC_ENTRYPOINTS = [
     title: 'Eai',
     description: 'Start or continue the EAI delivery pipeline.',
   },
+  {
+    stem: 'eai-update',
+    name: 'eai-update',
+    title: 'Eai Update',
+    description: 'Install or update EAI Gofer for this AI coding app.',
+  },
 ];
 const SURFACE_WORKSPACE_HOSTS = {
   'claude': 'claude',
@@ -62,7 +69,7 @@ const SURFACE_WORKSPACE_HOSTS = {
   'github-prompts': 'copilot',
   'github-agents': 'copilot',
   'github-skills': 'copilot',
-  'agents-skills': 'codex',
+  'agents-skills': 'codex-or-antigravity',
   'system-skills': 'codex',
   'grok-skills': 'grok',
   'gemini': 'gemini',
@@ -74,6 +81,15 @@ const WORKSPACE_PREFLIGHT_EXCLUDED_COMMANDS = new Set([
   'gofer:check-workspace',
   'gofer:bootstrap-workspace',
   'gofer:eai-first-run',
+]);
+
+const LEGACY_HELPER_COMMAND_FILES = new Set([
+  'gofer_bootstrap_workspace.md',
+  'gofer_check_workspace.md',
+  'gofer_eai_first_run.md',
+  'gofer_personality.md',
+  'gofer_plan.md',
+  'gofer_side.md',
 ]);
 const LEGACY_STAGE_STEMS = new Map([
   ['0_gofer_start', ['0_business_scenario']],
@@ -87,7 +103,8 @@ const LEGACY_STAGE_STEMS = new Map([
  * Returns true if the given stage should be excluded from the given surface.
  * Gofer keeps this function for older tests/imports, but no stages are
  * excluded by name anymore. Surface availability is controlled by stage
- * frontmatter so Claude, Copilot, Codex, and Gemini stay in parity.
+ * frontmatter so all current semantic hosts and the legacy Gemini file format
+ * stay in parity.
  *
  * @param {string} stageName
  * @param {string} surface
@@ -137,7 +154,7 @@ function buildGeminiExtensionManifest(version) {
   return {
     name: 'eai-gofer',
     version,
-    description: 'Gofer single-entry delivery command with internal pipeline routing',
+    description: 'Legacy Gemini CLI file-format compatibility for EAI Gofer',
     license: 'Apache-2.0',
     commands: '.gemini/commands/gofer/',
     gofer: {
@@ -254,14 +271,20 @@ function buildInternalStageList(stages) {
 
 function buildAlwaysEaiSection() {
   return `## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
 
-Users usually start every request with \`/eai\`, \`$eai\`, or \`#eai\`. Treat that prefix as activation for this contract, not as business content.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type \`/eai\` or \`$eai\`.
 
-1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
-2. Keep the reply short unless the user asks for detail.
-3. Explain the business effect first.
-4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.`;
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit \`/eai\` (Claude, Copilot, Antigravity, Grok, or VS Code) or \`$eai\` (Codex) prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->`;
 }
 
 function buildUserFacingResponseGateSection() {
@@ -272,7 +295,23 @@ Before each user-facing reply, check the draft against these rules:
 1. Lead with the business outcome, effect, risk, or decision.
 2. Use concise, simple language.
 3. Include technical detail only when it supports a decision or the user asks for it.
-4. If any check fails, rewrite the reply before sending it.`;
+4. If any check fails, rewrite the reply before sending it.
+
+${buildDeliveryDisciplineContract()}`;
+}
+
+export function buildDeliveryDisciplineContract() {
+  return `**Business Updates And Goal Checks**
+
+Use \`.specify/references/business-updates-and-goal-checks.md\`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run \`node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>\` before sending a drafted progress update; rewrite failed drafts. Use \`--kind answer\` for answers and \`--technical\` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
+
+Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable \`requireDeliveryCheckpoint\` in \`loop-contract.json\` and run \`node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>\` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
+
+**Priority And Outcome Protection**
+
+Follow \`.specify/references/priority-outcome-protection.md\`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run \`node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001\` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
+
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.`;
 }
 
 function buildJourneyStateSection() {
@@ -287,6 +326,26 @@ Before routing work, decide where the user is now.
 5. Find the earliest missing pipeline artifact or blocked EAI gate.
 6. Run that internal stage next, then continue forward.
 7. Keep the user-facing explanation at the business level.`;
+}
+
+function buildMvpCapabilityValidationSection() {
+  return `## MVP Capability-Based Validation
+
+Use \`.specify/references/mvp-capability-validation.md\` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create \`.specify/specs/{feature}/\` before app or operator-tool source work.
+2. Keep \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and the validation scope aligned.
+3. Mark each relevant capability as \`not_applicable\`, \`planned\`, \`implemented\`, \`verified\`, or \`blocked\`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat \`run.sh\`, \`run.bat\`, and \`run.ps1\` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey \`unverified\`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: \`The server runs. Authentication is not in the current MVP scope.\`
+10. When the feature claims a release or deployed outcome, create \`release-capability-ledger.md\` from \`.specify/templates/release-capability-ledger-template.md\`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.`;
 }
 
 function buildVerifiedEaiCliCommandContract() {
@@ -327,9 +386,24 @@ For app delivery, make EAI Platform choices for the business user.
 }
 
 function buildPublicEntrypointMarkdown(entry, stages, host) {
+  if (entry.name === 'eai-update') {
+    return buildEaiUpdateEntrypointMarkdown(host);
+  }
+
+  const legacyCompatibilityNotice =
+    host === 'gemini'
+      ? '> Legacy compatibility: this generated Gemini file remains for existing repositories only. Gemini is not a current Gofer host. Use Google Antigravity and `agy` for the current Google surface.\n\n'
+      : '';
+  const sharedAgentsHost = host === 'codex-or-antigravity';
+  const workspaceHost =
+    sharedAgentsHost ? '<current-host>' : host === 'gemini' ? 'antigravity' : host;
+  const workspaceHostSelection = sharedAgentsHost
+    ? 'This skill is shared by Codex and Google Antigravity. Replace `<current-host>` with `codex` in Codex or `antigravity` in Antigravity.'
+    : '';
+
   return `# ${entry.title}
 
-Use this as the single user-facing Gofer command. Users should run \`/${entry.name}\`, \`$${entry.name}\`, or \`#${entry.name}\` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+${legacyCompatibilityNotice}Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. Use \`/${entry.name}\` on Claude, Copilot, Antigravity, Grok, or VS Code, and \`$${entry.name}\` on Codex. The prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -361,10 +435,12 @@ ${buildAlwaysEaiSection()}
 
 ## Workspace Preflight
 
+${workspaceHostSelection}
+
 1. Resolve the repository root.
-2. Run \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\` when available.
+2. Run \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${workspaceHost} --json\` when available.
 3. If the repo is missing or stale, ask exactly: **"This repo is missing or stale for Gofer. Initialize/update it now?"**
-4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${host} --include-mirrors\`, then resume this command.
+4. If the user says yes, run \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host ${workspaceHost} --include-mirrors\`, then resume this command.
 5. If the user says no, stop and explain that Gofer needs the repo scaffold before it can safely continue.
 
 ${buildLocalSettingsCleanupContractSection()}
@@ -372,6 +448,10 @@ ${buildLocalSettingsCleanupContractSection()}
 ${buildAppPreviewRunnerContractSection()}
 
 ${buildJourneyStateSection()}
+
+${buildMvpCapabilityValidationSection()}
+
+${buildAuthAccessDecisionContract()}
 
 ## App vs Non-App Routing
 
@@ -383,11 +463,11 @@ ${buildJourneyStateSection()}
 
 ## EAI Platform Readiness
 
-1. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-2. For app delivery, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when the checker exists.
-3. Treat a missing checker or any result other than \`ready\` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
-4. Run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`. It must run \`eai init\` in the approved target folder and switch the active workspace to the created app.
-5. Rerun the readiness checker, \`eai verify\`, and \`eai template check --format json\`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+1. Run \`eai whoami\` only when the current feature uses EAI Platform services, the user asks for EAI setup, or EAI CLI recovery is needed.
+2. Require \`eai-app-template-readiness\`, \`eai verify\`, and \`eai template check --format json\` only when the feature creates, changes, or validates an EAI Platform app integration.
+3. Require the authentication journey only when the specification includes sign-in, protected content, user roles, or a deployment target that requires identity.
+4. For a local MVP with no EAI or authentication capability, record those states as \`not_applicable\` or \`planned\` and continue with local feature validation.
+5. When an EAI capability becomes required, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that \`eai init\` completed.
 7. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
 8. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into artifacts.
@@ -418,24 +498,83 @@ When this is the first EAI conversation for a new app:
 6. When app UI is involved, show the user the working UI as early and as often as practical.
 7. Keep stakeholder summaries, build maps, diagrams, loop evidence, tests, and validation artifacts current.
 
+${buildContinuationContractSection()}
+
 ## Internal Function Contracts
 
 ${buildInternalStageList(stages)}
 `;
 }
 
-function buildPublicEntrypointPrompt(entry, stages, host) {
+function buildEaiUpdateEntrypointMarkdown(host) {
+  if (host === 'gemini') {
+    return `## Legacy Gemini File-Format Compatibility
+
+This file remains only so existing Gemini CLI repositories can read the generated Gofer command format. Gemini is not a current Gofer host. Google Antigravity and its \`agy\` CLI are the current Google surface.
+
+## What To Do
+
+1. Install or update EAI Gofer from Google Antigravity with \`agy plugin install https://github.com/eai-support/eai-gofer\`.
+2. Use \`--host antigravity\` with \`gofer-surface-update.mjs\`.
+3. Start a new Antigravity session after installation.
+
+Existing automation that passes \`--host gemini\` is mapped to \`antigravity\` as a hidden compatibility alias. New commands and documentation must use \`antigravity\`. The updater reports exactly these current hosts: ${SUPPORTED_HOSTS.join(', ')}.
+${buildBlockerMediationContract()}
+`;
+  }
+
+  const sharedAgentsHost = host === 'codex-or-antigravity';
+  const selectedHost = sharedAgentsHost ? '<current-host>' : host;
+  const hostSelection = sharedAgentsHost
+    ? '2. This skill is shared by Codex and Google Antigravity. Set `<current-host>` to `codex` in Codex or `antigravity` in the `agy` CLI.'
+    : `2. Use \`${host}\` as the current semantic host.`;
+
+  return `## Update EAI Gofer
+
+Use this command to install or update EAI Gofer for the current AI coding app. This command works without an EAI project, a Gofer scaffold, or EAI sign-in.
+
+## Update Contract
+
+1. Do not run workspace checks, \`eai init\`, \`eai whoami\`, or pipeline stages.
+${hostSelection}
+3. Check the current host first:
+   \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action inspect --host ${selectedHost} --json\`
+4. If the plugin root is not known, identify the installed plugin bundle before you run the helper.
+5. State whether EAI Gofer is installed and whether the host command is available.
+6. Explain the planned user-level change and ask for approval before any install or update command.
+7. After approval, run one of these commands from the bundled helper:
+   - Install: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action install --host ${selectedHost} --execute --json\`
+   - Update: \`node <plugin-root>/.specify/scripts/node/gofer-surface-update.mjs --action update --host ${selectedHost} --execute --json\`
+8. After an actual install or update, the helper archives stale Gofer command and skill entries. It adds a small managed always-on instruction for Claude, Codex, Copilot, Antigravity, and VS Code. For Grok, it verifies the installed plugin's \`skills/eai/SKILL.md\` always-on contract instead of inventing a separate global instruction file. It keeps the current \`eai\` and \`eai-update\` entries. For Codex, a clean official local marketplace on \`main\` fast-forwards safely. A dirty, non-main, or unrecognised local marketplace remains unchanged and reports that its plugin update is incomplete while it still refreshes the always-on instruction. If the Codex marketplace source is unknown, it stops without changes.
+9. Run only the selected host by default. Use \`--host all\` only when the user explicitly asks to install or update every detected host.
+10. Show the required reload step from the helper output. Do not claim the command is ready until the host reloads.
+
+## Supported Hosts
+
+- Claude Code: refresh the marketplace and plugin, then run \`/reload-plugins\`.
+- Codex: refresh a confirmed Git marketplace and apply the plugin, then start a new task or restart Codex. A clean official local \`main\` checkout fast-forwards and applies the plugin. Other local checkouts keep their work unchanged, refresh the always-on instruction, and report what needs attention. An unknown source stops the update to protect local work.
+- GitHub Copilot: refresh the marketplace and plugin, then restart the CLI session or start a new app chat.
+- Google Antigravity: install or reinstall the repository plugin with \`agy\`, then start a new Antigravity session.
+- Grok Build: install or update the repository plugin with \`grok\`, then start a new Grok Build session.
+- VS Code: install or update \`EnterpriseAI.gofer\`, then run **Developer: Reload Window**.
+
+## Limits
+
+- This command updates user-level plugins and extensions. It archives known stale Gofer entries and replaces only Gofer's managed instruction section. It does not remove unrelated user files or host-managed plugin caches. It does not add the repo-owned \`.specify/\` scaffold.
+- For a repository scaffold, use \`/eai add or refresh the Gofer scaffold for this repo\` after the host update.
+- Gemini files remain only for legacy file-format compatibility. Gemini is not a current updater host.
+- Keep the full Gofer delivery pipeline unchanged. This command only manages its host installation.
+${buildBlockerMediationContract()}
+`;
+}
+
+export function buildPublicEntrypointPrompt(entry, stages, host) {
   return [
     '---',
     `name: ${entry.name}`,
     `description: ${entry.description}`,
     'agent: agent',
-    'tools:',
-    '  - Read',
-    '  - Grep',
-    '  - Glob',
-    '  - Bash',
-    '  - WebSearch',
+    // Inherit enabled host tools rather than restricting Copilot to foreign aliases.
     'argument-hint: goal-or-feature-description',
     'gofer:',
     '  workflowProfile: standard',
@@ -607,12 +746,6 @@ function buildCopilotPromptContent(stage, host = SURFACE_WORKSPACE_HOSTS['copilo
     `name: ${stageName}`,
     `description: ${description}`,
     'agent: agent',
-    'tools:',
-    '  - Read',
-    '  - Grep',
-    '  - Glob',
-    '  - Bash',
-    '  - WebSearch',
     'argument-hint: feature-name-or-description',
     'gofer:',
     '  workflowProfile: standard',
@@ -677,18 +810,27 @@ function transformClaudeContent(content, toPlatform) {
  * @param {string} commandName
  * @returns {string}
  */
-function injectPipelineContinuation(content, platform, commandName) {
+export function injectPipelineContinuation(content, platform, commandName) {
   void platform;
   const nextCommand = getNextCommand(commandName);
   if (!nextCommand) return content;
 
-  const autoChainSection = `\n\n## Pipeline Continuation\n\nThis completes the ${commandName} stage. To continue the Gofer pipeline:\n\n**Next Command:** \`#${nextCommand}\`\n\nThe next stage will read the artifacts from this stage and continue the workflow automatically.\n\n**Note:** Copilot Chat supports context preservation. Your conversation history will be maintained as you progress through pipeline stages.\n`;
+  if (content.includes('<!-- gofer:next-contract:start -->')) return content;
+  const autoChainSection = `\n\n## Pipeline Continuation\n<!-- gofer:next-contract:start -->\n\nNext internal contract: \`.specify/commands/${nextCommand}.md\`. Read and follow it in the same conversation after the current stage's required evidence and approval checks pass. Apply the shared continuation contract; do not ask the user to invoke a numbered command. Honor research-only requests, explicit pauses and material/user approval gates. If blocked, report Progress, Stop reason and Next action.\n<!-- gofer:next-contract:end -->\n`;
 
   if (content.includes('## Key Rules')) {
     return content.replace('## Key Rules', `${autoChainSection}\n## Key Rules`);
   }
 
   return content + autoChainSection;
+}
+
+export function buildAuthAccessDecisionContract() {
+  return `**Authentication Access Decision**
+
+When adding or changing authentication, read \`.specify/references/platform/eai-auth-access.md\`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to \`workspace-only\`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
+
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.`;
 }
 
 function buildEaiPlatformSessionPreflightSection() {
@@ -698,41 +840,58 @@ function buildEaiPlatformSessionPreflightSection() {
 Before any EAI CLI, login, tenant, template, or app-enrollment action:
 
 1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in \`.specify/commands/0_gofer_start.md\`.
-2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path. Do not ask for confirmation just because app delivery is inferred.
+2. Create \`.specify/specs/{feature}/\` and record the active delivery scope before app or operator-tool source work.
 3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision in the feature discovery or context bundle, do not run \`eai whoami\`, \`eai tenant select\`, \`eai init\`, or \`/gofer:eai-first-run\`, and continue the appropriate non-app pipeline path.
-5. If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
-6. For EAI app delivery, treat durable delivery as EAI Platform delivery by default, with Azure second and every other stack only by explicit exception.
-7. For EAI app delivery, run \`eai whoami\` and confirm the EAI CLI is installed, the user is logged in, and an active tenant is visible.
-8. Run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\` when available. A missing checker or any status other than \`ready\` blocks all app-delivery stages.
-9. If blocked, run \`/gofer:eai-first-run\`. The first-run path must complete \`eai init\`, enter the created app folder, and rerun the checker.
-10. Do not continue into research, specification, planning, tasks, implementation, or validation until the checker passes and \`.specify/specs/{feature}/eai-preflight.md\` records login, tenant, eai-init provenance, template readiness, and next-action evidence.
-11. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence.
-12. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+4. If the user confirms non-app, record the decision and mark app-only capabilities \`not_applicable\`. Do not run \`eai whoami\`, \`eai tenant select\`, \`eai init\`, or \`/gofer:eai-first-run\`.
+5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
+6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run \`eai whoami\` and record the EAI readiness evidence in \`eai-preflight.md\`.
+7. When the feature creates, changes, or validates an EAI Platform app integration, run \`node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json\`. A missing checker or status other than \`ready\` blocks that EAI capability. It does not block unrelated local MVP work.
+8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
+9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
+10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
+11. If the user changes scope, update \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope before continuing. Explain the business effect and evidence change.
+12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
+13. Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+
+${buildAuthAccessDecisionContract()}
 `.trim();
 }
 
 function injectEaiPlatformSessionPreflight(content) {
-  if (
-    content.includes('## Application Classification And EAI Preflight') ||
-    content.includes('## EAI Platform Session Preflight')
-  ) {
-    return content;
+  const section = `${buildMvpCapabilityValidationSection()}\n\n${buildEaiPlatformSessionPreflightSection()}`;
+  // Remove previous generated copies before replacing the bounded preflight.
+  // This makes a workspace refresh idempotent.
+  const withoutMvpCapabilitySection = content.replace(
+    /\n?## MVP Capability-Based Validation\n[\s\S]*?(?=\n## |\s*$)/g,
+    ''
+  );
+  const existingHeading = withoutMvpCapabilitySection.includes('## Application Classification And EAI Preflight')
+    ? '## Application Classification And EAI Preflight'
+    : withoutMvpCapabilitySection.includes('## EAI Platform Session Preflight')
+      ? '## EAI Platform Session Preflight'
+      : null;
+
+  if (existingHeading) {
+    const headingIndex = withoutMvpCapabilitySection.indexOf(existingHeading);
+    const nextHeadingIndex = withoutMvpCapabilitySection.indexOf('\n## ', headingIndex + existingHeading.length);
+    const suffix = nextHeadingIndex === -1 ? '' : withoutMvpCapabilitySection.slice(nextHeadingIndex).replace(/^\n+/, '');
+    return suffix
+      ? `${withoutMvpCapabilitySection.slice(0, headingIndex).trimEnd()}\n\n${section}\n\n${suffix}`
+      : `${withoutMvpCapabilitySection.slice(0, headingIndex).trimEnd()}\n\n${section}\n`;
   }
 
-  const section = buildEaiPlatformSessionPreflightSection();
-  const workspaceHeadingIndex = content.indexOf('## Workspace Preflight');
+  const workspaceHeadingIndex = withoutMvpCapabilitySection.indexOf('## Workspace Preflight');
   if (workspaceHeadingIndex !== -1) {
-    const nextHeadingIndex = content.indexOf('\n## ', workspaceHeadingIndex + 1);
+    const nextHeadingIndex = withoutMvpCapabilitySection.indexOf('\n## ', workspaceHeadingIndex + 1);
     if (nextHeadingIndex !== -1) {
-      return `${content.slice(0, nextHeadingIndex).trimEnd()}\n\n${section}\n\n${content
+      return `${withoutMvpCapabilitySection.slice(0, nextHeadingIndex).trimEnd()}\n\n${section}\n\n${withoutMvpCapabilitySection
         .slice(nextHeadingIndex)
         .replace(/^\n+/, '')}`;
     }
-    return `${content.trimEnd()}\n\n${section}\n`;
+    return `${withoutMvpCapabilitySection.trimEnd()}\n\n${section}\n`;
   }
 
-  return `${section}\n\n${content}`;
+  return `${section}\n\n${withoutMvpCapabilitySection}`;
 }
 
 function buildWorkspacePreflightSection(host = 'auto', includeEaiPreflight = true) {
@@ -772,7 +931,9 @@ Before doing stage/helper work:
    - Claude: \`AGENTS.md\`, \`CLAUDE.md\`, \`.claude/settings.json\`
    - Codex: \`AGENTS.md\`
    - Copilot: \`.github/copilot-instructions.md\`
-   - VS Code extension mirrors Claude/Copilot/Gemini resources itself and should still keep the core scaffold healthy
+   - Google Antigravity: \`AGENTS.md\`, \`GEMINI.md\`
+   - Grok Build: \`AGENTS.md\`; its installed plugin provides \`skills/eai/SKILL.md\`
+   - VS Code: \`.github/copilot-instructions.md\`; the extension manages its packaged resource mirrors
 4. If the repo already has the workspace checker script, prefer running:
    - \`node .specify/scripts/node/gofer-workspace-check.mjs --host ${host} --json\`
 5. If the workspace is missing or stale, ask exactly:
@@ -827,12 +988,8 @@ function buildTokenCostPolicySection() {
 
 Before spawning agents, calling tools, or loading large files:
 
-1. Treat \`.specify/memory/gofer-model-policy.yaml\` as the repo-owned source of truth for simple, medium, hard, and arbiter model routing. If it is missing, run \`/gofer:bootstrap-workspace\` before continuing.
-2. Use the cheapest capable model first.
-   - Claude: Haiku for scouting/extraction; Sonnet for normal implementation, synthesis, validation, and security; Opus for high-risk arbitration or release-critical failures.
-   - Codex/OpenAI: GPT mini for simple coding; GPT nano only for locate/classify/summarize/mechanical work; GPT-5.3-Codex or flagship GPT for tool-heavy coding, architecture, and release-critical validation.
-   - Gemini: Flash-Lite for cheap large-context scan/summarize; Flash for default research synthesis; Pro for large-context architecture or high-risk arbitration.
-   - Copilot: prefer Auto for simple and default work; ask the user before choosing a paid/high-tier picker model for hard security, architecture, or release gates.
+1. Treat \`.specify/memory/gofer-model-policy.yaml\` as advisory capability, cost, and quality constraints. A fresh signed host receipt and independently verified benchmark evidence select the model. If it is missing, run \`/gofer:bootstrap-workspace\` before continuing.
+2. Use the lowest-cost model that the live router qualifies for this task. Its signed host receipt and independent benchmark evidence must govern the exact model identity. Do not select a model from static provider examples, names, or price alone.
 3. Keep raw tool output out of the main conversation context. Save stable findings to \`.specify/specs/{feature}/context-bundle.md\`, then work from summaries.
 4. Use provider prompt/context caching only for stable, non-secret prefixes: Gofer scaffold, AGENTS/CLAUDE/Copilot instructions, constitution, repo map, stage contracts, and validation rubric.
 5. Before continuing after large research, planning, implementation, or validation bursts, checkpoint the durable artifacts and compact/clear/resume context when the host supports it.
@@ -887,6 +1044,8 @@ certification.
 15. Before each user-facing reply, check that it leads with the business effect,
     uses concise simple language, and includes only useful technical detail.
 16. If any check fails, rewrite the reply before sending it.
+${buildDeliveryDisciplineContract()}
+
 <!-- gofer:business-progress:end -->
 `.trim();
 }
@@ -939,20 +1098,21 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 1. Use \`./run.sh dev 3001\` on macOS, Linux, and GitHub Codespaces.
 2. Use \`run.bat dev 3001\` on Windows.
 3. Use a different port only when the feature notes record the reason.
-4. The runner must stop any process on the selected port before it restarts the app.
+4. Restart only this app. Before stopping a process, verify its exact checkout, process ID, start time and command, then recheck immediately before stopping it. Never stop another app, an unknown process, or every process on a port. If ownership is uncertain, leave it running and ask the user. Inspect older runners before use; do not run one that kills by port alone.
 5. Do not use direct \`npm run dev\`, \`next dev\`, or package-manager preview commands when \`run.sh\`, \`run.bat\`, or \`run.ps1\` exists.
 6. After every UI-facing change, run:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"\`
 7. On Windows, use:
    - \`node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"\`
 8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.
 <!-- gofer:app-preview-runner:end -->
 `.trim();
 }
 
 function injectAppPreviewRunnerContract(content) {
   if (content.includes('<!-- gofer:app-preview-runner:start -->')) {
-    return content;
+    return content.replace(/## App Preview Runner Contract\n<!-- gofer:app-preview-runner:start -->[\s\S]*?<!-- gofer:app-preview-runner:end -->/, buildAppPreviewRunnerContractSection());
   }
 
   const progressHeadingIndex = content.indexOf('## Business-Friendly Progress Contract');
@@ -1021,10 +1181,64 @@ function injectBusinessProgressContract(content) {
   return insertSectionAfterTitle(content, section);
 }
 
+export function buildContinuationContractSection() {
+  return `## Continuation And Stop Contract
+<!-- gofer:continuation:start -->
+
+1. Preserve the requested scope and mode, including read-only, plan-only, research-only and MVP work. Keep the full applicable pipeline, stage functions, artifacts, reviews and validation; do not expand an MVP into an unapproved release.
+2. After a stage's required evidence is complete, read and follow the next internal file in .specify/commands/ in the same conversation. Do not require a numbered command or a host-specific skill dispatcher. Optional helpers remain optional; maintenance and control commands do not start delivery work.
+3. Treat the stated business goal as authority for ordinary planning, task ordering, design, diagnosis, repair, testing, and reversible repository changes within scope. Record material Gofer decisions with their reason and effect. Do not ask the user to choose implementation details that Gofer can safely decide.
+4. Ask only when the goal is unclear or changes, the action is irreversible or destructive, it changes security or access, it creates external cost or commitment, it changes production or public exposure, it requires missing authority or credentials, or it conflicts with an explicit user constraint. Record the exact reason before asking. missing or ambiguous approval is not approval when an approval boundary applies. Rejected, revoked, changed or unclear authority requires a pause.
+5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. A business goal does not authorize publishing, spending, external changes, or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
+6. A tool proposal is not execution. If host consent is required, wait for it. After the tool result or approved proposal returns, inspect the result and resume the next authorized action within approved scope; do not end with only a plan or a proposed tool call. A denied tool or unavailable capability must not be bypassed through another host or CLI.
+7. Use the current agent's available native tools. Optional Gofer/MCP tools are conveniences, not prerequisites. If the current agent lacks a required capability, report that limitation and the safe next action; do not pretend a handoff button transfers control automatically.
+8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
+9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
+10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
+${buildBlockerMediationContract()}
+${buildVerifiedSpecialistContract()}
+<!-- gofer:continuation:end -->`;
+}
+
+export function buildBlockerMediationContract() {
+  return `
+**Blocker Mediation**
+
+- Before repeating a failed action or asking for missing input, read .specify/references/blocker-mediation.md and inspect the private blocker register with gofer-blocker-control.mjs. Reuse the same state directory and goal, subject and condition keys across stages, restarts and surfaces. Different wording, models or tools do not create a new blocker.
+- Classify the cause first. Missing user decisions, access, external dependencies and unavailable capabilities require a recorded wait. Reserve an ask event before asking; ask once, explain the business impact and required change, then stop affected work. An unanswered question is not new evidence. Do not poll or rephrase it to keep running.
+- Technical ask events require a fresh verification file under .specify/references/priority-outcome-protection.md: actual diagnosis, self-cause check and why no authorized repair is available. Business choices need no failed command. For feature tasks, use gofer-priority-check.mjs and the saved direction before switching work; this does not start delivery during maintenance or conversation.
+- For AI-solvable or unknown causes, reserve each attempt before execution. Allow one investigation and one different recovery within existing tighter budgets. Record its result even when interrupted or unsuccessful. An unfinished reservation must not launch again. Do not reset the register, change keys or switch surfaces to obtain more attempts.
+- Resume only after a real user answer or changed external evidence has been recorded and checked. The helper allows one evidence-backed resumption; exhausted limits need human review. Never invent approval or evidence. Successful model output and a running server do not resolve a blocker without the relevant check.
+- Save the blocker, unfinished tasks and next action before stopping. Continue only approved tasks that do not depend on it. Keep the original goal; update specs, plans, tasks and validation for accepted direction changes, and reopen stale checks. Do not quietly drop requirements to make progress.
+- Use node .specify/scripts/node/gofer-blocker-control.mjs --state-dir <private-state-directory> --event <private-event.json> before controlled actions; inspect with --state-dir alone, or add --task T001 for an independent task. A denied action, invalid record or missing helper means stop and explain the limitation, not bypass it. Use the installed plugin script path if no repo scaffold exists. Conversation-only work uses a private session state directory and does not require app setup or feature files.
+- Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.`;
+}
+
+export function buildVerifiedSpecialistContract() {
+  return `
+
+## Verified Specialist Execution
+
+Use .specify/references/verified-agent-execution.md before specialist delegation in any app or non-app stage. The shared agent-catalog.json retains specialist responsibilities. Resolve roles with gofer-agent-catalog.mjs; obtain tools and models from the current host, never from another provider's examples. Keep internal roles out of the public command picker.
+
+Preserve every required review. Provider-specific Task/model examples describe intent, not portable commands or proof of support. Run independent work together only when dependencies, permission boundaries, scope and budgets allow it. Otherwise serialize supported work. A required independent review remains unverified if separate execution is unavailable; never relabel self-review as independent.
+
+The experimental gofer-verified-execution.mjs controller accepts trusted adapters, not worker-supplied commands. It checks current priority, bounds calls and attempts, records required checks, and rejects stale results. Its local process tests do not qualify native model execution. Do not activate an unqualified host adapter or bypass existing blocker, permission, outcome or release gates. Preserve normal safe Gofer work and explain the limitation.
+`;
+}
+
+export function injectContinuationContract(content) {
+  const section = buildContinuationContractSection();
+  const pattern = /## Continuation And Stop Contract\n<!-- gofer:continuation:start -->[\s\S]*?<!-- gofer:continuation:end -->/;
+  const cleaned = content.replace(/(<!-- gofer:continuation:end -->)\n+## Verified Specialist Execution\n[\s\S]*?(?=\n## |$)/g, '$1');
+  if (pattern.test(cleaned)) return cleaned.replace(pattern, section);
+  return insertSectionAfterTitle(cleaned, section);
+}
+
 function injectTokenCostPolicy(content) {
-  return injectAppPreviewRunnerContract(
+  return injectContinuationContract(injectAppPreviewRunnerContract(
     injectLocalSettingsCleanupContract(injectBusinessProgressContract(injectTokenCostPolicyOnly(content)))
-  );
+  ));
 }
 
 function injectTokenCostPolicyOnly(content) {
@@ -1089,7 +1303,25 @@ async function refreshCanonicalCommandSources(root, dryRun) {
     if (!entry.endsWith('.md') || entry === '.gitkeep') continue;
     const filePath = path.join(commandsDir, entry);
     const source = await fs.readFile(filePath, 'utf8');
-    const refreshed = injectTokenCostPolicy(source);
+    // Emitter tests use intentionally partial command fixtures. Only normalize
+    // canonical command files that can be parsed and emitted as real stages.
+    if (!source.startsWith('---')) continue;
+    let refreshed = LEGACY_HELPER_COMMAND_FILES.has(entry)
+      ? injectContinuationContract(source)
+      : injectTokenCostPolicy(injectEaiPlatformSessionPreflight(source));
+    if (refreshed.includes('<!-- gofer:app-preview-runner:start -->')) {
+      refreshed = injectAppPreviewRunnerContract(refreshed);
+    }
+    if (entry === 'gofer_eai_first_run.md') {
+      const withoutAuthScope = refreshed.replace(
+        /\n?## Auth Scope Before Setup\n[\s\S]*?(?=\n## |\s*$)/g,
+        ''
+      );
+      refreshed = insertSectionAfterTitle(
+        withoutAuthScope,
+        `## Auth Scope Before Setup\n\n${buildAuthAccessDecisionContract()}`
+      );
+    }
     if (refreshed === source) continue;
 
     changed++;
@@ -1112,6 +1344,7 @@ async function refreshCanonicalCommandSources(root, dryRun) {
  * @returns {string | null}
  */
 function getNextCommand(currentCommand) {
+  if (currentCommand === '0a_problem_validation') return '1_gofer_research';
   const pipeline = [
     '0_gofer_start',
     '1_gofer_research',
@@ -1178,7 +1411,7 @@ function buildUmbrellaSkillContent(version, stages, hostLabel) {
   return `---\nname: eai\ndescription: "Use Gofer's repo-owned pipeline, scripts, and validation tools through one clean command surface."\n---\n\n# Eai\n\nVersion: ${version}\nHost: ${hostLabel}\n\nUse this skill when the user asks to install, update, diagnose, run, or understand Gofer from an AI coding app.\n\n## Clean Surface Contract\n\n- User-facing pickers should expose only \`eai\`.\n- Do not ask users to run numbered/helper stage commands such as \`/0_gofer_start\`, \`/1_gofer_research\`, or \`/6_gofer_validate\` unless they explicitly request internal details.\n- Keep the full pipeline available by routing internally through \`.specify/commands/*.md\` stage contracts.\n- Check workspace health before stage work: \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\`.\n- If missing or stale, ask the user before running: \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`.\n\n## Controlled English Contract\n\nUse ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.\n\nApply these rules before any user-facing output:\n\n1. Use short sentences. Keep instructions to 20 words or fewer where possible.\n2. Use one action per instruction.\n3. Use active voice. Use passive voice only when the actor is unknown or not important.\n4. Use simple present, simple past, simple future, infinitive, or imperative verb forms.\n5. Use approved project terms and necessary technical nouns only. Define acronyms on first use.\n6. Use direct words. Avoid idioms, marketing adjectives, vague praise, and hedging.\n7. Use vertical lists for complex information.\n8. Put one topic in each paragraph.\n9. For errors, write: what happened, why it matters, what to do next, and the exact safe command when one exists.\n10. Keep raw logs, stack traces, IDs, and secrets out of chat unless the user asks for technical detail.\n\n## Light Plugin And Repo Scripts\n\nThe light plugin installs durable Gofer knowledge and app integration metadata. The repository remains the source of truth for executable scripts, commands, templates, specs, and memory. After bootstrap, agents should prefer repo-local scripts over bundled fallback copies because the repo can be updated by \`eai gofer refresh\` or the VS Code extension.\n\n## App vs Non-App Routing\n\n- Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.\n- If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.\n- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**\n- If the user confirms non-app, do not run \`eai whoami\`, tenant selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.\n\n## First EAI Platform App\n\nIf the user is starting a first EAI Platform app, use this public entrypoint and then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. That setup path is intentionally allowed before \`.specify/\` exists.\n\n${buildVerifiedEaiCliCommandContract()}\n\n## Internal Pipeline Contracts\n\n${stageList}\n`;
 }
 
-function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
+export function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
   const frontmatter = [
     '---',
     `description: ${JSON.stringify(description)}`,
@@ -1197,26 +1430,19 @@ function buildGithubAgentContent({ id, description, tools, handoffs, body }) {
 
   frontmatter.push('---');
 
-  return `${frontmatter.join('\n')}\n\n# ${id}\n\n${buildUserFacingResponseGateSection()}\n\n${body.trim()}\n`;
+  return `${frontmatter.join('\n')}\n\n# ${id}\n\n${buildUserFacingResponseGateSection()}\n\n${buildContinuationContractSection()}\n\n${body.trim()}\n`;
 }
 
-function getGithubAgentSpecs() {
-  const goferTools = [
-    'search/codebase',
-    'vscode/askQuestion',
-    'gofer_check_workspace',
-    'gofer_bootstrap_workspace',
-    'gofer_get_pipeline_state',
-    'gofer_start_stage',
-    'gofer_validate_branch',
-    'gofer_open_artifact',
-  ];
+export function getGithubAgentSpecs() {
+  // Every stage writes artifacts and runs local checks, including intake preflight.
+  // Stage instructions constrain usage; tool lists are not permission grants.
+  const stageTools = ['read', 'search', 'edit', 'execute'];
 
   return [
     {
       id: 'gofer-business',
       description: 'Gofer start and setup agent. Use for first-run setup, workspace health, feature intake, and selecting the right pipeline entry point.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [
         {
           agent: 'gofer-research',
@@ -1228,7 +1454,7 @@ function getGithubAgentSpecs() {
       body: `
 You are the Gofer start agent.
 
-Start by checking Gofer workspace health. If the repo is missing or stale, ask before bootstrapping. Keep the user-facing surface simple: users see only eai; numbered stages and helpers are internal contracts.
+Check Gofer workspace health with the available native tools and repo-owned checker. During intake, edit only intake artifacts and execute only authorized workspace checks or approved setup. Ask before bootstrapping. Keep the user-facing surface simple: users see only eai; numbered stages and helpers are internal contracts. Continue into the next authorized internal stage without requiring a custom-agent handoff.
 
 Primary outputs:
 
@@ -1239,7 +1465,7 @@ Primary outputs:
     {
       id: 'gofer-research',
       description: 'Gofer research agent. Use for codebase and documentation research before specification.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [
         {
           agent: 'gofer-plan',
@@ -1252,12 +1478,13 @@ Primary outputs:
 You are the Gofer research agent.
 
 Use \`.specify/commands/1_gofer_research.md\` as the internal stage contract. Keep raw output out of chat when it is large; write durable findings to \`.specify/specs/{feature}/research.md\` and \`context-bundle.md\`.
+During research, use execute only for authorized diagnostics and edit only research artifacts. Do not modify application code before the implementation stage and its approval checks. Stop after requested research-only work; otherwise continue internally.
 `,
     },
     {
       id: 'gofer-plan',
       description: 'Gofer specification and planning agent. Use after research to produce spec, plan, contracts, and ordered tasks.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [
         {
           agent: 'gofer-implement',
@@ -1270,12 +1497,13 @@ Use \`.specify/commands/1_gofer_research.md\` as the internal stage contract. Ke
 You are the Gofer planning agent.
 
 Use \`.specify/commands/2_gofer_specify.md\`, \`.specify/commands/3_gofer_plan.md\`, and \`.specify/commands/4_gofer_tasks.md\` as the internal stage contracts. Keep the plan grounded in existing repository scripts, current platform capabilities, and explicit validation obligations.
+During planning, edit specifications and task artifacts and execute only authorized discovery/check scripts. Implementation requires the scope and approval checks in the next internal contract.
 `,
     },
     {
       id: 'gofer-implement',
       description: 'Gofer implementation agent. Use for task execution, code edits, tests, and repo-script driven changes.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [
         {
           agent: 'gofer-validate',
@@ -1293,12 +1521,13 @@ Use \`.specify/commands/5_gofer_implement.md\` as the internal stage contract. W
     {
       id: 'gofer-validate',
       description: 'Gofer validation agent. Use for branch validation, security checks, test evidence, and release readiness.',
-      tools: goferTools,
+      tools: stageTools,
       handoffs: [],
       body: `
 You are the Gofer validation agent.
 
 Use \`.specify/commands/6_gofer_validate.md\` as the terminal quality gate. Validate functional correctness, integration, security, standards, tests, generated artifacts, and release/public readiness where relevant.
+Use edit for validation evidence and execute for authorized tests and checks. If repairs are needed, return internally to the implementation contract within approved scope and retry limits, then revalidate. Do not mark failed checks complete.
 `,
     },
   ];
@@ -1334,7 +1563,7 @@ async function emitAgentsSkills(stages, root, dryRun) {
       entry,
       version,
       stages,
-      'Codex',
+      'Codex and Google Antigravity',
       SURFACE_WORKSPACE_HOSTS['agents-skills']
     );
 
@@ -1566,7 +1795,7 @@ async function emitGemini(stages, root, dryRun) {
 
 /**
  * T067 — agents-md emitter
- * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Gemini/Codex.
+ * Creates .agents/AGENTS.md — a consolidated AGENTS.md for Codex/Antigravity.
  * Includes all stages emitted to portable agent surfaces.
  *
  * @param {Array} stages
@@ -1591,6 +1820,8 @@ Generated: ${timestamp}
 Do not expose numbered or helper stage commands in user-facing pickers. They remain available as internal contracts under \`.specify/commands/\`.
 
 ${buildUserFacingResponseGateSection()}
+
+${buildAlwaysEaiSection()}
 
 ${buildVerifiedEaiCliCommandContract()}
 
@@ -1764,11 +1995,32 @@ async function main() {
     process.exit(1);
   }
 
+  // Minimal emitter fixtures do not include the full Gofer reference library.
+  // Only a real Gofer workspace may receive automatic contract normalization.
+  const commandsDir = path.join(root, '.specify', 'commands');
   try {
-    await refreshCanonicalCommandSources(root, dryRun);
+    await fs.access(commandsDir);
   } catch (err) {
-    console.error(`Canonical command normalization failed: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
+    if (err?.code === 'ENOENT') {
+      console.error('Canonical command normalization failed: .specify/commands/ not found');
+      process.exit(1);
+    }
+    throw err;
+  }
+  const capabilityContractPath = path.join(
+    root,
+    '.specify',
+    'references',
+    'mvp-capability-validation.md'
+  );
+  try {
+    await fs.access(capabilityContractPath);
+    await refreshCanonicalCommandSources(root, dryRun || check);
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      console.error(`Canonical command normalization failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   }
 
   // Load all stage command files from .specify/commands/

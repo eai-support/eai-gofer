@@ -8,6 +8,11 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConfigManager, DEFAULTS } from '../../../extension/src/config';
+import {
+  AUTONOMOUS_CLI_PROVIDERS,
+  CURRENT_SEMANTIC_HOSTS,
+} from '../../../extension/src/config/semanticHosts';
+import extensionPackage from '../../../extension/package.json';
 import * as vscode from 'vscode';
 
 // Mock VSCode workspace configuration
@@ -96,15 +101,25 @@ describe('ConfigManager (T071)', () => {
       const result = configManager.getDefaultCLI();
 
       // Type assertion to verify it's one of the valid values
-      const validValues: Array<'claude' | 'copilot' | 'codex' | 'gemini' | 'auto'> = [
-        'claude',
-        'copilot',
-        'codex',
-        'gemini',
-        'auto',
-      ];
+      const validValues = [...CURRENT_SEMANTIC_HOSTS, 'auto'];
 
       expect(validValues).toContain(result);
+    });
+
+    it('resets retired and invalid persisted values to auto before exposing them', () => {
+      mockConfig['defaultCLI'] = 'gemini';
+      configManager.refresh();
+      expect(configManager.getDefaultCLI()).toBe('auto');
+
+      mockConfig['defaultCLI'] = 'unknown-host';
+      configManager.refresh();
+      expect(configManager.getDefaultCLI()).toBe('auto');
+    });
+
+    it('keeps the extension manifest aligned with the exact semantic and CLI contracts', () => {
+      const properties = extensionPackage.contributes.configuration.properties;
+      expect(properties['gofer.defaultCLI'].enum).toEqual([...CURRENT_SEMANTIC_HOSTS, 'auto']);
+      expect(properties['gofer.cliProvider'].enum).toEqual([...AUTONOMOUS_CLI_PROVIDERS]);
     });
   });
 
@@ -125,6 +140,22 @@ describe('ConfigManager (T071)', () => {
     });
   });
 
+  describe('autonomous CLI provider contract', () => {
+    it('accepts exactly Claude, Codex, or auto and normalizes stale values', () => {
+      for (const provider of AUTONOMOUS_CLI_PROVIDERS) {
+        mockConfig['cliProvider'] = provider;
+        configManager.refresh();
+        expect(configManager.getPreferredCLIProvider()).toBe(provider);
+      }
+
+      for (const staleValue of ['copilot', 'gemini', 'antigravity', 'grok', 'vscode']) {
+        mockConfig['cliProvider'] = staleValue;
+        configManager.refresh();
+        expect(configManager.getPreferredCLIProvider()).toBe('auto');
+      }
+    });
+  });
+
   describe('T075: getCLIDisplayName()', () => {
     it('should return "Claude Code" for claude platform', () => {
       const displayName = configManager.getCLIDisplayName('claude');
@@ -132,16 +163,16 @@ describe('ConfigManager (T071)', () => {
       expect(displayName).toBe('Claude Code');
     });
 
-    it('should return "GitHub Copilot Chat" for copilot platform', () => {
+    it('should return "GitHub Copilot" for copilot platform', () => {
       const displayName = configManager.getCLIDisplayName('copilot');
 
-      expect(displayName).toBe('GitHub Copilot Chat');
+      expect(displayName).toBe('GitHub Copilot');
     });
 
-    it('should return "OpenAI Codex CLI" for codex platform', () => {
+    it('should return "OpenAI Codex" for codex platform', () => {
       const displayName = configManager.getCLIDisplayName('codex');
 
-      expect(displayName).toBe('OpenAI Codex CLI');
+      expect(displayName).toBe('OpenAI Codex');
     });
 
     it('should return "Auto-Detect" for auto setting', () => {

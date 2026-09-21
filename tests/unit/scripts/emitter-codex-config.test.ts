@@ -220,10 +220,12 @@ describe('codex-config emitter (T068)', () => {
     }
   });
 
-  it('keeps exactly one public skill entry', async () => {
+  it('keeps exactly the supported public skill entries', async () => {
     const outPath = path.join(tmpRoot, '.specify', 'outputs', 'codex-config-fragment.toml');
     const content = await readFile(outPath);
-    expect(content.match(/^\[\[skills\.config\]\]/gm)).toHaveLength(1);
+    expect(content.match(/^\[\[skills\.config\]\]/gm)).toHaveLength(2);
+    expect(content).toContain('/.agents/skills/eai');
+    expect(content).toContain('/.agents/skills/eai-update');
   });
 
   it('does NOT touch ~/.codex/config.toml — path is .specify/outputs not home dir', async () => {

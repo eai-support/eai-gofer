@@ -21,14 +21,18 @@ After the first run, the repository should contain:
 - `.specify/memory/gofer-model-policy.yaml`
 - `.specify/specs/{feature}/business-scenario.md`
 
-The public Gofer command should also be available on the host you installed:
+The public Gofer commands should also be available on the host you installed:
 
 - Claude Code: `/eai`
 - Codex: `eai` skill or `$eai`
-- GitHub Copilot: `#eai`
-- Gemini CLI: `/eai`
-- Grok Build: ask Grok to use the repository EAI skill
+- GitHub Copilot: `/eai`
+- Google Antigravity: `/eai`
+- Grok Build: `/eai`
 - VS Code: **Gofer: Initialize Repository** and the Gofer panel
+
+`eai-update` updates the host-level Gofer plugin or extension. It does not need
+an EAI project, a Gofer scaffold, or an EAI login. Use `/eai-update` on slash
+command hosts or `$eai-update` in Codex when Gofer is already available.
 
 ## 1. Install A Surface
 
@@ -63,16 +67,20 @@ copilot plugin marketplace add https://github.com/eai-support/eai-gofer
 copilot plugin install eai-gofer@eai-gofer
 ```
 
-### Gemini CLI
+### Google Antigravity
 
 ```bash
-gemini extensions install https://github.com/eai-support/eai-gofer --auto-update
+agy plugin install https://github.com/eai-support/eai-gofer
 ```
 
 ### Grok Build
 
-Run `eai gofer refresh` in the project, then start Grok with `eai start`. The
-CLI opens the project and asks Grok to use `.grok/skills/eai/SKILL.md`.
+```bash
+grok plugin install --trust https://github.com/eai-support/eai-gofer
+```
+
+The installed plugin's `skills/eai/SKILL.md` carries the always-on contract.
+Gofer does not create a separate global Grok instruction file.
 
 ## 2. Initialize The Repository
 
@@ -109,18 +117,73 @@ If `/eai` is unknown, install or update the Gofer plugin for the host first,
 then refresh or restart the host command picker. The public command is designed
 to work before `.specify/` exists.
 
+## Update A Surface Without A Repository
+
+Use the public update command in a host that already has Gofer:
+
+| Surface            | Command       | Required refresh                            |
+| ------------------ | ------------- | ------------------------------------------- |
+| Claude Code        | `/eai-update` | `/reload-plugins`                           |
+| Codex              | `$eai-update` | Start a new task or restart Codex           |
+| GitHub Copilot     | `/eai-update` | Restart the session or start a new app chat |
+| Google Antigravity | `/eai-update` | Start a new Antigravity session             |
+| Grok Build         | `/eai-update` | Start a new Grok Build session              |
+| VS Code            | `/eai-update` | **Developer: Reload Window**                |
+
+The command checks status, shows the planned user-level change, asks for
+approval, and then installs or updates only the current host. After an actual
+update, it archives known stale Gofer commands and skills. It keeps the current
+`eai` and `eai-update` entries. If Codex uses a local marketplace, it reports
+the local source and makes no changes to that checkout or its settings. If the
+source cannot be confirmed, it stops without changes. It can update all
+supported hosts only when you explicitly ask for that.
+
+## First Install Without A Repository
+
+`/eai-update` is available after the first Gofer install. For a new machine,
+download the small public helper. It needs Node.js, but it does not need a
+repository, EAI login, or EAI project.
+
+macOS and Linux:
+
+```bash
+helper_dir="${TMPDIR:-/tmp}/eai-gofer-update"
+mkdir -p "$helper_dir"
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-surface-update.mjs \
+  -o "$helper_dir/gofer-surface-update.mjs"
+curl -fsSL https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs \
+  -o "$helper_dir/gofer-local-settings-cleanup.mjs"
+node "$helper_dir/gofer-surface-update.mjs" --action install --host codex --execute --json
+```
+
+Windows PowerShell:
+
+```powershell
+$helperDir = Join-Path $env:TEMP 'eai-gofer-update'
+New-Item -ItemType Directory -Path $helperDir -Force | Out-Null
+$helper = Join-Path $helperDir 'gofer-surface-update.mjs'
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-surface-update.mjs -OutFile $helper
+Invoke-WebRequest https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gofer-local-settings-cleanup.mjs -OutFile (Join-Path $helperDir 'gofer-local-settings-cleanup.mjs')
+node $helper --action install --host codex --execute --json
+```
+
+Replace `codex` with `claude`, `copilot`, `antigravity`, `grok`, or `vscode`.
+Use `all` only when you want to install Gofer on every supported host found on
+that machine. The updater accepts exactly those six host names. Generated Gemini
+files remain only for legacy file-format compatibility.
+
 ## 3. Start The First Feature
 
 Use the host-specific command syntax:
 
-| Surface        | Copy-paste first command                                                                |
-| -------------- | --------------------------------------------------------------------------------------- |
-| VS Code        | Run **Gofer: Initialize Repository**, then ask your connected assistant with `/eai ...` |
-| Claude Code    | `/eai I want to add passwordless login for customers`                                   |
-| Codex          | `$eai I want to add passwordless login for customers`                                   |
-| GitHub Copilot | `#eai I want to add passwordless login for customers`                                   |
-| Gemini CLI     | `/eai I want to add passwordless login for customers`                                   |
-| Grok Build     | `Use the repository EAI skill. I want to add passwordless login for customers.`         |
+| Surface            | Copy-paste first command                                                                |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| Claude Code        | `/eai I want to add passwordless login for customers`                                   |
+| Codex              | `$eai I want to add passwordless login for customers`                                   |
+| GitHub Copilot     | `/eai I want to add passwordless login for customers`                                   |
+| Google Antigravity | `/eai I want to add passwordless login for customers`                                   |
+| Grok Build         | `/eai I want to add passwordless login for customers`                                   |
+| VS Code            | Run **Gofer: Initialize Repository**, then ask your connected assistant with `/eai ...` |
 
 For first EAI Platform app setup, use the same `/eai` command. It will handle
 EAI CLI, login, tenant, app template, and Gofer scaffold readiness before it

@@ -50,9 +50,9 @@ export const FULL_COMMAND_NAMES = [
   ...CONTROL_COMMANDS.map((command) => command.name),
 ] as const;
 
-export const PUBLIC_ENTRYPOINT_FILES = ['eai'] as const;
+export const PUBLIC_ENTRYPOINT_FILES = ['eai', 'eai-update'] as const;
 
-export const PUBLIC_ENTRYPOINT_NAMES = ['eai'] as const;
+export const PUBLIC_ENTRYPOINT_NAMES = ['eai', 'eai-update'] as const;
 
 export const CANONICAL_DESCRIPTION_NAMES = [
   ...PIPELINE_STAGE_FILES,
@@ -67,7 +67,11 @@ export const FORMERLY_CLAUDE_ONLY_STAGES = [
   '8_gofer_branding',
 ] as const;
 
-export const CROSS_CLI_SURFACES = [
+/**
+ * Generator output targets. These names include file-format mirrors such as
+ * `gemini`; they are intentionally not the current semantic-host contract.
+ */
+export const GENERATED_OUTPUT_TARGETS = [
   'claude',
   'claude-mirror',
   'copilot',

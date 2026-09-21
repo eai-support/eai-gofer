@@ -25,14 +25,21 @@ describe('workspace preflight surface generation', () => {
       'node .specify/scripts/node/gofer-workspace-check.mjs --host copilot --json'
     );
     expect(read('.agents/skills/eai/SKILL.md')).toContain(
-      'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
+      'node .specify/scripts/node/gofer-workspace-check.mjs --host <current-host> --json'
+    );
+    expect(read('.agents/skills/eai/SKILL.md')).toContain(
+      'Replace `<current-host>` with `codex` in Codex or `antigravity` in Antigravity'
     );
     expect(read('.system/skills/eai/SKILL.md')).toContain(
       'node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json'
     );
-    expect(read('.gemini/commands/gofer/eai.md')).toContain(
-      'node .specify/scripts/node/gofer-workspace-check.mjs --host gemini --json'
+    expect(read('.grok/skills/eai/SKILL.md')).toContain(
+      'node .specify/scripts/node/gofer-workspace-check.mjs --host grok --json'
     );
+    expect(read('.gemini/commands/gofer/eai.md')).toContain(
+      'node .specify/scripts/node/gofer-workspace-check.mjs --host antigravity --json'
+    );
+    expect(read('.gemini/commands/gofer/eai.md')).toContain('Gemini is not a current Gofer host');
 
     expect(fs.existsSync(path.join(REPO_ROOT, '.claude/commands/gofer.md'))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, '.github/prompts/gofer.prompt.md'))).toBe(false);
@@ -57,6 +64,7 @@ describe('workspace preflight surface generation', () => {
       '.github/prompts/eai.prompt.md',
       '.agents/skills/eai/SKILL.md',
       '.system/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
       '.gemini/commands/gofer/eai.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
     ]) {

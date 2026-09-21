@@ -10,7 +10,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const FILE_PATH = path.resolve(__dirname, '../../../.specify/commands/gofer_plan.md');
-const EXPECTED_SURFACES = [
+// Generator/file-format targets, not the six-host semantic contract.
+const EXPECTED_OUTPUT_TARGETS = [
   'agents-skills',
   'claude',
   'claude-mirror',
@@ -47,12 +48,12 @@ describe('gofer_plan control command (T132 / FR-012)', () => {
     expect(frontmatter.category).toBe('control');
   });
 
-  it('surfaces are exactly the supported cross-platform surface set', async () => {
+  it('surfaces are exactly the supported generator output target set', async () => {
     const { frontmatter } = await parseStageCommand(FILE_PATH);
     const surfaces = frontmatter.surfaces as string[];
     expect(Array.isArray(surfaces)).toBe(true);
     const sorted = [...surfaces].sort();
-    expect(sorted).toEqual([...EXPECTED_SURFACES].sort());
+    expect(sorted).toEqual([...EXPECTED_OUTPUT_TARGETS].sort());
   });
 
   it('body documents the plan-mode toggle behavior', async () => {

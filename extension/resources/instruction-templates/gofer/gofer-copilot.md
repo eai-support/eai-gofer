@@ -1,5 +1,5 @@
 This project uses Gofer for spec-driven development. In GitHub Copilot Chat, run
-`#eai` to start or continue the core pipeline: Gofer Start -> research ->
+`/eai` to start or continue the core pipeline: Gofer Start -> research ->
 specify -> plan -> tasks -> implement -> validate.
 
 Gofer routes internally through `.specify/commands/*.md` contracts; validation

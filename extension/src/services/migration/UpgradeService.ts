@@ -23,6 +23,11 @@ export interface IResourceOperations {
   installGoferCLI(): Promise<void>;
 
   /**
+   * Record the installed version after all required operations succeed
+   */
+  writeGoferVersion(): Promise<void>;
+
+  /**
    * Create Gofer folder structure
    */
   createGoferStructure(): Promise<void>;
@@ -68,6 +73,11 @@ export interface IResourceOperations {
   setupCopilotSkills(): Promise<void>;
 
   /**
+   * Setup Grok Build skills from bundled resources
+   */
+  setupGrokSkills(): Promise<void>;
+
+  /**
    * Setup Gemini CLI extension commands
    */
   setupGeminiCommands(): Promise<void>;
@@ -78,7 +88,7 @@ export interface IResourceOperations {
   setupCodexSkills(): Promise<void>;
 
   /**
-   * Setup default AI instruction files (AGENTS.md, CLAUDE.md, copilot-instructions.md)
+   * Setup default AI instruction files (AGENTS.md, CLAUDE.md, GEMINI.md, copilot-instructions.md)
    */
   setupDefaultInstructions(): Promise<void>;
 
@@ -264,8 +274,15 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
         await resourceOps.setupCopilotSkills();
 
-        progress.report({ message: 'Updating Gemini commands...' });
-        this.logger.info('UpgradeService', 'Setting up Gemini commands');
+        progress.report({ message: 'Updating Grok skills...' });
+        this.logger.info('UpgradeService', 'Setting up Grok skills');
+        await resourceOps.setupGrokSkills();
+
+        progress.report({ message: 'Updating legacy Gemini-format compatibility commands...' });
+        this.logger.info(
+          'UpgradeService',
+          'Setting up legacy Gemini-format compatibility commands'
+        );
         await resourceOps.setupGeminiCommands();
 
         progress.report({ message: 'Generating Codex CLI skills...' });
@@ -318,6 +335,10 @@ export class UpgradeService {
         progress.report({ message: 'Updating README...' });
         this.logger.info('UpgradeService', 'Updating .specify/README.md');
         await resourceOps.createReadme();
+
+        progress.report({ message: 'Recording installed version...' });
+        this.logger.info('UpgradeService', 'Recording installed Gofer version');
+        await resourceOps.writeGoferVersion();
 
         this.logger.info('UpgradeService', 'Upgrade complete');
       }
@@ -407,8 +428,15 @@ export class UpgradeService {
         this.logger.info('UpgradeService', 'Setting up GitHub Copilot skills');
         await resourceOps.setupCopilotSkills();
 
-        progress.report({ message: 'Updating Gemini commands...' });
-        this.logger.info('UpgradeService', 'Setting up Gemini commands');
+        progress.report({ message: 'Updating Grok skills...' });
+        this.logger.info('UpgradeService', 'Setting up Grok skills');
+        await resourceOps.setupGrokSkills();
+
+        progress.report({ message: 'Updating legacy Gemini-format compatibility commands...' });
+        this.logger.info(
+          'UpgradeService',
+          'Setting up legacy Gemini-format compatibility commands'
+        );
         await resourceOps.setupGeminiCommands();
 
         progress.report({ message: 'Generating Codex CLI skills...' });
@@ -458,6 +486,10 @@ export class UpgradeService {
         progress.report({ message: 'Updating README...' });
         this.logger.info('UpgradeService', 'Updating .specify/README.md');
         await resourceOps.createReadme();
+
+        progress.report({ message: 'Recording installed version...' });
+        this.logger.info('UpgradeService', 'Recording installed Gofer version');
+        await resourceOps.writeGoferVersion();
 
         this.logger.info('UpgradeService', 'Update complete');
       }

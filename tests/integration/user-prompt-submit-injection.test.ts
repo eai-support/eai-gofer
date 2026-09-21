@@ -20,10 +20,7 @@ describe('User-Prompt-Submit Memory Injection', () => {
   const jsonlPath = path.join(memoryDir, 'memories.jsonl');
   const localJsonPath = path.join(memoryDir, 'local.json');
 
-  const hookScript = path.resolve(
-    __dirname,
-    '../../.specify/scripts/hooks/user-prompt-submit.mjs'
-  );
+  const hookScript = path.resolve(__dirname, '../../.specify/scripts/hooks/user-prompt-submit.mjs');
 
   beforeEach(() => {
     fs.mkdirSync(memoryDir, { recursive: true });
@@ -36,20 +33,13 @@ describe('User-Prompt-Submit Memory Injection', () => {
     }
   });
 
-  function writeJsonlMemories(
-    memories: Array<Record<string, unknown>>
-  ): void {
+  function writeJsonlMemories(memories: Array<Record<string, unknown>>): void {
     const lines = memories.map((m) => JSON.stringify(m)).join('\n') + '\n';
     fs.writeFileSync(jsonlPath, lines);
   }
 
-  function writeLocalJsonMemories(
-    memories: Array<Record<string, unknown>>
-  ): void {
-    fs.writeFileSync(
-      localJsonPath,
-      JSON.stringify({ version: 1, memories })
-    );
+  function writeLocalJsonMemories(memories: Array<Record<string, unknown>>): void {
+    fs.writeFileSync(localJsonPath, JSON.stringify({ version: 1, memories }));
   }
 
   function runHook(
@@ -293,7 +283,7 @@ describe('User-Prompt-Submit Memory Injection', () => {
     }
   });
 
-  it('should produce no output when no memories match', () => {
+  it('applies the Gofer contract when no memories match', () => {
     writeJsonlMemories([
       {
         id: 'mem-1',
@@ -309,19 +299,11 @@ describe('User-Prompt-Submit Memory Injection', () => {
 
     // Prompt about something completely unrelated
     const result = runHook('hello');
-    // Either no output or output without the unrelated memory
     if (result.stdout) {
-      try {
-        const output = JSON.parse(result.stdout);
-        // If there's output, the context should not include the db memory
-        // (single-word prompt with no keyword overlap)
-        if (output.hookSpecificOutput?.additionalContext) {
-          // "hello" has no 3+ char keyword overlap with "postgresql" or "database"
-          // This is acceptable either way
-        }
-      } catch {
-        // Empty or non-JSON output is fine
-      }
+      const output = JSON.parse(result.stdout);
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('EAI Gofer is active for this request.');
+      expect(context).not.toContain('Uses PostgreSQL for data storage');
     }
   });
 });

@@ -5,12 +5,12 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.10.9
+Version: 3.12.9
 Host: Codex
 
 # Eai
 
-Use this as the single user-facing Gofer command. Users should run `/eai`, `$eai`, or `#eai` depending on the host. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
+Use this as the single user-facing Gofer command. Apply its contract to every request after Gofer is installed. Use `/eai` on Claude, Copilot, Antigravity, Grok, or VS Code, and `$eai` on Codex. The prefix is optional. Do not ask users to run numbered stage commands unless they explicitly request low-level internals.
 
 ## User-Facing Contract
 
@@ -45,17 +45,37 @@ Before each user-facing reply, check the draft against these rules:
 3. Include technical detail only when it supports a decision or the user asks for it.
 4. If any check fails, rewrite the reply before sending it.
 
+**Business Updates And Goal Checks**
+
+Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
+
+Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
+
+**Priority And Outcome Protection**
+
+Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
+
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+
 ## Always-On EAI Contract
+<!-- gofer:always-on-eai:start -->
 
-Users usually start every request with `/eai`, `$eai`, or `#eai`. Treat that prefix as activation for this contract, not as business content.
+Apply this contract to every request after Gofer is installed for this repo or AI coding app. The user does not need to type `/eai` or `$eai`.
 
-1. Apply the Controlled English Contract to every Gofer-authored message and artifact.
-2. Keep the reply short unless the user asks for detail.
-3. Explain the business effect first.
-4. Put technical evidence in durable artifacts.
-5. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+1. Preserve the user's request. Do not rewrite it or add a visible command prefix.
+2. Treat an explicit `/eai` (Claude, Copilot, Antigravity, Grok, or VS Code) or `$eai` (Codex) prefix as an idempotent request for the same contract.
+3. Apply the Controlled English Contract to every Gofer-authored message and artifact.
+4. Keep the reply short unless the user asks for detail.
+5. Explain the business effect first.
+6. Put technical evidence in durable artifacts.
+7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
+8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
+9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+<!-- gofer:always-on-eai:end -->
 
 ## Workspace Preflight
+
+
 
 1. Resolve the repository root.
 2. Run `node .specify/scripts/node/gofer-workspace-check.mjs --host codex --json` when available.
@@ -87,13 +107,14 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 1. Use `./run.sh dev 3001` on macOS, Linux, and GitHub Codespaces.
 2. Use `run.bat dev 3001` on Windows.
 3. Use a different port only when the feature notes record the reason.
-4. The runner must stop any process on the selected port before it restarts the app.
+4. Restart only this app. Before stopping a process, verify its exact checkout, process ID, start time and command, then recheck immediately before stopping it. Never stop another app, an unknown process, or every process on a port. If ownership is uncertain, leave it running and ask the user. Inspect older runners before use; do not run one that kills by port alone.
 5. Do not use direct `npm run dev`, `next dev`, or package-manager preview commands when `run.sh`, `run.bat`, or `run.ps1` exists.
 6. After every UI-facing change, run:
    - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "./run.sh dev 3001" --open auto --screenshot --change "<change summary>"`
 7. On Windows, use:
    - `node .specify/scripts/node/gofer-ui-preview.mjs --feature-dir {FEATURE_DIR} --command "run.bat dev 3001" --open auto --screenshot --change "<change summary>"`
 8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
+9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.
 <!-- gofer:app-preview-runner:end -->
 
 ## Journey State
@@ -108,6 +129,30 @@ Before routing work, decide where the user is now.
 6. Run that internal stage next, then continue forward.
 7. Keep the user-facing explanation at the business level.
 
+## MVP Capability-Based Validation
+
+Use `.specify/references/mvp-capability-validation.md` as the source of
+truth. Validate the work that the active feature specification requires now.
+Do not apply later delivery requirements to an early MVP.
+
+1. Create `.specify/specs/{feature}/` before app or operator-tool source work.
+2. Keep `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and the validation scope aligned.
+3. Mark each relevant capability as `not_applicable`, `planned`, `implemented`, `verified`, or `blocked`.
+4. Require evidence only for an implemented capability or a capability required by the current delivery decision.
+5. Treat `run.sh`, `run.bat`, and `run.ps1` as launch evidence only. They do not prove authentication, sessions, EAI access, or deployment readiness.
+6. For a user-facing change, store the local HTTP check, screenshot, and review outcome in the feature validation report.
+7. If browser validation is blocked, mark that user journey `unverified`. Do not call it complete.
+8. If the user changes scope, update the feature artifacts before continuing. Explain what changed, what remains valid, and what now needs evidence.
+9. Use truthful completion language. For example: `The server runs. Authentication is not in the current MVP scope.`
+10. When the feature claims a release or deployed outcome, create `release-capability-ledger.md` from `.specify/templates/release-capability-ledger-template.md`.
+11. Do not report a release complete or score 100% when a required capability is missing from traceability, remains on an open PR, is absent from the release branch, or lacks required deployed evidence.
+
+**Authentication Access Decision**
+
+When adding or changing authentication, read `.specify/references/platform/eai-auth-access.md`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to `workspace-only`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
+
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
+
 ## App vs Non-App Routing
 
 1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
@@ -118,11 +163,11 @@ Before routing work, decide where the user is now.
 
 ## EAI Platform Readiness
 
-1. Run `eai whoami` only for EAI app delivery work or explicit EAI CLI recovery.
-2. For app delivery, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json` when the checker exists.
-3. Treat a missing checker or any result other than `ready` as a hard stop. Do not research, specify, plan, create tasks, or edit app source yet.
-4. Run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`. It must run `eai init` in the approved target folder and switch the active workspace to the created app.
-5. Rerun the readiness checker, `eai verify`, and `eai template check --format json`. Continue only when the checker proves eai-init provenance and the supported app-template contract.
+1. Run `eai whoami` only when the current feature uses EAI Platform services, the user asks for EAI setup, or EAI CLI recovery is needed.
+2. Require `eai-app-template-readiness`, `eai verify`, and `eai template check --format json` only when the feature creates, changes, or validates an EAI Platform app integration.
+3. Require the authentication journey only when the specification includes sign-in, protected content, user roles, or a deployment target that requires identity.
+4. For a local MVP with no EAI or authentication capability, record those states as `not_applicable` or `planned` and continue with local feature validation.
+5. When an EAI capability becomes required, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that `eai init` completed.
 7. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
 8. Do not write tokens, secrets, private tenant IDs, or local `.env` values into artifacts.
@@ -181,6 +226,42 @@ When this is the first EAI conversation for a new app:
 5. Continue through research, specify, plan, tasks, implement, and validate unless a real business, security, release, or user-approval decision blocks progress.
 6. When app UI is involved, show the user the working UI as early and as often as practical.
 7. Keep stakeholder summaries, build maps, diagrams, loop evidence, tests, and validation artifacts current.
+
+## Continuation And Stop Contract
+<!-- gofer:continuation:start -->
+
+1. Preserve the requested scope and mode, including read-only, plan-only, research-only and MVP work. Keep the full applicable pipeline, stage functions, artifacts, reviews and validation; do not expand an MVP into an unapproved release.
+2. After a stage's required evidence is complete, read and follow the next internal file in .specify/commands/ in the same conversation. Do not require a numbered command or a host-specific skill dispatcher. Optional helpers remain optional; maintenance and control commands do not start delivery work.
+3. Treat the stated business goal as authority for ordinary planning, task ordering, design, diagnosis, repair, testing, and reversible repository changes within scope. Record material Gofer decisions with their reason and effect. Do not ask the user to choose implementation details that Gofer can safely decide.
+4. Ask only when the goal is unclear or changes, the action is irreversible or destructive, it changes security or access, it creates external cost or commitment, it changes production or public exposure, it requires missing authority or credentials, or it conflicts with an explicit user constraint. Record the exact reason before asking. missing or ambiguous approval is not approval when an approval boundary applies. Rejected, revoked, changed or unclear authority requires a pause.
+5. Pause for material scope, security, cost, deployment, destructive or protected files/boundary changes and any outstanding user gate. A business goal does not authorize publishing, spending, external changes, or bypassing host permissions. Complete safe authorized work without bypassing the blocked gate.
+6. A tool proposal is not execution. If host consent is required, wait for it. After the tool result or approved proposal returns, inspect the result and resume the next authorized action within approved scope; do not end with only a plan or a proposed tool call. A denied tool or unavailable capability must not be bypassed through another host or CLI.
+7. Use the current agent's available native tools. Optional Gofer/MCP tools are conveniences, not prerequisites. If the current agent lacks a required capability, report that limitation and the safe next action; do not pretend a handoff button transfers control automatically.
+8. Stop after research only when research-only work was requested, the user paused, or a real gate blocks progress. Otherwise continue to specification. At validation, report completion only when the requested scope's required evidence passes; failures remain unfinished work.
+9. Respect budget, context and retry limits from the existing loop contract. Repair safe within-scope failures only within those limits. Preserve a checkpoint before an orderly context stop; resume by reading its recorded stage and rechecking scope, approvals and evidence. Never claim an abrupt host termination was handled.
+10. Report concise Progress during work. At every controlled stop, report Progress, Stop reason and Next action, including the exact missing input or approval and unfinished work. Reasons are requested scope complete, user pause, approval required, material change, missing capability/access, validation blocked, or budget/context/retry limit. Stage completion alone is not pipeline completion.
+
+**Blocker Mediation**
+
+- Before repeating a failed action or asking for missing input, read .specify/references/blocker-mediation.md and inspect the private blocker register with gofer-blocker-control.mjs. Reuse the same state directory and goal, subject and condition keys across stages, restarts and surfaces. Different wording, models or tools do not create a new blocker.
+- Classify the cause first. Missing user decisions, access, external dependencies and unavailable capabilities require a recorded wait. Reserve an ask event before asking; ask once, explain the business impact and required change, then stop affected work. An unanswered question is not new evidence. Do not poll or rephrase it to keep running.
+- Technical ask events require a fresh verification file under .specify/references/priority-outcome-protection.md: actual diagnosis, self-cause check and why no authorized repair is available. Business choices need no failed command. For feature tasks, use gofer-priority-check.mjs and the saved direction before switching work; this does not start delivery during maintenance or conversation.
+- For AI-solvable or unknown causes, reserve each attempt before execution. Allow one investigation and one different recovery within existing tighter budgets. Record its result even when interrupted or unsuccessful. An unfinished reservation must not launch again. Do not reset the register, change keys or switch surfaces to obtain more attempts.
+- Resume only after a real user answer or changed external evidence has been recorded and checked. The helper allows one evidence-backed resumption; exhausted limits need human review. Never invent approval or evidence. Successful model output and a running server do not resolve a blocker without the relevant check.
+- Save the blocker, unfinished tasks and next action before stopping. Continue only approved tasks that do not depend on it. Keep the original goal; update specs, plans, tasks and validation for accepted direction changes, and reopen stale checks. Do not quietly drop requirements to make progress.
+- Use node .specify/scripts/node/gofer-blocker-control.mjs --state-dir <private-state-directory> --event <private-event.json> before controlled actions; inspect with --state-dir alone, or add --task T001 for an independent task. A denied action, invalid record or missing helper means stop and explain the limitation, not bypass it. Use the installed plugin script path if no repo scaffold exists. Conversation-only work uses a private session state directory and does not require app setup or feature files.
+- Strict loop validation checks every recorded feature blocker. Shared instructions guide native chats; this helper cannot intercept calls that a host sends directly. Do not claim native enforcement from package tests alone.
+
+
+## Verified Specialist Execution
+
+Use .specify/references/verified-agent-execution.md before specialist delegation in any app or non-app stage. The shared agent-catalog.json retains specialist responsibilities. Resolve roles with gofer-agent-catalog.mjs; obtain tools and models from the current host, never from another provider's examples. Keep internal roles out of the public command picker.
+
+Preserve every required review. Provider-specific Task/model examples describe intent, not portable commands or proof of support. Run independent work together only when dependencies, permission boundaries, scope and budgets allow it. Otherwise serialize supported work. A required independent review remains unverified if separate execution is unavailable; never relabel self-review as independent.
+
+The experimental gofer-verified-execution.mjs controller accepts trusted adapters, not worker-supplied commands. It checks current priority, bounds calls and attempts, records required checks, and rejects stale results. Its local process tests do not qualify native model execution. Do not activate an unqualified host adapter or bypass existing blocker, permission, outcome or release gates. Preserve normal safe Gofer work and explain the limitation.
+
+<!-- gofer:continuation:end -->
 
 ## Internal Function Contracts
 

@@ -92,7 +92,7 @@ Body with Next Command: #4_gofer_tasks
       expect(metadata.platform).toBe('copilot');
       expect(metadata.supportsAutoChain).toBe(true);
       expect(metadata.supportsParallelAgents).toBe(true);
-      expect(metadata.invocationSyntax.prefix).toBe('#');
+      expect(metadata.invocationSyntax.prefix).toBe('/');
     });
   });
 
@@ -118,7 +118,7 @@ Use separate Codex CLI sessions for parallel perspectives.
       expect(metadata.platform).toBe('codex');
       expect(metadata.supportsAutoChain).toBe(true);
       expect(metadata.supportsParallelAgents).toBe(true);
-      expect(metadata.invocationSyntax.prefix).toBe('/');
+      expect(metadata.invocationSyntax.prefix).toBe('$');
     });
 
     it('normalizes gofer-prefixed Codex skill names back to command ids', async () => {
@@ -136,7 +136,7 @@ Run: /gofer:diagnose
       );
 
       expect(metadata.name).toBe('gofer:diagnose');
-      expect(metadata.invocationSyntax.example).toBe('/gofer:diagnose');
+      expect(metadata.invocationSyntax.example).toBe('$gofer:diagnose');
     });
 
     it('handles missing frontmatter name safely', () => {
@@ -175,17 +175,17 @@ description: [unterminated
     });
 
     it('validates copilot syntax', () => {
-      expect(extractor.validateInvocationSyntax('#1_gofer_research', 'copilot')).toBe(true);
-      expect(extractor.validateInvocationSyntax('/1_gofer_research', 'copilot')).toBe(false);
+      expect(extractor.validateInvocationSyntax('/1_gofer_research', 'copilot')).toBe(true);
+      expect(extractor.validateInvocationSyntax('#1_gofer_research', 'copilot')).toBe(false);
     });
 
     it('validates codex syntax', () => {
-      expect(extractor.validateInvocationSyntax('/1_gofer_research', 'codex')).toBe(true);
+      expect(extractor.validateInvocationSyntax('$1_gofer_research', 'codex')).toBe(true);
       expect(extractor.validateInvocationSyntax('$ $1_gofer_research', 'codex')).toBe(false);
       expect(extractor.validateInvocationSyntax('$ $ 1_gofer_research', 'codex')).toBe(false);
     });
 
-    it('formats Gemini helper syntax without double-prefixing gofer names', async () => {
+    it('normalizes legacy Gemini-format metadata to Antigravity', async () => {
       const content = `---
 name: gofer:diagnose
 description: Diagnose helper
@@ -198,6 +198,7 @@ Body`;
         '/repo/.gemini/commands/gofer/gofer_diagnose.toml'
       );
 
+      expect(metadata.platform).toBe('antigravity');
       expect(metadata.invocationSyntax.example).toBe('/gofer:diagnose');
     });
   });

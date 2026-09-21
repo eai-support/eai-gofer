@@ -65,10 +65,13 @@ const LEGACY_GOFER_COMMAND_PATHS = [
   path.join('.system', 'skills', '0_business_scenario'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.md'),
   path.join('.gemini', 'commands', 'gofer', '0_business_scenario.toml'),
+  path.join('.grok', 'skills', '0_business_scenario'),
 ];
 const LEGACY_GOFER_COMMAND_ARCHIVE_ROOT = path.join('.specify', 'logs', 'legacy-command-backups');
 const PUBLIC_GOFER_ENTRYPOINT_STEMS = new Set(['eai']);
 const RETIRED_PUBLIC_GOFER_ENTRYPOINT_STEMS = ['gofer'];
+const GEMINI_MANAGED_SECTION_START = '<!-- gofer:always-on-eai:start -->';
+const GEMINI_MANAGED_SECTION_END = '<!-- gofer:always-on-eai:end -->';
 
 function isNodeErrorWithCode(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -220,7 +223,8 @@ export class ResourceSyncer implements IResourceOperations {
         path.join('.agents', 'skills', stem),
         path.join('.system', 'skills', stem),
         path.join('.gemini', 'commands', 'gofer', `${stem}.md`),
-        path.join('.gemini', 'commands', 'gofer', `${stem}.toml`)
+        path.join('.gemini', 'commands', 'gofer', `${stem}.toml`),
+        path.join('.grok', 'skills', stem)
       );
     }
 
@@ -452,11 +456,17 @@ export class ResourceSyncer implements IResourceOperations {
       this.logger.debug('ResourceSyncer', 'Restored existing constitution');
     }
 
-    // Save version
+    this.logger.info('ResourceSyncer', 'Gofer CLI resources installed successfully');
+  }
+
+  /**
+   * Record the installed Gofer version after every required resource operation
+   * has completed. Keeping this separate from installGoferCLI prevents a failed
+   * surface or instruction sync from being mistaken for a completed upgrade.
+   */
+  public async writeGoferVersion(): Promise<void> {
     const versionFilePath = path.join(this.specifyPath, '.gofer-version');
     await this.writeManagedFile(versionFilePath, await this.getExtensionVersion());
-
-    this.logger.info('ResourceSyncer', 'Gofer CLI resources installed successfully');
   }
 
   public async createGoferStructure(): Promise<void> {
@@ -616,12 +626,51 @@ export class ResourceSyncer implements IResourceOperations {
     );
   }
 
+  public async setupGrokSkills(): Promise<void> {
+    await this.cleanupLegacyGoferCommandFiles();
+    const sourceSkillPath = path.join(
+      this.getExtensionPath(),
+      'resources',
+      'grok-skills',
+      'eai',
+      'SKILL.md'
+    );
+    try {
+      const sourceStats = await fs.lstat(sourceSkillPath);
+      if (!sourceStats.isFile() || sourceStats.isSymbolicLink()) {
+        throw new Error(`Required bundled Grok skill is not a regular file: ${sourceSkillPath}`);
+      }
+    } catch (error) {
+      if (isNodeErrorWithCode(error) && error.code === 'ENOENT') {
+        throw new Error(`Required bundled Grok skill is missing: ${sourceSkillPath}`);
+      }
+      throw error;
+    }
+
+    await this.syncBundledDirectory(
+      'Grok skills',
+      'grok-skills',
+      path.join(this.workspacePath, '.grok', 'skills')
+    );
+
+    const targetSkillPath = path.join(this.workspacePath, '.grok', 'skills', 'eai', 'SKILL.md');
+    const targetStats = await fs.lstat(targetSkillPath);
+    if (!targetStats.isFile() || targetStats.isSymbolicLink()) {
+      throw new Error(
+        `Required Grok skill was not provisioned as a regular file: ${targetSkillPath}`
+      );
+    }
+  }
+
   public async setupGeminiCommands(): Promise<void> {
-    this.logger.info('ResourceSyncer', 'Copying Gemini CLI extension commands');
+    this.logger.info(
+      'ResourceSyncer',
+      'Copying legacy Gemini-format compatibility commands for Antigravity migration'
+    );
     await this.cleanupLegacyGoferCommandFiles();
     await this.syncCanonicalCommands();
     await this.syncBundledDirectory(
-      'Gemini CLI commands',
+      'Legacy Gemini-format compatibility commands',
       'gemini',
       path.join(this.workspacePath, '.gemini')
     );
@@ -1216,6 +1265,57 @@ export class ResourceSyncer implements IResourceOperations {
     return skillPaths;
   }
 
+  private getGeminiManagedSection(generatedContent: string): string {
+    const startIndex = generatedContent.indexOf(GEMINI_MANAGED_SECTION_START);
+    const endIndex = generatedContent.indexOf(GEMINI_MANAGED_SECTION_END);
+    const nextStartIndex = generatedContent.indexOf(
+      GEMINI_MANAGED_SECTION_START,
+      startIndex + GEMINI_MANAGED_SECTION_START.length
+    );
+    const nextEndIndex = generatedContent.indexOf(
+      GEMINI_MANAGED_SECTION_END,
+      endIndex + GEMINI_MANAGED_SECTION_END.length
+    );
+
+    if (startIndex < 0 || endIndex < startIndex || nextStartIndex >= 0 || nextEndIndex >= 0) {
+      throw new Error('Generated GEMINI.md contains an invalid Gofer-managed section');
+    }
+
+    return generatedContent.slice(startIndex, endIndex + GEMINI_MANAGED_SECTION_END.length);
+  }
+
+  private mergeGeminiManagedSection(existingContent: string, generatedContent: string): string {
+    const managedSection = this.getGeminiManagedSection(generatedContent);
+    const startIndex = existingContent.indexOf(GEMINI_MANAGED_SECTION_START);
+    const endIndex = existingContent.indexOf(GEMINI_MANAGED_SECTION_END);
+    const nextStartIndex = existingContent.indexOf(
+      GEMINI_MANAGED_SECTION_START,
+      startIndex + GEMINI_MANAGED_SECTION_START.length
+    );
+    const nextEndIndex = existingContent.indexOf(
+      GEMINI_MANAGED_SECTION_END,
+      endIndex + GEMINI_MANAGED_SECTION_END.length
+    );
+
+    if (startIndex < 0 && endIndex < 0) {
+      const trimmed = existingContent.replace(/\s+$/, '');
+      const separator = trimmed.length > 0 ? '\n\n' : '';
+      return `${trimmed}${separator}${managedSection}\n`;
+    }
+
+    if (startIndex < 0 || endIndex < startIndex || nextStartIndex >= 0 || nextEndIndex >= 0) {
+      throw new Error(
+        'Existing GEMINI.md contains malformed Gofer-managed section markers; refusing to overwrite it'
+      );
+    }
+
+    return (
+      existingContent.slice(0, startIndex) +
+      managedSection +
+      existingContent.slice(endIndex + GEMINI_MANAGED_SECTION_END.length)
+    );
+  }
+
   public async setupDefaultInstructions(): Promise<void> {
     try {
       const { ProjectDetector } = await import('../ProjectDetector');
@@ -1240,6 +1340,26 @@ export class ResourceSyncer implements IResourceOperations {
         this.logger.info('ResourceSyncer', 'Created CLAUDE.md');
       }
 
+      // GEMINI.md at workspace root (Antigravity delegates to canonical AGENTS.md).
+      // Only Gofer's bounded section is refreshed in an existing user-owned file.
+      const geminiPath = path.join(this.workspacePath, 'GEMINI.md');
+      const generatedGeminiContent = generator.generateGeminiMd();
+      const geminiState = await this.getManagedFileState(geminiPath);
+      if (!geminiState.exists) {
+        await this.writeManagedFile(geminiPath, generatedGeminiContent);
+        this.logger.info('ResourceSyncer', 'Created GEMINI.md');
+      } else {
+        const existingGeminiContent = await fs.readFile(geminiPath, 'utf-8');
+        const mergedGeminiContent = this.mergeGeminiManagedSection(
+          existingGeminiContent,
+          generatedGeminiContent
+        );
+        if (mergedGeminiContent !== existingGeminiContent) {
+          await this.writeManagedFile(geminiPath, mergedGeminiContent);
+          this.logger.info('ResourceSyncer', 'Refreshed Gofer-managed GEMINI.md section');
+        }
+      }
+
       // .github/copilot-instructions.md
       const copilotPath = path.join(this.workspacePath, '.github', 'copilot-instructions.md');
       if (!(await FileUtils.exists(copilotPath))) {
@@ -1252,6 +1372,7 @@ export class ResourceSyncer implements IResourceOperations {
       this.logger.error('ResourceSyncer', error as Error, {
         operation: 'setupDefaultInstructions',
       });
+      throw error;
     }
   }
 
@@ -1624,7 +1745,7 @@ Run the unified Gofer pipeline with one public command:
 /eai Add user authentication with OAuth2 and JWT
 \`\`\`
 
-Use \`#eai\` in Copilot-style prompts and \`$eai\` in hosts that use dollar-prefixed skills. \`/eai\`, \`#eai\`, and \`$eai\` are equivalent aliases.
+Use \`/eai\` in Claude, Copilot, Antigravity, Grok, and VS Code. Use \`$eai\` only in Codex.
 
 This automatically chains through all stages:
 1. **Research** → Explores codebase and technology
@@ -1658,7 +1779,8 @@ Gofer creates a user-owned model policy at
 \`.specify/memory/gofer-model-policy.yaml\` from the shipped
 \`.specify/templates/gofer-model-policy.yaml\` template. Edit the memory copy to
 tune simple, medium, hard, and arbiter model routes for Claude, Codex/OpenAI,
-Gemini, and Copilot. Bootstrap should not overwrite local edits.
+GitHub Copilot, Google Antigravity, Grok Build, and VS Code. Bootstrap should not
+overwrite local edits.
 
 ## Constitution
 
