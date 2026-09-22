@@ -173,8 +173,9 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
       `containing exactly this one line: "${SMOKE_FILE_CONTENT.trim()}". Make no other change.`,
     adapter: createSmokeAdapter({ ledger }),
   });
+  let result;
   try {
-    return await runtime.run({
+    result = await runtime.run({
       featureDir: resolvedFeatureDir,
       checks: { [SMOKE_TASK_ID]: [SMOKE_CHECK_NAME] },
       approvalReceipt: 'local-smoke-approval',
@@ -184,9 +185,31 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
       maxConcurrent: 1,
       deadlineMs: Date.now() + 300_000,
     });
-  } finally {
-    await runtime.dispose().catch(() => {});
+  } catch (error) {
+    // A failed run keeps its worktree for recovery; say where it is instead of hiding it.
+    await runtime.dispose().catch(disposeError => process.stderr.write(
+      `Worktree kept at ${runtime.isolation.isolatedWorkspace}: ${disposeError.message}\n`));
+    throw error;
   }
+  // A verified run must not leave a worktree behind, so disposal errors surface.
+  if (result.status === 'verified') {
+    await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
+      evidenceDirectory: resolvedFeatureDir });
+  }
+  await runtime.dispose();
+  return result;
+}
+
+/** Keep the verified proof file as controller evidence, then remove it from the task
+ * worktree so the strict clean-state disposal check stays unchanged. */
+async function retireVerifiedOutput({ isolatedWorkspace, evidenceDirectory }) {
+  const source = path.join(isolatedWorkspace, SMOKE_FILE_NAME);
+  const actual = await fs.readFile(source, 'utf8').catch(() => null);
+  if (actual === null) return;
+  if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
+  await fs.mkdir(path.join(evidenceDirectory, 'evidence'), { recursive: true, mode: 0o700 });
+  await fs.writeFile(path.join(evidenceDirectory, 'evidence', SMOKE_FILE_NAME), actual, { mode: 0o600 });
+  await fs.rm(source);
 }
 
 async function main(argv) {

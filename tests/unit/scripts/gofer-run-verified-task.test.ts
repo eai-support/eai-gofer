@@ -1,5 +1,5 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -101,6 +101,24 @@ describe('verified native runtime command entrypoint', () => {
       const result = await runVerifiedSmokeTask({ workspace: source });
       expect(result).toMatchObject({ status: 'verified', adapterCallsSettled: true });
       expect(runGraph).toHaveBeenCalledTimes(1);
+      // The verified task worktree is disposed, and its output is kept as evidence.
+      const worktrees = execFileSync('git', ['-C', source, 'worktree', 'list', '--porcelain'], {
+        encoding: 'utf8',
+      });
+      expect(worktrees).not.toContain('gofer-isolated-worktree-');
+      expect(
+        await readFile(
+          path.join(
+            source,
+            '.specify',
+            'specs',
+            'native-runtime-smoke',
+            'evidence',
+            'NATIVE_SMOKE_PROOF.md'
+          ),
+          'utf8'
+        )
+      ).toBe('native wiring smoke test passed.\n');
       const ledgerPath = path.join(
         source,
         '.specify',
@@ -160,7 +178,9 @@ describe('verified native runtime command entrypoint', () => {
       expect(seen.maxCalls).toBeGreaterThanOrEqual(9);
       const feature = path.join(source, '.specify', 'specs', 'native-runtime-smoke');
       expect(await readFile(path.join(feature, 'plan.md'), 'utf8')).toContain('Plan');
-      expect(JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))).toMatchObject({
+      expect(
+        JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))
+      ).toMatchObject({
         maxIterations: 1,
       });
     } finally {
