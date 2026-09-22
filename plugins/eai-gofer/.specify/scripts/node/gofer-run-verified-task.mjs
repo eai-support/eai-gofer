@@ -60,6 +60,26 @@ export function gitHead(workspaceRoot) {
   return execFileSync('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 }
 
+async function confinedFeatureDirectory(workspace, requested) {
+  const root = await fs.realpath(workspace);
+  const target = path.resolve(requested || path.join(root, '.specify', 'specs', 'native-runtime-smoke'));
+  const relative = path.relative(root, target);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('FEATURE_DIRECTORY_OUTSIDE_WORKSPACE');
+  }
+  let current = root;
+  for (const component of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, component);
+    const info = await fs.lstat(current).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!info) break;
+    if (info.isSymbolicLink()) throw new Error('FEATURE_DIRECTORY_SYMLINK');
+  }
+  return target;
+}
+
 /** Build the minimal set of controller documents `reviewPriority` requires,
  * describing exactly one bounded, inert smoke task. Kept in the controller's
  * source-side feature directory, never the isolated task worktree (D029). */
@@ -160,7 +180,7 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
   capabilityReceipt: suppliedReceipt, benchmark }) {
   const capabilityReceipt = suppliedReceipt ?? await issueDisposableCapabilityReceipt(workspace, host);
   const revision = gitHead(workspace);
-  const resolvedFeatureDir = featureDir || path.join(workspace, '.specify', 'specs', 'native-runtime-smoke');
+  const resolvedFeatureDir = await confinedFeatureDirectory(workspace, featureDir);
   await prepareSmokeFeature(resolvedFeatureDir, revision);
   // Bind every controller-side read and write to the same canonical directory.
   // This prevents a caller-controlled symlink from redirecting evidence after
