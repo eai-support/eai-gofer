@@ -125,16 +125,63 @@ async function confined(workspace, input, { exists = false, regular = false } = 
   return target;
 }
 
-async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
-  const target = await confined(workspace, input, { exists: true, regular: true });
-  await verifyParentDirectory(target);
-  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+async function holdDirectoryChain(root, target) {
+  const relativeParent = path.relative(root, path.dirname(target));
+  const directories = [root];
+  let current = root;
+  for (const component of relativeParent.split(path.sep).filter(Boolean)) {
+    current = path.join(current, component);
+    directories.push(current);
+  }
+  const held = [];
   try {
+    for (const directory of directories) {
+      const handle = await fs.open(directory,
+        constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+      const opened = await handle.stat();
+      const currentInfo = await fs.lstat(directory);
+      if (!opened.isDirectory() || currentInfo.isSymbolicLink() ||
+          !sameIdentity(opened, currentInfo)) {
+        await handle.close();
+        throw new Error('LEARNING_STORE_PARENT_CHANGED');
+      }
+      held.push({ directory, handle, identity: opened });
+    }
+    return held;
+  } catch (error) {
+    await Promise.allSettled(held.map(({ handle }) => handle.close()));
+    throw error;
+  }
+}
+
+async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
+  const root = await safeWorkspace(workspace);
+  const target = await confined(root, input, { exists: true, regular: true });
+  const held = await holdDirectoryChain(root, target);
+  let handle;
+  try {
+    const beforeOpen = await fs.lstat(target);
+    handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
     const info = await handle.stat();
+    if (!info.isFile() || beforeOpen.isSymbolicLink() || !sameIdentity(beforeOpen, info)) {
+      throw new Error('LEARNING_STORE_INVALID');
+    }
     if (info.size > maxBytes) throw new Error('LEARNING_INPUT_TOO_LARGE');
-    return { target, content: await handle.readFile('utf8') };
+    const content = await handle.readFile('utf8');
+    const targetAfter = await fs.lstat(target);
+    if (targetAfter.isSymbolicLink() || !sameIdentity(info, targetAfter)) {
+      throw new Error('LEARNING_STORE_INVALID');
+    }
+    for (const entry of held) {
+      const current = await fs.lstat(entry.directory);
+      if (current.isSymbolicLink() || !sameIdentity(entry.identity, current)) {
+        throw new Error('LEARNING_STORE_PARENT_CHANGED');
+      }
+    }
+    return { target, content };
   } finally {
-    await handle.close();
+    if (handle) await handle.close();
+    await Promise.allSettled(held.map(({ handle: directoryHandle }) => directoryHandle.close()));
   }
 }
 
