@@ -205,16 +205,20 @@ async function ensureStore(workspace) {
       await fs.mkdir(next, { mode: 0o700 }).catch((error) => {
         if (error?.code !== 'EEXIST') throw error;
       });
-      const [parentAfter, child] = await Promise.all([fs.lstat(current), fs.lstat(next)]);
-      if (child.isSymbolicLink()) throw new Error('LEARNING_PATH_SYMLINK');
-      if (!sameIdentity(openedParent, parentAfter) || !child.isDirectory()) {
+      const parentAfter = await fs.lstat(current);
+      if (!sameIdentity(openedParent, parentAfter)) {
         throw new Error('LEARNING_STORE_PATH_INVALID');
       }
       const childHandle = await fs.open(next,
-        constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+        constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
+        if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_PATH_SYMLINK');
+        throw error;
+      });
       try {
         const openedChild = await childHandle.stat();
-        if (!openedChild.isDirectory() || !sameIdentity(child, openedChild)) {
+        const child = await fs.lstat(next);
+        if (!openedChild.isDirectory() || child.isSymbolicLink() ||
+            !sameIdentity(child, openedChild)) {
           throw new Error('LEARNING_STORE_PATH_INVALID');
         }
         await childHandle.chmod(0o700);
