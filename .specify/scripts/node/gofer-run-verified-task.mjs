@@ -55,14 +55,14 @@ async function readJsonFile(filename) {
   } finally { await file.close(); }
 }
 
-function gitHead(workspaceRoot) {
+export function gitHead(workspaceRoot) {
   return execFileSync('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 }
 
 /** Build the minimal set of controller documents `reviewPriority` requires,
  * describing exactly one bounded, inert smoke task. Kept in the controller's
  * source-side feature directory, never the isolated task worktree (D029). */
-async function prepareSmokeFeature(featureDir, revision) {
+export async function prepareSmokeFeature(featureDir, revision) {
   await fs.mkdir(featureDir, { recursive: true, mode: 0o700 });
   await fs.writeFile(path.join(featureDir, 'spec.md'),
     '# Native Runtime Smoke Task\n\n' +
@@ -76,7 +76,7 @@ async function prepareSmokeFeature(featureDir, revision) {
   await fs.writeFile(path.join(featureDir, 'loop-contract.json'), `${JSON.stringify({
     schemaVersion: 1, requirePriorityPlan: true, loopId: 'native-runtime-smoke',
     profile: 'standard', objective: 'Prove the verified native runtime dispatches one real task end to end.',
-    entryStage: '0_gofer_start', maxIterations: 1, budget: {}, evalCommands: [],
+    entryStage: '0_gofer_start', maxIterations: 2, budget: {}, evalCommands: [],
     successCriteria: [], stopConditions: [],
     humanEscalation: { maxFailedIterations: 1, owner: 'Gofer maintainers', escalateWhen: ['native host authority is unavailable'] },
   }, null, 2)}\n`, { mode: 0o600 });
@@ -107,7 +107,7 @@ async function prepareSmokeFeature(featureDir, revision) {
 /** The worker-facing adapter. `reserve`/`lease` delegate straight to the same
  * ledger the graph engine authorizes and commits against; `check`/`verified`
  * inspect the isolated worktree directly rather than trusting worker claims. */
-function createSmokeAdapter({ ledger }) {
+export function createSmokeAdapter({ ledger }) {
   return {
     bindWorkspace({ workspaceRoot }) {
       return {

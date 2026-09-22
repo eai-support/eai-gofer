@@ -181,7 +181,7 @@ describe('verified native runtime command entrypoint', () => {
       expect(
         JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))
       ).toMatchObject({
-        maxIterations: 1,
+        maxIterations: 2,
       });
     } finally {
       cleanup();
