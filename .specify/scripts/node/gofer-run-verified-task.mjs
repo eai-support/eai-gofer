@@ -194,7 +194,7 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
   // A verified run must not leave a worktree behind, so disposal errors surface.
   if (result.status === 'verified') {
     await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
-      evidenceDirectory: resolvedFeatureDir });
+      featureDirectory: resolvedFeatureDir });
   }
   await runtime.dispose();
   return result;
@@ -202,13 +202,13 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
 
 /** Keep the verified proof file as controller evidence, then remove it from the task
  * worktree so the strict clean-state disposal check stays unchanged. */
-async function retireVerifiedOutput({ isolatedWorkspace, evidenceDirectory }) {
+async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
   const source = path.join(isolatedWorkspace, SMOKE_FILE_NAME);
   const actual = await fs.readFile(source, 'utf8').catch(() => null);
   if (actual === null) return;
   if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
-  await fs.mkdir(path.join(evidenceDirectory, 'evidence'), { recursive: true, mode: 0o700 });
-  await fs.writeFile(path.join(evidenceDirectory, 'evidence', SMOKE_FILE_NAME), actual, { mode: 0o600 });
+  await fs.mkdir(path.join(featureDirectory, 'evidence'), { recursive: true, mode: 0o700 });
+  await fs.writeFile(path.join(featureDirectory, 'evidence', SMOKE_FILE_NAME), actual, { mode: 0o600 });
   await fs.rm(source);
 }
 
