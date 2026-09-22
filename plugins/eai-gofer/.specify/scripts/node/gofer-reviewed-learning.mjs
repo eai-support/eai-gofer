@@ -135,14 +135,56 @@ async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
 
 async function ensureStore(workspace) {
   const root = await safeWorkspace(workspace);
-  const store = await confined(root, STORE_PATH);
-  await fs.mkdir(store, { recursive: true, mode: 0o700 });
-  await fs.chmod(store, 0o700);
-  await rejectSymlinkComponents(root, store);
-  return store;
+  let current = root;
+  for (const component of STORE_PATH.split(path.sep)) {
+    const parentBefore = await fs.lstat(current);
+    if (parentBefore.isSymbolicLink() || !parentBefore.isDirectory()) {
+      throw new Error('LEARNING_STORE_PARENT_INVALID');
+    }
+    const parentHandle = await fs.open(current,
+      constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+    try {
+      const openedParent = await parentHandle.stat();
+      if (!openedParent.isDirectory() || !sameIdentity(parentBefore, openedParent)) {
+        throw new Error('LEARNING_STORE_PARENT_CHANGED');
+      }
+      const next = path.join(current, component);
+      await fs.mkdir(next, { mode: 0o700 }).catch((error) => {
+        if (error?.code !== 'EEXIST') throw error;
+      });
+      const [parentAfter, child] = await Promise.all([fs.lstat(current), fs.lstat(next)]);
+      if (child.isSymbolicLink()) throw new Error('LEARNING_PATH_SYMLINK');
+      if (!sameIdentity(openedParent, parentAfter) || !child.isDirectory()) {
+        throw new Error('LEARNING_STORE_PATH_INVALID');
+      }
+      await fs.chmod(next, 0o700);
+      current = next;
+    } finally {
+      await parentHandle.close();
+    }
+  }
+  return current;
+}
+
+function sameIdentity(left, right) {
+  if (left.dev === undefined || left.ino === undefined ||
+      right.dev === undefined || right.ino === undefined) return true;
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function existingRegularFile(target) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (info && (info.isSymbolicLink() || !info.isFile())) {
+    throw new Error('LEARNING_STORE_INVALID');
+  }
+  return info;
 }
 
 async function appendPrivate(target, value) {
+  const beforeOpen = await existingRegularFile(target);
   const handle = await fs.open(
     target,
     constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | noFollowFlag,
@@ -150,7 +192,9 @@ async function appendPrivate(target, value) {
   );
   try {
     const info = await handle.stat();
-    if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
+    if (!info.isFile() || (beforeOpen && !sameIdentity(beforeOpen, info))) {
+      throw new Error('LEARNING_STORE_INVALID');
+    }
     await handle.writeFile(`${JSON.stringify(value)}\n`);
     await handle.sync();
   } finally {
@@ -161,6 +205,7 @@ async function appendPrivate(target, value) {
 async function writePrivateExclusive(target, value) {
   let handle;
   try {
+    await existingRegularFile(target);
     handle = await fs.open(
       target,
       constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag,
@@ -170,10 +215,13 @@ async function writePrivateExclusive(target, value) {
     await handle.sync();
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
+    const beforeOpen = await existingRegularFile(target);
     const existingHandle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
     try {
       const info = await existingHandle.stat();
-      if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
+      if (!info.isFile() || !beforeOpen || !sameIdentity(beforeOpen, info)) {
+        throw new Error('LEARNING_STORE_INVALID');
+      }
       const existing = await existingHandle.readFile('utf8');
       if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
     } finally {
@@ -450,23 +498,27 @@ export async function evaluateTrace({
     probabilities.taskSuccess >= policy.thresholds.taskSuccess &&
     probabilities.reusableLesson >= policy.thresholds.reusableLesson &&
     probabilities.evidenceSupport >= policy.thresholds.evidenceSupport;
-  const evaluatedAt = new Date().toISOString();
-  const evaluationCore = {
+  const evaluationSeed = {
     schemaVersion: 1,
     traceId: trace.traceId,
     traceHash: trace.traceHash,
     projectId: trace.projectId,
     proposal: boundedProposal,
     projectionHash,
-    evaluator: { provider: policy.provider, model: policy.model, credentialSource: 'configured' },
+    evaluator: { provider: policy.provider, model: policy.model,
+      credentialSource: providerResult.credentialSource },
     rubricHash,
     thresholds: policy.thresholds,
     probabilities,
     passed,
+  };
+  const evaluatedAt = new Date().toISOString();
+  const evaluationCore = {
+    ...evaluationSeed,
     evaluatedAt,
   };
   const evaluation = {
-    evaluationId: `evaluation_${sha256(canonical(evaluationCore)).slice(0, 32)}`,
+    evaluationId: `evaluation_${sha256(canonical(evaluationSeed)).slice(0, 32)}`,
     ...evaluationCore,
   };
   const store = await ensureStore(root);

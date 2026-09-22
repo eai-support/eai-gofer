@@ -197,11 +197,46 @@ describe('Gofer reviewed learning', () => {
     });
     expect(result.status).toBe('candidate');
     expect(result.candidate.state).toBe('candidate');
+    expect(result.evaluation.evaluator.credentialSource).toBe('environment');
     expect(await listCandidates({ workspace, state: 'candidate' })).toHaveLength(1);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://api.typesafe.ai/v1/systemone',
       expect.objectContaining({ method: 'POST' })
     );
+  });
+
+  it('keeps evaluation identity stable and records the actual credential source', async () => {
+    const { workspace, trace } = await fixture(true);
+    const fetchImpl = vi.fn(async () => response());
+    const first = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    const second = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    expect(second.evaluation.evaluationId).toBe(first.evaluation.evaluationId);
+
+    await mkdir(path.join(workspace, '.specify', 'secrets'), { recursive: true });
+    await writeFile(
+      path.join(workspace, '.specify', 'secrets', 'typesafe.env'),
+      'TYPESAFE_API_KEY=project-key\n'
+    );
+    const projectSecret = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl,
+      env: {},
+    });
+    expect(projectSecret.evaluation.evaluator.credentialSource).toBe('project_secret_file');
   });
 
   it('rejects candidate creation when evidence support misses its gate', async () => {
