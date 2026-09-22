@@ -331,8 +331,8 @@ and the EAI CLI does not qualify Grok.
 ## Known limits
 
 - Only Codex on macOS runs the full chain. Claude and Grok have execution
-  adapters but are not in the routed chain. Copilot, Antigravity and VS Code have
-  no adapter. Linux and Windows fail closed.
+  adapters but are not in the routed chain. Copilot, Antigravity and VS Code
+  have no adapter. Linux and Windows fail closed.
 - The corpus is written inside this project. The reviewer is a model.
 - The capability key is plaintext in your account. A worker can read it and
   could forge a capability receipt. It cannot forge a benchmark attestation.

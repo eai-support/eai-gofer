@@ -381,8 +381,7 @@ npm run gofer:package-plugin -- --sync-repo
 ### Optional TypeSafe semantic review
 
 TypeSafe adds an independent, bounded signal for long-running delivery work. It
-does not replace the specification, tests, priority controls, or human
-approval.
+does not replace the specification, tests, priority controls, or human approval.
 
 From the repository where Gofer is installed, connect once:
 
