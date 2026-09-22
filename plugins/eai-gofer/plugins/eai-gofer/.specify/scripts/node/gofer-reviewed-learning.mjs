@@ -6,7 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
-import { resolveApiKey } from './gofer-typesafe-credentials.mjs';
+import { requestTypeSafeEvaluation } from './gofer-typesafe-credentials.mjs';
 
 const POLICY_PATH = path.join('.specify', 'config', 'typesafe-learning-review.json');
 const STORE_PATH = path.join('.specify', 'memory', 'reviewed-learning');
@@ -390,40 +390,6 @@ function answerMap(payload) {
   return {};
 }
 
-async function requestEvaluation({ root, env, fetchImpl, policy, projection, rubric }) {
-  const { apiKey, source } = await resolveApiKey({ workspace: root, env });
-  if (!apiKey) return { status: 'not_configured', networkCalled: false };
-  let response;
-  try {
-    response = await fetchImpl(policy.endpoint, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(policy.timeoutMs),
-      body: JSON.stringify({
-        model: policy.model,
-        state: JSON.stringify(projection),
-        questions: rubric,
-      }),
-    });
-  } catch (error) {
-    return {
-      status: 'unavailable',
-      networkCalled: true,
-      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
-    };
-  }
-  if (!response.ok) {
-    return { status: 'unavailable', networkCalled: true, httpStatus: response.status };
-  }
-  try {
-    const raw = await response.text();
-    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
-    return { status: 'received', networkCalled: true, payload: JSON.parse(raw), source };
-  } catch {
-    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
-  }
-}
-
 export async function evaluateTrace({
   workspace = process.cwd(),
   trace,
@@ -462,7 +428,14 @@ export async function evaluateTrace({
     };
   }
   if (!policy.enabled) return { status: 'disabled', networkCalled: false, projectionHash, rubricHash };
-  const providerResult = await requestEvaluation({ root, env, fetchImpl, policy, projection, rubric });
+  const providerResult = await requestTypeSafeEvaluation({
+    workspace: root,
+    env,
+    fetchImpl,
+    policy,
+    projection,
+    rubric,
+  });
   if (providerResult.status !== 'received') {
     return { ...providerResult, projectionHash, rubricHash };
   }

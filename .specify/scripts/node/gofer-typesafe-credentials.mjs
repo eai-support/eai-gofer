@@ -169,6 +169,34 @@ export async function resolveApiKey({ workspace = process.cwd(), env = process.e
   return { apiKey: fileKey, source: fileKey ? 'project_secret_file' : 'none' };
 }
 
+export async function requestTypeSafeEvaluation({ workspace, env = process.env, fetchImpl = globalThis.fetch, policy, projection, rubric }) {
+  const { apiKey, source } = await resolveApiKey({ workspace, env });
+  if (!apiKey) return { status: 'not_configured', networkCalled: false };
+  let response;
+  try {
+    response = await fetchImpl(policy.endpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(policy.timeoutMs),
+      body: JSON.stringify({ model: policy.model, state: JSON.stringify(projection), questions: rubric }),
+    });
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      networkCalled: true,
+      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
+    };
+  }
+  if (!response.ok) return { status: 'unavailable', networkCalled: true, httpStatus: response.status };
+  try {
+    const raw = await response.text();
+    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
+    return { status: 'received', networkCalled: true, payload: JSON.parse(raw), source };
+  } catch {
+    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
+  }
+}
+
 export async function connect({ workspace = process.cwd(), key } = {}) {
   const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
