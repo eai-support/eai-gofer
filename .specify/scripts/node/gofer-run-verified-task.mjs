@@ -233,26 +233,26 @@ async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
   } finally { await sourceHandle.close(); }
   if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
   const evidenceDirectory = path.join(featureDirectory, 'evidence');
-  const featureBeforeOpen = await fs.lstat(featureDirectory);
-  if (featureBeforeOpen.isSymbolicLink() || !featureBeforeOpen.isDirectory()) {
-    throw new Error('CONTROLLER_FEATURE_DIRECTORY_UNSAFE');
-  }
   const featureHandle = await fs.open(featureDirectory,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
   let evidenceHandle;
   try {
     const featureIdentity = await featureHandle.stat();
-    if (!featureIdentity.isDirectory() || !sameIdentity(featureBeforeOpen, featureIdentity)) {
+    const featureAfterOpen = await fs.lstat(featureDirectory);
+    if (!featureIdentity.isDirectory() || featureAfterOpen.isSymbolicLink() ||
+        !sameIdentity(featureIdentity, featureAfterOpen)) {
       throw new Error('CONTROLLER_FEATURE_DIRECTORY_CHANGED');
     }
     // Exclusive creation rejects every pre-existing path, including a symlink.
     await fs.mkdir(evidenceDirectory, { mode: 0o700 });
-    const evidenceBeforeOpen = await fs.lstat(evidenceDirectory);
     evidenceHandle = await fs.open(evidenceDirectory,
       constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
     const evidenceIdentity = await evidenceHandle.stat();
-    const featureAfterCreate = await fs.lstat(featureDirectory);
-    if (!evidenceIdentity.isDirectory() || !sameIdentity(evidenceBeforeOpen, evidenceIdentity) ||
+    const [featureAfterCreate, evidenceAfterOpen] = await Promise.all([
+      fs.lstat(featureDirectory), fs.lstat(evidenceDirectory),
+    ]);
+    if (!evidenceIdentity.isDirectory() || evidenceAfterOpen.isSymbolicLink() ||
+        !sameIdentity(evidenceIdentity, evidenceAfterOpen) ||
         !sameIdentity(featureIdentity, featureAfterCreate)) {
       throw new Error('CONTROLLER_EVIDENCE_DIRECTORY_CHANGED');
     }
