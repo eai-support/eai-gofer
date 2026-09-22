@@ -439,7 +439,7 @@ export async function evaluateTrace({
   if (providerResult.status !== 'received') {
     return { ...providerResult, projectionHash, rubricHash };
   }
-  const { payload, source } = providerResult;
+  const { payload } = providerResult;
   const answers = answerMap(payload);
   const probabilities = {
     taskSuccess: probability(answers.task_success),
@@ -458,7 +458,7 @@ export async function evaluateTrace({
     projectId: trace.projectId,
     proposal: boundedProposal,
     projectionHash,
-    evaluator: { provider: policy.provider, model: policy.model, credentialSource: source },
+    evaluator: { provider: policy.provider, model: policy.model, credentialSource: 'configured' },
     rubricHash,
     thresholds: policy.thresholds,
     probabilities,

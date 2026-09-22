@@ -170,7 +170,7 @@ export async function resolveApiKey({ workspace = process.cwd(), env = process.e
 }
 
 export async function requestTypeSafeEvaluation({ workspace, env = process.env, fetchImpl = globalThis.fetch, policy, projection, rubric }) {
-  const { apiKey, source } = await resolveApiKey({ workspace, env });
+  const { apiKey } = await resolveApiKey({ workspace, env });
   if (!apiKey) return { status: 'not_configured', networkCalled: false };
   let response;
   try {
@@ -191,7 +191,7 @@ export async function requestTypeSafeEvaluation({ workspace, env = process.env, 
   try {
     const raw = await response.text();
     if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
-    return { status: 'received', networkCalled: true, payload: JSON.parse(raw), source };
+    return { status: 'received', networkCalled: true, payload: JSON.parse(raw) };
   } catch {
     return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
   }
