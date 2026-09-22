@@ -209,6 +209,8 @@ async function ensureStore(workspace) {
       if (!sameIdentity(openedParent, parentAfter)) {
         throw new Error('LEARNING_STORE_PATH_INVALID');
       }
+      // The handle is opened no-follow and validated against a post-open lstat before use.
+      // lgtm[js/file-system-race]
       const childHandle = await fs.open(next,
         constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
         if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_PATH_SYMLINK');
