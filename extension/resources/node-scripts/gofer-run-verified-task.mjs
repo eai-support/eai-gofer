@@ -217,32 +217,13 @@ async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
   } finally { await sourceHandle.close(); }
   if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
   const evidenceDirectory = path.join(featureDirectory, 'evidence');
-  const existingDirectory = await fs.lstat(evidenceDirectory).catch(error => {
-    if (error?.code === 'ENOENT') return null;
-    throw error;
-  });
-  if (existingDirectory?.isSymbolicLink() || (existingDirectory && !existingDirectory.isDirectory())) {
-    throw new Error('SMOKE_EVIDENCE_DIRECTORY_INVALID');
-  }
-  if (!existingDirectory) await fs.mkdir(evidenceDirectory, { mode: 0o700 });
+  // Exclusive creation fails closed for every pre-existing path, including a
+  // symlink. This avoids a check-then-use race at the evidence boundary.
+  await fs.mkdir(evidenceDirectory, { mode: 0o700 });
   const evidencePath = path.join(evidenceDirectory, SMOKE_FILE_NAME);
-  const existingEvidence = await fs.lstat(evidencePath).catch(error => {
-    if (error?.code === 'ENOENT') return null;
-    throw error;
-  });
-  if (existingEvidence?.isSymbolicLink() || (existingEvidence && !existingEvidence.isFile())) {
-    throw new Error('SMOKE_EVIDENCE_PATH_INVALID');
-  }
-  if (existingEvidence) {
-    const saved = await fs.open(evidencePath, constants.O_RDONLY | noFollowFlag);
-    try {
-      if (await saved.readFile('utf8') !== actual) throw new Error('SMOKE_EVIDENCE_COLLISION');
-    } finally { await saved.close(); }
-  } else {
-    const saved = await fs.open(evidencePath,
-      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
-    try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
-  }
+  const saved = await fs.open(evidencePath,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+  try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
   await fs.rm(source);
 }
 
