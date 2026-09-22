@@ -97,9 +97,14 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('eai deploy app <app-key> --target eai');
       expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
       expect(content, file).toContain('--target-tenant-id <id>');
-      expect(content, file).toContain('--resume <operation-id>');
-      expect(content, file).toContain('--retry <operation-id>');
-      expect(content, file).toContain('Never substitute the latest operation');
+      expect(content, file).toContain(
+        '--target-tenant-id <runtime-tenant> --resume <operation-id>'
+      );
+      expect(content, file).toContain('same tenant flags and `--retry <operation-id>`');
+      expect(content, file).toContain('Never omit the target tenant or substitute the latest operation');
+      expect(content, file).toContain('`classification: succeeded`');
+      expect(content, file).toContain('`requiresTenantInfra: false`');
+      expect(content, file).toContain('`eai deploy doctor --url <activeUrl>`');
       expect(content, file).toContain('missing tenant repository connection');
       expect(content, file).toContain('OpenID Connect (OIDC)');
       expect(content, file).toContain('TenantInfra acceptance');
