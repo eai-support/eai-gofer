@@ -120,6 +120,17 @@ describe('Gofer reviewed learning', () => {
     expect(JSON.parse(await readFile(tracePath, 'utf8')).traceHash).toBe(trace.traceHash);
   });
 
+  it('redacts secrets embedded in event names', () => {
+    const trace = normalizeTrace({
+      workspace: '/tmp/example',
+      host: 'codex',
+      objective: 'Test',
+      sourceContent: '{}',
+      events: [{ event: 'Bearer secret-token-value', time: '2026-09-22T00:00:00.000Z' }],
+    });
+    expect(trace.events[0].name).toBe('[REDACTED]');
+  });
+
   it('produces the same trace for the same source', async () => {
     const { workspace, journal, trace } = await fixture();
     const second = await normalizeJournal({
@@ -341,13 +352,14 @@ describe('Gofer reviewed learning', () => {
       decision: 'approve',
       humanConfirmed: true,
       actor: 'delivery-owner',
-      reason: 'The trace contains the validation and commit receipts.',
+      reason: 'The trace contains the receipts. TYPESAFE_API_KEY=private-value',
     });
     const results = await searchApprovedMemory({ workspace, query: 'protected validation' });
     expect(results).toHaveLength(1);
     expect(results[0].memoryId).toBe(reviewed.memory.memoryId);
     expect(results[0].traceHash).toBe(trace.traceHash);
     expect(results[0].approvedBy).toBe('delivery-owner');
+    expect(results[0].approvalReason).not.toContain('private-value');
   });
 
   it('never persists proposal secrets in candidates or approved memory', async () => {
@@ -538,6 +550,26 @@ describe('Gofer reviewed learning', () => {
     });
     expect((await learningReport({ workspace })).feedback.total).toBe(1);
     expect(repeated.feedbackId).toMatch(/^feedback_[a-f0-9]{32}$/);
+    const concurrent = await Promise.allSettled([
+      recordMemoryOutcome({
+        workspace,
+        memoryId: reviewed.memory.memoryId,
+        runId: 'run-2',
+        outcome: 'helped',
+        note: 'Prevented a stale commit.',
+      }),
+      recordMemoryOutcome({
+        workspace,
+        memoryId: reviewed.memory.memoryId,
+        runId: 'run-2',
+        outcome: 'helped',
+        note: 'Prevented a stale commit.',
+      }),
+    ]);
+    expect(
+      concurrent.filter((result) => result.status === 'fulfilled').length
+    ).toBeGreaterThanOrEqual(1);
+    expect((await learningReport({ workspace })).feedback.total).toBe(1);
   });
 
   it('rejects journal paths outside the workspace', async () => {

@@ -291,6 +291,8 @@ async function writePrivateExclusive(target, value) {
 
 async function readJsonLines(target) {
   await verifyParentDirectory(target);
+  const beforeOpen = await existingRegularFile(target);
+  if (!beforeOpen) return [];
   const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag).catch((error) => {
     if (error?.code === 'ENOENT') return null;
     throw error;
@@ -298,7 +300,10 @@ async function readJsonLines(target) {
   if (!handle) return [];
   try {
     const info = await handle.stat();
-    if (!info.isFile() || info.size > MAX_SOURCE_BYTES) throw new Error('LEARNING_STORE_INVALID');
+    const current = await fs.lstat(target);
+    if (!info.isFile() || current.isSymbolicLink() || !current.isFile() ||
+        !sameIdentity(beforeOpen, info) || !sameIdentity(info, current) ||
+        info.size > MAX_SOURCE_BYTES) throw new Error('LEARNING_STORE_INVALID');
     const lines = (await handle.readFile('utf8')).split('\n').filter(Boolean);
     if (lines.length > MAX_RECORDS) throw new Error('LEARNING_STORE_LIMIT');
     return lines.map((line) => JSON.parse(line));
@@ -365,7 +370,7 @@ export function normalizeTrace({
   const projectId = `project_${sha256(path.resolve(workspace)).slice(0, 24)}`;
   const resolvedSession = truncateUtf8(text(sessionId) || sourceHash.slice(0, 32), 200);
   const normalizedEvents = events.map((event, index) => {
-    const name = truncateUtf8(text(event.event ?? event.name ?? event.type) || 'event', 120);
+    const name = redactString(text(event.event ?? event.name ?? event.type) || 'event', 120);
     const data = redactValue(
       Object.fromEntries(Object.entries(event).filter(([key]) => !['time', 'timestamp', 'at', 'event', 'name', 'type'].includes(key))),
       maxTextBytes
@@ -752,8 +757,8 @@ export async function reviewCandidate({
         rubricHash: candidate.rubricHash,
         probabilities: candidate.probabilities,
         approvedAt: reviewedAt,
-        approvedBy: truncateUtf8(actor, 200),
-        approvalReason: truncateUtf8(reason, 1000),
+        approvedBy: redactString(actor, 200),
+        approvalReason: redactString(reason, 1000),
       };
       const memory = {
         action: 'approved',
@@ -767,8 +772,8 @@ export async function reviewCandidate({
         state: 'approved',
         memoryId: memory.memoryId,
         reviewedAt,
-        reviewedBy: truncateUtf8(actor, 200),
-        reviewReason: truncateUtf8(reason, 1000),
+        reviewedBy: redactString(actor, 200),
+        reviewReason: redactString(reason, 1000),
       };
       await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
         action: 'review_transaction',
@@ -785,8 +790,8 @@ export async function reviewCandidate({
         candidateId,
         state: 'rejected',
         reviewedAt,
-        reviewedBy: truncateUtf8(actor, 200),
-        reviewReason: truncateUtf8(reason, 1000),
+        reviewedBy: redactString(actor, 200),
+        reviewReason: redactString(reason, 1000),
       };
       await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
         action: 'review_transaction',
@@ -813,8 +818,8 @@ export async function reviewCandidate({
       state: 'superseded',
       supersededBy: replacementMemoryId,
       reviewedAt,
-      reviewedBy: truncateUtf8(actor, 200),
-      reviewReason: truncateUtf8(reason, 1000),
+      reviewedBy: redactString(actor, 200),
+      reviewReason: redactString(reason, 1000),
     };
     const candidateUpdate = {
       action: 'reviewed',
@@ -872,25 +877,27 @@ export async function recordMemoryOutcome({
     throw new Error('LEARNING_FEEDBACK_INVALID');
   }
   const store = await ensureStore(workspace);
-  const memory = (await currentMemories(store)).get(memoryId);
-  if (!memory || memory.state !== 'approved') throw new Error('LEARNING_MEMORY_NOT_APPROVED');
-  const feedbackCore = {
-    schemaVersion: 1,
-    memoryId,
-    projectId: memory.projectId,
-    runId: truncateUtf8(runId, 200),
-    outcome,
-    note: redactString(note, 1000),
-  };
-  const feedback = {
-    ...feedbackCore,
-    feedbackId: `feedback_${sha256(canonical(feedbackCore)).slice(0, 32)}`,
-    recordedAt: now().toISOString(),
-  };
-  const existing = await readJsonLines(path.join(store, 'feedback.jsonl'));
-  if (existing.some((item) => item.feedbackId === feedback.feedbackId)) return feedback;
-  await appendPrivate(path.join(store, 'feedback.jsonl'), feedback);
-  return feedback;
+  return withReviewLock(store, async () => {
+    const memory = (await currentMemories(store)).get(memoryId);
+    if (!memory || memory.state !== 'approved') throw new Error('LEARNING_MEMORY_NOT_APPROVED');
+    const feedbackCore = {
+      schemaVersion: 1,
+      memoryId,
+      projectId: memory.projectId,
+      runId: truncateUtf8(runId, 200),
+      outcome,
+      note: redactString(note, 1000),
+    };
+    const feedback = {
+      ...feedbackCore,
+      feedbackId: `feedback_${sha256(canonical(feedbackCore)).slice(0, 32)}`,
+      recordedAt: now().toISOString(),
+    };
+    const existing = await readJsonLines(path.join(store, 'feedback.jsonl'));
+    if (existing.some((item) => item.feedbackId === feedback.feedbackId)) return feedback;
+    await appendPrivate(path.join(store, 'feedback.jsonl'), feedback);
+    return feedback;
+  });
 }
 
 export async function learningReport({ workspace = process.cwd() } = {}) {
