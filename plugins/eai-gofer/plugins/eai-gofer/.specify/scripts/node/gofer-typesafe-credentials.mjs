@@ -6,7 +6,10 @@ import path from 'path';
 import process from 'process';
 
 const SECRET_RELATIVE_PATH = path.join('.specify', 'secrets', 'typesafe.env');
-const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-review.json');
+const POLICY_RELATIVE_PATHS = [
+  path.join('.specify', 'config', 'typesafe-semantic-review.json'),
+  path.join('.specify', 'config', 'typesafe-learning-review.json'),
+];
 
 function parseArgs(argv) {
   const action = argv.find((value) => value === '--connect' || value === '--disconnect' || value === '--status');
@@ -111,10 +114,16 @@ async function readSecretFile(secretPath) {
 }
 
 async function writePolicyEnabled(workspace, enabled) {
-  const policyPath = await confinedPath(workspace, POLICY_RELATIVE_PATH);
-  const current = JSON.parse(await readNoFollow(policyPath));
-  current.enabled = enabled;
-  await writeNoFollow(policyPath, `${JSON.stringify(current, null, 2)}\n`, 0o600);
+  for (const relativePath of POLICY_RELATIVE_PATHS) {
+    const policyPath = await confinedPath(workspace, relativePath);
+    // Older Gofer workspaces have only the semantic-review policy. Keep
+    // connect/disconnect compatible until workspace bootstrap adds the
+    // reviewed-learning policy.
+    if (!(await existingFile(policyPath))) continue;
+    const current = JSON.parse(await readNoFollow(policyPath));
+    current.enabled = enabled;
+    await writeNoFollow(policyPath, `${JSON.stringify(current, null, 2)}\n`, 0o600);
+  }
 }
 
 async function promptForKey() {

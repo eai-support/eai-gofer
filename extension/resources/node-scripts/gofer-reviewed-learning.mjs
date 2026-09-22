@@ -1,0 +1,811 @@
+#!/usr/bin/env node
+
+import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { pathToFileURL } from 'node:url';
+import { resolveApiKey } from './gofer-typesafe-credentials.mjs';
+
+const POLICY_PATH = path.join('.specify', 'config', 'typesafe-learning-review.json');
+const STORE_PATH = path.join('.specify', 'memory', 'reviewed-learning');
+const MAX_SOURCE_BYTES = 16 * 1024 * 1024;
+const MAX_RECORDS = 100_000;
+const MAX_LESSON_BYTES = 8 * 1024;
+const OFFICIAL_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
+const noFollowFlag = process.platform === 'win32' ? 0 : constants.O_NOFOLLOW;
+const sensitiveKey = /(authorization|api[-_]?key|secret|token|password|credential|cookie)/i;
+const secretPatterns = [
+  /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
+  /\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{12,}\b/g,
+  /\bTYPESAFE_API_KEY\s*=\s*[^\s]+/gi,
+];
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]));
+  }
+  return value;
+}
+
+function canonical(value) {
+  return JSON.stringify(stable(value));
+}
+
+function text(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function validTime(value) {
+  const normalized = text(value);
+  if (!normalized || Number.isNaN(Date.parse(normalized))) return '';
+  return new Date(normalized).toISOString();
+}
+
+function truncateUtf8(value, maxBytes) {
+  const input = Buffer.from(String(value), 'utf8');
+  if (input.length <= maxBytes) return input.toString('utf8');
+  let end = maxBytes;
+  while (end > 0 && (input[end] & 0xc0) === 0x80) end -= 1;
+  return input.subarray(0, end).toString('utf8');
+}
+
+function redactString(value, maxBytes) {
+  let output = String(value);
+  for (const pattern of secretPatterns) output = output.replace(pattern, '[REDACTED]');
+  return truncateUtf8(output, maxBytes);
+}
+
+function redactValue(value, maxBytes, key = '', depth = 0) {
+  if (depth > 8) return '[TRUNCATED_DEPTH]';
+  if (sensitiveKey.test(key)) return '[REDACTED]';
+  if (typeof value === 'string') return redactString(value, maxBytes);
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
+  if (Array.isArray(value)) return value.slice(0, 100).map((item) => redactValue(item, maxBytes, '', depth + 1));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).slice(0, 100).map(([name, item]) => [
+        truncateUtf8(name, 120),
+        redactValue(item, maxBytes, name, depth + 1),
+      ])
+    );
+  }
+  return String(value ?? '');
+}
+
+async function safeWorkspace(workspace) {
+  const root = path.resolve(workspace);
+  const info = await fs.lstat(root).catch(() => null);
+  if (!info || !info.isDirectory() || info.isSymbolicLink()) {
+    throw new Error('LEARNING_WORKSPACE_INVALID');
+  }
+  return root;
+}
+
+async function rejectSymlinkComponents(root, target) {
+  const relative = path.relative(root, target);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('LEARNING_PATH_OUTSIDE_WORKSPACE');
+  }
+  let current = root;
+  for (const component of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, component);
+    const info = await fs.lstat(current).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!info) return;
+    if (info.isSymbolicLink()) throw new Error('LEARNING_PATH_SYMLINK');
+  }
+}
+
+async function confined(workspace, input, { exists = false, regular = false } = {}) {
+  const root = await safeWorkspace(workspace);
+  const target = path.resolve(root, input);
+  await rejectSymlinkComponents(root, target);
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (exists && !info) throw new Error('LEARNING_PATH_MISSING');
+  if (info?.isSymbolicLink()) throw new Error('LEARNING_PATH_SYMLINK');
+  if (regular && info && !info.isFile()) throw new Error('LEARNING_PATH_NOT_FILE');
+  return target;
+}
+
+async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
+  const target = await confined(workspace, input, { exists: true, regular: true });
+  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+  try {
+    const info = await handle.stat();
+    if (info.size > maxBytes) throw new Error('LEARNING_INPUT_TOO_LARGE');
+    return { target, content: await handle.readFile('utf8') };
+  } finally {
+    await handle.close();
+  }
+}
+
+async function ensureStore(workspace) {
+  const root = await safeWorkspace(workspace);
+  const store = await confined(root, STORE_PATH);
+  await fs.mkdir(store, { recursive: true, mode: 0o700 });
+  await fs.chmod(store, 0o700);
+  await rejectSymlinkComponents(root, store);
+  return store;
+}
+
+async function appendPrivate(target, value) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (info?.isSymbolicLink() || (info && !info.isFile())) throw new Error('LEARNING_STORE_INVALID');
+  const handle = await fs.open(
+    target,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | noFollowFlag,
+    0o600
+  );
+  try {
+    await handle.writeFile(`${JSON.stringify(value)}\n`);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function writePrivateExclusive(target, value) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (info?.isSymbolicLink() || (info && !info.isFile())) throw new Error('LEARNING_STORE_INVALID');
+  if (info) {
+    const existing = await fs.readFile(target, 'utf8');
+    if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
+    return;
+  }
+  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+  try {
+    await handle.writeFile(value);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readJsonLines(target) {
+  const info = await fs.lstat(target).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!info) return [];
+  if (!info.isFile() || info.isSymbolicLink() || info.size > MAX_SOURCE_BYTES) {
+    throw new Error('LEARNING_STORE_INVALID');
+  }
+  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+  try {
+    const lines = (await handle.readFile('utf8')).split('\n').filter(Boolean);
+    if (lines.length > MAX_RECORDS) throw new Error('LEARNING_STORE_LIMIT');
+    return lines.map((line) => JSON.parse(line));
+  } finally {
+    await handle.close();
+  }
+}
+
+function eventType(name) {
+  if (['started', 'resumed', 'call_reserved', 'attempt_reserved', 'lease_granted'].includes(name)) return 'lifecycle';
+  if (['ledger_authorized', 'commit_authorized', 'approval'].includes(name)) return 'approval';
+  if (['check', 'verified'].includes(name)) return 'validation';
+  if (['blocked', 'cancelled', 'stale', 'repair_required', 'failed', 'error'].includes(name)) return 'error';
+  if (/command|shell/.test(name)) return 'command';
+  if (/file|patch|write|edit/.test(name)) return 'file_change';
+  if (/tool/.test(name)) return 'tool';
+  if (/message|prompt|response/.test(name)) return 'message';
+  return 'other';
+}
+
+function validateTrace(trace) {
+  if (trace?.schemaVersion !== 1 || !/^trace_[a-f0-9]{32}$/.test(trace.traceId ?? '') ||
+      !/^project_[a-f0-9]{24}$/.test(trace.projectId ?? '') || !text(trace.host) ||
+      !text(trace.sessionId) || !text(trace.objective) || !validTime(trace.startedAt) ||
+      !validTime(trace.endedAt) || !Array.isArray(trace.events) ||
+      trace.events.length < 1 || trace.events.length > 100 ||
+      !/^[a-f0-9]{64}$/.test(trace.traceHash ?? '')) {
+    throw new Error('LEARNING_TRACE_INVALID');
+  }
+  for (const [index, event] of trace.events.entries()) {
+    if (event.sequence !== index + 1 || !/^event_[a-f0-9]{24}$/.test(event.id ?? '') ||
+        !validTime(event.time) || !text(event.name) || !text(event.type) ||
+        !event.data || typeof event.data !== 'object' || Array.isArray(event.data)) {
+      throw new Error('LEARNING_TRACE_EVENT_INVALID');
+    }
+  }
+  const { traceHash, ...withoutHash } = trace;
+  if (sha256(canonical(withoutHash)) !== traceHash) throw new Error('LEARNING_TRACE_HASH_INVALID');
+  return trace;
+}
+
+export function normalizeTrace({
+  workspace,
+  host,
+  objective,
+  sessionId,
+  sourceKind = 'host-event-export',
+  sourceContent,
+  events,
+  maxEvents = 100,
+  maxTextBytes = 2000,
+}) {
+  if (!text(workspace) || !text(host) || !text(objective) || !text(sourceContent) ||
+      !Array.isArray(events) || events.length < 1 || events.length > maxEvents ||
+      !Number.isSafeInteger(maxEvents) || maxEvents < 1 || maxEvents > 100 ||
+      !Number.isSafeInteger(maxTextBytes) || maxTextBytes < 128 || maxTextBytes > 8192) {
+    throw new Error('LEARNING_NORMALIZE_INVALID');
+  }
+  const sourceHash = sha256(sourceContent);
+  const times = events.map((event) => validTime(event.time ?? event.timestamp ?? event.at)).filter(Boolean);
+  if (times.length !== events.length) throw new Error('LEARNING_EVENT_TIME_REQUIRED');
+  const projectId = `project_${sha256(path.resolve(workspace)).slice(0, 24)}`;
+  const resolvedSession = truncateUtf8(text(sessionId) || sourceHash.slice(0, 32), 200);
+  const normalizedEvents = events.map((event, index) => {
+    const name = truncateUtf8(text(event.event ?? event.name ?? event.type) || 'event', 120);
+    const data = redactValue(
+      Object.fromEntries(Object.entries(event).filter(([key]) => !['time', 'timestamp', 'at', 'event', 'name', 'type'].includes(key))),
+      maxTextBytes
+    );
+    const base = { sequence: index + 1, time: times[index], type: eventType(name), name, data };
+    return { id: `event_${sha256(canonical({ sourceHash, ...base })).slice(0, 24)}`, ...base };
+  });
+  const core = {
+    schemaVersion: 1,
+    projectId,
+    host: truncateUtf8(text(host), 64),
+    sessionId: resolvedSession,
+    objective: redactString(objective, 4000),
+    startedAt: times[0],
+    endedAt: times[times.length - 1],
+    source: { kind: sourceKind, sha256: sourceHash },
+    events: normalizedEvents,
+  };
+  const traceId = `trace_${sha256(canonical(core)).slice(0, 32)}`;
+  const withoutHash = { schemaVersion: 1, traceId, ...core };
+  return validateTrace({ ...withoutHash, traceHash: sha256(canonical(withoutHash)) });
+}
+
+export async function normalizeJournal({
+  workspace = process.cwd(),
+  input,
+  host,
+  objective,
+  sessionId,
+  sourceKind = 'verified-execution-journal',
+}) {
+  const root = await safeWorkspace(workspace);
+  const { content } = await readBoundedFile(root, input);
+  const lines = content.split('\n').filter(Boolean);
+  if (!lines.length || lines.length > 100) throw new Error('LEARNING_EVENT_LIMIT');
+  const events = lines.map((line) => JSON.parse(line));
+  const trace = normalizeTrace({
+    workspace: root,
+    host,
+    objective,
+    sessionId,
+    sourceKind,
+    sourceContent: content,
+    events,
+  });
+  const store = await ensureStore(root);
+  const traceDir = path.join(store, 'traces');
+  await fs.mkdir(traceDir, { recursive: true, mode: 0o700 });
+  const tracePath = path.join(traceDir, `${trace.traceId}.json`);
+  await writePrivateExclusive(tracePath, `${JSON.stringify(trace, null, 2)}\n`);
+  return { trace, tracePath };
+}
+
+async function loadPolicy(workspace) {
+  const { content } = await readBoundedFile(workspace, POLICY_PATH, 64 * 1024);
+  const policy = JSON.parse(content);
+  const thresholds = policy.thresholds;
+  if (policy.schemaVersion !== 1 || policy.provider !== 'typesafe' ||
+      policy.endpoint !== OFFICIAL_ENDPOINT || policy.model !== 'jev-latest' ||
+      typeof policy.enabled !== 'boolean' || !Number.isSafeInteger(policy.timeoutMs) ||
+      policy.timeoutMs < 1000 || policy.timeoutMs > 30_000 ||
+      !Number.isSafeInteger(policy.maxEvents) || policy.maxEvents < 1 || policy.maxEvents > 100 ||
+      !Number.isSafeInteger(policy.maxTextBytes) || policy.maxTextBytes < 128 || policy.maxTextBytes > 8192 ||
+      !Number.isSafeInteger(policy.maxProjectionBytes) || policy.maxProjectionBytes < 4096 ||
+      policy.maxProjectionBytes > 1024 * 1024 || !thresholds ||
+      ['taskSuccess', 'reusableLesson', 'evidenceSupport'].some((key) =>
+        typeof thresholds[key] !== 'number' || thresholds[key] < 0 || thresholds[key] > 1)) {
+    throw new Error('LEARNING_POLICY_INVALID');
+  }
+  return policy;
+}
+
+function proposedLesson(value) {
+  const title = truncateUtf8(text(value?.title), 200);
+  const lesson = truncateUtf8(text(value?.lesson), MAX_LESSON_BYTES);
+  const kind = truncateUtf8(text(value?.kind) || 'engineering-pattern', 80);
+  if (!title || !lesson) throw new Error('LEARNING_LESSON_REQUIRED');
+  return { title, lesson, kind };
+}
+
+export function buildEvaluationProjection(trace, proposal, policy) {
+  validateTrace(trace);
+  const boundedProposal = proposedLesson(proposal);
+  const projection = {
+    schemaVersion: 1,
+    trace: {
+      traceId: trace.traceId,
+      projectId: trace.projectId,
+      host: trace.host,
+      objective: redactString(trace.objective, policy.maxTextBytes),
+      startedAt: trace.startedAt,
+      endedAt: trace.endedAt,
+      source: trace.source,
+      events: trace.events.slice(0, policy.maxEvents).map((event) => ({
+        id: event.id,
+        sequence: event.sequence,
+        time: event.time,
+        type: event.type,
+        name: event.name,
+        data: redactValue(event.data, policy.maxTextBytes),
+      })),
+    },
+    proposedMemory: redactValue(boundedProposal, policy.maxTextBytes),
+  };
+  const serialized = canonical(projection);
+  if (Buffer.byteLength(serialized, 'utf8') > policy.maxProjectionBytes) {
+    throw new Error('LEARNING_PROJECTION_TOO_LARGE');
+  }
+  return { projection, projectionHash: sha256(serialized), proposal: boundedProposal };
+}
+
+function probability(answer) {
+  const direct = Number(answer?.probability ?? answer?.score);
+  if (Number.isFinite(direct) && direct >= 0 && direct <= 1) return direct;
+  const choice = String(answer?.choice ?? '').toLowerCase();
+  const confidence = Number(answer?.confidence);
+  if (['yes', 'true'].includes(choice) && Number.isFinite(confidence) && confidence >= 0 && confidence <= 1) {
+    return confidence;
+  }
+  if (['no', 'false'].includes(choice) && Number.isFinite(confidence) && confidence >= 0 && confidence <= 1) {
+    return 1 - confidence;
+  }
+  return 0;
+}
+
+function answerMap(payload) {
+  if (payload?.answers && typeof payload.answers === 'object') return payload.answers;
+  if (payload?.questions && typeof payload.questions === 'object') return payload.questions;
+  if (payload?.results && typeof payload.results === 'object') return payload.results;
+  return {};
+}
+
+export async function evaluateTrace({
+  workspace = process.cwd(),
+  trace,
+  proposal,
+  dryRun = false,
+  fetchImpl = globalThis.fetch,
+  env = process.env,
+}) {
+  const root = await safeWorkspace(workspace);
+  const policy = await loadPolicy(root);
+  const { projection, projectionHash, proposal: boundedProposal } =
+    buildEvaluationProjection(trace, proposal, policy);
+  const rubric = {
+    task_success: {
+      type: 'noul',
+      instructions: 'Did this trace complete the stated engineering objective successfully?',
+    },
+    reusable_lesson: {
+      type: 'noul',
+      instructions: 'Is the proposed lesson reusable for a future engineering task?',
+    },
+    evidence_support: {
+      type: 'noul',
+      instructions: 'Is the proposed lesson supported by concrete evidence in this trace?',
+    },
+  };
+  const rubricHash = sha256(canonical(rubric));
+  if (dryRun) {
+    return {
+      status: 'dry_run',
+      networkCalled: false,
+      projectionHash,
+      rubricHash,
+      eventCount: projection.trace.events.length,
+      projectionBytes: Buffer.byteLength(canonical(projection), 'utf8'),
+    };
+  }
+  if (!policy.enabled) return { status: 'disabled', networkCalled: false, projectionHash, rubricHash };
+  const { apiKey, source } = await resolveApiKey({ workspace: root, env });
+  if (!apiKey) return { status: 'not_configured', networkCalled: false, projectionHash, rubricHash };
+  let response;
+  try {
+    response = await fetchImpl(policy.endpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(policy.timeoutMs),
+      body: JSON.stringify({
+        model: policy.model,
+        state: JSON.stringify(projection),
+        questions: rubric,
+      }),
+    });
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      networkCalled: true,
+      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
+      projectionHash,
+      rubricHash,
+    };
+  }
+  if (!response.ok) {
+    return { status: 'unavailable', networkCalled: true, httpStatus: response.status, projectionHash, rubricHash };
+  }
+  let payload;
+  try {
+    const raw = await response.text();
+    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
+    payload = JSON.parse(raw);
+  } catch {
+    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response', projectionHash, rubricHash };
+  }
+  const answers = answerMap(payload);
+  const probabilities = {
+    taskSuccess: probability(answers.task_success),
+    reusableLesson: probability(answers.reusable_lesson),
+    evidenceSupport: probability(answers.evidence_support),
+  };
+  const passed =
+    probabilities.taskSuccess >= policy.thresholds.taskSuccess &&
+    probabilities.reusableLesson >= policy.thresholds.reusableLesson &&
+    probabilities.evidenceSupport >= policy.thresholds.evidenceSupport;
+  const evaluatedAt = new Date().toISOString();
+  const evaluationCore = {
+    schemaVersion: 1,
+    traceId: trace.traceId,
+    traceHash: trace.traceHash,
+    projectId: trace.projectId,
+    proposal: boundedProposal,
+    projectionHash,
+    evaluator: { provider: policy.provider, model: policy.model, credentialSource: source },
+    rubricHash,
+    thresholds: policy.thresholds,
+    probabilities,
+    passed,
+    evaluatedAt,
+  };
+  const evaluation = {
+    evaluationId: `evaluation_${sha256(canonical(evaluationCore)).slice(0, 32)}`,
+    ...evaluationCore,
+  };
+  const store = await ensureStore(root);
+  await appendPrivate(path.join(store, 'evaluations.jsonl'), evaluation);
+  if (!passed) return { status: 'not_candidate', networkCalled: true, evaluation };
+  const candidateCore = {
+    schemaVersion: 1,
+    projectId: trace.projectId,
+    traceId: trace.traceId,
+    traceHash: trace.traceHash,
+    evaluationId: evaluation.evaluationId,
+    proposal: boundedProposal,
+    evaluator: evaluation.evaluator,
+    rubricHash,
+    probabilities,
+    createdAt: evaluatedAt,
+  };
+  const candidate = {
+    candidateId: `candidate_${sha256(canonical(candidateCore)).slice(0, 32)}`,
+    ...candidateCore,
+    state: 'candidate',
+  };
+  const existing = await currentCandidates(store);
+  if (!existing.has(candidate.candidateId)) {
+    await appendPrivate(path.join(store, 'candidates.jsonl'), { action: 'created', ...candidate });
+  }
+  return { status: 'candidate', networkCalled: true, evaluation, candidate };
+}
+
+async function currentCandidates(store) {
+  const records = await readJsonLines(path.join(store, 'candidates.jsonl'));
+  const state = new Map();
+  for (const record of records) {
+    if (record.action === 'created') state.set(record.candidateId, { ...record });
+    else if (state.has(record.candidateId)) {
+      state.set(record.candidateId, { ...state.get(record.candidateId), ...record });
+    }
+  }
+  return state;
+}
+
+async function currentMemories(store) {
+  const records = await readJsonLines(path.join(store, 'memories.jsonl'));
+  const state = new Map();
+  for (const record of records) {
+    if (record.action === 'approved') state.set(record.memoryId, { ...record });
+    else if (state.has(record.memoryId)) state.set(record.memoryId, { ...state.get(record.memoryId), ...record });
+  }
+  return state;
+}
+
+export async function listCandidates({ workspace = process.cwd(), state } = {}) {
+  const store = await ensureStore(workspace);
+  return [...(await currentCandidates(store)).values()]
+    .filter((candidate) => !state || candidate.state === state)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+
+export async function reviewCandidate({
+  workspace = process.cwd(),
+  candidateId,
+  decision,
+  actor,
+  reason,
+  replacementMemoryId,
+  now = () => new Date(),
+}) {
+  const root = await safeWorkspace(workspace);
+  if (!/^candidate_[a-f0-9]{32}$/.test(candidateId ?? '') ||
+      !['approve', 'reject', 'supersede'].includes(decision) || !text(actor) || !text(reason)) {
+    throw new Error('LEARNING_REVIEW_INVALID');
+  }
+  const store = await ensureStore(root);
+  const candidates = await currentCandidates(store);
+  const candidate = candidates.get(candidateId);
+  if (!candidate) throw new Error('LEARNING_CANDIDATE_NOT_FOUND');
+  const reviewedAt = now().toISOString();
+  if (decision === 'approve') {
+    if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
+    const memoryCore = {
+      schemaVersion: 1,
+      candidateId,
+      projectId: candidate.projectId,
+      title: candidate.proposal.title,
+      content: candidate.proposal.lesson,
+      kind: candidate.proposal.kind,
+      traceId: candidate.traceId,
+      traceHash: candidate.traceHash,
+      evaluationId: candidate.evaluationId,
+      evaluator: candidate.evaluator,
+      rubricHash: candidate.rubricHash,
+      probabilities: candidate.probabilities,
+      approvedAt: reviewedAt,
+      approvedBy: truncateUtf8(actor, 200),
+      approvalReason: truncateUtf8(reason, 1000),
+    };
+    const memory = {
+      action: 'approved',
+      memoryId: `memory_${sha256(canonical(memoryCore)).slice(0, 32)}`,
+      ...memoryCore,
+      state: 'approved',
+    };
+    await appendPrivate(path.join(store, 'memories.jsonl'), memory);
+    await appendPrivate(path.join(store, 'candidates.jsonl'), {
+      action: 'reviewed',
+      candidateId,
+      state: 'approved',
+      memoryId: memory.memoryId,
+      reviewedAt,
+      reviewedBy: truncateUtf8(actor, 200),
+      reviewReason: truncateUtf8(reason, 1000),
+    });
+    return { candidateId, state: 'approved', memory };
+  }
+  if (decision === 'reject') {
+    if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
+    const review = {
+      action: 'reviewed',
+      candidateId,
+      state: 'rejected',
+      reviewedAt,
+      reviewedBy: truncateUtf8(actor, 200),
+      reviewReason: truncateUtf8(reason, 1000),
+    };
+    await appendPrivate(path.join(store, 'candidates.jsonl'), review);
+    return review;
+  }
+  if (candidate.state !== 'approved' || !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
+    throw new Error('LEARNING_SUPERSEDE_INVALID');
+  }
+  const memories = await currentMemories(store);
+  const current = memories.get(candidate.memoryId);
+  const replacement = memories.get(replacementMemoryId);
+  if (!current || !replacement || current.projectId !== replacement.projectId ||
+      current.projectId !== candidate.projectId || replacement.state !== 'approved') {
+    throw new Error('LEARNING_REPLACEMENT_INVALID');
+  }
+  const update = {
+    action: 'superseded',
+    memoryId: current.memoryId,
+    state: 'superseded',
+    supersededBy: replacementMemoryId,
+    reviewedAt,
+    reviewedBy: truncateUtf8(actor, 200),
+    reviewReason: truncateUtf8(reason, 1000),
+  };
+  await appendPrivate(path.join(store, 'memories.jsonl'), update);
+  await appendPrivate(path.join(store, 'candidates.jsonl'), {
+    action: 'reviewed',
+    candidateId,
+    state: 'superseded',
+    replacementMemoryId,
+    reviewedAt,
+    reviewedBy: update.reviewedBy,
+    reviewReason: update.reviewReason,
+  });
+  return update;
+}
+
+function queryTerms(query) {
+  return [...new Set(String(query).toLowerCase().match(/[a-z0-9_-]{3,}/g) ?? [])].slice(0, 100);
+}
+
+export async function searchApprovedMemory({ workspace = process.cwd(), query, limit = 10 } = {}) {
+  if (!text(query) || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error('LEARNING_SEARCH_INVALID');
+  }
+  const root = await safeWorkspace(workspace);
+  const store = await ensureStore(root);
+  const projectId = `project_${sha256(root).slice(0, 24)}`;
+  const terms = queryTerms(query);
+  return [...(await currentMemories(store)).values()]
+    .filter((memory) => memory.projectId === projectId && memory.state === 'approved')
+    .map((memory) => {
+      const haystack = `${memory.title} ${memory.content} ${memory.kind}`.toLowerCase();
+      const matches = terms.filter((term) => haystack.includes(term)).length;
+      return { ...memory, relevance: terms.length ? matches / terms.length : 0 };
+    })
+    .filter((memory) => memory.relevance > 0)
+    .sort((a, b) => b.relevance - a.relevance || String(b.approvedAt).localeCompare(String(a.approvedAt)))
+    .slice(0, limit);
+}
+
+export async function recordMemoryOutcome({
+  workspace = process.cwd(),
+  memoryId,
+  runId,
+  outcome,
+  note = '',
+  now = () => new Date(),
+}) {
+  if (!/^memory_[a-f0-9]{32}$/.test(memoryId ?? '') || !text(runId) ||
+      !['helped', 'neutral', 'harmed'].includes(outcome)) {
+    throw new Error('LEARNING_FEEDBACK_INVALID');
+  }
+  const store = await ensureStore(workspace);
+  const memory = (await currentMemories(store)).get(memoryId);
+  if (!memory || memory.state !== 'approved') throw new Error('LEARNING_MEMORY_NOT_APPROVED');
+  const feedback = {
+    schemaVersion: 1,
+    memoryId,
+    projectId: memory.projectId,
+    runId: truncateUtf8(runId, 200),
+    outcome,
+    note: redactString(note, 1000),
+    recordedAt: now().toISOString(),
+  };
+  feedback.feedbackId = `feedback_${sha256(canonical(feedback)).slice(0, 32)}`;
+  const existing = await readJsonLines(path.join(store, 'feedback.jsonl'));
+  if (existing.some((item) => item.feedbackId === feedback.feedbackId)) return feedback;
+  await appendPrivate(path.join(store, 'feedback.jsonl'), feedback);
+  return feedback;
+}
+
+export async function learningReport({ workspace = process.cwd() } = {}) {
+  const root = await safeWorkspace(workspace);
+  const store = await ensureStore(root);
+  const projectId = `project_${sha256(root).slice(0, 24)}`;
+  const candidates = [...(await currentCandidates(store)).values()].filter((item) => item.projectId === projectId);
+  const memories = [...(await currentMemories(store)).values()].filter((item) => item.projectId === projectId);
+  const feedback = (await readJsonLines(path.join(store, 'feedback.jsonl'))).filter((item) => item.projectId === projectId);
+  const outcomes = Object.fromEntries(['helped', 'neutral', 'harmed'].map((name) => [
+    name,
+    feedback.filter((item) => item.outcome === name).length,
+  ]));
+  return {
+    projectId,
+    candidates: {
+      total: candidates.length,
+      pending: candidates.filter((item) => item.state === 'candidate').length,
+      approved: candidates.filter((item) => item.state === 'approved').length,
+      rejected: candidates.filter((item) => item.state === 'rejected').length,
+      superseded: candidates.filter((item) => item.state === 'superseded').length,
+    },
+    memories: {
+      approved: memories.filter((item) => item.state === 'approved').length,
+      superseded: memories.filter((item) => item.state === 'superseded').length,
+    },
+    feedback: { total: feedback.length, ...outcomes },
+  };
+}
+
+function parseArgs(argv) {
+  const [action, ...rest] = argv;
+  const flags = new Map();
+  for (let index = 0; index < rest.length; index += 1) {
+    const name = rest[index];
+    if (!name.startsWith('--')) throw new Error('LEARNING_CLI_INVALID');
+    if (name === '--dry-run') flags.set(name, true);
+    else {
+      const value = rest[++index];
+      if (!value || value.startsWith('--')) throw new Error(`Missing value for ${name}`);
+      flags.set(name, value);
+    }
+  }
+  return { action, flags };
+}
+
+async function main() {
+  const { action, flags } = parseArgs(process.argv.slice(2));
+  const workspace = flags.get('--workspace') ?? process.cwd();
+  let result;
+  if (action === 'normalize') {
+    result = await normalizeJournal({
+      workspace,
+      input: flags.get('--input'),
+      host: flags.get('--host'),
+      objective: flags.get('--objective'),
+      sessionId: flags.get('--session'),
+      sourceKind: flags.get('--source-kind') ?? 'verified-execution-journal',
+    });
+    result = { traceId: result.trace.traceId, tracePath: result.tracePath };
+  } else if (action === 'evaluate') {
+    const traceFile = await readBoundedFile(workspace, flags.get('--trace'));
+    const lessonFile = await readBoundedFile(workspace, flags.get('--lesson-file'), MAX_LESSON_BYTES);
+    result = await evaluateTrace({
+      workspace,
+      trace: JSON.parse(traceFile.content),
+      proposal: {
+        title: flags.get('--title'),
+        lesson: lessonFile.content,
+        kind: flags.get('--kind'),
+      },
+      dryRun: flags.get('--dry-run') === true,
+    });
+  } else if (action === 'candidates') {
+    result = await listCandidates({ workspace, state: flags.get('--state') });
+  } else if (action === 'review') {
+    result = await reviewCandidate({
+      workspace,
+      candidateId: flags.get('--candidate'),
+      decision: flags.get('--decision'),
+      actor: flags.get('--actor'),
+      reason: flags.get('--reason'),
+      replacementMemoryId: flags.get('--replacement'),
+    });
+  } else if (action === 'search') {
+    result = await searchApprovedMemory({
+      workspace,
+      query: flags.get('--query'),
+      limit: flags.has('--limit') ? Number(flags.get('--limit')) : 10,
+    });
+  } else if (action === 'feedback') {
+    result = await recordMemoryOutcome({
+      workspace,
+      memoryId: flags.get('--memory'),
+      runId: flags.get('--run'),
+      outcome: flags.get('--outcome'),
+      note: flags.get('--note'),
+    });
+  } else if (action === 'report') {
+    result = await learningReport({ workspace });
+  } else {
+    throw new Error('Usage: normalize | evaluate | candidates | review | search | feedback | report');
+  }
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+
+const direct = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (direct) main().catch((error) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
+});

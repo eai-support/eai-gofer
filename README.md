@@ -408,6 +408,47 @@ The receipt contains only hashes and review outcomes. A conflict or uncertain
 outcome requires reconciliation; it cannot modify the specification or close a
 task.
 
+### Reviewed learning from completed runs
+
+Gofer can convert a completed local runtime journal into a normalized trace. It
+can then evaluate a proposed lesson and place it in a review queue. Jev is
+optional. No memory becomes reusable without explicit approval.
+
+Normalize a completed journal:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs normalize \
+  --input .specify/specs/<feature>/verified-execution.jsonl \
+  --host codex \
+  --objective "Complete the scoped delivery task"
+```
+
+Prepare a proposed lesson in a workspace file. Inspect the exact projection
+without making a network call:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs evaluate \
+  --trace .specify/memory/reviewed-learning/traces/<trace-id>.json \
+  --title "Validate before commit" \
+  --lesson-file .specify/memory/proposed-lesson.md \
+  --kind delivery-control \
+  --dry-run
+```
+
+When TypeSafe is connected and the learning policy is enabled, omit `--dry-run`
+to create a candidate. Approve it only after review:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs review \
+  --candidate <candidate-id> \
+  --decision approve \
+  --actor <reviewer> \
+  --reason "The trace supports this reusable lesson."
+```
+
+Approved memory remains project-scoped and local. It cannot authorize model
+routing, execution, writes, commits, validation, or feature completion.
+
 ## Community
 
 - Questions and usage help:
