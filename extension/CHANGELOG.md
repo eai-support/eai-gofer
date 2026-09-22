@@ -2,6 +2,11 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.13.0] - 2026-09-22
+
+Add the EAI-managed hosting choice and hand deployment to the canonical EAI CLI
+with exact-operation resume and actionable setup recovery (#3503).
+
 ## [3.12.9] - 2026-09-19
 
 Accept release-tagged eai-app-template provenance in readiness checks (#364)
