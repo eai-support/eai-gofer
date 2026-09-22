@@ -26,6 +26,7 @@ const SMOKE_TASK_ID = 'T001';
 const SMOKE_CHECK_NAME = 'smoke-file-check';
 const SMOKE_FILE_NAME = 'NATIVE_SMOKE_PROOF.md';
 const SMOKE_FILE_CONTENT = 'native wiring smoke test passed.\n';
+const noFollowFlag = process.platform === 'win32' ? 0 : constants.O_NOFOLLOW;
 
 function parseArgs(argv) {
   const args = { workspace: '', featureDir: '', capabilityReceipt: '', benchmark: '' };
@@ -192,10 +193,13 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
     throw error;
   }
   // A verified run must not leave a worktree behind, so disposal errors surface.
-  if (result.status === 'verified') {
-    await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
-      featureDirectory: resolvedFeatureDir });
+  if (result.status !== 'verified' || result.adapterCallsSettled !== true) {
+    const location = runtime.isolation.isolatedWorkspace;
+    process.stderr.write(`Worktree kept at ${location}: native task requires recovery\n`);
+    throw new Error(`NATIVE_RUNTIME_REQUIRES_RECOVERY:${location}`);
   }
+  await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
+    featureDirectory: resolvedFeatureDir });
   await runtime.dispose();
   return result;
 }
@@ -204,11 +208,41 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
  * worktree so the strict clean-state disposal check stays unchanged. */
 async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
   const source = path.join(isolatedWorkspace, SMOKE_FILE_NAME);
-  const actual = await fs.readFile(source, 'utf8').catch(() => null);
-  if (actual === null) return;
+  const sourceHandle = await fs.open(source, constants.O_RDONLY | noFollowFlag);
+  let actual;
+  try {
+    const sourceInfo = await sourceHandle.stat();
+    if (!sourceInfo.isFile()) throw new Error('SMOKE_TASK_OUTPUT_INVALID');
+    actual = await sourceHandle.readFile('utf8');
+  } finally { await sourceHandle.close(); }
   if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
-  await fs.mkdir(path.join(featureDirectory, 'evidence'), { recursive: true, mode: 0o700 });
-  await fs.writeFile(path.join(featureDirectory, 'evidence', SMOKE_FILE_NAME), actual, { mode: 0o600 });
+  const evidenceDirectory = path.join(featureDirectory, 'evidence');
+  const existingDirectory = await fs.lstat(evidenceDirectory).catch(error => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existingDirectory?.isSymbolicLink() || (existingDirectory && !existingDirectory.isDirectory())) {
+    throw new Error('SMOKE_EVIDENCE_DIRECTORY_INVALID');
+  }
+  if (!existingDirectory) await fs.mkdir(evidenceDirectory, { mode: 0o700 });
+  const evidencePath = path.join(evidenceDirectory, SMOKE_FILE_NAME);
+  const existingEvidence = await fs.lstat(evidencePath).catch(error => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existingEvidence?.isSymbolicLink() || (existingEvidence && !existingEvidence.isFile())) {
+    throw new Error('SMOKE_EVIDENCE_PATH_INVALID');
+  }
+  if (existingEvidence) {
+    const saved = await fs.open(evidencePath, constants.O_RDONLY | noFollowFlag);
+    try {
+      if (await saved.readFile('utf8') !== actual) throw new Error('SMOKE_EVIDENCE_COLLISION');
+    } finally { await saved.close(); }
+  } else {
+    const saved = await fs.open(evidencePath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+    try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
+  }
   await fs.rm(source);
 }
 

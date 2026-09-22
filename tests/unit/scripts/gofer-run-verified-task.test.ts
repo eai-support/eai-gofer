@@ -172,6 +172,10 @@ describe('verified native runtime command entrypoint', () => {
       let seen: Record<string, unknown> = {};
       runGraph.mockImplementationOnce(async (input) => {
         seen = input;
+        await writeFile(
+          path.join(input.workspaceRoot, 'NATIVE_SMOKE_PROOF.md'),
+          'native wiring smoke test passed.\n'
+        );
         return { status: 'verified', adapterCallsSettled: true };
       });
       const benchmark = { evidence: { schemaVersion: 2 }, attestation: { schemaVersion: 1 } };
