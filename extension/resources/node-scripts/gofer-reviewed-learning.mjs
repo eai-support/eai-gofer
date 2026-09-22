@@ -77,7 +77,7 @@ function redactValue(value, maxBytes, key = '', depth = 0) {
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).slice(0, 100).map(([name, item]) => [
-        truncateUtf8(name, 120),
+        redactString(name, 120),
         redactValue(item, maxBytes, name, depth + 1),
       ])
     );
@@ -164,7 +164,17 @@ async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
     const info = await handle.stat();
     if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
     if (info.size > maxBytes) throw new Error('LEARNING_INPUT_TOO_LARGE');
-    const content = await handle.readFile('utf8');
+    const chunks = [];
+    let total = 0;
+    while (true) {
+      const chunk = Buffer.alloc(Math.min(64 * 1024, maxBytes - total + 1));
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
+      if (!bytesRead) break;
+      total += bytesRead;
+      if (total > maxBytes) throw new Error('LEARNING_INPUT_TOO_LARGE');
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const content = Buffer.concat(chunks, total).toString('utf8');
     for (const entry of held) {
       const current = await fs.lstat(entry.directory);
       if (current.isSymbolicLink() || !sameIdentity(entry.identity, current)) {
@@ -716,6 +726,37 @@ async function currentMemories(store) {
   return state;
 }
 
+async function recoverReviewLock(lockPath, expectedIdentity) {
+  const recoveryPath = `${lockPath}.recovery`;
+  let recovery;
+  try {
+    recovery = await fs.open(recoveryPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+  } catch (error) {
+    if (error?.code === 'EEXIST') throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+    throw error;
+  }
+  const recoveryIdentity = await recovery.stat();
+  try {
+    const current = await fs.lstat(lockPath).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!current || current.isSymbolicLink() || !sameIdentity(expectedIdentity, current)) {
+      throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+    }
+    await fs.unlink(lockPath);
+  } finally {
+    await recovery.close();
+    const currentRecovery = await fs.lstat(recoveryPath).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (currentRecovery && !currentRecovery.isSymbolicLink() &&
+        sameIdentity(recoveryIdentity, currentRecovery)) await fs.unlink(recoveryPath);
+  }
+}
+
 async function withReviewLock(store, action) {
   const lockPath = path.join(store, 'review.lock');
   await verifyParentDirectory(lockPath);
@@ -737,7 +778,7 @@ async function withReviewLock(store, action) {
         Date.now() - lockIdentity.mtimeMs >= REVIEW_LOCK_TTL_MS &&
         !current.isSymbolicLink() && sameIdentity(lockIdentity, current);
       if (!incompleteExpired) throw new Error('LEARNING_REVIEW_IN_PROGRESS');
-      await fs.unlink(lockPath);
+      await recoverReviewLock(lockPath, lockIdentity);
       return withReviewLock(store, action);
     } finally {
       await existing.close();
@@ -753,7 +794,7 @@ async function withReviewLock(store, action) {
     if (!expired || ownerAlive || current.isSymbolicLink() || !sameIdentity(lockIdentity, current)) {
       throw new Error('LEARNING_REVIEW_IN_PROGRESS');
     }
-    await fs.unlink(lockPath);
+    await recoverReviewLock(lockPath, lockIdentity);
     return withReviewLock(store, action);
   }
   const lockIdentity = await lock.stat();
