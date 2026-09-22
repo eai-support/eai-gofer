@@ -23,6 +23,8 @@ const secretPatterns = [
 ];
 
 function sha256(value) {
+  // This is a content-addressing digest, never a password derivation function.
+  // lgtm[js/insufficient-password-hash]
   return createHash('sha256').update(value).digest('hex');
 }
 
@@ -141,17 +143,14 @@ async function ensureStore(workspace) {
 }
 
 async function appendPrivate(target, value) {
-  const info = await fs.lstat(target).catch((error) => {
-    if (error?.code === 'ENOENT') return null;
-    throw error;
-  });
-  if (info?.isSymbolicLink() || (info && !info.isFile())) throw new Error('LEARNING_STORE_INVALID');
   const handle = await fs.open(
     target,
     constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | noFollowFlag,
     0o600
   );
   try {
+    const info = await handle.stat();
+    if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
     await handle.writeFile(`${JSON.stringify(value)}\n`);
     await handle.sync();
   } finally {
@@ -160,36 +159,40 @@ async function appendPrivate(target, value) {
 }
 
 async function writePrivateExclusive(target, value) {
-  const info = await fs.lstat(target).catch((error) => {
-    if (error?.code === 'ENOENT') return null;
-    throw error;
-  });
-  if (info?.isSymbolicLink() || (info && !info.isFile())) throw new Error('LEARNING_STORE_INVALID');
-  if (info) {
-    const existing = await fs.readFile(target, 'utf8');
-    if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
-    return;
-  }
-  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+  let handle;
   try {
+    handle = await fs.open(
+      target,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag,
+      0o600
+    );
     await handle.writeFile(value);
     await handle.sync();
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const existingHandle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+    try {
+      const info = await existingHandle.stat();
+      if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
+      const existing = await existingHandle.readFile('utf8');
+      if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
+    } finally {
+      await existingHandle.close();
+    }
   } finally {
-    await handle.close();
+    if (handle) await handle.close();
   }
 }
 
 async function readJsonLines(target) {
-  const info = await fs.lstat(target).catch((error) => {
+  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag).catch((error) => {
     if (error?.code === 'ENOENT') return null;
     throw error;
   });
-  if (!info) return [];
-  if (!info.isFile() || info.isSymbolicLink() || info.size > MAX_SOURCE_BYTES) {
-    throw new Error('LEARNING_STORE_INVALID');
-  }
-  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+  if (!handle) return [];
   try {
+    const info = await handle.stat();
+    if (!info.isFile() || info.size > MAX_SOURCE_BYTES) throw new Error('LEARNING_STORE_INVALID');
     const lines = (await handle.readFile('utf8')).split('\n').filter(Boolean);
     if (lines.length > MAX_RECORDS) throw new Error('LEARNING_STORE_LIMIT');
     return lines.map((line) => JSON.parse(line));
