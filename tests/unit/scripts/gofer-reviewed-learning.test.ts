@@ -92,7 +92,7 @@ function response(
   return new Response(
     JSON.stringify({
       answers: Object.fromEntries(
-        Object.entries(probabilities).map(([key, probability]) => [key, { probability }])
+        Object.entries(probabilities).map(([key, probability]) => [key, { noul: probability }])
       ),
     }),
     { status: 200 }

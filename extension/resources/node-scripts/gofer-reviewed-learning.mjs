@@ -332,6 +332,7 @@ function validateTrace(trace) {
       trace.events.length < 1 || trace.events.length > 100 ||
       !['host-event-export', 'verified-execution-journal'].includes(trace.source?.kind) ||
       !/^[a-f0-9]{64}$/.test(trace.source?.sha256 ?? '') ||
+      Object.keys(trace.source ?? {}).sort().join(',') !== 'kind,sha256' ||
       !/^[a-f0-9]{64}$/.test(trace.traceHash ?? '')) {
     throw new Error('LEARNING_TRACE_INVALID');
   }
@@ -463,7 +464,7 @@ export function buildEvaluationProjection(trace, proposal, policy) {
       objective: redactString(trace.objective, policy.maxTextBytes),
       startedAt: trace.startedAt,
       endedAt: trace.endedAt,
-      source: trace.source,
+      source: { kind: trace.source.kind, sha256: trace.source.sha256 },
       events: trace.events.slice(0, policy.maxEvents).map((event) => ({
         id: event.id,
         sequence: event.sequence,
@@ -483,7 +484,7 @@ export function buildEvaluationProjection(trace, proposal, policy) {
 }
 
 function probability(answer) {
-  const direct = Number(answer?.probability ?? answer?.score);
+  const direct = Number(answer?.noul ?? answer?.probability ?? answer?.score);
   if (Number.isFinite(direct) && direct >= 0 && direct <= 1) return direct;
   const choice = String(answer?.choice ?? '').toLowerCase();
   const confidence = Number(answer?.confidence);
