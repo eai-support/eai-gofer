@@ -173,10 +173,6 @@ async function ensurePrivateDirectory(parent, name) {
   await fs.mkdir(target, { mode: 0o700 }).catch((error) => {
     if (error?.code !== 'EEXIST') throw error;
   });
-  const beforeOpen = await fs.lstat(target);
-  if (beforeOpen.isSymbolicLink() || !beforeOpen.isDirectory()) {
-    throw new Error('LEARNING_STORE_PATH_INVALID');
-  }
   const handle = await fs.open(target,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
     if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_STORE_PATH_INVALID');
