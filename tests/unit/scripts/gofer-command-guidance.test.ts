@@ -75,6 +75,41 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
+  it('routes EAI-managed hosting through the canonical CLI with exact-operation recovery', () => {
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.github/prompts/eai.prompt.md',
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
+      '.github/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
+      '.gemini/commands/gofer/eai.md',
+      'skills/eai/SKILL.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain('## EAI Hosting And Deployment Contract');
+      expect(content, file).toContain(
+        'Where should this app run: EAI-managed Azure, your Azure, or local only?'
+      );
+      expect(content, file).toContain('eai deploy app <app-key> --target eai');
+      expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
+      expect(content, file).toContain('--target-tenant-id <id>');
+      expect(content, file).toContain('--resume <operation-id>');
+      expect(content, file).toContain('--retry <operation-id>');
+      expect(content, file).toContain('Never substitute the latest operation');
+      expect(content, file).toContain('missing tenant repository connection');
+      expect(content, file).toContain('OpenID Connect (OIDC)');
+      expect(content, file).toContain('TenantInfra acceptance');
+      expect(content, file).toContain('GitHub App private key');
+      expect(content, file).toContain(
+        'Keep customer Azure and local deployment behavior unchanged'
+      );
+    }
+  });
+
   it('keeps the generated Grok skill on the current Gofer version', () => {
     const { version } = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')

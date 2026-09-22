@@ -187,6 +187,39 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 7. Record the verified command and source in `eai-preflight.md`, `service-fit-matrix.md`, or the active feature notes before the command changes files or external systems.
 8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
 
+## EAI Hosting And Deployment Contract
+
+When an app reaches a deployment decision, ask once: **"Where should this app run: EAI-managed Azure, your Azure, or local only?"**
+
+Explain the choices before the user decides:
+
+- **EAI-managed Azure**: EAI builds the app from the selected GitHub repository and deploys it through the managed TenantInfra path.
+- **Your Azure**: keep the existing customer-owned Azure deployment path and credentials.
+- **Local only**: stop after local validation. Do not create cloud resources.
+
+For EAI-managed Azure:
+
+1. Verify `eai deploy app --help` from the installed CLI. Do not reproduce its API, GitHub, workflow, or TenantInfra logic in Gofer.
+2. After the deployment approval gate, run `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --repo <owner/name> --installation-id <positive-id> [--target-tenant-id <id>] [--branch main] [--environment preview] [--workflow .github/workflows/eai-app.yml] [--wait] --format json`.
+3. Use the app-scope tenant for `--tenant-id`. Pass `--target-tenant-id` only when the approved runtime tenant differs.
+4. If the CLI installs or updates the workflow, stop at its commit-and-push instruction. Resume only after that exact commit is available remotely.
+5. Persist the returned operation ID in the active feature notes. Read, resume, and retry only that exact operation.
+6. Resume with `eai deploy app <app-key> --target eai --tenant-id <id> --resume <operation-id> [--wait] --format json`. Retry with the same command and `--retry <operation-id>`. Never substitute the latest operation.
+7. Treat the CLI JSON as the deployment authority. Record its repository, ref, commit SHA, config hash, status, and next action without copying tokens or secrets.
+8. Require final CLI success and the deployed URL checks before claiming deployment complete.
+
+If deployment stops, use the CLI reason and `nextAction`. Then run `eai errors explain <code-or-reason> --format json` when advertised. Explain what happened, why it matters, and the exact safe resume action. Keep these causes separate:
+
+- EAI login, selected account, tenant membership, or app access;
+- GitHub login or wrong GitHub account;
+- missing tenant repository connection;
+- missing or incorrect GitHub App installation or repository grant;
+- protected repository or workflow update that needs a commit and push;
+- workflow variable, OpenID Connect (OIDC), workflow permission, evidence, or run failure;
+- TenantInfra acceptance, progress, or deployment failure.
+
+Never ask the user for a GitHub App private key, personal access token, Azure credential, or platform service token. Keep customer Azure and local deployment behavior unchanged.
+
 ## EAI Platform Decision Contract
 
 For app delivery, make EAI Platform choices for the business user.
