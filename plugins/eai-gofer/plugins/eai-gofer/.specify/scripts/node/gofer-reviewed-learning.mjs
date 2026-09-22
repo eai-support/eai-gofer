@@ -172,26 +172,36 @@ async function ensureStore(workspace) {
 
 async function ensurePrivateDirectory(parent, name) {
   await verifyRememberedDirectory(parent);
+  const parentHandle = await fs.open(parent,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  const parentIdentity = await parentHandle.stat();
   const target = path.join(parent, name);
-  await fs.mkdir(target, { mode: 0o700 }).catch((error) => {
-    if (error?.code !== 'EEXIST') throw error;
-  });
-  const handle = await fs.open(target,
-    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
-    if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_STORE_PATH_INVALID');
-    throw error;
-  });
   try {
-    const opened = await handle.stat();
-    const current = await fs.lstat(target);
-    if (!opened.isDirectory() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
-      throw new Error('LEARNING_STORE_PATH_INVALID');
+    await fs.mkdir(target, { mode: 0o700 }).catch((error) => {
+      if (error?.code !== 'EEXIST') throw error;
+    });
+    await verifyRememberedDirectory(parent);
+    const handle = await fs.open(target,
+      constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
+      if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_STORE_PATH_INVALID');
+      throw error;
+    });
+    try {
+      const opened = await handle.stat();
+      const current = await fs.lstat(target);
+      const currentParent = await fs.lstat(parent);
+      if (!opened.isDirectory() || current.isSymbolicLink() || !sameIdentity(opened, current) ||
+          currentParent.isSymbolicLink() || !sameIdentity(parentIdentity, currentParent)) {
+        throw new Error('LEARNING_STORE_PATH_INVALID');
+      }
+      await fs.chmod(target, 0o700);
+      verifiedDirectories.set(target, { dev: opened.dev, ino: opened.ino });
+      return target;
+    } finally {
+      await handle.close();
     }
-    await fs.chmod(target, 0o700);
-    verifiedDirectories.set(target, { dev: opened.dev, ino: opened.ino });
-    return target;
   } finally {
-    await handle.close();
+    await parentHandle.close();
   }
 }
 
@@ -670,7 +680,13 @@ async function withReviewLock(store, action) {
       lockIdentity = await existing.stat();
       record = JSON.parse(await existing.readFile('utf8'));
     } catch {
-      throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+      const current = await fs.lstat(lockPath);
+      const incompleteExpired = lockIdentity &&
+        Date.now() - lockIdentity.mtimeMs >= REVIEW_LOCK_TTL_MS &&
+        !current.isSymbolicLink() && sameIdentity(lockIdentity, current);
+      if (!incompleteExpired) throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+      await fs.unlink(lockPath);
+      return withReviewLock(store, action);
     } finally {
       await existing.close();
     }

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -450,7 +450,7 @@ describe('Gofer reviewed learning', () => {
     );
   });
 
-  it('recovers an expired review lock only when its owner is gone', async () => {
+  it('recovers an expired incomplete review lock', async () => {
     const { workspace, trace } = await fixture(true);
     const evaluation = await evaluateTrace({
       workspace,
@@ -460,14 +460,11 @@ describe('Gofer reviewed learning', () => {
       env: { TYPESAFE_API_KEY: 'test-key' },
     });
     const lockPath = path.join(workspace, '.specify', 'memory', 'reviewed-learning', 'review.lock');
-    await writeFile(
+    await writeFile(lockPath, '{');
+    await utimes(
       lockPath,
-      JSON.stringify({
-        schemaVersion: 1,
-        pid: 2_147_483_647,
-        createdAt: '2020-01-01T00:00:00.000Z',
-        expiresAt: '2020-01-01T00:05:00.000Z',
-      })
+      new Date('2020-01-01T00:00:00.000Z'),
+      new Date('2020-01-01T00:00:00.000Z')
     );
     const reviewed = await reviewCandidate({
       workspace,
