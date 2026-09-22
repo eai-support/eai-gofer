@@ -5,6 +5,7 @@ import { constants } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { requestTypeSafeEvaluation } from './gofer-typesafe-credentials.mjs';
 
@@ -717,12 +718,17 @@ export async function reviewCandidate({
   actor,
   reason,
   replacementMemoryId,
+  humanConfirmed = false,
   now = () => new Date(),
 }) {
   const root = await safeWorkspace(workspace);
   if (!/^candidate_[a-f0-9]{32}$/.test(candidateId ?? '') ||
       !['approve', 'reject', 'supersede'].includes(decision) || !text(actor) || !text(reason)) {
     throw new Error('LEARNING_REVIEW_INVALID');
+  }
+  if (['approve', 'supersede'].includes(decision) &&
+      (!humanConfirmed || process.stdin.isTTY !== true)) {
+    throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
   }
   const store = await ensureStore(root);
   return withReviewLock(store, async () => {
@@ -961,13 +967,29 @@ async function main() {
   } else if (action === 'candidates') {
     result = await listCandidates({ workspace, state: flags.get('--state') });
   } else if (action === 'review') {
+    const decision = flags.get('--decision');
+    let humanConfirmed = false;
+    if (['approve', 'supersede'].includes(decision)) {
+      if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
+        throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+      }
+      const prompt = createInterface({ input: process.stdin, output: process.stdout });
+      try {
+        const expected = `${decision.toUpperCase()} ${flags.get('--candidate')}`;
+        humanConfirmed = (await prompt.question(`Type ${expected} to confirm human review: `)).trim() === expected;
+      } finally {
+        prompt.close();
+      }
+      if (!humanConfirmed) throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+    }
     result = await reviewCandidate({
       workspace,
       candidateId: flags.get('--candidate'),
-      decision: flags.get('--decision'),
+      decision,
       actor: flags.get('--actor'),
       reason: flags.get('--reason'),
       replacementMemoryId: flags.get('--replacement'),
+      humanConfirmed,
     });
   } else if (action === 'search') {
     result = await searchApprovedMemory({

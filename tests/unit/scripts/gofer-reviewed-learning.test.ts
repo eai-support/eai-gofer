@@ -1,7 +1,7 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   buildEvaluationProjection,
   evaluateTrace,
@@ -15,6 +15,15 @@ import {
 } from '../../../.specify/scripts/node/gofer-reviewed-learning.mjs';
 
 const roots: string[] = [];
+const originalStdinIsTty = process.stdin.isTTY;
+
+beforeAll(() => {
+  Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+});
+
+afterAll(() => {
+  Object.defineProperty(process.stdin, 'isTTY', { value: originalStdinIsTty, configurable: true });
+});
 
 async function fixture(enabled = false) {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'gofer-learning-'));
@@ -330,6 +339,7 @@ describe('Gofer reviewed learning', () => {
       workspace,
       candidateId: evaluation.candidate.candidateId,
       decision: 'approve',
+      humanConfirmed: true,
       actor: 'delivery-owner',
       reason: 'The trace contains the validation and commit receipts.',
     });
@@ -357,6 +367,7 @@ describe('Gofer reviewed learning', () => {
       workspace,
       candidateId: evaluation.candidate.candidateId,
       decision: 'approve',
+      humanConfirmed: true,
       actor: 'delivery-owner',
       reason: 'Evidence is complete.',
     });
@@ -387,6 +398,7 @@ describe('Gofer reviewed learning', () => {
         workspace,
         candidateId: evaluation.candidate.candidateId,
         decision: 'approve',
+        humanConfirmed: true,
         actor: 'reviewer-one',
         reason: 'Approved.',
       }),
@@ -394,6 +406,7 @@ describe('Gofer reviewed learning', () => {
         workspace,
         candidateId: evaluation.candidate.candidateId,
         decision: 'approve',
+        humanConfirmed: true,
         actor: 'reviewer-two',
         reason: 'Approved.',
       }),
@@ -429,6 +442,7 @@ describe('Gofer reviewed learning', () => {
       workspace,
       candidateId: evaluation.candidate.candidateId,
       decision: 'approve',
+      humanConfirmed: true,
       actor: 'recovery-reviewer',
       reason: 'Recovered abandoned lock.',
     });
@@ -469,6 +483,7 @@ describe('Gofer reviewed learning', () => {
       candidateId: evaluation.candidate.candidateId,
       actor: 'reviewer',
       reason: 'Reviewed',
+      humanConfirmed: true,
     };
     const approved = await reviewCandidate({ ...input, decision: 'approve' });
     await expect(reviewCandidate({ ...input, decision: 'reject' })).rejects.toThrow(
@@ -496,6 +511,7 @@ describe('Gofer reviewed learning', () => {
       workspace,
       candidateId: evaluation.candidate.candidateId,
       decision: 'approve',
+      humanConfirmed: true,
       actor: 'reviewer',
       reason: 'Reusable',
     });
