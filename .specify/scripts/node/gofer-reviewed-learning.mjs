@@ -137,15 +137,13 @@ async function ensureStore(workspace) {
   const root = await safeWorkspace(workspace);
   let current = root;
   for (const component of STORE_PATH.split(path.sep)) {
-    const parentBefore = await fs.lstat(current);
-    if (parentBefore.isSymbolicLink() || !parentBefore.isDirectory()) {
-      throw new Error('LEARNING_STORE_PARENT_INVALID');
-    }
     const parentHandle = await fs.open(current,
       constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
     try {
       const openedParent = await parentHandle.stat();
-      if (!openedParent.isDirectory() || !sameIdentity(parentBefore, openedParent)) {
+      const parentAfterOpen = await fs.lstat(current);
+      if (!openedParent.isDirectory() || parentAfterOpen.isSymbolicLink() ||
+          !sameIdentity(openedParent, parentAfterOpen)) {
         throw new Error('LEARNING_STORE_PARENT_CHANGED');
       }
       const next = path.join(current, component);
@@ -487,6 +485,7 @@ export async function evaluateTrace({
   if (providerResult.status !== 'received') {
     return { ...providerResult, projectionHash, rubricHash };
   }
+  const credentialSource = text(env.TYPESAFE_API_KEY) ? 'environment' : 'project_secret_file';
   const { payload } = providerResult;
   const answers = answerMap(payload);
   const probabilities = {
@@ -506,7 +505,7 @@ export async function evaluateTrace({
     proposal: boundedProposal,
     projectionHash,
     evaluator: { provider: policy.provider, model: policy.model,
-      credentialSource: providerResult.credentialSource },
+      credentialSource },
     rubricHash,
     thresholds: policy.thresholds,
     probabilities,
