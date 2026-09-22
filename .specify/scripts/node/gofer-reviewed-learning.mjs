@@ -160,18 +160,11 @@ async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
   const held = await holdDirectoryChain(root, target);
   let handle;
   try {
-    const beforeOpen = await fs.lstat(target);
     handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
     const info = await handle.stat();
-    if (!info.isFile() || beforeOpen.isSymbolicLink() || !sameIdentity(beforeOpen, info)) {
-      throw new Error('LEARNING_STORE_INVALID');
-    }
+    if (!info.isFile()) throw new Error('LEARNING_STORE_INVALID');
     if (info.size > maxBytes) throw new Error('LEARNING_INPUT_TOO_LARGE');
     const content = await handle.readFile('utf8');
-    const targetAfter = await fs.lstat(target);
-    if (targetAfter.isSymbolicLink() || !sameIdentity(info, targetAfter)) {
-      throw new Error('LEARNING_STORE_INVALID');
-    }
     for (const entry of held) {
       const current = await fs.lstat(entry.directory);
       if (current.isSymbolicLink() || !sameIdentity(entry.identity, current)) {
