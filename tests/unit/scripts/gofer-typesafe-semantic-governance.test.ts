@@ -48,6 +48,34 @@ afterEach(async () => {
 });
 
 describe('TypeSafe semantic governance', () => {
+  it('stops reading provider output at the response byte limit', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    let cancelled = false;
+    const body = new ReadableStream({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(1024 * 1024));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const result = await credentials.requestTypeSafeEvaluation({
+      workspace,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+      policy: {
+        endpoint: 'https://api.typesafe.ai/v1/systemone',
+        model: 'jev-latest',
+        timeoutMs: 1000,
+      },
+      projection: {},
+      rubric: {},
+      fetchImpl: vi.fn(async () => new Response(body, { status: 200 })),
+    });
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response' });
+    expect(cancelled).toBe(true);
+  });
+
   it('writes only an ignored project secret file and enables review', async () => {
     const { workspace } = await fixture();
     const credentials = await import(credentialsUrl.href);

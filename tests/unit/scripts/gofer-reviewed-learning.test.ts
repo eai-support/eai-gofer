@@ -135,6 +135,19 @@ describe('Gofer reviewed learning', () => {
     ).toThrow('LEARNING_EVENT_TIME_REQUIRED');
   });
 
+  it('rejects a trace source outside the packaged schema', () => {
+    expect(() =>
+      normalizeTrace({
+        workspace: '/tmp/example',
+        host: 'codex',
+        objective: 'Test',
+        sourceKind: 'untrusted-import',
+        sourceContent: '{}',
+        events: [{ event: 'started', time: '2026-09-22T00:00:00.000Z' }],
+      })
+    ).toThrow('LEARNING_TRACE_INVALID');
+  });
+
   it('rejects more than 100 source events', () => {
     const events = Array.from({ length: 101 }, (_, index) => ({
       event: 'message',
@@ -184,6 +197,33 @@ describe('Gofer reviewed learning', () => {
     const fetchImpl = vi.fn();
     const result = await evaluateTrace({ workspace, trace, proposal, fetchImpl });
     expect(result.status).toBe('disabled');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('rejects a trace from a different workspace before provider access', async () => {
+    const { trace } = await fixture(true);
+    const otherWorkspace = await mkdtemp(path.join(os.tmpdir(), 'gofer-learning-other-'));
+    roots.push(otherWorkspace);
+    await mkdir(path.join(otherWorkspace, '.specify', 'config'), { recursive: true });
+    await writeFile(
+      path.join(otherWorkspace, '.specify', 'config', 'typesafe-learning-review.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'typesafe',
+        model: 'jev-latest',
+        endpoint: 'https://api.typesafe.ai/v1/systemone',
+        timeoutMs: 10000,
+        maxEvents: 100,
+        maxTextBytes: 2000,
+        maxProjectionBytes: 262144,
+        thresholds: { taskSuccess: 0.6, reusableLesson: 0.75, evidenceSupport: 0.85 },
+      })
+    );
+    const fetchImpl = vi.fn();
+    await expect(
+      evaluateTrace({ workspace: otherWorkspace, trace, proposal, fetchImpl })
+    ).rejects.toThrow('LEARNING_TRACE_PROJECT_MISMATCH');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -366,6 +406,35 @@ describe('Gofer reviewed learning', () => {
     );
   });
 
+  it('recovers an expired review lock only when its owner is gone', async () => {
+    const { workspace, trace } = await fixture(true);
+    const evaluation = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    const lockPath = path.join(workspace, '.specify', 'memory', 'reviewed-learning', 'review.lock');
+    await writeFile(
+      lockPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        pid: 2_147_483_647,
+        createdAt: '2020-01-01T00:00:00.000Z',
+        expiresAt: '2020-01-01T00:05:00.000Z',
+      })
+    );
+    const reviewed = await reviewCandidate({
+      workspace,
+      candidateId: evaluation.candidate.candidateId,
+      decision: 'approve',
+      actor: 'recovery-reviewer',
+      reason: 'Recovered abandoned lock.',
+    });
+    expect(reviewed.state).toBe('approved');
+  });
+
   it('keeps rejected candidates out of memory', async () => {
     const { workspace, trace } = await fixture(true);
     const evaluation = await evaluateTrace({
@@ -401,10 +470,17 @@ describe('Gofer reviewed learning', () => {
       actor: 'reviewer',
       reason: 'Reviewed',
     };
-    await reviewCandidate({ ...input, decision: 'approve' });
+    const approved = await reviewCandidate({ ...input, decision: 'approve' });
     await expect(reviewCandidate({ ...input, decision: 'reject' })).rejects.toThrow(
       'LEARNING_CANDIDATE_ALREADY_REVIEWED'
     );
+    await expect(
+      reviewCandidate({
+        ...input,
+        decision: 'supersede',
+        replacementMemoryId: approved.memory.memoryId,
+      })
+    ).rejects.toThrow('LEARNING_SUPERSEDE_INVALID');
   });
 
   it('records outcomes only for approved memory', async () => {
@@ -436,6 +512,16 @@ describe('Gofer reviewed learning', () => {
       neutral: 0,
       harmed: 0,
     });
+    const repeated = await recordMemoryOutcome({
+      workspace,
+      memoryId: reviewed.memory.memoryId,
+      runId: 'run-2',
+      outcome: 'helped',
+      note: 'Prevented a stale commit.',
+      now: () => new Date('2030-01-01T00:00:00.000Z'),
+    });
+    expect((await learningReport({ workspace })).feedback.total).toBe(1);
+    expect(repeated.feedbackId).toMatch(/^feedback_[a-f0-9]{32}$/);
   });
 
   it('rejects journal paths outside the workspace', async () => {

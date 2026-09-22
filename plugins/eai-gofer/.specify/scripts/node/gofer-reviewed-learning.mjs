@@ -22,6 +22,7 @@ const secretPatterns = [
   /\bTYPESAFE_API_KEY\s*=\s*[^\s]+/gi,
 ];
 const verifiedDirectories = new Map();
+const REVIEW_LOCK_TTL_MS = 5 * 60 * 1000;
 
 function sha256(value) {
   // This is a content-addressing digest, never a password derivation function.
@@ -323,6 +324,8 @@ function validateTrace(trace) {
       !text(trace.sessionId) || !text(trace.objective) || !validTime(trace.startedAt) ||
       !validTime(trace.endedAt) || !Array.isArray(trace.events) ||
       trace.events.length < 1 || trace.events.length > 100 ||
+      !['host-event-export', 'verified-execution-journal'].includes(trace.source?.kind) ||
+      !/^[a-f0-9]{64}$/.test(trace.source?.sha256 ?? '') ||
       !/^[a-f0-9]{64}$/.test(trace.traceHash ?? '')) {
     throw new Error('LEARNING_TRACE_INVALID');
   }
@@ -504,6 +507,8 @@ export async function evaluateTrace({
 }) {
   const root = await safeWorkspace(workspace);
   const policy = await loadPolicy(root);
+  const expectedProjectId = `project_${sha256(root).slice(0, 24)}`;
+  if (trace?.projectId !== expectedProjectId) throw new Error('LEARNING_TRACE_PROJECT_MISMATCH');
   const { projection, projectionHash, proposal: boundedProposal } =
     buildEvaluationProjection(trace, proposal, policy);
   const rubric = {
@@ -644,13 +649,46 @@ async function currentMemories(store) {
 async function withReviewLock(store, action) {
   const lockPath = path.join(store, 'review.lock');
   await verifyParentDirectory(lockPath);
-  const lock = await fs.open(lockPath,
-    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600)
-    .catch((error) => {
-      if (error?.code === 'EEXIST') throw new Error('LEARNING_REVIEW_IN_PROGRESS');
-      throw error;
-    });
+  let lock;
+  try {
+    lock = await fs.open(lockPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const existing = await fs.open(lockPath, constants.O_RDONLY | noFollowFlag);
+    let lockIdentity;
+    let record;
+    try {
+      lockIdentity = await existing.stat();
+      record = JSON.parse(await existing.readFile('utf8'));
+    } catch {
+      throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+    } finally {
+      await existing.close();
+    }
+    const expired = validTime(record?.expiresAt) && Date.parse(record.expiresAt) <= Date.now();
+    let ownerAlive = true;
+    if (Number.isSafeInteger(record?.pid) && record.pid > 0) {
+      try { process.kill(record.pid, 0); } catch (ownerError) {
+        ownerAlive = ownerError?.code !== 'ESRCH';
+      }
+    }
+    const current = await fs.lstat(lockPath);
+    if (!expired || ownerAlive || current.isSymbolicLink() || !sameIdentity(lockIdentity, current)) {
+      throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+    }
+    await fs.unlink(lockPath);
+    return withReviewLock(store, action);
+  }
   const lockIdentity = await lock.stat();
+  const createdAt = new Date();
+  await lock.writeFile(JSON.stringify({
+    schemaVersion: 1,
+    pid: process.pid,
+    createdAt: createdAt.toISOString(),
+    expiresAt: new Date(createdAt.getTime() + REVIEW_LOCK_TTL_MS).toISOString(),
+  }));
+  await lock.sync();
   try {
     return await action();
   } finally {
@@ -752,7 +790,8 @@ export async function reviewCandidate({
       });
       return review;
     }
-    if (candidate.state !== 'approved' || !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
+    if (candidate.state !== 'approved' || candidate.memoryId === replacementMemoryId ||
+        !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
       throw new Error('LEARNING_SUPERSEDE_INVALID');
     }
     const memories = await currentMemories(store);
@@ -829,16 +868,19 @@ export async function recordMemoryOutcome({
   const store = await ensureStore(workspace);
   const memory = (await currentMemories(store)).get(memoryId);
   if (!memory || memory.state !== 'approved') throw new Error('LEARNING_MEMORY_NOT_APPROVED');
-  const feedback = {
+  const feedbackCore = {
     schemaVersion: 1,
     memoryId,
     projectId: memory.projectId,
     runId: truncateUtf8(runId, 200),
     outcome,
     note: redactString(note, 1000),
+  };
+  const feedback = {
+    ...feedbackCore,
+    feedbackId: `feedback_${sha256(canonical(feedbackCore)).slice(0, 32)}`,
     recordedAt: now().toISOString(),
   };
-  feedback.feedbackId = `feedback_${sha256(canonical(feedback)).slice(0, 32)}`;
   const existing = await readJsonLines(path.join(store, 'feedback.jsonl'));
   if (existing.some((item) => item.feedbackId === feedback.feedbackId)) return feedback;
   await appendPrivate(path.join(store, 'feedback.jsonl'), feedback);

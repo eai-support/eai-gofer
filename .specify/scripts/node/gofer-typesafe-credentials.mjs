@@ -189,8 +189,21 @@ export async function requestTypeSafeEvaluation({ workspace, env = process.env, 
   }
   if (!response.ok) return { status: 'unavailable', networkCalled: true, httpStatus: response.status };
   try {
-    const raw = await response.text();
-    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
+    if (!response.body?.getReader) throw new Error('response body is not streamable');
+    const reader = response.body.getReader();
+    const chunks = [];
+    let bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2 * 1024 * 1024) {
+        await reader.cancel('response too large');
+        throw new Error('response too large');
+      }
+      chunks.push(Buffer.from(value));
+    }
+    const raw = Buffer.concat(chunks, bytes).toString('utf8');
     return { status: 'received', networkCalled: true, payload: JSON.parse(raw) };
   } catch {
     return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
