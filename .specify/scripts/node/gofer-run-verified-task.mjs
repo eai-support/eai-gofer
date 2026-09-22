@@ -162,7 +162,11 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
   const revision = gitHead(workspace);
   const resolvedFeatureDir = featureDir || path.join(workspace, '.specify', 'specs', 'native-runtime-smoke');
   await prepareSmokeFeature(resolvedFeatureDir, revision);
-  const ledger = await createRuntimeLedger({ ledgerPath: path.join(resolvedFeatureDir, 'runtime-ledger.jsonl') });
+  // Bind every controller-side read and write to the same canonical directory.
+  // This prevents a caller-controlled symlink from redirecting evidence after
+  // the runtime has validated its feature root.
+  const controllerFeatureDir = await fs.realpath(resolvedFeatureDir);
+  const ledger = await createRuntimeLedger({ ledgerPath: path.join(controllerFeatureDir, 'runtime-ledger.jsonl') });
   const runtime = await createVerifiedNativeRuntime({
     workspaceRoot: workspace,
     host,
@@ -177,7 +181,7 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
   let result;
   try {
     result = await runtime.run({
-      featureDir: resolvedFeatureDir,
+      featureDir: controllerFeatureDir,
       checks: { [SMOKE_TASK_ID]: [SMOKE_CHECK_NAME] },
       approvalReceipt: 'local-smoke-approval',
       benchmarkEvidence: benchmark?.evidence,
@@ -198,10 +202,22 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
     process.stderr.write(`Worktree kept at ${location}: native task requires recovery\n`);
     throw new Error(`NATIVE_RUNTIME_REQUIRES_RECOVERY:${location}`);
   }
-  await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
-    featureDirectory: resolvedFeatureDir });
-  await runtime.dispose();
+  try {
+    await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
+      featureDirectory: controllerFeatureDir });
+    await runtime.dispose();
+  } catch (error) {
+    process.stderr.write(
+      `Worktree kept at ${runtime.isolation.isolatedWorkspace}: ${error.message}\n`);
+    throw error;
+  }
   return result;
+}
+
+function sameIdentity(left, right) {
+  if (left.dev === undefined || left.ino === undefined ||
+      right.dev === undefined || right.ino === undefined) return true;
+  return left.dev === right.dev && left.ino === right.ino;
 }
 
 /** Keep the verified proof file as controller evidence, then remove it from the task
@@ -217,14 +233,45 @@ async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
   } finally { await sourceHandle.close(); }
   if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
   const evidenceDirectory = path.join(featureDirectory, 'evidence');
-  // Exclusive creation fails closed for every pre-existing path, including a
-  // symlink. This avoids a check-then-use race at the evidence boundary.
-  await fs.mkdir(evidenceDirectory, { mode: 0o700 });
-  const evidencePath = path.join(evidenceDirectory, SMOKE_FILE_NAME);
-  const saved = await fs.open(evidencePath,
-    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
-  try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
-  await fs.rm(source);
+  const featureBeforeOpen = await fs.lstat(featureDirectory);
+  if (featureBeforeOpen.isSymbolicLink() || !featureBeforeOpen.isDirectory()) {
+    throw new Error('CONTROLLER_FEATURE_DIRECTORY_UNSAFE');
+  }
+  const featureHandle = await fs.open(featureDirectory,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  let evidenceHandle;
+  try {
+    const featureIdentity = await featureHandle.stat();
+    if (!featureIdentity.isDirectory() || !sameIdentity(featureBeforeOpen, featureIdentity)) {
+      throw new Error('CONTROLLER_FEATURE_DIRECTORY_CHANGED');
+    }
+    // Exclusive creation rejects every pre-existing path, including a symlink.
+    await fs.mkdir(evidenceDirectory, { mode: 0o700 });
+    const evidenceBeforeOpen = await fs.lstat(evidenceDirectory);
+    evidenceHandle = await fs.open(evidenceDirectory,
+      constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+    const evidenceIdentity = await evidenceHandle.stat();
+    const featureAfterCreate = await fs.lstat(featureDirectory);
+    if (!evidenceIdentity.isDirectory() || !sameIdentity(evidenceBeforeOpen, evidenceIdentity) ||
+        !sameIdentity(featureIdentity, featureAfterCreate)) {
+      throw new Error('CONTROLLER_EVIDENCE_DIRECTORY_CHANGED');
+    }
+    const evidencePath = path.join(evidenceDirectory, SMOKE_FILE_NAME);
+    const saved = await fs.open(evidencePath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+    try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
+    const [featureAfterWrite, evidenceAfterWrite] = await Promise.all([
+      fs.lstat(featureDirectory), fs.lstat(evidenceDirectory),
+    ]);
+    if (!sameIdentity(featureIdentity, featureAfterWrite) ||
+        !sameIdentity(evidenceIdentity, evidenceAfterWrite)) {
+      throw new Error('CONTROLLER_EVIDENCE_DIRECTORY_CHANGED');
+    }
+    await fs.rm(source);
+  } finally {
+    await evidenceHandle?.close();
+    await featureHandle.close();
+  }
 }
 
 async function main(argv) {
