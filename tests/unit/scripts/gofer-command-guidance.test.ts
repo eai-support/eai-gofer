@@ -68,6 +68,7 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('## Welcome to Enterprise AI 👋');
       expect(content, file).toContain('What process would you like to improve');
       expect(content, file).toContain('Do not repeat it after onboarding starts');
+      expect(content, file).toContain('before workspace preflight, EAI readiness, setup');
       expect(content, file).toContain('Keep numbered Gofer stages internal');
       expect(content, file).toContain('Pause once for approval of the business specification');
       expect(content, file).toContain('Do not create a GitHub repository');
