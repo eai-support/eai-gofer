@@ -210,8 +210,18 @@ async function ensureStore(workspace) {
       if (!sameIdentity(openedParent, parentAfter) || !child.isDirectory()) {
         throw new Error('LEARNING_STORE_PATH_INVALID');
       }
-      await fs.chmod(next, 0o700);
-      verifiedDirectories.set(next, { dev: child.dev, ino: child.ino });
+      const childHandle = await fs.open(next,
+        constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+      try {
+        const openedChild = await childHandle.stat();
+        if (!openedChild.isDirectory() || !sameIdentity(child, openedChild)) {
+          throw new Error('LEARNING_STORE_PATH_INVALID');
+        }
+        await childHandle.chmod(0o700);
+        verifiedDirectories.set(next, { dev: openedChild.dev, ino: openedChild.ino });
+      } finally {
+        await childHandle.close();
+      }
       current = next;
     } finally {
       await parentHandle.close();
@@ -244,7 +254,7 @@ async function withPrivateDirectory(parent, name, action) {
           currentParent.isSymbolicLink() || !sameIdentity(parentIdentity, currentParent)) {
         throw new Error('LEARNING_STORE_PATH_INVALID');
       }
-      await fs.chmod(target, 0o700);
+      await handle.chmod(0o700);
       verifiedDirectories.set(target, { dev: opened.dev, ino: opened.ino });
       const result = await action(target);
       const [parentAfterAction, targetAfterAction] = await Promise.all([
