@@ -178,14 +178,17 @@ async function issueDisposableCapabilityReceipt(workspace, host) {
  * issues its own receipt and the routing gate correctly refuses to route. */
 export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'codex',
   capabilityReceipt: suppliedReceipt, benchmark }) {
-  const capabilityReceipt = suppliedReceipt ?? await issueDisposableCapabilityReceipt(workspace, host);
   const revision = gitHead(workspace);
   const resolvedFeatureDir = await confinedFeatureDirectory(workspace, featureDir);
+  // Complete every path-based controller write before any native worker can
+  // start. The worker receives only its isolated worktree and cannot reach the
+  // controller feature directory.
   await prepareSmokeFeature(resolvedFeatureDir, revision);
   // Bind every controller-side read and write to the same canonical directory.
   // This prevents a caller-controlled symlink from redirecting evidence after
   // the runtime has validated its feature root.
   const controllerFeatureDir = await fs.realpath(resolvedFeatureDir);
+  const capabilityReceipt = suppliedReceipt ?? await issueDisposableCapabilityReceipt(workspace, host);
   const ledger = await createRuntimeLedger({ ledgerPath: path.join(controllerFeatureDir, 'runtime-ledger.jsonl') });
   const runtime = await createVerifiedNativeRuntime({
     workspaceRoot: workspace,
@@ -198,6 +201,10 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
       `containing exactly this one line: "${SMOKE_FILE_CONTENT.trim()}". Make no other change.`,
     adapter: createSmokeAdapter({ ledger }),
   });
+  // Create and retain the final evidence file descriptor before dispatch.
+  // Retirement writes through this descriptor and never resolves a path that
+  // a concurrent process could replace after the worker starts.
+  const evidenceSink = await openEvidenceSink(controllerFeatureDir);
   let result;
   try {
     result = await runtime.run({
@@ -211,6 +218,7 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
       deadlineMs: Date.now() + 300_000,
     });
   } catch (error) {
+    await evidenceSink.close().catch(() => {});
     // A failed run keeps its worktree for recovery; say where it is instead of hiding it.
     await runtime.dispose().catch(disposeError => process.stderr.write(
       `Worktree kept at ${runtime.isolation.isolatedWorkspace}: ${disposeError.message}\n`));
@@ -218,15 +226,18 @@ export async function runVerifiedSmokeTask({ workspace, featureDir, host = 'code
   }
   // A verified run must not leave a worktree behind, so disposal errors surface.
   if (result.status !== 'verified' || result.adapterCallsSettled !== true) {
+    await evidenceSink.close().catch(() => {});
     const location = runtime.isolation.isolatedWorkspace;
     process.stderr.write(`Worktree kept at ${location}: native task requires recovery\n`);
     throw new Error(`NATIVE_RUNTIME_REQUIRES_RECOVERY:${location}`);
   }
   try {
     await retireVerifiedOutput({ isolatedWorkspace: runtime.isolation.isolatedWorkspace,
-      featureDirectory: controllerFeatureDir });
+      evidenceSink });
+    await evidenceSink.close();
     await runtime.dispose();
   } catch (error) {
+    await evidenceSink.close().catch(() => {});
     process.stderr.write(
       `Worktree kept at ${runtime.isolation.isolatedWorkspace}: ${error.message}\n`);
     throw error;
@@ -240,18 +251,7 @@ function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-/** Keep the verified proof file as controller evidence, then remove it from the task
- * worktree so the strict clean-state disposal check stays unchanged. */
-async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
-  const source = path.join(isolatedWorkspace, SMOKE_FILE_NAME);
-  const sourceHandle = await fs.open(source, constants.O_RDONLY | noFollowFlag);
-  let actual;
-  try {
-    const sourceInfo = await sourceHandle.stat();
-    if (!sourceInfo.isFile()) throw new Error('SMOKE_TASK_OUTPUT_INVALID');
-    actual = await sourceHandle.readFile('utf8');
-  } finally { await sourceHandle.close(); }
-  if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
+async function openEvidenceSink(featureDirectory) {
   const evidenceDirectory = path.join(featureDirectory, 'evidence');
   const featureHandle = await fs.open(featureDirectory,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
@@ -277,21 +277,40 @@ async function retireVerifiedOutput({ isolatedWorkspace, featureDirectory }) {
       throw new Error('CONTROLLER_EVIDENCE_DIRECTORY_CHANGED');
     }
     const evidencePath = path.join(evidenceDirectory, SMOKE_FILE_NAME);
-    const saved = await fs.open(evidencePath,
+    const sink = await fs.open(evidencePath,
       constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
-    try { await saved.writeFile(actual); await saved.sync(); } finally { await saved.close(); }
-    const [featureAfterWrite, evidenceAfterWrite] = await Promise.all([
+    const [featureAfterSinkOpen, evidenceAfterSinkOpen] = await Promise.all([
       fs.lstat(featureDirectory), fs.lstat(evidenceDirectory),
     ]);
-    if (!sameIdentity(featureIdentity, featureAfterWrite) ||
-        !sameIdentity(evidenceIdentity, evidenceAfterWrite)) {
+    if (!sameIdentity(featureIdentity, featureAfterSinkOpen) ||
+        !sameIdentity(evidenceIdentity, evidenceAfterSinkOpen)) {
+      await sink.close();
       throw new Error('CONTROLLER_EVIDENCE_DIRECTORY_CHANGED');
     }
-    await fs.rm(source);
+    return sink;
   } finally {
     await evidenceHandle?.close();
     await featureHandle.close();
   }
+}
+
+/** Keep the verified proof file as controller evidence, then remove it from the task
+ * worktree so the strict clean-state disposal check stays unchanged. */
+async function retireVerifiedOutput({ isolatedWorkspace, evidenceSink }) {
+  const source = path.join(isolatedWorkspace, SMOKE_FILE_NAME);
+  const sourceHandle = await fs.open(source, constants.O_RDONLY | noFollowFlag);
+  let actual;
+  try {
+    const sourceInfo = await sourceHandle.stat();
+    if (!sourceInfo.isFile()) throw new Error('SMOKE_TASK_OUTPUT_INVALID');
+    actual = await sourceHandle.readFile('utf8');
+  } finally { await sourceHandle.close(); }
+  if (actual !== SMOKE_FILE_CONTENT) throw new Error('SMOKE_TASK_OUTPUT_MISMATCH');
+  const sinkInfo = await evidenceSink.stat();
+  if (!sinkInfo.isFile()) throw new Error('CONTROLLER_EVIDENCE_FILE_INVALID');
+  await evidenceSink.writeFile(actual);
+  await evidenceSink.sync();
+  await fs.rm(source);
 }
 
 async function main(argv) {
