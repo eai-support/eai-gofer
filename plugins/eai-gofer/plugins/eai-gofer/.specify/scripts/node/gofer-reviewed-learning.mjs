@@ -390,6 +390,40 @@ function answerMap(payload) {
   return {};
 }
 
+async function requestEvaluation({ root, env, fetchImpl, policy, projection, rubric }) {
+  const { apiKey, source } = await resolveApiKey({ workspace: root, env });
+  if (!apiKey) return { status: 'not_configured', networkCalled: false };
+  let response;
+  try {
+    response = await fetchImpl(policy.endpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(policy.timeoutMs),
+      body: JSON.stringify({
+        model: policy.model,
+        state: JSON.stringify(projection),
+        questions: rubric,
+      }),
+    });
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      networkCalled: true,
+      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
+    };
+  }
+  if (!response.ok) {
+    return { status: 'unavailable', networkCalled: true, httpStatus: response.status };
+  }
+  try {
+    const raw = await response.text();
+    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
+    return { status: 'received', networkCalled: true, payload: JSON.parse(raw), source };
+  } catch {
+    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
+  }
+}
+
 export async function evaluateTrace({
   workspace = process.cwd(),
   trace,
@@ -428,40 +462,11 @@ export async function evaluateTrace({
     };
   }
   if (!policy.enabled) return { status: 'disabled', networkCalled: false, projectionHash, rubricHash };
-  const { apiKey, source } = await resolveApiKey({ workspace: root, env });
-  if (!apiKey) return { status: 'not_configured', networkCalled: false, projectionHash, rubricHash };
-  let response;
-  try {
-    response = await fetchImpl(policy.endpoint, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(policy.timeoutMs),
-      body: JSON.stringify({
-        model: policy.model,
-        state: JSON.stringify(projection),
-        questions: rubric,
-      }),
-    });
-  } catch (error) {
-    return {
-      status: 'unavailable',
-      networkCalled: true,
-      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
-      projectionHash,
-      rubricHash,
-    };
+  const providerResult = await requestEvaluation({ root, env, fetchImpl, policy, projection, rubric });
+  if (providerResult.status !== 'received') {
+    return { ...providerResult, projectionHash, rubricHash };
   }
-  if (!response.ok) {
-    return { status: 'unavailable', networkCalled: true, httpStatus: response.status, projectionHash, rubricHash };
-  }
-  let payload;
-  try {
-    const raw = await response.text();
-    if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) throw new Error('response too large');
-    payload = JSON.parse(raw);
-  } catch {
-    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response', projectionHash, rubricHash };
-  }
+  const { payload, source } = providerResult;
   const answers = answerMap(payload);
   const probabilities = {
     taskSuccess: probability(answers.task_success),
