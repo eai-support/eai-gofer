@@ -2,6 +2,48 @@
   "schema": "eai.test_coverage_map.v1",
   "repositories": {
     "eai-gofer": {
+      "intentional_skipped_tests": [
+        {
+          "path": "tests/e2e/autonomous-execution.test.ts",
+          "reason": "Orchestrator placeholder until the autonomous runtime exists. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/integration/lsp-mcp/LspMcpCommunication.integration.test.ts",
+          "reason": "Requires a real VS Code Electron environment. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/integration/spec-loading-flow.test.ts",
+          "reason": "Placeholder until SpecLoader is complete. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/unit/autonomous/CodexUsageAdapter.test.ts",
+          "reason": "Pre-existing disabled autonomous adapter pending owner re-enable. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/unit/autonomous/acc-integration.test.ts",
+          "reason": "Pre-existing disabled ACC integration pending owner re-enable. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/unit/autonomous/contextbuilder-wiring.test.ts",
+          "reason": "Pre-existing disabled ContextBuilder wiring pending owner re-enable. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/unit/autonomous/observation-tracking.test.ts",
+          "reason": "Legacy terminal tracking was replaced by HookBridgeWatcher; ingestion checks await restored wiring. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        },
+        {
+          "path": "tests/unit/exponentialBackoff.test.ts",
+          "reason": "The autonomous orchestrator is not implemented. This is unrelated to #3503 and is never credited as managed-deploy evidence.",
+          "owner": "eai-gofer"
+        }
+      ],
       "features": [
         {
           "id": "admin-portal-gofer-headless-contract",
