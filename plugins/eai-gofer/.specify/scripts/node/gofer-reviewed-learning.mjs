@@ -21,6 +21,7 @@ const secretPatterns = [
   /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
   /\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{12,}\b/g,
   /\bTYPESAFE_API_KEY\s*=\s*[^\s]+/gi,
+  /\b(?:api[-_]?key|access[-_]?token|password|secret|token)\s*=\s*[^\s&]+/gi,
 ];
 const verifiedDirectories = new Map();
 const REVIEW_LOCK_TTL_MS = 5 * 60 * 1000;

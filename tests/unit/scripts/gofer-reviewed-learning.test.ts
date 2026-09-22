@@ -131,6 +131,25 @@ describe('Gofer reviewed learning', () => {
     expect(trace.events[0].name).toBe('[REDACTED]');
   });
 
+  it('redacts common secret assignments in free text', () => {
+    const trace = normalizeTrace({
+      workspace: '/tmp/example',
+      host: 'codex',
+      objective: 'Call https://example.test?api_key=private-value',
+      sourceContent: '{}',
+      events: [
+        {
+          event: 'message',
+          message: 'access_token=token-value password=hunter2',
+          time: '2026-09-22T00:00:00.000Z',
+        },
+      ],
+    });
+    expect(JSON.stringify(trace)).not.toContain('private-value');
+    expect(JSON.stringify(trace)).not.toContain('token-value');
+    expect(JSON.stringify(trace)).not.toContain('hunter2');
+  });
+
   it('produces the same trace for the same source', async () => {
     const { workspace, journal, trace } = await fixture();
     const second = await normalizeJournal({
