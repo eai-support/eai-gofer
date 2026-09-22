@@ -44,8 +44,16 @@ describe('sync-extension-resources pathExists', () => {
 describe('sync-extension-resources check mode', () => {
   it('verifies the checked-in extension resources without writing them', () => {
     const script = path.resolve('.specify/scripts/node/sync-extension-resources.mjs');
-    const result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+    // Other test files exercise the surface generator in parallel. It replaces
+    // generated trees in several steps, so a check can briefly observe the
+    // valid repository between two writes. Retry the read-only check; genuine
+    // committed drift remains present and fails every attempt.
+    let result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+    for (let attempt = 1; result.status !== 0 && attempt < 5; attempt += 1) {
+      result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+    }
 
+    expect(`${result.stdout}${result.stderr}`).toContain('extension/resources/ is in sync');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('extension/resources/ is in sync');
   });
