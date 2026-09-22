@@ -170,7 +170,7 @@ async function ensureStore(workspace) {
   return current;
 }
 
-async function ensurePrivateDirectory(parent, name) {
+async function withPrivateDirectory(parent, name, action) {
   await verifyRememberedDirectory(parent);
   const parentHandle = await fs.open(parent,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
@@ -196,7 +196,17 @@ async function ensurePrivateDirectory(parent, name) {
       }
       await fs.chmod(target, 0o700);
       verifiedDirectories.set(target, { dev: opened.dev, ino: opened.ino });
-      return target;
+      const result = await action(target);
+      const [parentAfterAction, targetAfterAction] = await Promise.all([
+        fs.lstat(parent),
+        fs.lstat(target),
+      ]);
+      if (parentAfterAction.isSymbolicLink() || targetAfterAction.isSymbolicLink() ||
+          !sameIdentity(parentIdentity, parentAfterAction) ||
+          !sameIdentity(opened, targetAfterAction)) {
+        throw new Error('LEARNING_STORE_PATH_INVALID');
+      }
+      return result;
     } finally {
       await handle.close();
     }
@@ -429,9 +439,11 @@ export async function normalizeJournal({
     events,
   });
   const store = await ensureStore(root);
-  const traceDir = await ensurePrivateDirectory(store, 'traces');
-  const tracePath = path.join(traceDir, `${trace.traceId}.json`);
-  await writePrivateExclusive(tracePath, `${JSON.stringify(trace, null, 2)}\n`);
+  const tracePath = await withPrivateDirectory(store, 'traces', async (traceDir) => {
+    const target = path.join(traceDir, `${trace.traceId}.json`);
+    await writePrivateExclusive(target, `${JSON.stringify(trace, null, 2)}\n`);
+    return target;
+  });
   return { trace, tracePath };
 }
 
@@ -741,7 +753,6 @@ export async function reviewCandidate({
   actor,
   reason,
   replacementMemoryId,
-  humanConfirmed = false,
   now = () => new Date(),
 }) {
   const root = await safeWorkspace(workspace);
@@ -749,9 +760,20 @@ export async function reviewCandidate({
       !['approve', 'reject', 'supersede'].includes(decision) || !text(actor) || !text(reason)) {
     throw new Error('LEARNING_REVIEW_INVALID');
   }
-  if (['approve', 'supersede'].includes(decision) &&
-      (!humanConfirmed || process.stdin.isTTY !== true)) {
-    throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+  if (['approve', 'supersede'].includes(decision)) {
+    if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
+      throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+    }
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const expected = `${decision.toUpperCase()} ${candidateId}`;
+      const confirmed = (await prompt.question(
+        `Type ${expected} to confirm human review: `
+      )).trim() === expected;
+      if (!confirmed) throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+    } finally {
+      prompt.close();
+    }
   }
   const store = await ensureStore(root);
   return withReviewLock(store, async () => {
@@ -993,20 +1015,6 @@ async function main() {
     result = await listCandidates({ workspace, state: flags.get('--state') });
   } else if (action === 'review') {
     const decision = flags.get('--decision');
-    let humanConfirmed = false;
-    if (['approve', 'supersede'].includes(decision)) {
-      if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
-        throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
-      }
-      const prompt = createInterface({ input: process.stdin, output: process.stdout });
-      try {
-        const expected = `${decision.toUpperCase()} ${flags.get('--candidate')}`;
-        humanConfirmed = (await prompt.question(`Type ${expected} to confirm human review: `)).trim() === expected;
-      } finally {
-        prompt.close();
-      }
-      if (!humanConfirmed) throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
-    }
     result = await reviewCandidate({
       workspace,
       candidateId: flags.get('--candidate'),
@@ -1014,7 +1022,6 @@ async function main() {
       actor: flags.get('--actor'),
       reason: flags.get('--reason'),
       replacementMemoryId: flags.get('--replacement'),
-      humanConfirmed,
     });
   } else if (action === 'search') {
     result = await searchApprovedMemory({

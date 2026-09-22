@@ -2,6 +2,13 @@ import { mkdtemp, mkdir, readFile, rm, symlink, utimes, writeFile } from 'node:f
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+vi.mock('node:readline/promises', () => ({
+  createInterface: () => ({
+    question: async (message: string) => message.match(/^Type (.+) to confirm/)?.[1] ?? '',
+    close: () => undefined,
+  }),
+}));
 import {
   buildEvaluationProjection,
   evaluateTrace,
@@ -16,13 +23,19 @@ import {
 
 const roots: string[] = [];
 const originalStdinIsTty = process.stdin.isTTY;
+const originalStdoutIsTty = process.stdout.isTTY;
 
 beforeAll(() => {
   Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+  Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
 });
 
 afterAll(() => {
   Object.defineProperty(process.stdin, 'isTTY', { value: originalStdinIsTty, configurable: true });
+  Object.defineProperty(process.stdout, 'isTTY', {
+    value: originalStdoutIsTty,
+    configurable: true,
+  });
 });
 
 async function fixture(enabled = false) {
