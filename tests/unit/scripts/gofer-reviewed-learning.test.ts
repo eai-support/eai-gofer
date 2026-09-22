@@ -165,6 +165,8 @@ describe('Gofer reviewed learning', () => {
       policy
     );
     expect(JSON.stringify(result.projection)).not.toContain('private-value');
+    expect(JSON.stringify(result.proposal)).not.toContain('private-value');
+    expect(JSON.stringify(result.proposal)).toContain('[REDACTED]');
     expect(result.projectionHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -223,6 +225,8 @@ describe('Gofer reviewed learning', () => {
       env: { TYPESAFE_API_KEY: 'test-key' },
     });
     expect(second.evaluation.evaluationId).toBe(first.evaluation.evaluationId);
+    expect(second.candidate.candidateId).toBe(first.candidate.candidateId);
+    expect(await listCandidates({ workspace, state: 'candidate' })).toHaveLength(1);
 
     await mkdir(path.join(workspace, '.specify', 'secrets'), { recursive: true });
     await writeFile(
@@ -294,6 +298,72 @@ describe('Gofer reviewed learning', () => {
     expect(results[0].memoryId).toBe(reviewed.memory.memoryId);
     expect(results[0].traceHash).toBe(trace.traceHash);
     expect(results[0].approvedBy).toBe('delivery-owner');
+  });
+
+  it('never persists proposal secrets in candidates or approved memory', async () => {
+    const { workspace, trace } = await fixture(true);
+    const secretProposal = {
+      ...proposal,
+      lesson: `${proposal.lesson} TYPESAFE_API_KEY=private-value`,
+    };
+    const evaluation = await evaluateTrace({
+      workspace,
+      trace,
+      proposal: secretProposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    const reviewed = await reviewCandidate({
+      workspace,
+      candidateId: evaluation.candidate.candidateId,
+      decision: 'approve',
+      actor: 'delivery-owner',
+      reason: 'Evidence is complete.',
+    });
+    const store = path.join(workspace, '.specify', 'memory', 'reviewed-learning');
+    const persisted = [
+      await readFile(path.join(store, 'candidates.jsonl'), 'utf8'),
+      await readFile(path.join(store, 'review-transactions.jsonl'), 'utf8'),
+    ].join('\n');
+    expect(persisted).not.toContain('private-value');
+    expect(persisted).toContain('[REDACTED]');
+    expect(JSON.stringify(reviewed.memory)).not.toContain('private-value');
+    expect(await searchApprovedMemory({ workspace, query: 'protected validation' })).toHaveLength(
+      1
+    );
+  });
+
+  it('allows only one concurrent review decision', async () => {
+    const { workspace, trace } = await fixture(true);
+    const evaluation = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    const decisions = await Promise.allSettled([
+      reviewCandidate({
+        workspace,
+        candidateId: evaluation.candidate.candidateId,
+        decision: 'approve',
+        actor: 'reviewer-one',
+        reason: 'Approved.',
+      }),
+      reviewCandidate({
+        workspace,
+        candidateId: evaluation.candidate.candidateId,
+        decision: 'approve',
+        actor: 'reviewer-two',
+        reason: 'Approved.',
+      }),
+    ]);
+    expect(decisions.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(decisions.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(await listCandidates({ workspace, state: 'approved' })).toHaveLength(1);
+    expect(await searchApprovedMemory({ workspace, query: 'protected validation' })).toHaveLength(
+      1
+    );
   });
 
   it('keeps rejected candidates out of memory', async () => {
@@ -391,5 +461,23 @@ describe('Gofer reviewed learning', () => {
       process.platform === 'win32' ? 'junction' : 'dir'
     );
     await expect(learningReport({ workspace })).rejects.toThrow('LEARNING_PATH_SYMLINK');
+  });
+
+  it('rejects a trace directory routed through a symlink', async () => {
+    const { workspace, journal } = await fixture();
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-learning-traces-'));
+    roots.push(outside);
+    const traceDirectory = path.join(
+      workspace,
+      '.specify',
+      'memory',
+      'reviewed-learning',
+      'traces'
+    );
+    await rm(traceDirectory, { recursive: true });
+    await symlink(outside, traceDirectory, process.platform === 'win32' ? 'junction' : 'dir');
+    await expect(
+      normalizeJournal({ workspace, input: journal, host: 'codex', objective: 'Test' })
+    ).rejects.toThrow(/LEARNING_STORE_PATH_INVALID|LEARNING_PATH_SYMLINK/);
   });
 });

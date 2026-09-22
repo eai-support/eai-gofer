@@ -21,6 +21,7 @@ const secretPatterns = [
   /\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{12,}\b/g,
   /\bTYPESAFE_API_KEY\s*=\s*[^\s]+/gi,
 ];
+const verifiedDirectories = new Map();
 
 function sha256(value) {
   // This is a content-addressing digest, never a password derivation function.
@@ -123,6 +124,7 @@ async function confined(workspace, input, { exists = false, regular = false } = 
 
 async function readBoundedFile(workspace, input, maxBytes = MAX_SOURCE_BYTES) {
   const target = await confined(workspace, input, { exists: true, regular: true });
+  await verifyParentDirectory(target);
   const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
   try {
     const info = await handle.stat();
@@ -156,6 +158,7 @@ async function ensureStore(workspace) {
         throw new Error('LEARNING_STORE_PATH_INVALID');
       }
       await fs.chmod(next, 0o700);
+      verifiedDirectories.set(next, { dev: child.dev, ino: child.ino });
       current = next;
     } finally {
       await parentHandle.close();
@@ -164,10 +167,66 @@ async function ensureStore(workspace) {
   return current;
 }
 
+async function ensurePrivateDirectory(parent, name) {
+  await verifyRememberedDirectory(parent);
+  const target = path.join(parent, name);
+  await fs.mkdir(target, { mode: 0o700 }).catch((error) => {
+    if (error?.code !== 'EEXIST') throw error;
+  });
+  const beforeOpen = await fs.lstat(target);
+  if (beforeOpen.isSymbolicLink() || !beforeOpen.isDirectory()) {
+    throw new Error('LEARNING_STORE_PATH_INVALID');
+  }
+  const handle = await fs.open(target,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag).catch((error) => {
+    if (['ELOOP', 'ENOTDIR'].includes(error?.code)) throw new Error('LEARNING_STORE_PATH_INVALID');
+    throw error;
+  });
+  try {
+    const opened = await handle.stat();
+    const current = await fs.lstat(target);
+    if (!opened.isDirectory() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
+      throw new Error('LEARNING_STORE_PATH_INVALID');
+    }
+    await fs.chmod(target, 0o700);
+    verifiedDirectories.set(target, { dev: opened.dev, ino: opened.ino });
+    return target;
+  } finally {
+    await handle.close();
+  }
+}
+
 function sameIdentity(left, right) {
   if (left.dev === undefined || left.ino === undefined ||
       right.dev === undefined || right.ino === undefined) return true;
   return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function verifyParentDirectory(target) {
+  const parent = path.dirname(target);
+  const handle = await fs.open(parent,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  try {
+    const opened = await handle.stat();
+    const current = await fs.lstat(parent);
+    if (!opened.isDirectory() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
+      throw new Error('LEARNING_STORE_PARENT_CHANGED');
+    }
+    const expected = verifiedDirectories.get(parent);
+    if (expected && !sameIdentity(expected, opened)) throw new Error('LEARNING_STORE_PARENT_CHANGED');
+  } finally {
+    await handle.close();
+  }
+}
+
+async function verifyRememberedDirectory(target) {
+  await verifyParentDirectory(path.join(target, '.guard'));
+  const current = await fs.lstat(target);
+  const expected = verifiedDirectories.get(target);
+  if (current.isSymbolicLink() || !current.isDirectory() ||
+      (expected && !sameIdentity(expected, current))) {
+    throw new Error('LEARNING_STORE_PATH_INVALID');
+  }
 }
 
 async function existingRegularFile(target) {
@@ -182,6 +241,7 @@ async function existingRegularFile(target) {
 }
 
 async function appendPrivate(target, value) {
+  await verifyParentDirectory(target);
   const beforeOpen = await existingRegularFile(target);
   const handle = await fs.open(
     target,
@@ -203,6 +263,7 @@ async function appendPrivate(target, value) {
 async function writePrivateExclusive(target, value) {
   let handle;
   try {
+    await verifyParentDirectory(target);
     await existingRegularFile(target);
     handle = await fs.open(
       target,
@@ -231,6 +292,7 @@ async function writePrivateExclusive(target, value) {
 }
 
 async function readJsonLines(target) {
+  await verifyParentDirectory(target);
   const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag).catch((error) => {
     if (error?.code === 'ENOENT') return null;
     throw error;
@@ -350,8 +412,7 @@ export async function normalizeJournal({
     events,
   });
   const store = await ensureStore(root);
-  const traceDir = path.join(store, 'traces');
-  await fs.mkdir(traceDir, { recursive: true, mode: 0o700 });
+  const traceDir = await ensurePrivateDirectory(store, 'traces');
   const tracePath = path.join(traceDir, `${trace.traceId}.json`);
   await writePrivateExclusive(tracePath, `${JSON.stringify(trace, null, 2)}\n`);
   return { trace, tracePath };
@@ -387,6 +448,7 @@ function proposedLesson(value) {
 export function buildEvaluationProjection(trace, proposal, policy) {
   validateTrace(trace);
   const boundedProposal = proposedLesson(proposal);
+  const safeProposal = redactValue(boundedProposal, policy.maxTextBytes);
   const projection = {
     schemaVersion: 1,
     trace: {
@@ -406,13 +468,13 @@ export function buildEvaluationProjection(trace, proposal, policy) {
         data: redactValue(event.data, policy.maxTextBytes),
       })),
     },
-    proposedMemory: redactValue(boundedProposal, policy.maxTextBytes),
+    proposedMemory: safeProposal,
   };
   const serialized = canonical(projection);
   if (Buffer.byteLength(serialized, 'utf8') > policy.maxProjectionBytes) {
     throw new Error('LEARNING_PROJECTION_TOO_LARGE');
   }
-  return { projection, projectionHash: sha256(serialized), proposal: boundedProposal };
+  return { projection, projectionHash: sha256(serialized), proposal: safeProposal };
 }
 
 function probability(answer) {
@@ -523,7 +585,7 @@ export async function evaluateTrace({
   const store = await ensureStore(root);
   await appendPrivate(path.join(store, 'evaluations.jsonl'), evaluation);
   if (!passed) return { status: 'not_candidate', networkCalled: true, evaluation };
-  const candidateCore = {
+  const candidateSeed = {
     schemaVersion: 1,
     projectId: trace.projectId,
     traceId: trace.traceId,
@@ -533,11 +595,11 @@ export async function evaluateTrace({
     evaluator: evaluation.evaluator,
     rubricHash,
     probabilities,
-    createdAt: evaluatedAt,
   };
   const candidate = {
-    candidateId: `candidate_${sha256(canonical(candidateCore)).slice(0, 32)}`,
-    ...candidateCore,
+    candidateId: `candidate_${sha256(canonical(candidateSeed)).slice(0, 32)}`,
+    ...candidateSeed,
+    createdAt: evaluatedAt,
     state: 'candidate',
   };
   const existing = await currentCandidates(store);
@@ -549,10 +611,17 @@ export async function evaluateTrace({
 
 async function currentCandidates(store) {
   const records = await readJsonLines(path.join(store, 'candidates.jsonl'));
+  const transactions = await readJsonLines(path.join(store, 'review-transactions.jsonl'));
   const state = new Map();
   for (const record of records) {
     if (record.action === 'created') state.set(record.candidateId, { ...record });
     else if (state.has(record.candidateId)) {
+      state.set(record.candidateId, { ...state.get(record.candidateId), ...record });
+    }
+  }
+  for (const transaction of transactions) {
+    const record = transaction.candidate;
+    if (record && state.has(record.candidateId)) {
       state.set(record.candidateId, { ...state.get(record.candidateId), ...record });
     }
   }
@@ -561,12 +630,43 @@ async function currentCandidates(store) {
 
 async function currentMemories(store) {
   const records = await readJsonLines(path.join(store, 'memories.jsonl'));
+  const transactions = await readJsonLines(path.join(store, 'review-transactions.jsonl'));
   const state = new Map();
   for (const record of records) {
     if (record.action === 'approved') state.set(record.memoryId, { ...record });
     else if (state.has(record.memoryId)) state.set(record.memoryId, { ...state.get(record.memoryId), ...record });
   }
+  for (const transaction of transactions) {
+    for (const record of transaction.memories ?? []) {
+      if (record.action === 'approved') state.set(record.memoryId, { ...record });
+      else if (state.has(record.memoryId)) state.set(record.memoryId, { ...state.get(record.memoryId), ...record });
+    }
+  }
   return state;
+}
+
+async function withReviewLock(store, action) {
+  const lockPath = path.join(store, 'review.lock');
+  await verifyParentDirectory(lockPath);
+  const lock = await fs.open(lockPath,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600)
+    .catch((error) => {
+      if (error?.code === 'EEXIST') throw new Error('LEARNING_REVIEW_IN_PROGRESS');
+      throw error;
+    });
+  const lockIdentity = await lock.stat();
+  try {
+    return await action();
+  } finally {
+    await lock.close();
+    const current = await fs.lstat(lockPath).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (current && !current.isSymbolicLink() && sameIdentity(lockIdentity, current)) {
+      await fs.unlink(lockPath);
+    }
+  }
 }
 
 export async function listCandidates({ workspace = process.cwd(), state } = {}) {
@@ -591,90 +691,107 @@ export async function reviewCandidate({
     throw new Error('LEARNING_REVIEW_INVALID');
   }
   const store = await ensureStore(root);
-  const candidates = await currentCandidates(store);
-  const candidate = candidates.get(candidateId);
-  if (!candidate) throw new Error('LEARNING_CANDIDATE_NOT_FOUND');
-  const reviewedAt = now().toISOString();
-  if (decision === 'approve') {
-    if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
-    const memoryCore = {
-      schemaVersion: 1,
-      candidateId,
-      projectId: candidate.projectId,
-      title: candidate.proposal.title,
-      content: candidate.proposal.lesson,
-      kind: candidate.proposal.kind,
-      traceId: candidate.traceId,
-      traceHash: candidate.traceHash,
-      evaluationId: candidate.evaluationId,
-      evaluator: candidate.evaluator,
-      rubricHash: candidate.rubricHash,
-      probabilities: candidate.probabilities,
-      approvedAt: reviewedAt,
-      approvedBy: truncateUtf8(actor, 200),
-      approvalReason: truncateUtf8(reason, 1000),
-    };
-    const memory = {
-      action: 'approved',
-      memoryId: `memory_${sha256(canonical(memoryCore)).slice(0, 32)}`,
-      ...memoryCore,
-      state: 'approved',
-    };
-    await appendPrivate(path.join(store, 'memories.jsonl'), memory);
-    await appendPrivate(path.join(store, 'candidates.jsonl'), {
-      action: 'reviewed',
-      candidateId,
-      state: 'approved',
-      memoryId: memory.memoryId,
+  return withReviewLock(store, async () => {
+    const candidates = await currentCandidates(store);
+    const candidate = candidates.get(candidateId);
+    if (!candidate) throw new Error('LEARNING_CANDIDATE_NOT_FOUND');
+    const reviewedAt = now().toISOString();
+    if (decision === 'approve') {
+      if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
+      const memoryCore = {
+        schemaVersion: 1,
+        candidateId,
+        projectId: candidate.projectId,
+        title: candidate.proposal.title,
+        content: candidate.proposal.lesson,
+        kind: candidate.proposal.kind,
+        traceId: candidate.traceId,
+        traceHash: candidate.traceHash,
+        evaluationId: candidate.evaluationId,
+        evaluator: candidate.evaluator,
+        rubricHash: candidate.rubricHash,
+        probabilities: candidate.probabilities,
+        approvedAt: reviewedAt,
+        approvedBy: truncateUtf8(actor, 200),
+        approvalReason: truncateUtf8(reason, 1000),
+      };
+      const memory = {
+        action: 'approved',
+        memoryId: `memory_${sha256(canonical(memoryCore)).slice(0, 32)}`,
+        ...memoryCore,
+        state: 'approved',
+      };
+      const candidateUpdate = {
+        action: 'reviewed',
+        candidateId,
+        state: 'approved',
+        memoryId: memory.memoryId,
+        reviewedAt,
+        reviewedBy: truncateUtf8(actor, 200),
+        reviewReason: truncateUtf8(reason, 1000),
+      };
+      await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
+        action: 'review_transaction',
+        transactionId: `review_${sha256(canonical({ candidateUpdate, memory })).slice(0, 32)}`,
+        candidate: candidateUpdate,
+        memories: [memory],
+      });
+      return { candidateId, state: 'approved', memory };
+    }
+    if (decision === 'reject') {
+      if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
+      const review = {
+        action: 'reviewed',
+        candidateId,
+        state: 'rejected',
+        reviewedAt,
+        reviewedBy: truncateUtf8(actor, 200),
+        reviewReason: truncateUtf8(reason, 1000),
+      };
+      await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
+        action: 'review_transaction',
+        transactionId: `review_${sha256(canonical(review)).slice(0, 32)}`,
+        candidate: review,
+        memories: [],
+      });
+      return review;
+    }
+    if (candidate.state !== 'approved' || !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
+      throw new Error('LEARNING_SUPERSEDE_INVALID');
+    }
+    const memories = await currentMemories(store);
+    const current = memories.get(candidate.memoryId);
+    const replacement = memories.get(replacementMemoryId);
+    if (!current || !replacement || current.projectId !== replacement.projectId ||
+        current.projectId !== candidate.projectId || replacement.state !== 'approved') {
+      throw new Error('LEARNING_REPLACEMENT_INVALID');
+    }
+    const update = {
+      action: 'superseded',
+      memoryId: current.memoryId,
+      state: 'superseded',
+      supersededBy: replacementMemoryId,
       reviewedAt,
       reviewedBy: truncateUtf8(actor, 200),
       reviewReason: truncateUtf8(reason, 1000),
+    };
+    const candidateUpdate = {
+      action: 'reviewed',
+      candidateId,
+      state: 'superseded',
+      replacementMemoryId,
+      reviewedAt,
+      reviewedBy: update.reviewedBy,
+      reviewReason: update.reviewReason,
+    };
+    await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
+      action: 'review_transaction',
+      transactionId: `review_${sha256(canonical({ candidateUpdate, update })).slice(0, 32)}`,
+      candidate: candidateUpdate,
+      memories: [update],
     });
-    return { candidateId, state: 'approved', memory };
-  }
-  if (decision === 'reject') {
-    if (candidate.state !== 'candidate') throw new Error('LEARNING_CANDIDATE_ALREADY_REVIEWED');
-    const review = {
-      action: 'reviewed',
-      candidateId,
-      state: 'rejected',
-      reviewedAt,
-      reviewedBy: truncateUtf8(actor, 200),
-      reviewReason: truncateUtf8(reason, 1000),
-    };
-    await appendPrivate(path.join(store, 'candidates.jsonl'), review);
-    return review;
-  }
-  if (candidate.state !== 'approved' || !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
-    throw new Error('LEARNING_SUPERSEDE_INVALID');
-  }
-  const memories = await currentMemories(store);
-  const current = memories.get(candidate.memoryId);
-  const replacement = memories.get(replacementMemoryId);
-  if (!current || !replacement || current.projectId !== replacement.projectId ||
-      current.projectId !== candidate.projectId || replacement.state !== 'approved') {
-    throw new Error('LEARNING_REPLACEMENT_INVALID');
-  }
-  const update = {
-    action: 'superseded',
-    memoryId: current.memoryId,
-    state: 'superseded',
-    supersededBy: replacementMemoryId,
-    reviewedAt,
-    reviewedBy: truncateUtf8(actor, 200),
-    reviewReason: truncateUtf8(reason, 1000),
-  };
-  await appendPrivate(path.join(store, 'memories.jsonl'), update);
-  await appendPrivate(path.join(store, 'candidates.jsonl'), {
-    action: 'reviewed',
-    candidateId,
-    state: 'superseded',
-    replacementMemoryId,
-    reviewedAt,
-    reviewedBy: update.reviewedBy,
-    reviewReason: update.reviewReason,
+    return update;
   });
-  return update;
 }
 
 function queryTerms(query) {
