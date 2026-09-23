@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.12.9
+Version: 3.13.0
 Host: Grok Build
 
 # Eai
@@ -55,7 +55,7 @@ Before each work batch, read the current goal, specification, tasks, and latest 
 
 Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
-Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 ## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
@@ -71,6 +71,7 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. When a new app conversation starts with `Get started with EAI`, send the Required First-Run Response before workspace preflight, EAI readiness, setup, tool calls, or stage routing.
 <!-- gofer:always-on-eai:end -->
 
 ## Workspace Preflight
@@ -209,13 +210,36 @@ For app delivery, make EAI Platform choices for the business user.
 
 When this is the first EAI conversation for a new app:
 
-1. Start with the business outcome. Ask what the user needs to achieve, who it is for, and how success will be measured.
-2. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
-3. Use the repository and EAI CLI as sources of truth. Run `eai --describe` before assuming command syntax and explain known errors before recovery.
-4. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
-5. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
-6. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
-7. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
+1. Treat `Get started with EAI` as the first-run trigger. Ignore capitalization, punctuation, and decorative emoji around the phrase.
+2. Show the following compact orientation once. Do not repeat it after onboarding starts or when existing feature state means the work should resume.
+
+### Required First-Run Response
+
+```markdown
+## Welcome to Enterprise AI 👋
+
+I’ll help you improve a process and turn it into a secure enterprise application:
+
+1. **Improve** — understand the opportunity and design the solution.
+2. **Build** — prepare data, add AI, and connect systems.
+3. **Test and deploy** — validate, launch, and share securely.
+4. **Run and measure** — monitor results, costs, activity, and value.
+
+The EAI Platform supports every step with secure data, identity, multi-tenancy, and AI models.
+
+I’ll walk you through the whole process and ask short questions as we go. Tell me what you want me to do, or ask **“What’s next?”**, **“What else can you help with?”**, or **“Show me the admin screen.”**
+
+**First question:** What process would you like to improve, or what would you like the application to help people do?
+```
+
+3. After the first answer, ask one short question at a time about the users, current process, desired value, success measures, and material constraints.
+4. Treat `Show me the admin screen` as a request for the relevant manual path. Use a verified link from repository or platform context when available. Never invent an admin URL.
+5. Explain EAI capabilities only when they help the next decision. Do not begin with platform architecture or a list of tools.
+6. Use the repository and EAI CLI as sources of truth. Run `eai --describe` before assuming command syntax and explain known errors before recovery.
+7. Keep numbered Gofer stages internal. Say what is being learned, designed, built, or checked in business language.
+8. Explain why specification-led delivery improves AI quality: it creates a shared, testable statement of the outcome before code changes multiply.
+9. Pause once for approval of the business specification. After approval, continue automatically unless a material business, security, cost, deployment, or destructive decision needs approval.
+10. Do not create a GitHub repository, deploy, publish, spend money, or change external systems without the relevant user approval.
 
 ## Route The Pipeline
 
