@@ -1,14 +1,28 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, utimes, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('node:readline/promises', () => ({
-  createInterface: () => ({
-    question: async (message: string) => message.match(/^Type (.+) to confirm/)?.[1] ?? '',
-    close: () => undefined,
-  }),
+vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', async () => {
+  const { generateKeyPairSync } = await import('node:crypto');
+  const pair = generateKeyPairSync('ed25519');
+  return {
+    VERIFIER_EVALUATOR: 'gofer-heldout-benchmark-verifier',
+    loadActiveBenchmarkVerifierKey: vi.fn(async ({ getPassphrase }) => {
+      await getPassphrase();
+      return { privateKey: pair.privateKey, keyId: 'test-reviewer-key' };
+    }),
+    resolveTrustedEvaluatorPublicKey: vi.fn(async () => pair.publicKey),
+  };
+});
+
+vi.mock('../../../.specify/scripts/node/gofer-tty-prompt.mjs', () => ({
+  promptHidden: vi.fn(async () => 'test-reviewer-passphrase'),
 }));
+
+import { loadActiveBenchmarkVerifierKey } from '../../../.specify/scripts/node/gofer-trusted-evaluator.mjs';
+import { promptHidden } from '../../../.specify/scripts/node/gofer-tty-prompt.mjs';
 import {
   buildEvaluationProjection,
   evaluateTrace,
@@ -22,21 +36,17 @@ import {
 } from '../../../.specify/scripts/node/gofer-reviewed-learning.mjs';
 
 const roots: string[] = [];
-const originalStdinIsTty = process.stdin.isTTY;
-const originalStdoutIsTty = process.stdout.isTTY;
 
-beforeAll(() => {
-  Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
-  Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
-});
-
-afterAll(() => {
-  Object.defineProperty(process.stdin, 'isTTY', { value: originalStdinIsTty, configurable: true });
-  Object.defineProperty(process.stdout, 'isTTY', {
-    value: originalStdoutIsTty,
-    configurable: true,
-  });
-});
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
 async function fixture(enabled = false) {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'gofer-learning-'));
@@ -120,6 +130,7 @@ const proposal = {
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  vi.clearAllMocks();
 });
 
 describe('Gofer reviewed learning', () => {
@@ -233,6 +244,30 @@ describe('Gofer reviewed learning', () => {
     expect(JSON.stringify(result.proposal)).not.toContain('private-value');
     expect(JSON.stringify(result.proposal)).toContain('[REDACTED]');
     expect(result.projectionHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('re-redacts imported trace labels before provider access', async () => {
+    const { workspace, trace } = await fixture();
+    const policy = JSON.parse(
+      await readFile(
+        path.join(workspace, '.specify', 'config', 'typesafe-learning-review.json'),
+        'utf8'
+      )
+    );
+    const importedWithoutHash = {
+      ...trace,
+      host: 'Bearer private-host-token',
+      events: [{ ...trace.events[0], name: 'api_key=private-event-token' }],
+    };
+    delete (importedWithoutHash as Partial<typeof trace>).traceHash;
+    const imported = {
+      ...importedWithoutHash,
+      traceHash: createHash('sha256').update(canonical(importedWithoutHash)).digest('hex'),
+    };
+    const result = buildEvaluationProjection(imported, proposal, policy);
+    expect(JSON.stringify(result.projection)).not.toContain('private-host-token');
+    expect(JSON.stringify(result.projection)).not.toContain('private-event-token');
+    expect(JSON.stringify(result.projection)).toContain('[REDACTED]');
   });
 
   it('supports dry-run without credentials or a network call', async () => {
@@ -392,6 +427,83 @@ describe('Gofer reviewed learning', () => {
     expect(results[0].traceHash).toBe(trace.traceHash);
     expect(results[0].approvedBy).toBe('delivery-owner');
     expect(results[0].approvalReason).not.toContain('private-value');
+    expect(loadActiveBenchmarkVerifierKey).toHaveBeenCalledTimes(1);
+    expect(promptHidden).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores unsigned forged approvals', async () => {
+    const { workspace, trace } = await fixture(true);
+    const evaluation = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    const memory = {
+      action: 'approved',
+      memoryId: `memory_${'1'.repeat(32)}`,
+      candidateId: evaluation.candidate.candidateId,
+      projectId: trace.projectId,
+      title: proposal.title,
+      content: proposal.lesson,
+      kind: proposal.kind,
+      state: 'approved',
+      approvedAt: '2026-09-23T00:00:00.000Z',
+      approvedBy: 'forged-reviewer',
+      approvalReason: 'forged',
+    };
+    const transaction = {
+      action: 'review_transaction',
+      transactionId: `review_${'2'.repeat(32)}`,
+      candidate: {
+        action: 'reviewed',
+        candidateId: evaluation.candidate.candidateId,
+        state: 'approved',
+        memoryId: memory.memoryId,
+      },
+      memories: [memory],
+    };
+    const ledger = path.join(
+      workspace,
+      '.specify',
+      'memory',
+      'reviewed-learning',
+      'review-transactions.jsonl'
+    );
+    await writeFile(ledger, `${JSON.stringify(transaction)}\n`, { flag: 'a' });
+    expect(await searchApprovedMemory({ workspace, query: 'protected validation' })).toEqual([]);
+    expect((await listCandidates({ workspace }))[0].state).toBe('candidate');
+  });
+
+  it('ignores a signed approval after ledger tampering', async () => {
+    const { workspace, trace } = await fixture(true);
+    const evaluation = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: { TYPESAFE_API_KEY: 'test-key' },
+    });
+    await reviewCandidate({
+      workspace,
+      candidateId: evaluation.candidate.candidateId,
+      decision: 'approve',
+      actor: 'delivery-owner',
+      reason: 'Evidence is complete.',
+    });
+    const ledger = path.join(
+      workspace,
+      '.specify',
+      'memory',
+      'reviewed-learning',
+      'review-transactions.jsonl'
+    );
+    const transaction = JSON.parse((await readFile(ledger, 'utf8')).trim());
+    transaction.memories[0].content = 'tampered memory';
+    await writeFile(ledger, `${JSON.stringify(transaction)}\n`);
+    expect(await searchApprovedMemory({ workspace, query: 'tampered memory' })).toEqual([]);
+    expect((await listCandidates({ workspace }))[0].state).toBe('candidate');
   });
 
   it('never persists proposal secrets in candidates or approved memory', async () => {

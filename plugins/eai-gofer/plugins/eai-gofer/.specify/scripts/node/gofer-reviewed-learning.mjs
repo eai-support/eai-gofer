@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
+import { createHash, sign, verify } from 'node:crypto';
 import { constants } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { requestTypeSafeEvaluation } from './gofer-typesafe-credentials.mjs';
+import { loadActiveBenchmarkVerifierKey, resolveTrustedEvaluatorPublicKey,
+  VERIFIER_EVALUATOR } from './gofer-trusted-evaluator.mjs';
+import { promptHidden } from './gofer-tty-prompt.mjs';
 
 const POLICY_PATH = path.join('.specify', 'config', 'typesafe-learning-review.json');
 const STORE_PATH = path.join('.specify', 'memory', 'reviewed-learning');
@@ -287,25 +289,31 @@ function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-async function verifyParentDirectory(target) {
+async function withVerifiedParent(target, action) {
   const parent = path.dirname(target);
   const handle = await fs.open(parent,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  const opened = await handle.stat();
   try {
-    const opened = await handle.stat();
     const current = await fs.lstat(parent);
     if (!opened.isDirectory() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
       throw new Error('LEARNING_STORE_PARENT_CHANGED');
     }
     const expected = verifiedDirectories.get(parent);
     if (expected && !sameIdentity(expected, opened)) throw new Error('LEARNING_STORE_PARENT_CHANGED');
+    const result = await action();
+    const after = await fs.lstat(parent);
+    if (after.isSymbolicLink() || !sameIdentity(opened, after)) {
+      throw new Error('LEARNING_STORE_PARENT_CHANGED');
+    }
+    return result;
   } finally {
     await handle.close();
   }
 }
 
 async function verifyRememberedDirectory(target) {
-  await verifyParentDirectory(path.join(target, '.guard'));
+  await withVerifiedParent(path.join(target, '.guard'), async () => undefined);
   const current = await fs.lstat(target);
   const expected = verifiedDirectories.get(target);
   if (current.isSymbolicLink() || !current.isDirectory() ||
@@ -326,77 +334,80 @@ async function existingRegularFile(target) {
 }
 
 async function appendPrivate(target, value) {
-  await verifyParentDirectory(target);
-  const beforeOpen = await existingRegularFile(target);
-  const handle = await fs.open(
-    target,
-    constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | noFollowFlag,
-    0o600
-  );
-  try {
-    const info = await handle.stat();
-    if (!info.isFile() || (beforeOpen && !sameIdentity(beforeOpen, info))) {
-      throw new Error('LEARNING_STORE_INVALID');
+  return withVerifiedParent(target, async () => {
+    const beforeOpen = await existingRegularFile(target);
+    const handle = await fs.open(
+      target,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | noFollowFlag,
+      0o600
+    );
+    try {
+      const info = await handle.stat();
+      if (!info.isFile() || (beforeOpen && !sameIdentity(beforeOpen, info))) {
+        throw new Error('LEARNING_STORE_INVALID');
+      }
+      await handle.writeFile(`${JSON.stringify(value)}\n`);
+      await handle.sync();
+    } finally {
+      await handle.close();
     }
-    await handle.writeFile(`${JSON.stringify(value)}\n`);
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
+  });
 }
 
 async function writePrivateExclusive(target, value) {
-  let handle;
-  try {
-    await verifyParentDirectory(target);
-    await existingRegularFile(target);
-    handle = await fs.open(
-      target,
-      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag,
-      0o600
-    );
-    await handle.writeFile(value);
-    await handle.sync();
-  } catch (error) {
-    if (error?.code !== 'EEXIST') throw error;
-    const beforeOpen = await existingRegularFile(target);
-    const existingHandle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+  return withVerifiedParent(target, async () => {
+    let handle;
     try {
-      const info = await existingHandle.stat();
-      if (!info.isFile() || !beforeOpen || !sameIdentity(beforeOpen, info)) {
-        throw new Error('LEARNING_STORE_INVALID');
+      await existingRegularFile(target);
+      handle = await fs.open(
+        target,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag,
+        0o600
+      );
+      await handle.writeFile(value);
+      await handle.sync();
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      const beforeOpen = await existingRegularFile(target);
+      const existingHandle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+      try {
+        const info = await existingHandle.stat();
+        if (!info.isFile() || !beforeOpen || !sameIdentity(beforeOpen, info)) {
+          throw new Error('LEARNING_STORE_INVALID');
+        }
+        const existing = await existingHandle.readFile('utf8');
+        if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
+      } finally {
+        await existingHandle.close();
       }
-      const existing = await existingHandle.readFile('utf8');
-      if (existing !== value) throw new Error('LEARNING_RECORD_COLLISION');
     } finally {
-      await existingHandle.close();
+      if (handle) await handle.close();
     }
-  } finally {
-    if (handle) await handle.close();
-  }
+  });
 }
 
 async function readJsonLines(target) {
-  await verifyParentDirectory(target);
-  const beforeOpen = await existingRegularFile(target);
-  if (!beforeOpen) return [];
-  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag).catch((error) => {
-    if (error?.code === 'ENOENT') return null;
-    throw error;
+  return withVerifiedParent(target, async () => {
+    const beforeOpen = await existingRegularFile(target);
+    if (!beforeOpen) return [];
+    const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!handle) return [];
+    try {
+      const info = await handle.stat();
+      const current = await fs.lstat(target);
+      if (!info.isFile() || current.isSymbolicLink() || !current.isFile() ||
+          !sameIdentity(beforeOpen, info) || !sameIdentity(info, current) ||
+          info.size > MAX_SOURCE_BYTES) throw new Error('LEARNING_STORE_INVALID');
+      const lines = (await handle.readFile('utf8')).split('\n').filter(Boolean);
+      if (lines.length > MAX_RECORDS) throw new Error('LEARNING_STORE_LIMIT');
+      return lines.map((line) => JSON.parse(line));
+    } finally {
+      await handle.close();
+    }
   });
-  if (!handle) return [];
-  try {
-    const info = await handle.stat();
-    const current = await fs.lstat(target);
-    if (!info.isFile() || current.isSymbolicLink() || !current.isFile() ||
-        !sameIdentity(beforeOpen, info) || !sameIdentity(info, current) ||
-        info.size > MAX_SOURCE_BYTES) throw new Error('LEARNING_STORE_INVALID');
-    const lines = (await handle.readFile('utf8')).split('\n').filter(Boolean);
-    if (lines.length > MAX_RECORDS) throw new Error('LEARNING_STORE_LIMIT');
-    return lines.map((line) => JSON.parse(line));
-  } finally {
-    await handle.close();
-  }
 }
 
 function eventType(name) {
@@ -549,7 +560,7 @@ export function buildEvaluationProjection(trace, proposal, policy) {
     trace: {
       traceId: trace.traceId,
       projectId: trace.projectId,
-      host: trace.host,
+      host: redactString(trace.host, 200),
       objective: redactString(trace.objective, policy.maxTextBytes),
       startedAt: trace.startedAt,
       endedAt: trace.endedAt,
@@ -559,7 +570,7 @@ export function buildEvaluationProjection(trace, proposal, policy) {
         sequence: event.sequence,
         time: event.time,
         type: event.type,
-        name: event.name,
+        name: redactString(event.name, 200),
         data: redactValue(event.data, policy.maxTextBytes),
       })),
     },
@@ -699,16 +710,61 @@ export async function evaluateTrace({
     createdAt: evaluatedAt,
     state: 'candidate',
   };
-  const existing = await currentCandidates(store);
+  const existing = await currentCandidates(store, root);
   if (!existing.has(candidate.candidateId)) {
     await appendPrivate(path.join(store, 'candidates.jsonl'), { action: 'created', ...candidate });
   }
   return { status: 'candidate', networkCalled: true, evaluation, candidate };
 }
 
-async function currentCandidates(store) {
-  const records = await readJsonLines(path.join(store, 'candidates.jsonl'));
+function reviewTransactionPayload(transaction) {
+  const { approval, ...payload } = transaction;
+  return payload;
+}
+
+function signReviewTransaction(transaction, privateKey, keyId) {
+  const payload = reviewTransactionPayload(transaction);
+  return {
+    ...payload,
+    approval: {
+      algorithm: 'ed25519',
+      evaluator: VERIFIER_EVALUATOR,
+      keyId,
+      value: sign(null, Buffer.from(canonical(payload)), privateKey).toString('base64url'),
+    },
+  };
+}
+
+async function authenticReviewTransaction(transaction, workspace) {
+  const approval = transaction?.approval;
+  if (approval?.algorithm !== 'ed25519' || approval.evaluator !== VERIFIER_EVALUATOR ||
+      !text(approval.keyId) || !/^[A-Za-z0-9_-]+$/.test(approval.value ?? '')) return false;
+  try {
+    const publicKey = await resolveTrustedEvaluatorPublicKey({
+      host: 'codex',
+      provenance: { evaluator: approval.evaluator, keyId: approval.keyId },
+    }, { workspaceRoot: workspace });
+    return verify(null, Buffer.from(canonical(reviewTransactionPayload(transaction))), publicKey,
+      Buffer.from(approval.value, 'base64url'));
+  } catch {
+    return false;
+  }
+}
+
+async function trustedReviewTransactions(store, workspace) {
   const transactions = await readJsonLines(path.join(store, 'review-transactions.jsonl'));
+  const trusted = [];
+  for (const transaction of transactions) {
+    const grantsMemory = (transaction.memories ?? []).some((record) =>
+      ['approved', 'superseded'].includes(record?.action));
+    if (!grantsMemory || await authenticReviewTransaction(transaction, workspace)) trusted.push(transaction);
+  }
+  return trusted;
+}
+
+async function currentCandidates(store, workspace) {
+  const records = await readJsonLines(path.join(store, 'candidates.jsonl'));
+  const transactions = await trustedReviewTransactions(store, workspace);
   const state = new Map();
   for (const record of records) {
     if (record.action === 'created') state.set(record.candidateId, { ...record });
@@ -725,9 +781,9 @@ async function currentCandidates(store) {
   return state;
 }
 
-async function currentMemories(store) {
+async function currentMemories(store, workspace) {
   const records = await readJsonLines(path.join(store, 'memories.jsonl'));
-  const transactions = await readJsonLines(path.join(store, 'review-transactions.jsonl'));
+  const transactions = await trustedReviewTransactions(store, workspace);
   const state = new Map();
   for (const record of records) {
     if (record.action === 'approved') state.set(record.memoryId, { ...record });
@@ -775,13 +831,13 @@ async function recoverReviewLock(lockPath, expectedIdentity) {
 
 async function withReviewLock(store, action) {
   const lockPath = path.join(store, 'review.lock');
-  await verifyParentDirectory(lockPath);
-  let lock;
-  try {
+  return withVerifiedParent(lockPath, async () => {
+    let lock;
+    try {
     lock = await fs.open(lockPath,
       constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
-  } catch (error) {
-    if (error?.code !== 'EEXIST') throw error;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
     const existing = await fs.open(lockPath, constants.O_RDONLY | noFollowFlag);
     let lockIdentity;
     let record;
@@ -812,33 +868,35 @@ async function withReviewLock(store, action) {
     }
     await recoverReviewLock(lockPath, lockIdentity);
     return withReviewLock(store, action);
-  }
-  const lockIdentity = await lock.stat();
-  const createdAt = new Date();
-  await lock.writeFile(JSON.stringify({
+    }
+    const lockIdentity = await lock.stat();
+    const createdAt = new Date();
+    await lock.writeFile(JSON.stringify({
     schemaVersion: 1,
     pid: process.pid,
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + REVIEW_LOCK_TTL_MS).toISOString(),
   }));
-  await lock.sync();
-  try {
-    return await action();
-  } finally {
-    await lock.close();
-    const current = await fs.lstat(lockPath).catch((error) => {
+    await lock.sync();
+    try {
+      return await action();
+    } finally {
+      await lock.close();
+      const current = await fs.lstat(lockPath).catch((error) => {
       if (error?.code === 'ENOENT') return null;
       throw error;
     });
-    if (current && !current.isSymbolicLink() && sameIdentity(lockIdentity, current)) {
-      await fs.unlink(lockPath);
+      if (current && !current.isSymbolicLink() && sameIdentity(lockIdentity, current)) {
+        await fs.unlink(lockPath);
+      }
     }
-  }
+  });
 }
 
 export async function listCandidates({ workspace = process.cwd(), state } = {}) {
-  const store = await ensureStore(workspace);
-  return [...(await currentCandidates(store)).values()]
+  const root = await safeWorkspace(workspace);
+  const store = await ensureStore(root);
+  return [...(await currentCandidates(store, root)).values()]
     .filter((candidate) => !state || candidate.state === state)
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 }
@@ -857,24 +915,25 @@ export async function reviewCandidate({
       !['approve', 'reject', 'supersede'].includes(decision) || !text(actor) || !text(reason)) {
     throw new Error('LEARNING_REVIEW_INVALID');
   }
+  let approvalAuthority;
   if (['approve', 'supersede'].includes(decision)) {
-    if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
-      throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
-    }
-    const prompt = createInterface({ input: process.stdin, output: process.stdout });
     try {
-      const expected = `${decision.toUpperCase()} ${candidateId}`;
-      const confirmed = (await prompt.question(
-        `Type ${expected} to confirm human review: `
-      )).trim() === expected;
-      if (!confirmed) throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
-    } finally {
-      prompt.close();
+      approvalAuthority = await loadActiveBenchmarkVerifierKey({
+        workspaceRoot: root,
+        getPassphrase: () => promptHidden(
+          `${decision === 'approve' ? 'Approve' : 'Supersede'} ${candidateId} — reviewer passphrase: `
+        ),
+      });
+    } catch (error) {
+      if (error?.message === 'TTY_REQUIRED' || error?.message === 'PASSPHRASE_REQUIRED') {
+        throw new Error('LEARNING_HUMAN_APPROVAL_REQUIRED');
+      }
+      throw error;
     }
   }
   const store = await ensureStore(root);
   return withReviewLock(store, async () => {
-    const candidates = await currentCandidates(store);
+    const candidates = await currentCandidates(store, root);
     const candidate = candidates.get(candidateId);
     if (!candidate) throw new Error('LEARNING_CANDIDATE_NOT_FOUND');
     const reviewedAt = now().toISOString();
@@ -912,12 +971,14 @@ export async function reviewCandidate({
         reviewedBy: redactString(actor, 200),
         reviewReason: redactString(reason, 1000),
       };
-      await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
+      const transaction = {
         action: 'review_transaction',
         transactionId: `review_${sha256(canonical({ candidateUpdate, memory })).slice(0, 32)}`,
         candidate: candidateUpdate,
         memories: [memory],
-      });
+      };
+      await appendPrivate(path.join(store, 'review-transactions.jsonl'),
+        signReviewTransaction(transaction, approvalAuthority.privateKey, approvalAuthority.keyId));
       return { candidateId, state: 'approved', memory };
     }
     if (decision === 'reject') {
@@ -942,7 +1003,7 @@ export async function reviewCandidate({
         !/^memory_[a-f0-9]{32}$/.test(replacementMemoryId ?? '')) {
       throw new Error('LEARNING_SUPERSEDE_INVALID');
     }
-    const memories = await currentMemories(store);
+    const memories = await currentMemories(store, root);
     const current = memories.get(candidate.memoryId);
     const replacement = memories.get(replacementMemoryId);
     if (!current || !replacement || current.projectId !== replacement.projectId ||
@@ -967,12 +1028,14 @@ export async function reviewCandidate({
       reviewedBy: update.reviewedBy,
       reviewReason: update.reviewReason,
     };
-    await appendPrivate(path.join(store, 'review-transactions.jsonl'), {
+    const transaction = {
       action: 'review_transaction',
       transactionId: `review_${sha256(canonical({ candidateUpdate, update })).slice(0, 32)}`,
       candidate: candidateUpdate,
       memories: [update],
-    });
+    };
+    await appendPrivate(path.join(store, 'review-transactions.jsonl'),
+      signReviewTransaction(transaction, approvalAuthority.privateKey, approvalAuthority.keyId));
     return update;
   });
 }
@@ -989,7 +1052,7 @@ export async function searchApprovedMemory({ workspace = process.cwd(), query, l
   const store = await ensureStore(root);
   const projectId = `project_${sha256(root).slice(0, 24)}`;
   const terms = queryTerms(query);
-  return [...(await currentMemories(store)).values()]
+  return [...(await currentMemories(store, root)).values()]
     .filter((memory) => memory.projectId === projectId && memory.state === 'approved')
     .map((memory) => {
       const haystack = `${memory.title} ${memory.content} ${memory.kind}`.toLowerCase();
@@ -1013,9 +1076,10 @@ export async function recordMemoryOutcome({
       !['helped', 'neutral', 'harmed'].includes(outcome)) {
     throw new Error('LEARNING_FEEDBACK_INVALID');
   }
-  const store = await ensureStore(workspace);
+  const root = await safeWorkspace(workspace);
+  const store = await ensureStore(root);
   return withReviewLock(store, async () => {
-    const memory = (await currentMemories(store)).get(memoryId);
+    const memory = (await currentMemories(store, root)).get(memoryId);
     if (!memory || memory.state !== 'approved') throw new Error('LEARNING_MEMORY_NOT_APPROVED');
     const feedbackCore = {
       schemaVersion: 1,
@@ -1041,8 +1105,8 @@ export async function learningReport({ workspace = process.cwd() } = {}) {
   const root = await safeWorkspace(workspace);
   const store = await ensureStore(root);
   const projectId = `project_${sha256(root).slice(0, 24)}`;
-  const candidates = [...(await currentCandidates(store)).values()].filter((item) => item.projectId === projectId);
-  const memories = [...(await currentMemories(store)).values()].filter((item) => item.projectId === projectId);
+  const candidates = [...(await currentCandidates(store, root)).values()].filter((item) => item.projectId === projectId);
+  const memories = [...(await currentMemories(store, root)).values()].filter((item) => item.projectId === projectId);
   const feedback = (await readJsonLines(path.join(store, 'feedback.jsonl'))).filter((item) => item.projectId === projectId);
   const outcomes = Object.fromEntries(['helped', 'neutral', 'harmed'].map((name) => [
     name,
