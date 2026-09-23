@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Prepare local signing identities without granting them runtime authority. */
+/** Prepare the local capability identity without granting it runtime authority. */
 import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
@@ -45,9 +45,11 @@ export async function initializeStagedTrust(root) {
       (rootInfo.mode & 0o077) !== 0) throw denied();
   const staged = path.join(root, 'staged-keys');
   await mkdir(staged, { mode: 0o700 });
+  // The benchmark verifier key is not staged here. A worker sandbox can read
+  // the account home, so a plaintext verifier key would be forgeable. It is
+  // created, encrypted, by the human-run gofer-verifier-key-ceremony.mjs.
   const identities = [
     { name: 'capability-evaluator', host: 'codex', evaluator: 'gofer-native-host-evaluator' },
-    { name: 'heldout-verifier', host: 'codex', evaluator: 'gofer-heldout-benchmark-verifier' },
   ];
   const records = [];
   for (const identity of identities) {
