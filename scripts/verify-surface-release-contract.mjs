@@ -45,7 +45,10 @@ const requiredRuntimeAssets = [
   '.specify/scripts/node/gofer-run-verified-task.mjs',
   '.specify/scripts/node/gofer-semantic-drift.mjs',
   '.specify/scripts/node/gofer-typesafe-credentials.mjs',
+  '.specify/scripts/node/gofer-reviewed-learning.mjs',
   '.specify/config/typesafe-semantic-review.json',
+  '.specify/config/typesafe-learning-review.json',
+  '.specify/schemas/gofer-learning-trace-v1.json',
 ];
 // extension/resources mirrors .specify/<category>/ under a differently named
 // sibling directory (see sync-extension-resources.mjs); the plugin roots keep
@@ -55,6 +58,7 @@ const requiredRuntimeAssets = [
 const EXTENSION_RESOURCE_CATEGORY_DIRS = {
   'scripts/node/': 'node-scripts/',
   'config/': 'specify-config/',
+  'schemas/': 'schemas/',
 };
 function packagedAssetPath(asset, root) {
   if (!root.endsWith('resources')) return asset;

@@ -4,8 +4,14 @@ import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
-const credentialsUrl = new URL('../../../.specify/scripts/node/gofer-typesafe-credentials.mjs', import.meta.url);
-const semanticUrl = new URL('../../../.specify/scripts/node/gofer-semantic-drift.mjs', import.meta.url);
+const credentialsUrl = new URL(
+  '../../../.specify/scripts/node/gofer-typesafe-credentials.mjs',
+  import.meta.url
+);
+const semanticUrl = new URL(
+  '../../../.specify/scripts/node/gofer-semantic-drift.mjs',
+  import.meta.url
+);
 const directories: string[] = [];
 
 async function fixture() {
@@ -14,35 +20,130 @@ async function fixture() {
   const featureDir = path.join(workspace, '.specify', 'specs', '002-typesafe');
   await mkdir(path.join(workspace, '.specify', 'config'), { recursive: true });
   await mkdir(featureDir, { recursive: true });
-  await writeFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), JSON.stringify({ schemaVersion: 1, enabled: false, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 0.85, uncertainAction: 'reconcile', conflictAction: 'block_affected_task' }));
+  await writeFile(
+    path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      enabled: false,
+      provider: 'typesafe',
+      events: ['before_validation'],
+      minimumConfidence: 0.85,
+      uncertainAction: 'reconcile',
+      conflictAction: 'block_affected_task',
+    })
+  );
+  await writeFile(
+    path.join(workspace, '.specify', 'config', 'typesafe-learning-review.json'),
+    JSON.stringify({ schemaVersion: 1, enabled: false, provider: 'typesafe' })
+  );
   await writeFile(path.join(featureDir, 'goal-ledger.json'), '{"goal":"deliver"}');
   await writeFile(path.join(featureDir, 'spec.md'), '# Spec');
   return { workspace, featureDir };
 }
 
-afterEach(async () => { await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))); });
+afterEach(async () => {
+  await Promise.all(
+    directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))
+  );
+});
 
 describe('TypeSafe semantic governance', () => {
+  it('stops reading provider output at the response byte limit', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    let cancelled = false;
+    const body = new ReadableStream({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(1024 * 1024));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const result = await credentials.requestTypeSafeEvaluation({
+      workspace,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+      policy: {
+        endpoint: 'https://api.typesafe.ai/v1/systemone',
+        model: 'jev-latest',
+        timeoutMs: 1000,
+      },
+      projection: {},
+      rubric: {},
+      fetchImpl: vi.fn(async () => new Response(body, { status: 200 })),
+    });
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response' });
+    expect(cancelled).toBe(true);
+  });
+
   it('writes only an ignored project secret file and enables review', async () => {
     const { workspace } = await fixture();
     const credentials = await import(credentialsUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    expect(await readFile(path.join(workspace, '.specify', 'secrets', 'typesafe.env'), 'utf8')).toBe('TYPESAFE_API_KEY=secret-value\n');
-    expect(JSON.parse(await readFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), 'utf8')).enabled).toBe(true);
+    expect(
+      await readFile(path.join(workspace, '.specify', 'secrets', 'typesafe.env'), 'utf8')
+    ).toBe('TYPESAFE_API_KEY=secret-value\n');
+    expect(
+      JSON.parse(
+        await readFile(
+          path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'),
+          'utf8'
+        )
+      ).enabled
+    ).toBe(true);
+    expect(
+      JSON.parse(
+        await readFile(
+          path.join(workspace, '.specify', 'config', 'typesafe-learning-review.json'),
+          'utf8'
+        )
+      ).enabled
+    ).toBe(true);
     const result = await credentials.disconnect({ workspace });
     expect(result.removedProjectSecret).toBe(true);
-    expect(JSON.parse(await readFile(path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'), 'utf8')).enabled).toBe(false);
+    expect(
+      JSON.parse(
+        await readFile(
+          path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json'),
+          'utf8'
+        )
+      ).enabled
+    ).toBe(false);
+    expect(
+      JSON.parse(
+        await readFile(
+          path.join(workspace, '.specify', 'config', 'typesafe-learning-review.json'),
+          'utf8'
+        )
+      ).enabled
+    ).toBe(false);
   });
 
   it('does not call the provider when review is disabled or no credential exists', async () => {
     const { workspace, featureDir } = await fixture();
     const semantic = await import(semanticUrl.href);
     const fetchImpl = vi.fn();
-    expect(await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })).toMatchObject({ status: 'disabled' });
+    expect(
+      await semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl,
+      })
+    ).toMatchObject({ status: 'disabled' });
     expect(fetchImpl).not.toHaveBeenCalled();
     const policyPath = path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json');
-    const policy = JSON.parse(await readFile(policyPath, 'utf8')); policy.enabled = true; await writeFile(policyPath, JSON.stringify(policy));
-    expect(await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })).toMatchObject({ status: 'not_configured' });
+    const policy = JSON.parse(await readFile(policyPath, 'utf8'));
+    policy.enabled = true;
+    await writeFile(policyPath, JSON.stringify(policy));
+    expect(
+      await semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl,
+      })
+    ).toMatchObject({ status: 'not_configured' });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -51,11 +152,32 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'conflict', confidence: 0.99 }, required_action: { choice: 'ask_user', confidence: 0.99 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'conflict', confidence: 0.99 },
+              required_action: { choice: 'ask_user', confidence: 0.99 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result).toMatchObject({ status: 'conflict', confidence: 0.99 });
     expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer secret-value');
-    const receipt = JSON.parse(await readFile(path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'), 'utf8'));
+    const receipt = JSON.parse(
+      await readFile(
+        path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'),
+        'utf8'
+      )
+    );
     expect(receipt.artifacts['spec.md']).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(receipt)).not.toContain('secret-value');
   });
@@ -65,13 +187,29 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const networkFailure = vi.fn(async () => { throw new TypeError('fetch failed'); });
+    const networkFailure = vi.fn(async () => {
+      throw new TypeError('fetch failed');
+    });
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl: networkFailure })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl: networkFailure,
+      })
     ).resolves.toMatchObject({ status: 'unavailable', reason: 'network_error' });
-    const timeout = vi.fn(async () => { const error = new Error('The operation was aborted'); error.name = 'TimeoutError'; throw error; });
+    const timeout = vi.fn(async () => {
+      const error = new Error('The operation was aborted');
+      error.name = 'TimeoutError';
+      throw error;
+    });
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl: timeout })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl: timeout,
+      })
     ).resolves.toMatchObject({ status: 'unavailable', reason: 'timeout' });
   });
 
@@ -80,8 +218,24 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'unclear', confidence: 0.99 }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'unclear', confidence: 0.99 },
+              required_action: { choice: 'continue', confidence: 0.99 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result.status).toBe('reconcile');
   });
 
@@ -91,7 +245,12 @@ describe('TypeSafe semantic governance', () => {
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
     const fetchImpl = vi.fn(async () => new Response('not json', { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_body' });
   });
 
@@ -100,8 +259,24 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 0.95 },
+              required_action: { choice: 'continue', confidence: 0.95 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result.status).toBe('aligned');
   });
 
@@ -115,10 +290,20 @@ describe('TypeSafe semantic governance', () => {
     await writeFile(path.join(outside, 'secret.txt'), 'do not read this');
     const fetchImpl = vi.fn();
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir: outside, event: 'before_validation', fetchImpl })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir: outside,
+        event: 'before_validation',
+        fetchImpl,
+      })
     ).rejects.toThrow('must remain inside the workspace');
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir: path.join(workspace, '..', 'escape'), event: 'before_validation', fetchImpl })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir: path.join(workspace, '..', 'escape'),
+        event: 'before_validation',
+        fetchImpl,
+      })
     ).rejects.toThrow('must remain inside the workspace');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -130,8 +315,24 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     const oversized = `${'a'.repeat(64 * 1024)}TAIL_DRIFT_MARKER`;
     await writeFile(path.join(featureDir, 'spec.md'), oversized);
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 0.95 },
+              required_action: { choice: 'continue', confidence: 0.95 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result.artifacts['spec.md']).toBe(createHash('sha256').update(oversized).digest('hex'));
     const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
     const sentState = JSON.parse(sentBody.state);
@@ -144,8 +345,14 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-secrets-'));
     directories.push(outside);
-    await symlink(outside, path.join(workspace, '.specify', 'secrets'), process.platform === 'win32' ? 'junction' : 'dir');
-    await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow('symbolic link');
+    await symlink(
+      outside,
+      path.join(workspace, '.specify', 'secrets'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+    await expect(credentials.connect({ workspace, key: 'secret-value' })).rejects.toThrow(
+      'symbolic link'
+    );
   });
 
   it('fails closed when an enabled policy has a missing or invalid minimumConfidence', async () => {
@@ -157,9 +364,27 @@ describe('TypeSafe semantic governance', () => {
     const policyPath = path.join(workspace, '.specify', 'config', 'typesafe-semantic-review.json');
     for (const malformed of [
       { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'] },
-      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 'high' },
-      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 1.5 },
-      { schemaVersion: 1, enabled: true, provider: 'typesafe', events: 'before_validation', minimumConfidence: 0.85 },
+      {
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'typesafe',
+        events: ['before_validation'],
+        minimumConfidence: 'high',
+      },
+      {
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'typesafe',
+        events: ['before_validation'],
+        minimumConfidence: 1.5,
+      },
+      {
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'typesafe',
+        events: 'before_validation',
+        minimumConfidence: 0.85,
+      },
     ]) {
       await writeFile(policyPath, JSON.stringify(malformed));
       await expect(
@@ -176,9 +401,22 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     const outside = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-config-'));
     directories.push(outside);
-    await writeFile(path.join(outside, 'typesafe-semantic-review.json'), JSON.stringify({ schemaVersion: 1, enabled: true, provider: 'typesafe', events: ['before_validation'], minimumConfidence: 0.85 }));
+    await writeFile(
+      path.join(outside, 'typesafe-semantic-review.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'typesafe',
+        events: ['before_validation'],
+        minimumConfidence: 0.85,
+      })
+    );
     await rm(path.join(workspace, '.specify', 'config'), { recursive: true, force: true });
-    await symlink(outside, path.join(workspace, '.specify', 'config'), process.platform === 'win32' ? 'junction' : 'dir');
+    await symlink(
+      outside,
+      path.join(workspace, '.specify', 'config'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
     const fetchImpl = vi.fn();
     await expect(
       semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl })
@@ -190,7 +428,10 @@ describe('TypeSafe semantic governance', () => {
     const { workspace } = await fixture();
     const credentials = await import(credentialsUrl.href);
     await credentials.connect({ workspace, key: 'project-secret-value' });
-    const result = await credentials.resolveApiKey({ workspace, env: { TYPESAFE_API_KEY: 'environment-value' } });
+    const result = await credentials.resolveApiKey({
+      workspace,
+      env: { TYPESAFE_API_KEY: 'environment-value' },
+    });
     expect(result).toEqual({ apiKey: 'environment-value', source: 'environment' });
   });
 
@@ -201,8 +442,24 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     // A malformed confidence on one answer must not be outweighed by a high
     // confidence on the other: the minimum must still fail closed to zero.
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 'not-a-number' }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 'not-a-number' },
+              required_action: { choice: 'continue', confidence: 0.99 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result.confidence).toBe(0);
     expect(result.status).toBe('reconcile');
   });
@@ -229,7 +486,12 @@ describe('TypeSafe semantic governance', () => {
     await symlink(outside, linkedFeatureDir, process.platform === 'win32' ? 'junction' : 'dir');
     const fetchImpl = vi.fn();
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir: linkedFeatureDir,
+        event: 'before_validation',
+        fetchImpl,
+      })
     ).rejects.toThrow('symbolic link');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -241,7 +503,12 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     const fetchImpl = vi.fn();
     await expect(
-      semantic.runSemanticReview({ workspace, featureDir: path.join(workspace, '.specify', 'specs', 'typo-d-feature'), event: 'before_validation', fetchImpl })
+      semantic.runSemanticReview({
+        workspace,
+        featureDir: path.join(workspace, '.specify', 'specs', 'typo-d-feature'),
+        event: 'before_validation',
+        fetchImpl,
+      })
     ).rejects.toThrow('does not exist');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -251,8 +518,24 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 2 }, required_action: { choice: 'continue', confidence: 0.99 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 2 },
+              required_action: { choice: 'continue', confidence: 0.99 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     expect(result.confidence).toBe(0);
     expect(result.status).toBe('reconcile');
   });
@@ -274,9 +557,27 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
-    const result = await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
-    expect(result.missingArtifacts).toEqual(expect.arrayContaining(['plan.md', 'tasks.md', 'decisions.md', 'traceability.md']));
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 0.95 },
+              required_action: { choice: 'continue', confidence: 0.95 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+    expect(result.missingArtifacts).toEqual(
+      expect.arrayContaining(['plan.md', 'tasks.md', 'decisions.md', 'traceability.md'])
+    );
     expect(result.status).toBe('aligned');
   });
 
@@ -289,8 +590,24 @@ describe('TypeSafe semantic governance', () => {
     // truncation would let this through far past the 64 KiB byte bound.
     const oversized = '€'.repeat(64 * 1024);
     await writeFile(path.join(featureDir, 'spec.md'), oversized, 'utf8');
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ answers: { goal_alignment: { choice: 'aligned', confidence: 0.95 }, required_action: { choice: 'continue', confidence: 0.95 } } }), { status: 200 }));
-    await semantic.runSemanticReview({ workspace, featureDir, event: 'before_validation', fetchImpl });
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              goal_alignment: { choice: 'aligned', confidence: 0.95 },
+              required_action: { choice: 'continue', confidence: 0.95 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
     const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
     const sentState = JSON.parse(sentBody.state);
     expect(Buffer.byteLength(sentState['spec.md'].content, 'utf8')).toBeLessThanOrEqual(64 * 1024);
@@ -305,7 +622,12 @@ describe('TypeSafe semantic governance', () => {
     const semantic = await import(semanticUrl.href);
     const linkedFeatureDir = featureDir.replace(workspace, linkedWorkspace);
     await expect(
-      semantic.runSemanticReview({ workspace: linkedWorkspace, featureDir: linkedFeatureDir, event: 'before_validation', fetchImpl: vi.fn() })
+      semantic.runSemanticReview({
+        workspace: linkedWorkspace,
+        featureDir: linkedFeatureDir,
+        event: 'before_validation',
+        fetchImpl: vi.fn(),
+      })
     ).rejects.toThrow('must be a real directory, not a symbolic link');
     const credentials = await import(credentialsUrl.href);
     await expect(credentials.credentialStatus({ workspace: linkedWorkspace })).rejects.toThrow(
@@ -317,7 +639,12 @@ describe('TypeSafe semantic governance', () => {
     const { featureDir } = await fixture();
     const semantic = await import(semanticUrl.href);
     await expect(
-      semantic.runSemanticReview({ workspace: '/nonexistent/gofer-workspace-root', featureDir, event: 'before_validation', fetchImpl: vi.fn() })
+      semantic.runSemanticReview({
+        workspace: '/nonexistent/gofer-workspace-root',
+        featureDir,
+        event: 'before_validation',
+        fetchImpl: vi.fn(),
+      })
     ).rejects.toThrow('Gofer workspace root does not exist.');
   });
 
