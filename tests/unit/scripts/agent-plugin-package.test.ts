@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SCRIPT_PATH = path.join(REPO_ROOT, '.specify', 'scripts', 'node', 'package-agent-plugin.mjs');
 const VERSION = '3.4.0';
+const FIRST_RUN_TRIGGER = 'Treat `Get started with EAI` as the first-run trigger';
 
 function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
@@ -107,9 +108,9 @@ describe('Gofer agent plugin package', () => {
         '.github/plugin/plugin.json',
         '.codex-plugin/plugin.json',
       ]) {
-        expect(readJson<{ keywords: string[] }>(path.join(pluginRoot, manifest)).keywords).toContain(
-          'grok'
-        );
+        expect(
+          readJson<{ keywords: string[] }>(path.join(pluginRoot, manifest)).keywords
+        ).toContain('grok');
       }
       const umbrellaSkill = fs.readFileSync(
         path.join(pluginRoot, 'plugin-skills', 'eai', 'SKILL.md'),
@@ -120,6 +121,19 @@ describe('Gofer agent plugin package', () => {
       for (const surface of ['skills', '.claude/skills', '.github/skills']) {
         const skill = fs.readFileSync(path.join(pluginRoot, surface, 'eai', 'SKILL.md'), 'utf8');
         expect(skill).toContain(buildContinuationContractSection());
+      }
+      for (const stagedRoot of [pluginRoot, path.join(pluginRoot, 'plugins', 'eai-gofer')]) {
+        const eaiSkill = fs.readFileSync(
+          path.join(stagedRoot, 'skills', 'eai', 'SKILL.md'),
+          'utf8'
+        );
+        const updateSkill = fs.readFileSync(
+          path.join(stagedRoot, 'skills', 'eai-update', 'SKILL.md'),
+          'utf8'
+        );
+        expect(eaiSkill).toContain(FIRST_RUN_TRIGGER);
+        expect(updateSkill).not.toContain(FIRST_RUN_TRIGGER);
+        expect(updateSkill).not.toContain('## First Conversation');
       }
       expect(
         fs.readFileSync(path.join(REPO_ROOT, '.agents/skills/eai/SKILL.md'), 'utf8')
