@@ -4,6 +4,30 @@
     "eai-gofer": {
       "features": [
         {
+          "id": "gofer-app-marketplace-distribution",
+          "description": "Gofer classifies distributable apps, generates bounded application packages, composes the existing capability contract, and never substitutes local conformance for platform listing and buyer installation approval.",
+          "owned_paths": [
+            ".specify/commands/1_gofer_research.md",
+            ".specify/commands/2_gofer_specify.md",
+            ".specify/commands/3_gofer_plan.md",
+            ".specify/commands/4_gofer_tasks.md",
+            ".specify/commands/5_gofer_implement.md",
+            ".specify/commands/6_gofer_validate.md",
+            ".specify/references/platform/app-marketplace.md",
+            ".specify/scripts/node/validate-application-package.mjs",
+            "extension/resources/**",
+            "tests/unit/application-package-validator.test.ts",
+            "package.json"
+          ],
+          "required_repo_tests": [
+            "tests/unit/application-package-validator.test.ts",
+            "tests/unit/scripts/sync-extension-resources.test.ts"
+          ],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
+        },
+        {
           "id": "admin-portal-gofer-headless-contract",
           "description": "Side-effect-free Gofer stages 0-4 contracts, governance validation, and deterministic portable repository export for Admin Portal generation and regeneration.",
           "owned_paths": ["src/headless/**", "tests/unit/headless/**", "package.json"],
