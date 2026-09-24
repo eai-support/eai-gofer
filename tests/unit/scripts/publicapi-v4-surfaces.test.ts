@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(import.meta.dirname, '../../..');
-const textExtensions = /\.(?:md|json|ya?ml|toml|ts|js|mjs)$/i;
 const excludedPaths = [
   'dist/',
   'graphify-out/',
@@ -13,10 +12,12 @@ const excludedPaths = [
 ];
 
 function trackedTextFiles(): string[] {
-  return execFileSync('git', ['ls-files'], { cwd: repoRoot, encoding: 'utf8' })
+  return execFileSync('git', ['grep', '-Il', '-e', '', '--', '.'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  })
     .split('\n')
     .filter(Boolean)
-    .filter((file) => textExtensions.test(file))
     .filter((file) => !excludedPaths.some((prefix) => file.startsWith(prefix)));
 }
 
