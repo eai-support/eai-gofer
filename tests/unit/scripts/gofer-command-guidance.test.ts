@@ -93,6 +93,10 @@ describe('Gofer public execution-depth guidance', () => {
       'skills/eai/SKILL.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
       'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+      'extension/resources/claude-skills/eai/SKILL.md',
+      'extension/resources/copilot-prompts/eai.prompt.md',
+      'extension/resources/gemini/commands/gofer/eai.md',
+      'extension/resources/grok-skills/eai/SKILL.md',
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       expect(content, file).toContain('## EAI Hosting And Deployment Contract');
@@ -111,7 +115,9 @@ describe('Gofer public execution-depth guidance', () => {
       );
       expect(content, file).toContain('`classification: succeeded`');
       expect(content, file).toContain('`requiresTenantInfra: false`');
-      expect(content, file).toContain('`eai deploy doctor --url <activeUrl>`');
+      expect(content, file).toContain(
+        'eai deploy doctor --url <activeUrl> --format json > .eai/deploy-doctor.json'
+      );
       expect(content, file).toContain('missing tenant repository connection');
       expect(content, file).toContain('OpenID Connect (OIDC)');
       expect(content, file).toContain('TenantInfra acceptance');

@@ -12,7 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
-import { buildAuthAccessDecisionContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
+import { buildAuthAccessDecisionContract, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -459,42 +459,6 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 
 ${buildEaiHostingAndDeploymentContract()}`;
 }
-
-function buildEaiHostingAndDeploymentContract() {
-  return `## EAI Hosting And Deployment Contract
-
-When an app reaches a deployment decision, ask once: **"Where should this app run: EAI-managed Azure, your Azure, or local only?"**
-
-Explain the choices before the user decides:
-
-- **EAI-managed Azure**: EAI builds the app from the selected GitHub repository and deploys it through the managed TenantInfra path.
-- **Your Azure**: keep the existing customer-owned Azure deployment path and credentials.
-- **Local only**: stop after local validation. Do not create cloud resources.
-
-For EAI-managed Azure:
-
-1. Verify \`eai deploy app --help\` from the installed CLI. Do not reproduce its API, GitHub, workflow, or TenantInfra logic in Gofer.
-2. After the deployment approval gate, run \`eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --repo <owner/name> --installation-id <positive-id> [--target-tenant-id <id>] [--branch main] [--environment preview] [--workflow .github/workflows/eai-app.yml] [--wait] --format json\`.
-3. Use the app-scope tenant for \`--tenant-id\`. Record the approved runtime tenant from \`targetTenantId\`; resume and retry must always pass it explicitly with \`--target-tenant-id\`, including same-tenant deployments.
-4. If the CLI installs or updates the workflow, stop at its commit-and-push instruction. Resume only after that exact commit is available remotely.
-5. Persist the returned operation ID in the active feature notes. Read, resume, and retry only that exact operation.
-6. Resume with \`eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --resume <operation-id> [--wait] --format json\`. Retry with the same tenant flags and \`--retry <operation-id>\`. Never omit the target tenant or substitute the latest operation.
-7. Treat the CLI JSON as the deployment authority. Record its target tenant, source binding, deployment ID, runtime identity, active URL, pointer versions, status, and next action without copying tokens or secrets.
-8. Claim deployment complete only when the CLI reports \`classification: succeeded\`, \`status: active\`, \`requiresTenantInfra: false\`, an HTTPS \`activeUrl\`, a deployment ID, and runtime identity. Run the exact advertised \`eai deploy doctor --url <activeUrl>\` command and require its checks to pass.
-
-If deployment stops, use the CLI reason and \`nextAction\`. Then run \`eai errors explain <code-or-reason> --format json\` when advertised. Explain what happened, why it matters, and the exact safe resume action. Keep these causes separate:
-
-- EAI login, selected account, tenant membership, or app access;
-- GitHub login or wrong GitHub account;
-- missing tenant repository connection;
-- missing or incorrect GitHub App installation or repository grant;
-- protected repository or workflow update that needs a commit and push;
-- workflow variable, OpenID Connect (OIDC), workflow permission, evidence, or run failure;
-- TenantInfra acceptance, progress, or deployment failure.
-
-Never ask the user for a GitHub App private key, personal access token, Azure credential, or platform service token. Keep customer Azure and local deployment behavior unchanged.`;
-}
-
 
 function buildEaiPlatformDecisionSection() {
   return `## EAI Platform Decision Contract

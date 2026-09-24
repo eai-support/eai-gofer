@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildContinuationContractSection } from '../../../.specify/scripts/node/generate-commands.mjs';
+import { buildContinuationContractSection, buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
 import {
   FULL_COMMAND_FILES,
   PUBLIC_ENTRYPOINT_COUNT,
@@ -117,6 +117,7 @@ describe('Gofer agent plugin package', () => {
         'utf8'
       );
       expect(umbrellaSkill).toContain(buildContinuationContractSection());
+      expect(umbrellaSkill).toContain(buildEaiHostingAndDeploymentContract());
       // Codex plugins load root skills; repo-local Codex skills use .agents.
       for (const surface of ['skills', '.claude/skills', '.github/skills']) {
         const skill = fs.readFileSync(path.join(pluginRoot, surface, 'eai', 'SKILL.md'), 'utf8');
@@ -132,6 +133,7 @@ describe('Gofer agent plugin package', () => {
           'utf8'
         );
         expect(eaiSkill).toContain(FIRST_RUN_TRIGGER);
+        expect(eaiSkill).toContain(buildEaiHostingAndDeploymentContract());
         expect(updateSkill).not.toContain(FIRST_RUN_TRIGGER);
         expect(updateSkill).not.toContain('## First Conversation');
       }
@@ -194,6 +196,14 @@ describe('Gofer agent plugin package', () => {
         expect(zipListing).toContain(required);
       }
       expect(zipEntries).not.toContain('eai-gofer/.vscode/mcp.json');
+      for (const entry of [
+        'eai-gofer/plugin-skills/eai/SKILL.md',
+        'eai-gofer/skills/eai/SKILL.md',
+        'eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md',
+      ]) {
+        const shippedSkill = execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8' });
+        expect(shippedSkill, entry).toContain(buildEaiHostingAndDeploymentContract());
+      }
 
       const copilotManifest = readJson<{
         name: string;
