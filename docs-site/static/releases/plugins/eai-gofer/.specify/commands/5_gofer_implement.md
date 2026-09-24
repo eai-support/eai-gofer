@@ -981,8 +981,8 @@ separation from `tasks.md`:
   separate readiness states. If hybrid/vector are unavailable but fulltext is
   ready, use `eai resources search "<query>" --fulltext --tenant-id <tenant-id>`
   and record semantic search as a deferred platform capability only when the
-  business scenario genuinely requires it. Do not apply this fallback to legacy
-  v1/v3 or active ResourceAPI behavior.
+  business scenario genuinely requires it. Apply this fallback only to the
+  published passive ResourceAPI search contract.
 - If a browser or runtime auth log reports `AADSTS50011`, `redirect_uri`,
   "reply URL specified in the request does not match", or
   `/api/auth/callback/microsoft-entra-id`, match

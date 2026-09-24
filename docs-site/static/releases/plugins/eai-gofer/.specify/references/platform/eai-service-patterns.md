@@ -99,8 +99,8 @@ storage aliases or generic table names; derive them from `eai app provision`,
   record for runtime writes. On the v4 passive ResourceAPI interface, treat
   full-text readiness separately from hybrid/vector readiness; semantic modes
   require `eai resources storage doctor` to report `capabilities.search.hybrid`
-  or `capabilities.search.vector`. Do not apply this fallback rule to legacy
-  v1/v3 or active ResourceAPI behavior.
+  or `capabilities.search.vector`. Apply this fallback only to the published
+  passive ResourceAPI search contract.
 - `content understanding`: use the EAI document and content services before
   custom extraction code when the app must classify, extract, summarize, or
   prepare evidence from documents or media.
