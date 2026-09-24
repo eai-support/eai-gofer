@@ -104,6 +104,12 @@ describe('Gofer public execution-depth guidance', () => {
         'Where should this app run: EAI-managed Azure, your Azure, or local only?'
       );
       expect(content, file).toContain('eai deploy app <app-key> --target eai');
+      expect(content, file).toContain('same EAI actor through its browser handoff');
+      expect(content, file).toContain('Who should maintain the app source: EAI-maintained or My GitHub?');
+      expect(content, file).toContain('--source eai-managed');
+      expect(content, file).toContain('--source customer-owned');
+      expect(content, file).toContain('Do not require an origin remote, a customer push, customer write access to the EAI repository');
+      expect(content, file).toContain('Never treat an accepted bundle or `pending_review` receipt as deployment success');
       expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
       expect(content, file).toContain('--target-tenant-id <id>');
       expect(content, file).toContain(

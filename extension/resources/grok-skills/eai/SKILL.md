@@ -192,29 +192,32 @@ When an app reaches a deployment decision, ask once: **"Where should this app ru
 
 Explain the choices before the user decides:
 
-- **EAI-managed Azure**: EAI builds the app from the selected GitHub repository and deploys it through the managed TenantInfra path.
+- **EAI-managed Azure**: use the current local app as source, choose who maintains its GitHub repository, and deploy its verified commit through TenantInfra.
 - **Your Azure**: keep the existing customer-owned Azure deployment path and credentials.
 - **Local only**: stop after local validation. Do not create cloud resources.
 
 For EAI-managed Azure:
 
 1. Verify `eai deploy app --help` from the installed CLI. Do not reproduce its API, GitHub, workflow, or TenantInfra logic in Gofer.
-2. After the deployment approval gate, run `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --repo <owner/name> --installation-id <positive-id> [--target-tenant-id <id>] [--branch main] [--environment preview] [--workflow .github/workflows/eai-app.yml] [--wait] --format json`.
-3. Use the app-scope tenant for `--tenant-id`. Record the approved runtime tenant from `targetTenantId`; resume and retry must always pass it explicitly with `--target-tenant-id`, including same-tenant deployments.
-4. If the CLI installs or updates the workflow, stop at its commit-and-push instruction. Resume only after that exact commit is available remotely.
-5. Persist the returned operation ID in the active feature notes. Read, resume, and retry only that exact operation.
-6. Resume with `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --resume <operation-id> [--wait] --format json`. Retry with the same tenant flags and `--retry <operation-id>`. Never omit the target tenant or substitute the latest operation.
-7. Treat the CLI JSON as the deployment authority. Record its target tenant, source binding, deployment ID, runtime identity, active URL, pointer versions, status, and next action without copying tokens or secrets.
-8. Claim deployment complete only when the CLI reports `classification: succeeded`, `status: active`, `requiresTenantInfra: false`, an HTTPS `activeUrl`, a deployment ID, and runtime identity. Run `mkdir -p .eai && eai deploy doctor --url <activeUrl> --format json > .eai/deploy-doctor.json` and require the recorded checks to pass before the shared readiness gate can pass.
+2. Verify EAI login, the selected tenant, and app access. The CLI must verify a GitHub identity linked to that same EAI actor through its browser handoff. Guide the user to link an existing GitHub account or create one if needed. Matching email text or a local `gh` login does not prove this association.
+3. Ask **"Who should maintain the app source: EAI-maintained or My GitHub?"** after identity verification. Keep this choice separate from EAI Azure hosting. EAI-maintained means a server-owned bot repository; My GitHub means the customer's repository.
+4. For **EAI-maintained**, use `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --source eai-managed [--target-tenant-id <id>] [--environment preview] [--wait] --format json`. The CLI packages the exact bounded local source. EAI derives the repository, creates and validates the bot PR, merges it, and dispatches the exact merged commit. Do not require an origin remote, a customer push, customer write access to the EAI repository, or customer PR merging. Never treat an accepted bundle or `pending_review` receipt as deployment success.
+5. For **My GitHub**, use `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --source customer-owned --repo <owner/name> --installation-id <positive-id> [--target-tenant-id <id>] [--branch main] [--environment preview] [--workflow .github/workflows/eai-app.yml] [--wait] --format json`. The customer commits, pushes, reviews, and merges under that repository's rules. If the CLI installs or updates its workflow, stop at its commit-and-push instruction and continue only after that exact commit is available remotely.
+6. Use the app-scope tenant for `--tenant-id`. Record the approved runtime tenant from `targetTenantId`; resume and retry must always pass it explicitly with `--target-tenant-id`, including same-tenant deployments. Persist the selected source mode and returned operation ID in the active feature notes. Read, resume, and retry only that exact operation using the CLI's returned next action.
+7. For the customer-owned source operation, resume with `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --resume <operation-id> [--wait] --format json`. Retry with the same tenant flags and `--retry <operation-id>`. Never omit the target tenant or substitute the latest operation. For EAI-maintained publication, follow its own exact-operation next action; do not substitute the customer-owned dispatch path.
+8. Treat the CLI JSON as the deployment authority. Record its target tenant, source mode, source binding, bundle digest when present, bot PR and merged commit when present, deployment ID, runtime identity, active URL, pointer versions, status, and next action without copying tokens or secrets.
+9. Claim deployment complete only when the CLI reports `classification: succeeded`, `status: active`, `requiresTenantInfra: false`, an HTTPS `activeUrl`, a deployment ID, and runtime identity. Run `mkdir -p .eai && eai deploy doctor --url <activeUrl> --format json > .eai/deploy-doctor.json` and require the recorded checks to pass before the shared readiness gate can pass.
 
 If deployment stops, use the CLI reason and `nextAction`. Then run `eai errors explain <code-or-reason> --format json` when advertised. Explain what happened, why it matters, and the exact safe resume action. Keep these causes separate:
 
 - EAI login, selected account, tenant membership, or app access;
-- GitHub login or wrong GitHub account;
-- missing tenant repository connection;
+- missing or incorrectly linked GitHub identity for the signed-in EAI actor;
+- customer-repository GitHub login or wrong GitHub account;
+- missing tenant repository connection for customer-owned source;
 - missing or incorrect GitHub App installation or repository grant;
 - protected repository or workflow update that needs a commit and push;
-- workflow variable, OpenID Connect (OIDC), workflow permission, evidence, or run failure;
+- rejected local source, unapproved template pin, pending bot PR checks, or publication failure;
+- OpenID Connect (OIDC), workflow permission, evidence, or run failure;
 - TenantInfra acceptance, progress, or deployment failure.
 
 Never ask the user for a GitHub App private key, personal access token, Azure credential, or platform service token. Keep customer Azure and local deployment behavior unchanged.
