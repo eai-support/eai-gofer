@@ -273,8 +273,10 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-heldout-snapshot.mjs',
       'node/gofer-semantic-drift.mjs',
       'node/gofer-typesafe-credentials.mjs',
+      'node/gofer-reviewed-learning.mjs',
     ]),
-    ...under('config', ['typesafe-semantic-review.json']),
+    ...under('config', ['typesafe-semantic-review.json', 'typesafe-learning-review.json']),
+    ...under('schemas', ['gofer-learning-trace-v1.json']),
   ].sort()
 );
 

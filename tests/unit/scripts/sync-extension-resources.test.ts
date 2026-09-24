@@ -46,6 +46,7 @@ describe('sync-extension-resources check mode', () => {
     const script = path.resolve('.specify/scripts/node/sync-extension-resources.mjs');
     const result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
 
+    expect(`${result.stdout}${result.stderr}`).toContain('extension/resources/ is in sync');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('extension/resources/ is in sync');
   });

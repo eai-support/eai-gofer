@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-09-22T09:55:05.925Z
+Generated: 2026-09-23T00:54:45.296Z
 
 ## Public Entrypoints
 
@@ -45,6 +45,7 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. When a new app conversation starts with `Get started with EAI`, send the Required First-Run Response before workspace preflight, EAI readiness, setup, tool calls, or stage routing.
 <!-- gofer:always-on-eai:end -->
 
 ## Verified EAI CLI Command Contract

@@ -63,7 +63,12 @@ describe('Gofer public execution-depth guidance', () => {
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       expect(content, file).toContain('## First Conversation');
-      expect(content, file).toContain('Start with the business outcome');
+      expect(content, file).toContain('Treat `Get started with EAI` as the first-run trigger');
+      expect(content, file).toContain('### Required First-Run Response');
+      expect(content, file).toContain('## Welcome to Enterprise AI 👋');
+      expect(content, file).toContain('What process would you like to improve');
+      expect(content, file).toContain('Do not repeat it after onboarding starts');
+      expect(content, file).toContain('before workspace preflight, EAI readiness, setup');
       expect(content, file).toContain('Keep numbered Gofer stages internal');
       expect(content, file).toContain('Pause once for approval of the business specification');
       expect(content, file).toContain('Do not create a GitHub repository');
@@ -101,7 +106,9 @@ describe('Gofer public execution-depth guidance', () => {
         '--target-tenant-id <runtime-tenant> --resume <operation-id>'
       );
       expect(content, file).toContain('same tenant flags and `--retry <operation-id>`');
-      expect(content, file).toContain('Never omit the target tenant or substitute the latest operation');
+      expect(content, file).toContain(
+        'Never omit the target tenant or substitute the latest operation'
+      );
       expect(content, file).toContain('`classification: succeeded`');
       expect(content, file).toContain('`requiresTenantInfra: false`');
       expect(content, file).toContain('`eai deploy doctor --url <activeUrl>`');
