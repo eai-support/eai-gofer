@@ -155,8 +155,8 @@ rationale, owner, expiry, and validation evidence.
   `search_embedding_required`, or missing vector embedding readiness, inspect
   `capabilities.search` from storage doctor. Use full-text search when
   `fulltext` is ready and reserve hybrid/vector search for tenants where storage
-  doctor reports those modes ready. Do not apply this fallback to legacy v1/v3
-  or active ResourceAPI behavior.
+  doctor reports those modes ready. Apply this fallback only to the published
+  passive ResourceAPI search contract.
 - Do not claim provisioning, seeding, schema readiness, or preview readiness as
   equivalent states. Record each gate separately.
 
