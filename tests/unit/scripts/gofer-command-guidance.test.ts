@@ -170,6 +170,12 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain(
         'Never omit the target tenant or substitute the latest operation'
       );
+      expect(content, file).toContain(
+        'Before running any returned action that re-invokes `eai deploy app`, verify it names the same `<app-key>`, uses `--target eai`, passes the same `--tenant-id <app-scope-tenant>` and `--target-tenant-id <runtime-tenant>`, addresses `<operation-id>` explicitly, and uses `--format json`'
+      );
+      expect(content, file).toContain(
+        'stop and report the inconsistent CLI action instead of running it or repairing it from memory'
+      );
       expect(content, file).toContain('`classification: succeeded`');
       expect(content, file).toContain('`requiresTenantInfra: false`');
       expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
