@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.13.1
+Version: 3.13.2
 Host: Claude Code
 
 ## Update EAI Gofer
