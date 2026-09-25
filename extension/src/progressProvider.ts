@@ -34,6 +34,7 @@ const DEPLOYMENT_ARTIFACT_KEYWORDS: readonly string[] = [
 const TASK_BINDING_EVIDENCE_ISSUES = new Set([
   'DEPLOYMENT_TASK_BINDING_MISSING',
   'DEPLOYMENT_TASK_BINDING_INVALID',
+  'DEPLOYMENT_TASK_COMMAND_MISMATCH',
 ]);
 const RECEIPT_FILE_EVIDENCE_ISSUES = new Set([
   'DOCTOR_EVIDENCE_UNREADABLE',
@@ -83,7 +84,7 @@ function buildDeploymentReadinessRecovery(
   }
   if (hasAnyEvidenceIssue(evidenceIssues, TASK_BINDING_EVIDENCE_ISSUES)) {
     actions.push(
-      'Regenerate or update this [hosting:eai-managed] task after the exact operation exists so its checkbox line contains the resolved eai deploy doctor command, then run that resolved command.'
+      'Regenerate or update this [hosting:eai-managed] task after the exact operation exists so its checkbox line retains the selected eai deploy app command and the resolved eai deploy doctor command for the same app and tenants, then run that resolved doctor command.'
     );
   }
   if (hasAnyEvidenceIssue(evidenceIssues, RECEIPT_FILE_EVIDENCE_ISSUES)) {

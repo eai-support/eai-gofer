@@ -194,6 +194,24 @@ function isManagedDeploySourceMode(value: unknown): value is ManagedDeploySource
   return value === 'eai-managed' || value === 'customer-owned';
 }
 
+function extractUniqueCommandFlagValue(tokens: readonly string[], flag: string): string | null {
+  const positions = tokens.reduce<number[]>(
+    (matches: number[], token: string, index: number): number[] => {
+      if (token === flag) {
+        matches.push(index);
+      }
+      return matches;
+    },
+    []
+  );
+  if (positions.length !== 1) {
+    return null;
+  }
+
+  const value = tokens[positions[0] + 1];
+  return value && !value.startsWith('--') ? value : null;
+}
+
 function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResult {
   const initialCommandMatches = Array.from(
     deploymentTaskText.matchAll(/`(eai\s+deploy\s+app(?:\s+[^`]*)?)`/g),
@@ -217,21 +235,17 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
   }
 
   const initialTokens = initialCommandMatches[0].split(/\s+/);
-  const sourceFlagPositions = initialTokens.reduce<number[]>(
-    (positions: number[], token: string, index: number): number[] => {
-      if (token === '--source') {
-        positions.push(index);
-      }
-      return positions;
-    },
-    []
-  );
-  const sourceMode =
-    sourceFlagPositions.length === 1 ? initialTokens[sourceFlagPositions[0] + 1] : undefined;
+  const initialAppKey = initialTokens[3];
+  const initialTenantId = extractUniqueCommandFlagValue(initialTokens, '--tenant-id');
+  const initialTargetTenantId = extractUniqueCommandFlagValue(initialTokens, '--target-tenant-id');
+  const sourceMode = extractUniqueCommandFlagValue(initialTokens, '--source');
   if (
     initialTokens[0] !== 'eai' ||
     initialTokens[1] !== 'deploy' ||
     initialTokens[2] !== 'app' ||
+    !isSafeManagedDeployIdentifier(initialAppKey) ||
+    !isSafeManagedDeployIdentifier(initialTenantId) ||
+    !isSafeManagedDeployIdentifier(initialTargetTenantId) ||
     !isManagedDeploySourceMode(sourceMode)
   ) {
     return {
@@ -278,6 +292,17 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
     return {
       binding: null,
       issues: ['DEPLOYMENT_TASK_BINDING_INVALID'],
+    };
+  }
+
+  if (
+    initialAppKey !== appKey ||
+    initialTenantId !== tenantId ||
+    initialTargetTenantId !== targetTenantId
+  ) {
+    return {
+      binding: null,
+      issues: ['DEPLOYMENT_TASK_COMMAND_MISMATCH'],
     };
   }
 

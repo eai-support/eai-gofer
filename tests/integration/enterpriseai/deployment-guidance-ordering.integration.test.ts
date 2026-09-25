@@ -55,8 +55,12 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     );
     expect(tasksCommand).toContain('same deployment task');
     expect(tasksCommand).toContain('that selected initial command with its');
-    expect(tasksCommand).toContain('resolved `--source`');
+    expect(tasksCommand).toContain('resolved app key');
+    expect(tasksCommand).toContain('`--tenant-id`, `--target-tenant-id`, and `--source`');
     expect(tasksCommand).toContain('reads both commands as independent binding sources');
+    expect(tasksCommand).toMatch(
+      /requires their app\s+key, app-scope tenant, and runtime tenant to match/
+    );
     expect(tasksCommand).toMatch(/separate dependent\s+post-deploy checkbox/);
     expect(tasksCommand).not.toContain('4. **EAI-managed post-deploy smoke gate');
     expect(tasksCommand).not.toContain(
@@ -67,7 +71,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       "Put that complete inline command on the same deployment task's"
     );
     expect(tasksCommand).toContain(
-      'task with a placeholder or missing resolved command cannot pass'
+      'task with a placeholder, mismatch, or missing resolved command'
     );
     expect(tasksCommand).not.toContain('mkdir -p .eai');
     expect(tasksCommand).not.toContain('> .eai/deploy-doctor.json');
@@ -86,7 +90,8 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(implementCommand).toContain('optional `EVT-012` `evidenceIssues` field');
     expect(implementCommand).toContain('Recovery instructions must follow the reported condition');
     expect(implementCommand).toContain('inside one `[hosting:eai-managed]` task');
-    expect(implementCommand).toMatch(/selected initial\s+command's source mode/);
+    expect(implementCommand).toMatch(/selected initial command's app key, app-scope tenant/);
+    expect(implementCommand).toContain('initial and doctor app and tenant values must match');
     expect(implementCommand).toContain("receipt's source mode and four operation fields");
     expect(implementCommand).toMatch(/Do not create a later dependent\s+post-deploy checkbox/);
     expect(implementCommand).not.toContain('mkdir -p .eai');
@@ -205,6 +210,60 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       fs.rmSync(fixturesDir, { recursive: true, force: true });
     }
   });
+
+  it.each([
+    [
+      'app key',
+      MANAGED_DEPLOY_TASK_TEXT.replace(
+        'eai deploy app planning-portal',
+        'eai deploy app another-app'
+      ),
+    ],
+    [
+      'app-scope tenant',
+      MANAGED_DEPLOY_TASK_TEXT.replace('--tenant-id app-tenant', '--tenant-id another-tenant'),
+    ],
+    [
+      'runtime tenant',
+      MANAGED_DEPLOY_TASK_TEXT.replace(
+        '--target-tenant-id runtime-tenant',
+        '--target-tenant-id another-runtime'
+      ),
+    ],
+  ])(
+    'rejects a task whose initial and doctor commands disagree on %s',
+    async (_label, taskText) => {
+      const fixturesDir = createFixtureDir('fixtures-deployment-task-command-mismatch');
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+      fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+      fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      fs.writeFileSync(
+        path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+        `${JSON.stringify(buildManagedDeployDoctorEvidence())}\n`
+      );
+
+      try {
+        const result = await validateDeploymentReadiness(
+          {
+            runId: 'run_task_command_mismatch',
+            stage: 'implementation',
+            deploymentTaskId: 'task_command_mismatch',
+            deploymentTaskText: taskText,
+            receiptValidationMode: 'operation-bound',
+            requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+            blockCompletionOnFailure: true,
+          },
+          { workspaceRoot: fixturesDir }
+        );
+
+        expect(result.response.readinessPassed).toBe(false);
+        expect(result.response.evidenceIssues).toEqual(['DEPLOYMENT_TASK_COMMAND_MISMATCH']);
+        expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+      } finally {
+        fs.rmSync(fixturesDir, { recursive: true, force: true });
+      }
+    }
+  );
 
   it.each([
     [

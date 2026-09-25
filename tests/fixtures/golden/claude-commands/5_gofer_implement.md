@@ -871,7 +871,8 @@ readiness, and atomically writes the receipt.
 
 Keep the selected initial EAI-managed deployment command and this doctor phase
 inside one `[hosting:eai-managed]` task. Run the initial command while the task
-remains in progress, and retain its selected `--source eai-managed` or `--source
+remains in progress, and retain its resolved app key, `--tenant-id`,
+`--target-tenant-id`, and selected `--source eai-managed` or `--source
 customer-owned` value on the task's checkbox line. Do not create a later dependent
 post-deploy checkbox: the initial marked task itself cannot complete until this gate
 has the receipt.
@@ -879,13 +880,14 @@ has the receipt.
 After the exact operation exists and before requesting task completion, update
 the EAI-managed deployment task's checkbox line in `tasks.md` so it retains
 `[hosting:eai-managed]` and its inline doctor command contains the resolved
-operation ID, app key, app-scope tenant, and runtime tenant. The gate parses
-that task line as an independent binding source, including the selected initial
-command's source mode. It then parses
-`eai.managed-deploy-doctor-evidence.v1`, requires passing receipt and doctor
-status plus authenticated readiness, rejects recorded failures, and compares
-the receipt's source mode and four operation fields with the task. A stale,
-malformed, failing, or unrelated receipt cannot clear the gate.
+operation ID, app key, app-scope tenant, and runtime tenant. The gate independently
+parses the selected initial command's app key, app-scope tenant, runtime tenant,
+and source mode. The initial and doctor app and tenant values must match before
+the gate parses `eai.managed-deploy-doctor-evidence.v1`. It then requires passing
+receipt and doctor status plus authenticated readiness, rejects recorded failures,
+and compares the receipt's source mode and four operation fields with the task. A
+stale, malformed, failing, cross-command, or unrelated receipt cannot clear the
+gate.
 
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass

@@ -452,7 +452,7 @@ created: "2025-10-22"
           error instanceof Error &&
           error.message.includes('DEPLOYMENT_TASK_BINDING_MISSING') &&
           error.message.includes('Regenerate or update this [hosting:eai-managed] task') &&
-          error.message.includes('then run that resolved command')
+          error.message.includes('then run that resolved doctor command')
       );
     });
 
@@ -587,6 +587,40 @@ created: "2025-10-22"
           error.message.includes('DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH') &&
           error.message.includes('Confirm the task identifiers') &&
           !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
+      );
+    });
+
+    test('should reject mismatched initial and doctor command identifiers', async () => {
+      const specId = '012e3-enterpriseai-task-command-mismatch';
+      await setWorkflowProfile('enterpriseai');
+      await createTestSpecWithTasks(specId, 'Task Command Mismatch Recovery', 'in_progress', [
+        {
+          id: 'T001',
+          desc: `Deploy app to EnterpriseAI production ${MANAGED_DEPLOY_TASK_SUFFIX.replace(
+            'eai deploy app planning-portal',
+            'eai deploy app another-app'
+          )}`,
+          status: 'pending',
+        },
+      ]);
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(
+        path.join(tempDir, '.eai', 'deploy-doctor.json'),
+        JSON.stringify(buildManagedDeployDoctorEvidence())
+      );
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      await assert.rejects(
+        progressProvider.updateTaskStatus(specId, 'T001', 'completed'),
+        (error: unknown): boolean =>
+          error instanceof Error &&
+          error.message.includes('DEPLOYMENT_TASK_COMMAND_MISMATCH') &&
+          error.message.includes('Regenerate or update this [hosting:eai-managed] task') &&
+          !error.message.includes('Confirm the task identifiers')
       );
     });
 
