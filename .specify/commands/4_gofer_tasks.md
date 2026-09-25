@@ -783,7 +783,8 @@ the EAI-managed deployment task is marked complete.
      - Run the selected initial command without marking the task complete. After
        it returns the exact operation ID, update this same task's checkbox line
        to retain `[hosting:eai-managed]`, that selected initial command with its
-       resolved app key, `--tenant-id`, `--target-tenant-id`, and `--source`,
+       resolved app key, `--target eai`, `--tenant-id`, `--target-tenant-id`,
+       `--source`, and `--format json`,
        and the fully resolved doctor command below. Run doctor, then request
        completion. Do not create a separate dependent
        post-deploy checkbox whose prerequisite is this receipt-gated task.
@@ -802,11 +803,12 @@ the EAI-managed deployment task is marked complete.
      runtime tenant. Put that complete inline command on the same deployment task's
      checkbox line in `tasks.md` before requesting completion, and keep the selected
      initial command with the same app key, app-scope tenant, and runtime tenant plus
-     `--source eai-managed` or `--source customer-owned` on that line. The shared
-     gate reads both commands as independent binding sources and requires their app
-     key, app-scope tenant, and runtime tenant to match before it reads the receipt.
-     An EAI-managed task with a placeholder, mismatch, or missing resolved command
-     cannot pass.
+     `--target eai`, `--source eai-managed` or `--source customer-owned`, and
+     `--format json` on that line. The shared gate reads both commands as independent
+     binding sources, requires the initial command's exact target and output mode,
+     and requires their app key, app-scope tenant, and runtime tenant to match before
+     it reads the receipt. An EAI-managed task with a placeholder, mismatch, or
+     missing resolved command cannot pass.
    - The CLI derives the active URL from the exact operation, verifies its
      deployment, runtime, source, and configuration bindings, runs authenticated
      readiness, and atomically writes the receipt. The receipt captures runtime

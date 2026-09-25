@@ -239,6 +239,8 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
   const initialTenantId = extractUniqueCommandFlagValue(initialTokens, '--tenant-id');
   const initialTargetTenantId = extractUniqueCommandFlagValue(initialTokens, '--target-tenant-id');
   const sourceMode = extractUniqueCommandFlagValue(initialTokens, '--source');
+  const target = extractUniqueCommandFlagValue(initialTokens, '--target');
+  const initialFormat = extractUniqueCommandFlagValue(initialTokens, '--format');
   if (
     initialTokens[0] !== 'eai' ||
     initialTokens[1] !== 'deploy' ||
@@ -246,7 +248,9 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
     !isSafeManagedDeployIdentifier(initialAppKey) ||
     !isSafeManagedDeployIdentifier(initialTenantId) ||
     !isSafeManagedDeployIdentifier(initialTargetTenantId) ||
-    !isManagedDeploySourceMode(sourceMode)
+    !isManagedDeploySourceMode(sourceMode) ||
+    target !== 'eai' ||
+    initialFormat !== 'json'
   ) {
     return {
       binding: null,

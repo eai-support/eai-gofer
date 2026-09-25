@@ -178,7 +178,10 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('source and configuration digests');
       expect(content, file).toContain('authenticated readiness');
       expect(content, file).toContain(
-        "retain that complete inline command on the task's checkbox line"
+        'retain the selected initial command plus that complete inline doctor command'
+      );
+      expect(content, file).toContain(
+        'requires exactly one `--target eai` and `--format json` on the initial command'
       );
       expect(content, file).toContain('stale, malformed, failing, or unrelated evidence');
       expect(content, file).toContain('missing tenant repository connection');
@@ -202,6 +205,9 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('[hosting:eai-managed]');
       expect(content, file).toContain('operation-bound');
       expect(content, file).toMatch(/resolved\s+operation ID/i);
+      expect(content, file).toContain('`--target eai`');
+      expect(content, file).toContain('`--format json`');
+      expect(content, file).toMatch(/target(?:,| and|.*?)output mode/s);
       expect(content, file).not.toContain('mkdir -p .eai');
       expect(content, file).not.toContain('> .eai/deploy-doctor.json');
     }
