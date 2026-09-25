@@ -93,6 +93,7 @@ function createInternalApiPayloadFixtures(): Record<
       deploymentTaskId: 'task_deploy_001',
       deploymentTaskText:
         'Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`',
+      receiptValidationMode: 'operation-bound',
       requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },

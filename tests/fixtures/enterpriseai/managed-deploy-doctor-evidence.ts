@@ -6,7 +6,7 @@ export const MANAGED_DEPLOY_BINDING = Object.freeze({
 });
 
 export const MANAGED_DEPLOY_TASK_TEXT =
-  'Validate the deployed app with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
+  '[hosting:eai-managed] Validate the deployed app with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
 
 export interface ManagedDeployEvidenceOverrides {
   schemaVersion?: unknown;

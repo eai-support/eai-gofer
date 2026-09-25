@@ -7,7 +7,7 @@ import { ProgressProvider } from '../../progressProvider';
 
 const MANAGED_DEPLOY_DOCTOR_COMMAND =
   'eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json';
-const MANAGED_DEPLOY_TASK_SUFFIX = `with \`${MANAGED_DEPLOY_DOCTOR_COMMAND}\``;
+const MANAGED_DEPLOY_TASK_SUFFIX = `[hosting:eai-managed] with \`${MANAGED_DEPLOY_DOCTOR_COMMAND}\``;
 
 function buildManagedDeployDoctorEvidence(): Record<string, unknown> {
   const activeUrl = 'https://planning.example.com';
@@ -382,9 +382,10 @@ created: "2025-10-22"
           error.message.includes('IMPL_DEPLOYMENT_VALIDATION_FAILED') &&
           error.message.includes('eai.runtime.json') &&
           error.message.includes('.eai/deploy-doctor.json') &&
-          error.message.includes('Next step') &&
-          error.message.includes('regenerate this deployment task') &&
-          error.message.includes('rerun that exact command')
+          error.message.includes('Next steps') &&
+          error.message.includes('Create or restore eai.runtime.json') &&
+          error.message.includes('Run the existing deployment doctor flow') &&
+          !error.message.includes('Regenerate or update')
       );
 
       const tasksPath = path.join(tempDir, '.specify', 'specs', specId, 'tasks.md');
@@ -421,11 +422,15 @@ created: "2025-10-22"
       assert.ok(tasksContent.includes('- [x] T001 Deploy app to EnterpriseAI production'));
     });
 
-    test('should reject legacy deployment task text even when evidence files exist', async () => {
+    test('should reject an EAI-managed task without a resolved binding', async () => {
       const specId = '012a-enterpriseai-deploy-gate-legacy-task';
       await setWorkflowProfile('enterpriseai');
       await createTestSpecWithTasks(specId, 'EnterpriseAI Legacy Deploy Gate', 'in_progress', [
-        { id: 'T001', desc: 'Deploy app to EnterpriseAI production', status: 'pending' },
+        {
+          id: 'T001',
+          desc: '[hosting:eai-managed] Deploy app to EnterpriseAI production',
+          status: 'pending',
+        },
       ]);
 
       await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
@@ -444,8 +449,142 @@ created: "2025-10-22"
         (error: unknown): boolean =>
           error instanceof Error &&
           error.message.includes('DEPLOYMENT_TASK_BINDING_MISSING') &&
-          error.message.includes('regenerate this deployment task') &&
-          error.message.includes('rerun that exact command')
+          error.message.includes('Regenerate or update this [hosting:eai-managed] task') &&
+          error.message.includes('then run that resolved command')
+      );
+    });
+
+    test('should preserve presence-only readiness for customer Azure and local-only tasks', async () => {
+      await setWorkflowProfile('enterpriseai');
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, '.eai', 'deploy-doctor.json'), '{legacy-evidence');
+
+      const compatibleTasks = [
+        {
+          specId: '012b-enterpriseai-customer-azure-presence',
+          description: '[hosting:customer-azure] Deploy app to customer Azure production',
+        },
+        {
+          specId: '012c-enterpriseai-local-only-presence',
+          description: '[hosting:local-only] Validate local deployment artifacts',
+        },
+      ];
+
+      for (const compatibleTask of compatibleTasks) {
+        await createTestSpecWithTasks(
+          compatibleTask.specId,
+          'Compatible Presence Gate',
+          'in_progress',
+          [{ id: 'T001', desc: compatibleTask.description, status: 'pending' }]
+        );
+      }
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      for (const compatibleTask of compatibleTasks) {
+        await progressProvider.updateTaskStatus(compatibleTask.specId, 'T001', 'completed');
+        const tasksContent = await fs.readFile(
+          path.join(tempDir, '.specify', 'specs', compatibleTask.specId, 'tasks.md'),
+          'utf-8'
+        );
+        assert.ok(tasksContent.includes('- [x] T001'));
+      }
+    });
+
+    test('should recommend receipt replacement for malformed managed evidence', async () => {
+      const specId = '012d-enterpriseai-malformed-receipt';
+      await setWorkflowProfile('enterpriseai');
+      await createTestSpecWithTasks(specId, 'Malformed Receipt Recovery', 'in_progress', [
+        {
+          id: 'T001',
+          desc: `Deploy app to EnterpriseAI production ${MANAGED_DEPLOY_TASK_SUFFIX}`,
+          status: 'pending',
+        },
+      ]);
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, '.eai', 'deploy-doctor.json'), '{not-json');
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      await assert.rejects(
+        progressProvider.updateTaskStatus(specId, 'T001', 'completed'),
+        (error: unknown): boolean =>
+          error instanceof Error &&
+          error.message.includes('DOCTOR_EVIDENCE_INVALID_JSON') &&
+          error.message.includes('atomically replace .eai/deploy-doctor.json') &&
+          !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
+      );
+    });
+
+    test('should recommend identifier verification for mismatched managed evidence', async () => {
+      const specId = '012e-enterpriseai-mismatched-receipt';
+      await setWorkflowProfile('enterpriseai');
+      await createTestSpecWithTasks(specId, 'Mismatched Receipt Recovery', 'in_progress', [
+        {
+          id: 'T001',
+          desc: `Deploy app to EnterpriseAI production ${MANAGED_DEPLOY_TASK_SUFFIX}`,
+          status: 'pending',
+        },
+      ]);
+      const evidence = buildManagedDeployDoctorEvidence();
+      (evidence.operation as Record<string, unknown>).operationId = 'operation-other';
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(
+        path.join(tempDir, '.eai', 'deploy-doctor.json'),
+        JSON.stringify(evidence)
+      );
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      await assert.rejects(
+        progressProvider.updateTaskStatus(specId, 'T001', 'completed'),
+        (error: unknown): boolean =>
+          error instanceof Error &&
+          error.message.includes('DOCTOR_EVIDENCE_OPERATION_ID_MISMATCH') &&
+          error.message.includes('Confirm the task identifiers') &&
+          !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
+      );
+    });
+
+    test('should recommend readiness repair for a failing managed receipt', async () => {
+      const specId = '012f-enterpriseai-failing-receipt';
+      await setWorkflowProfile('enterpriseai');
+      await createTestSpecWithTasks(specId, 'Failing Receipt Recovery', 'in_progress', [
+        {
+          id: 'T001',
+          desc: `Deploy app to EnterpriseAI production ${MANAGED_DEPLOY_TASK_SUFFIX}`,
+          status: 'pending',
+        },
+      ]);
+      const evidence = buildManagedDeployDoctorEvidence();
+      evidence.status = 'fail';
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(
+        path.join(tempDir, '.eai', 'deploy-doctor.json'),
+        JSON.stringify(evidence)
+      );
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      await assert.rejects(
+        progressProvider.updateTaskStatus(specId, 'T001', 'completed'),
+        (error: unknown): boolean =>
+          error instanceof Error &&
+          error.message.includes('DOCTOR_EVIDENCE_STATUS_NOT_PASS') &&
+          error.message.includes('Fix the deployment or authenticated readiness failures') &&
+          !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
       );
     });
 

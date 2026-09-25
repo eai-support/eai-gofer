@@ -270,6 +270,10 @@ export const INTERNAL_API_SCHEMAS: Readonly<
     },
     optional: {
       deploymentTaskText: { type: 'string' },
+      receiptValidationMode: {
+        type: 'string',
+        enumValues: ['presence', 'operation-bound'],
+      },
     },
   },
 } as const;

@@ -1,3 +1,4 @@
+import { constants as fsConstants, type Stats } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { validateEventPayload } from '../contracts/EventPayloadSchemas';
@@ -8,9 +9,12 @@ export interface ValidateDeploymentReadinessRequest {
   stage: string;
   deploymentTaskId: string;
   deploymentTaskText?: string;
+  receiptValidationMode?: DeploymentReceiptValidationMode;
   requiredFiles: readonly string[];
   blockCompletionOnFailure: boolean;
 }
+
+export type DeploymentReceiptValidationMode = 'presence' | 'operation-bound';
 
 export interface ValidateDeploymentReadinessResponse {
   status: 'completed';
@@ -27,7 +31,7 @@ export interface DeploymentReadinessValidatedEventPayload {
   deploymentTaskId: string;
   readinessPassed: boolean;
   missingFiles: readonly string[];
-  evidenceIssues: readonly string[];
+  evidenceIssues?: readonly string[];
   validatedAt: string;
 }
 
@@ -63,6 +67,7 @@ const ALLOWED_REQUIRED_DEPLOYMENT_FILES = new Set<string>([
 const MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH = '.eai/deploy-doctor.json';
 const MANAGED_DEPLOY_DOCTOR_SCHEMA = 'eai.managed-deploy-doctor-evidence.v1';
 const MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES = 1024 * 1024;
+const MANAGED_DEPLOY_DOCTOR_READ_CHUNK_BYTES = 64 * 1024;
 const MANAGED_DEPLOY_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
@@ -322,7 +327,7 @@ function hasValidDoctorSummary(value: unknown, checks: readonly unknown[]): bool
 
 function validateManagedDeployDoctorEvidence(
   evidence: unknown,
-  expected: DeploymentEvidenceBinding
+  expected?: DeploymentEvidenceBinding
 ): readonly string[] {
   if (!isRecord(evidence) || evidence.schemaVersion !== MANAGED_DEPLOY_DOCTOR_SCHEMA) {
     return ['DOCTOR_EVIDENCE_SCHEMA_INVALID'];
@@ -388,34 +393,37 @@ function validateManagedDeployDoctorEvidence(
 
   const bindingChecks: ReadonlyArray<{
     actual: unknown;
-    expected: string;
+    expected?: string;
     issue: string;
   }> = [
     {
       actual: operation.operationId,
-      expected: expected.operationId,
+      expected: expected?.operationId,
       issue: 'DOCTOR_EVIDENCE_OPERATION_ID_MISMATCH',
     },
     {
       actual: operation.appKey,
-      expected: expected.appKey,
+      expected: expected?.appKey,
       issue: 'DOCTOR_EVIDENCE_APP_KEY_MISMATCH',
     },
     {
       actual: operation.tenantId,
-      expected: expected.tenantId,
+      expected: expected?.tenantId,
       issue: 'DOCTOR_EVIDENCE_APP_TENANT_MISMATCH',
     },
     {
       actual: operation.targetTenantId,
-      expected: expected.targetTenantId,
+      expected: expected?.targetTenantId,
       issue: 'DOCTOR_EVIDENCE_RUNTIME_TENANT_MISMATCH',
     },
   ];
   for (const bindingCheck of bindingChecks) {
     if (!isSafeManagedDeployIdentifier(bindingCheck.actual)) {
       issues.push('DOCTOR_EVIDENCE_SCHEMA_INVALID');
-    } else if (bindingCheck.actual !== bindingCheck.expected) {
+    } else if (
+      bindingCheck.expected !== undefined &&
+      bindingCheck.actual !== bindingCheck.expected
+    ) {
       issues.push(bindingCheck.issue);
     }
   }
@@ -425,32 +433,133 @@ function validateManagedDeployDoctorEvidence(
 
 async function readManagedDeployDoctorEvidence(
   workspaceRoot: string,
-  expected: DeploymentEvidenceBinding
-): Promise<readonly string[]> {
+  expected?: DeploymentEvidenceBinding
+): Promise<ManagedDeployDoctorReadResult> {
   const evidencePath = resolveAbsolutePath(workspaceRoot, MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH);
-  let fileStats;
+  const noFollowFlag = typeof fsConstants.O_NOFOLLOW === 'number' ? fsConstants.O_NOFOLLOW : 0;
+  let evidenceFile: fs.FileHandle;
   try {
-    fileStats = await fs.lstat(evidencePath);
-  } catch {
-    return ['DOCTOR_EVIDENCE_UNREADABLE'];
+    evidenceFile = await fs.open(
+      evidencePath,
+      fsConstants.O_RDONLY | fsConstants.O_NONBLOCK | noFollowFlag
+    );
+  } catch (error) {
+    if (isNodeErrorWithCode(error) && ['ENOENT', 'ENOTDIR'].includes(error.code ?? '')) {
+      return { missing: true, issues: [] };
+    }
+    if (
+      isNodeErrorWithCode(error) &&
+      ['EISDIR', 'ELOOP', 'EMLINK', 'ENODEV', 'ENXIO'].includes(error.code ?? '')
+    ) {
+      return { missing: false, issues: ['DOCTOR_EVIDENCE_FILE_INVALID'] };
+    }
+    return { missing: false, issues: ['DOCTOR_EVIDENCE_UNREADABLE'] };
   }
 
-  if (
-    !fileStats.isFile() ||
-    fileStats.isSymbolicLink() ||
-    fileStats.size > MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES
-  ) {
-    return ['DOCTOR_EVIDENCE_FILE_INVALID'];
+  let evidenceText: string;
+  try {
+    const [openedStats, pathStats] = await Promise.all([
+      evidenceFile.stat(),
+      fs.lstat(evidencePath),
+    ]);
+    if (!isSameRegularEvidenceFile(pathStats, openedStats)) {
+      return { missing: false, issues: ['DOCTOR_EVIDENCE_FILE_INVALID'] };
+    }
+    if (openedStats.size > MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES) {
+      return { missing: false, issues: ['DOCTOR_EVIDENCE_FILE_INVALID'] };
+    }
+
+    const boundedRead = await readBoundedEvidenceFile(evidenceFile);
+    if (boundedRead.exceededLimit) {
+      return { missing: false, issues: ['DOCTOR_EVIDENCE_FILE_INVALID'] };
+    }
+
+    const [finalOpenedStats, finalPathStats] = await Promise.all([
+      evidenceFile.stat(),
+      fs.lstat(evidencePath),
+    ]);
+    if (
+      !isSameRegularEvidenceFile(finalPathStats, finalOpenedStats) ||
+      !hasStableEvidenceFileContents(openedStats, finalOpenedStats, boundedRead.bytesRead)
+    ) {
+      return { missing: false, issues: ['DOCTOR_EVIDENCE_FILE_INVALID'] };
+    }
+    evidenceText = boundedRead.text;
+  } catch {
+    return { missing: false, issues: ['DOCTOR_EVIDENCE_UNREADABLE'] };
+  } finally {
+    await evidenceFile.close();
   }
 
   let evidence: unknown;
   try {
-    evidence = JSON.parse(await fs.readFile(evidencePath, 'utf8')) as unknown;
+    evidence = JSON.parse(evidenceText) as unknown;
   } catch {
-    return ['DOCTOR_EVIDENCE_INVALID_JSON'];
+    return { missing: false, issues: ['DOCTOR_EVIDENCE_INVALID_JSON'] };
   }
 
-  return validateManagedDeployDoctorEvidence(evidence, expected);
+  return {
+    missing: false,
+    issues: validateManagedDeployDoctorEvidence(evidence, expected),
+  };
+}
+
+interface ManagedDeployDoctorReadResult {
+  missing: boolean;
+  issues: readonly string[];
+}
+
+function isSameRegularEvidenceFile(pathStats: Stats, openedStats: Stats): boolean {
+  return (
+    pathStats.isFile() &&
+    !pathStats.isSymbolicLink() &&
+    openedStats.isFile() &&
+    pathStats.dev === openedStats.dev &&
+    pathStats.ino === openedStats.ino
+  );
+}
+
+function hasStableEvidenceFileContents(
+  initialStats: Stats,
+  finalStats: Stats,
+  bytesRead: number
+): boolean {
+  return (
+    initialStats.size === finalStats.size &&
+    finalStats.size === bytesRead &&
+    initialStats.mtimeMs === finalStats.mtimeMs &&
+    initialStats.ctimeMs === finalStats.ctimeMs
+  );
+}
+
+interface BoundedEvidenceRead {
+  bytesRead: number;
+  exceededLimit: boolean;
+  text: string;
+}
+
+async function readBoundedEvidenceFile(evidenceFile: fs.FileHandle): Promise<BoundedEvidenceRead> {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
+  while (totalBytes <= MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES) {
+    const remainingBytes = MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES + 1 - totalBytes;
+    const buffer = Buffer.allocUnsafe(
+      Math.min(MANAGED_DEPLOY_DOCTOR_READ_CHUNK_BYTES, remainingBytes)
+    );
+    const { bytesRead } = await evidenceFile.read(buffer, 0, buffer.length, totalBytes);
+    if (bytesRead === 0) {
+      break;
+    }
+    chunks.push(buffer.subarray(0, bytesRead));
+    totalBytes += bytesRead;
+  }
+
+  return {
+    bytesRead: totalBytes,
+    exceededLimit: totalBytes > MAX_MANAGED_DEPLOY_DOCTOR_EVIDENCE_BYTES,
+    text: Buffer.concat(chunks, totalBytes).toString('utf8'),
+  };
 }
 
 function assertValidInternalApiPayload(payload: ValidateDeploymentReadinessRequest): void {
@@ -481,21 +590,32 @@ export async function validateDeploymentReadiness(
     );
   }
 
+  const receiptValidationMode = request.receiptValidationMode ?? 'presence';
   const workspaceRoot = options.workspaceRoot ?? process.cwd();
-  const missingFiles = await findMissingFiles(requiredFiles, workspaceRoot);
-  const taskBinding = parseDeploymentTaskBinding(request.deploymentTaskText ?? '');
-  const evidenceIssues = [...taskBinding.issues];
-  if (
-    missingFiles.length === 0 &&
-    taskBinding.binding &&
-    requiredFiles.includes(MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH)
-  ) {
-    evidenceIssues.push(
-      ...(await readManagedDeployDoctorEvidence(workspaceRoot, taskBinding.binding))
-    );
-  }
-  if (!requiredFiles.includes(MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH)) {
-    evidenceIssues.push('DOCTOR_EVIDENCE_FILE_NOT_REQUIRED');
+  const filesForPresenceCheck =
+    receiptValidationMode === 'operation-bound'
+      ? requiredFiles.filter(
+          (requiredFile: string): boolean => requiredFile !== MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH
+        )
+      : requiredFiles;
+  const missingFiles = [...(await findMissingFiles(filesForPresenceCheck, workspaceRoot))];
+  const evidenceIssues: string[] = [];
+  if (receiptValidationMode === 'operation-bound') {
+    const taskBinding = parseDeploymentTaskBinding(request.deploymentTaskText ?? '');
+    evidenceIssues.push(...taskBinding.issues);
+    if (requiredFiles.includes(MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH)) {
+      const doctorEvidence = await readManagedDeployDoctorEvidence(
+        workspaceRoot,
+        taskBinding.binding ?? undefined
+      );
+      if (doctorEvidence.missing) {
+        missingFiles.push(MANAGED_DEPLOY_DOCTOR_EVIDENCE_PATH);
+      } else {
+        evidenceIssues.push(...doctorEvidence.issues);
+      }
+    } else {
+      evidenceIssues.push('DOCTOR_EVIDENCE_FILE_NOT_REQUIRED');
+    }
   }
 
   const normalizedEvidenceIssues = Array.from(new Set(evidenceIssues));

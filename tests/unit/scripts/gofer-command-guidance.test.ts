@@ -199,8 +199,9 @@ describe('Gofer public execution-depth guidance', () => {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
 
       expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
-      expect(content, file).toMatch(/legacy\s+generic[^.]*task/i);
-      expect(content, file).toContain('resolved operation ID');
+      expect(content, file).toContain('[hosting:eai-managed]');
+      expect(content, file).toContain('operation-bound');
+      expect(content, file).toMatch(/resolved\s+operation ID/i);
       expect(content, file).not.toContain('mkdir -p .eai');
       expect(content, file).not.toContain('> .eai/deploy-doctor.json');
     }

@@ -729,9 +729,10 @@ is migration-only and used only when `workflowProfile` is explicitly
 
 When the workflow profile is explicitly `enterpriseai`,
 `tasks.md` MUST emit deployment
-tasks in the following ordered chain. Each task is independently runnable and
-the ordering enforces scaffold before deployment so that runtime contract and
-deploy-doctor evidence exist before any deploy command runs.
+tasks in the following ordered chain. Each task is independently runnable. The
+runtime contract must pass before any deploy command runs. Deploy-doctor
+evidence is captured only after the exact operation exists and must pass before
+the EAI-managed deployment task is marked complete.
 
 0. **EAI readiness unblock -> `eai-preflight.md`**
    - If `{FEATURE_DIR}/eai-preflight.md` is missing, stale, or blocked, emit
@@ -762,17 +763,39 @@ deploy-doctor evidence exist before any deploy command runs.
    - Commands: `eai runtime validate` and `eai verify`
    - Confirms the runtime contract, tenant/workflow configuration, and platform
      readiness before any deploy attempt.
-3. **Pinned `eai major.minor` deployment tasks -> `eai deploy`**
-   - Command: `eai deploy trigger --repo <org/repo>`
-   - Inherits the `major.minor` pin recorded in `plan.md`.
-4. **Post-deploy smoke gate -> `eai deploy doctor`**
+3. **Hosting- and source-specific deployment task**
+   - Read the approved hosting choice from the active specification or plan.
+     Do not emit one deployment command for every mode.
+   - For **EAI-managed Azure**, include `[hosting:eai-managed]` on the task's
+     checkbox line and branch again on the approved source choice:
+     - **EAI-maintained** command: `eai deploy app <app-key> --target eai
+       --tenant-id <app-scope-tenant> --source eai-managed --target-tenant-id
+       <runtime-tenant> [--environment preview] [--wait] --format json`.
+     - **My GitHub** command: `eai deploy app <app-key> --target eai --tenant-id
+       <app-scope-tenant> --source customer-owned --repo <owner/name>
+       --installation-id <positive-id> --target-tenant-id <runtime-tenant>
+       [--branch main] [--environment preview] [--workflow
+       .github/workflows/eai-app.yml] [--wait] --format json`.
+     - `eai deploy trigger --repo <org/repo>` belongs only to a verified
+       customer-owned repository next action returned by the installed CLI.
+       Never substitute it for the EAI-maintained command.
+   - For **customer Azure**, include `[hosting:customer-azure]` and retain the
+     existing approved customer-owned Azure deployment path and credentials.
+     Do not add an EAI-managed operation or source command.
+   - For **local only**, include `[hosting:local-only]`, stop after local
+     validation, and emit no cloud deployment or post-deploy task.
+   - EAI CLI deployment tasks inherit the `major.minor` pin recorded in
+     `plan.md`.
+4. **EAI-managed post-deploy smoke gate -> `eai deploy doctor`**
+   - Include `[hosting:eai-managed]` on the task's checkbox line.
+     This marker selects operation-bound receipt validation.
    - Command: `eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json`
    - After deployment returns the exact operation ID, replace every placeholder
      in this command with the resolved operation ID, app key, app-scope tenant, and
      runtime tenant. Put that complete inline command on the post-deploy task's
      checkbox line in `tasks.md` before requesting completion. The shared gate
-     reads that task line as the independent binding source; a placeholder or
-     legacy generic deployment task cannot pass.
+     reads that task line as the independent binding source; an EAI-managed
+     task with a placeholder or missing resolved command cannot pass.
    - The CLI derives the active URL from the exact operation, verifies its
      deployment, runtime, source, and configuration bindings, runs authenticated
      readiness, and atomically writes the receipt. The receipt captures runtime
@@ -780,7 +803,7 @@ deploy-doctor evidence exist before any deploy command runs.
      tenant/workflow config, and declared smoke tests.
 
 <!-- prettier-ignore -->
-The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, invoke pinned `eai major.minor` deployment tasks, and then capture deploy-doctor evidence. After the operation exists, the runnable post-deploy task MUST retain the resolved doctor command on its checkbox line. Breaking the order or leaving unresolved binding placeholders causes deployment preflight gating in `/5_gofer_implement` to fail.
+The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, branch on the recorded hosting and source choices, invoke the selected pinned `eai major.minor` deployment command only for EAI-managed Azure, and then capture deploy-doctor evidence after the operation exists. Before completion, the runnable EAI-managed task MUST retain `[hosting:eai-managed]` and the resolved doctor command on its checkbox line. Breaking the order or leaving unresolved binding placeholders causes deployment preflight gating in `/5_gofer_implement` to fail.
 
 ### App-Delivery Preconditions Inside Shared Stages
 

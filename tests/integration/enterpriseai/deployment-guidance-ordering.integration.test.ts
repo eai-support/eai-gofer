@@ -38,9 +38,24 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(tasksCommand).toContain('eai runtime validate');
     expect(tasksCommand).toContain('eai verify');
     expect(tasksCommand).toContain('eai deploy trigger --repo <org/repo>');
+    expect(tasksCommand).toContain('Hosting- and source-specific deployment task');
+    expect(tasksCommand).toContain('[hosting:eai-managed]');
+    expect(tasksCommand).toContain('--source eai-managed');
+    expect(tasksCommand).toContain('--source customer-owned');
+    expect(tasksCommand).toContain('belongs only to a verified');
+    expect(tasksCommand).toContain('customer-owned repository next action');
+    expect(tasksCommand).toContain('[hosting:customer-azure]');
+    expect(tasksCommand).toContain('[hosting:local-only]');
+    expect(tasksCommand).toContain('runtime contract must pass before any deploy command runs');
+    expect(tasksCommand).toContain('only after the exact operation exists');
+    expect(tasksCommand).not.toContain(
+      'runtime contract and\ndeploy-doctor evidence exist before any deploy command runs'
+    );
     expect(tasksCommand).toContain(portableDoctorCommand);
     expect(tasksCommand).toContain('Put that complete inline command on the post-deploy task');
-    expect(tasksCommand).toContain('legacy generic deployment task cannot pass');
+    expect(tasksCommand).toContain(
+      'task with a placeholder or missing resolved command cannot pass'
+    );
     expect(tasksCommand).not.toContain('mkdir -p .eai');
     expect(tasksCommand).not.toContain('> .eai/deploy-doctor.json');
 
@@ -51,6 +66,12 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(implementCommand).toContain(portableDoctorCommand);
     expect(implementCommand).toContain('eai.managed-deploy-doctor-evidence.v1');
     expect(implementCommand).toContain('stale, malformed, failing');
+    expect(implementCommand).toContain(
+      '[hosting:eai-managed]` uses the strict operation-bound receipt gate'
+    );
+    expect(implementCommand).toContain('retain the prior required-file');
+    expect(implementCommand).toContain('optional `EVT-012` `evidenceIssues` field');
+    expect(implementCommand).toContain('Recovery instructions must follow the reported condition');
     expect(implementCommand).not.toContain('mkdir -p .eai');
     expect(implementCommand).not.toContain('> .eai/deploy-doctor.json');
   });
@@ -76,6 +97,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_01',
           deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
@@ -107,6 +129,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
             stage: 'implementation',
             deploymentTaskId: 'task_deploy_unsafe',
             deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+            receiptValidationMode: 'operation-bound',
             requiredFiles: ['/etc/passwd'],
             blockCompletionOnFailure: true,
           },
@@ -137,6 +160,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_exact_receipt',
           deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
@@ -190,6 +214,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_mismatched_receipt',
           deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
@@ -258,6 +283,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_invalid_receipt',
           deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },
@@ -266,6 +292,129 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
 
       expect(result.response.readinessPassed).toBe(false);
       expect(result.response.evidenceIssues).toContain(expectedIssue);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symbolic-link deployment receipt', async () => {
+    const fixturesDir = createFixtureDir('fixtures-deployment-evidence-symlink');
+    const evidenceDir = path.join(fixturesDir, '.eai');
+    const targetName = 'external-deploy-doctor.json';
+    fs.rmSync(fixturesDir, { recursive: true, force: true });
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    fs.writeFileSync(
+      path.join(evidenceDir, targetName),
+      `${JSON.stringify(buildManagedDeployDoctorEvidence())}\n`
+    );
+    fs.symlinkSync(targetName, path.join(evidenceDir, 'deploy-doctor.json'), 'file');
+
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_symlink_receipt',
+          stage: 'implementation',
+          deploymentTaskId: 'task_symlink_receipt',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.evidenceIssues).toEqual(['DOCTOR_EVIDENCE_FILE_INVALID']);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a deployment receipt larger than one MiB', async () => {
+    const fixturesDir = createFixtureDir('fixtures-deployment-evidence-oversized');
+    fs.rmSync(fixturesDir, { recursive: true, force: true });
+    fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    fs.writeFileSync(
+      path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+      'x'.repeat(1024 * 1024 + 1)
+    );
+
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_oversized_receipt',
+          stage: 'implementation',
+          deploymentTaskId: 'task_oversized_receipt',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.evidenceIssues).toEqual(['DOCTOR_EVIDENCE_FILE_INVALID']);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a non-regular deployment receipt', async () => {
+    const fixturesDir = createFixtureDir('fixtures-deployment-evidence-directory');
+    fs.rmSync(fixturesDir, { recursive: true, force: true });
+    fs.mkdirSync(path.join(fixturesDir, '.eai', 'deploy-doctor.json'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_directory_receipt',
+          stage: 'implementation',
+          deploymentTaskId: 'task_directory_receipt',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.evidenceIssues).toEqual(['DOCTOR_EVIDENCE_FILE_INVALID']);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves the default presence gate for non-managed deployment tasks', async () => {
+    const fixturesDir = createFixtureDir('fixtures-deployment-evidence-presence');
+    fs.rmSync(fixturesDir, { recursive: true, force: true });
+    fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    fs.writeFileSync(path.join(fixturesDir, '.eai', 'deploy-doctor.json'), '{legacy-evidence');
+
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_presence_receipt',
+          stage: 'implementation',
+          deploymentTaskId: 'task_presence_receipt',
+          deploymentTaskText: '[hosting:customer-azure] Deploy to customer Azure',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+
+      expect(result.response.readinessPassed).toBe(true);
+      expect(result.response.evidenceIssues).toEqual([]);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(true);
     } finally {
       fs.rmSync(fixturesDir, { recursive: true, force: true });
     }
@@ -287,7 +436,8 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           runId: 'run_legacy_task',
           stage: 'implementation',
           deploymentTaskId: 'task_legacy_task',
-          deploymentTaskText: 'Deploy app to EnterpriseAI production',
+          deploymentTaskText: '[hosting:eai-managed] Deploy app to EnterpriseAI production',
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },

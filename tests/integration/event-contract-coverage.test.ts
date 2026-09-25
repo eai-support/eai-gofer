@@ -341,6 +341,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_evt_012',
           deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },

@@ -10,7 +10,7 @@ import { createDeploymentReadinessEventHandlers } from '../../../services/enterp
 suite('enterpriseai deployment readiness gate (extension integration)', () => {
   const fixturesDir = path.join(__dirname, 'fixtures-deployment-readiness-gate');
   const deploymentTaskText =
-    'Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
+    '[hosting:eai-managed] Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
 
   setup(async () => {
     await fs.rm(fixturesDir, { recursive: true, force: true });
@@ -37,6 +37,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
         stage: 'implementation',
         deploymentTaskId: 'task_deploy_01',
         deploymentTaskText,
+        receiptValidationMode: 'operation-bound',
         requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
         blockCompletionOnFailure: true,
       },
@@ -73,6 +74,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_unsafe',
           deploymentTaskText,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['/etc/passwd'],
           blockCompletionOnFailure: true,
         },
