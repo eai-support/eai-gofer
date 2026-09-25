@@ -874,9 +874,12 @@ Required commands:
 
 ```bash
 eai runtime validate
-mkdir -p .eai
-eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
+eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json
 ```
+
+The CLI derives the active URL from the exact operation, verifies its
+deployment, runtime, source, and configuration bindings, runs authenticated
+readiness, and atomically writes the receipt.
 
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass

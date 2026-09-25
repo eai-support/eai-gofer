@@ -40,6 +40,22 @@ const EAI_HOSTING_CONTRACT_SURFACES = [
   'skills/eai/SKILL.md',
 ] as const;
 
+const PORTABLE_DEPLOY_DOCTOR_COMMAND =
+  'eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json';
+
+const ENTERPRISEAI_DOCTOR_GUIDANCE_SURFACES = [
+  '.specify/commands/4_gofer_tasks.md',
+  '.specify/commands/5_gofer_implement.md',
+  'extension/resources/specify-commands/4_gofer_tasks.md',
+  'extension/resources/specify-commands/5_gofer_implement.md',
+  'plugins/eai-gofer/.specify/commands/4_gofer_tasks.md',
+  'plugins/eai-gofer/.specify/commands/5_gofer_implement.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.specify/commands/4_gofer_tasks.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.specify/commands/5_gofer_implement.md',
+  'tests/fixtures/golden/claude-commands/4_gofer_tasks.md',
+  'tests/fixtures/golden/claude-commands/5_gofer_implement.md',
+] as const;
+
 describe('Gofer public execution-depth guidance', () => {
   it('keeps business-friendly progress guidance in every command source', () => {
     const commandDir = path.join(REPO_ROOT, '.specify/commands');
@@ -140,7 +156,13 @@ describe('Gofer public execution-depth guidance', () => {
         'Never treat an accepted bundle or `pending_review` receipt as deployment success'
       );
       expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
-      expect(content, file).toContain('--target-tenant-id <id>');
+      expect(content, file).toContain(
+        '--source eai-managed --target-tenant-id <runtime-tenant> [--environment preview]'
+      );
+      expect(content, file).toContain(
+        '--installation-id <positive-id> --target-tenant-id <runtime-tenant> [--branch main]'
+      );
+      expect(content, file).not.toContain('[--target-tenant-id <id>]');
       expect(content, file).toContain(
         '--target-tenant-id <runtime-tenant> --resume <operation-id>'
       );
@@ -150,9 +172,7 @@ describe('Gofer public execution-depth guidance', () => {
       );
       expect(content, file).toContain('`classification: succeeded`');
       expect(content, file).toContain('`requiresTenantInfra: false`');
-      expect(content, file).toContain(
-        'eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json'
-      );
+      expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
       expect(content, file).toContain('derive the active URL from the exact PublicAPI operation');
       expect(content, file).toContain('atomically write the receipt');
       expect(content, file).toContain('source and configuration digests');
@@ -168,6 +188,16 @@ describe('Gofer public execution-depth guidance', () => {
 
     expect(canonicalContract).not.toContain('mkdir -p .eai');
     expect(canonicalContract).not.toContain('> .eai/deploy-doctor.json');
+  });
+
+  it('uses portable operation-bound doctor evidence in EnterpriseAI pipeline guidance', () => {
+    for (const file of ENTERPRISEAI_DOCTOR_GUIDANCE_SURFACES) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+
+      expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
+      expect(content, file).not.toContain('mkdir -p .eai');
+      expect(content, file).not.toContain('> .eai/deploy-doctor.json');
+    }
   });
 
   it('keeps the generated Grok skill on the current Gofer version', () => {

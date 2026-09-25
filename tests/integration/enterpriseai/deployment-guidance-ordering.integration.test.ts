@@ -25,6 +25,8 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
   it('documents scaffold-before-deploy ordering, EAI CLI syntax, and runtime deploy-doctor gating', () => {
     const tasksCommand = readCommandFile('4_gofer_tasks.md');
     const implementCommand = readCommandFile('5_gofer_implement.md');
+    const portableDoctorCommand =
+      'eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json';
 
     expect(tasksCommand).toContain('Ordered Runnable Task-Generation Guidance');
     expect(tasksCommand).toContain('EAI App Template scaffolding -> `eai init`');
@@ -32,12 +34,17 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(tasksCommand).toContain('eai runtime validate');
     expect(tasksCommand).toContain('eai verify');
     expect(tasksCommand).toContain('eai deploy trigger --repo <org/repo>');
-    expect(tasksCommand).toContain('eai deploy doctor --url <deployed-url> --format json');
+    expect(tasksCommand).toContain(portableDoctorCommand);
+    expect(tasksCommand).not.toContain('mkdir -p .eai');
+    expect(tasksCommand).not.toContain('> .eai/deploy-doctor.json');
 
     expect(implementCommand).toContain('EnterpriseAI Runtime Deployment Preflight Gate');
     expect(implementCommand).toContain('runtime contract and deploy');
     expect(implementCommand).toContain('eai.runtime.json');
     expect(implementCommand).toContain('.eai/deploy-doctor.json');
+    expect(implementCommand).toContain(portableDoctorCommand);
+    expect(implementCommand).not.toContain('mkdir -p .eai');
+    expect(implementCommand).not.toContain('> .eai/deploy-doctor.json');
   });
 
   it('enforces required-file readiness gating before deployment task completion and emits EVT-012', async () => {
