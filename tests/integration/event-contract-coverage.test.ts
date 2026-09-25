@@ -26,6 +26,10 @@ import { runCompatibilityAndParityGate } from '../../extension/src/services/ente
 import { updateExtensionMessaging } from '../../extension/src/services/enterpriseai/internalApi/UpdateExtensionMessaging';
 import { validateDeploymentReadiness } from '../../extension/src/services/enterpriseai/internalApi/ValidateDeploymentReadiness';
 import { workflowActivateProfile } from '../../extension/src/services/enterpriseai/internalApi/WorkflowActivateProfile';
+import {
+  buildManagedDeployDoctorEvidence,
+  MANAGED_DEPLOY_TASK_TEXT,
+} from '../fixtures/enterpriseai/managed-deploy-doctor-evidence';
 
 function createFixtureDir(prefix: string): string {
   return path.join(process.cwd(), 'tests', 'integration', `${prefix}-${process.pid}-${Date.now()}`);
@@ -110,7 +114,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
       fs.mkdirSync(path.join(deploymentFixtureDir, '.eai'), { recursive: true });
       fs.writeFileSync(
         path.join(deploymentFixtureDir, '.eai', 'deploy-doctor.json'),
-        '{"status":"pass"}\n',
+        `${JSON.stringify(buildManagedDeployDoctorEvidence(), null, 2)}\n`,
         'utf8'
       );
 
@@ -336,6 +340,7 @@ describe('enterpriseai event contract coverage gate (root integration)', () => {
           runId: 'run_evt_012',
           stage: 'implementation',
           deploymentTaskId: 'task_evt_012',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
         },

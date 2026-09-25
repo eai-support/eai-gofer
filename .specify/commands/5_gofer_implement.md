@@ -881,6 +881,15 @@ The CLI derives the active URL from the exact operation, verifies its
 deployment, runtime, source, and configuration bindings, runs authenticated
 readiness, and atomically writes the receipt.
 
+Before requesting task completion, update the deployment task's checkbox line
+in `tasks.md` so its inline doctor command contains the resolved operation ID,
+app key, app-scope tenant, and runtime tenant. The gate parses that task line as
+an independent binding source. It then parses
+`eai.managed-deploy-doctor-evidence.v1`, requires passing receipt and doctor
+status plus authenticated readiness, rejects recorded failures, and compares
+the receipt's four operation fields with the task. A stale, malformed, failing,
+or unrelated receipt cannot clear the gate.
+
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass
 before deployment is complete. Tenant apps must not add app-only
@@ -891,6 +900,12 @@ search.
 
 - If any required file is missing, the stage emits `EVT-012` via the
   deployment-readiness event bus and blocks task completion.
+- If the task line lacks the resolved doctor command, regenerate or update that
+  task after the operation exists, rerun the exact command, and retry. Legacy
+  generic task text fails closed.
+- If the receipt schema, status, authenticated readiness, source/configuration,
+  deployment/runtime, timestamp, or task binding is invalid, the stage records
+  non-secret evidence reasons in `EVT-012` and blocks task completion.
 - Paths are resolved relative to the workspace root. Any attempt to resolve a
   required file outside the workspace (for example `/etc/passwd`) throws
   `IMPL_DEPLOYMENT_PATH_INVALID`.

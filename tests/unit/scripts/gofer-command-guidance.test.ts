@@ -177,6 +177,10 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('atomically write the receipt');
       expect(content, file).toContain('source and configuration digests');
       expect(content, file).toContain('authenticated readiness');
+      expect(content, file).toContain(
+        "retain that complete inline command on the task's checkbox line"
+      );
+      expect(content, file).toContain('stale, malformed, failing, or unrelated evidence');
       expect(content, file).toContain('missing tenant repository connection');
       expect(content, file).toContain('OpenID Connect (OIDC)');
       expect(content, file).toContain('TenantInfra acceptance');
@@ -195,6 +199,8 @@ describe('Gofer public execution-depth guidance', () => {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
 
       expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
+      expect(content, file).toMatch(/legacy\s+generic[^.]*task/i);
+      expect(content, file).toContain('resolved operation ID');
       expect(content, file).not.toContain('mkdir -p .eai');
       expect(content, file).not.toContain('> .eai/deploy-doctor.json');
     }

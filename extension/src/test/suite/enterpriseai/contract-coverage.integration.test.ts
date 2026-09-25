@@ -98,6 +98,8 @@ function createInternalApiPayloadFixtures(): Record<
       runId: 'run_001',
       stage: 'implementation',
       deploymentTaskId: 'task_deploy_001',
+      deploymentTaskText:
+        'Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`',
       requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },
@@ -192,6 +194,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
       deploymentTaskId: 'task_deploy_01',
       readinessPassed: false,
       missingFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+      evidenceIssues: ['DEPLOYMENT_TASK_BINDING_MISSING'],
       validatedAt: '2026-04-09T00:25:00Z',
     },
   };

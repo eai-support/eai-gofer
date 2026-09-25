@@ -750,6 +750,12 @@ deploy-doctor evidence exist before any deploy command runs.
    - Inherits the `major.minor` pin recorded in `plan.md`.
 4. **Post-deploy smoke gate -> `eai deploy doctor`**
    - Command: `eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json`
+   - After deployment returns the exact operation ID, replace every placeholder
+     in this command with the resolved operation ID, app key, app-scope tenant, and
+     runtime tenant. Put that complete inline command on the post-deploy task's
+     checkbox line in `tasks.md` before requesting completion. The shared gate
+     reads that task line as the independent binding source; a placeholder or
+     legacy generic deployment task cannot pass.
    - The CLI derives the active URL from the exact operation, verifies its
      deployment, runtime, source, and configuration bindings, runs authenticated
      readiness, and atomically writes the receipt. The receipt captures runtime
@@ -757,7 +763,7 @@ deploy-doctor evidence exist before any deploy command runs.
      tenant/workflow config, and declared smoke tests.
 
 <!-- prettier-ignore -->
-The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, invoke pinned `eai major.minor` deployment tasks, and then capture deploy-doctor evidence. Breaking the order causes deployment preflight gating in `/5_gofer_implement` to fail.
+The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, invoke pinned `eai major.minor` deployment tasks, and then capture deploy-doctor evidence. After the operation exists, the runnable post-deploy task MUST retain the resolved doctor command on its checkbox line. Breaking the order or leaving unresolved binding placeholders causes deployment preflight gating in `/5_gofer_implement` to fail.
 
 ### App-Delivery Preconditions Inside Shared Stages
 

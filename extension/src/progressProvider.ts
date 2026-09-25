@@ -828,6 +828,7 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
         taskId: task.id,
         readinessPassed: payload.readinessPassed,
         missingFiles: payload.missingFiles,
+        evidenceIssues: payload.evidenceIssues,
       });
     });
 
@@ -836,6 +837,7 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
         runId: `progress-${specId}`,
         stage: 'implementation',
         deploymentTaskId: task.id,
+        deploymentTaskText: task.description,
         requiredFiles: ENTERPRISE_AI_DEPLOYMENT_REQUIRED_FILES,
         blockCompletionOnFailure: true,
       },
@@ -848,11 +850,21 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
     );
 
     if (!readiness.response.deploymentTaskCompletionAllowed) {
-      const missingFiles = readiness.response.missingFiles.join(', ');
+      const failureDetails: string[] = [];
+      if (readiness.response.missingFiles.length > 0) {
+        failureDetails.push(
+          `Missing required runtime contract or deploy doctor evidence files: ${readiness.response.missingFiles.join(', ')}.`
+        );
+      }
+      if (readiness.response.evidenceIssues.length > 0) {
+        failureDetails.push(
+          `Deployment evidence did not pass: ${readiness.response.evidenceIssues.join(', ')}.`
+        );
+      }
       const message =
         `Cannot mark deployment task "${task.id}" complete. ` +
-        `Missing required runtime contract or deploy doctor evidence files: ${missingFiles}. ` +
-        'Next step: create the EAI runtime contract from the app template, run deploy doctor after deployment, save the result to .eai/deploy-doctor.json, then retry.';
+        `${failureDetails.join(' ')} ` +
+        'Next step: regenerate this deployment task after the exact operation is available so its task line contains the resolved eai deploy doctor command, rerun that exact command to replace .eai/deploy-doctor.json, then retry.';
       void vscode.window.showWarningMessage(message);
       throw new Error(`IMPL_DEPLOYMENT_VALIDATION_FAILED: ${message}`);
     }

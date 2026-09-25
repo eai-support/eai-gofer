@@ -231,6 +231,7 @@ export const EVENT_PAYLOAD_SCHEMAS: Readonly<
       deploymentTaskId: { type: 'string' },
       readinessPassed: { type: 'boolean' },
       missingFiles: { type: 'string[]' },
+      evidenceIssues: { type: 'string[]' },
       validatedAt: { type: 'string' },
     },
   },

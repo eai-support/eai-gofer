@@ -9,6 +9,8 @@ import { createDeploymentReadinessEventHandlers } from '../../../services/enterp
 
 suite('enterpriseai deployment readiness gate (extension integration)', () => {
   const fixturesDir = path.join(__dirname, 'fixtures-deployment-readiness-gate');
+  const deploymentTaskText =
+    'Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
 
   setup(async () => {
     await fs.rm(fixturesDir, { recursive: true, force: true });
@@ -34,6 +36,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
         runId: 'run_029_0001',
         stage: 'implementation',
         deploymentTaskId: 'task_deploy_01',
+        deploymentTaskText,
         requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
         blockCompletionOnFailure: true,
       },
@@ -53,10 +56,12 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
     assert.strictEqual(result.response.status, 'completed');
     assert.strictEqual(result.response.readinessPassed, false);
     assert.deepStrictEqual(result.response.missingFiles, ['.eai/deploy-doctor.json']);
+    assert.deepStrictEqual(result.response.evidenceIssues, []);
     assert.strictEqual(result.response.deploymentTaskCompletionAllowed, false);
     assert.strictEqual(result.emittedEvent.contractId, 'EVT-012');
     assert.strictEqual(consumedPayloads.length, 1);
     assert.deepStrictEqual(consumedPayloads[0].missingFiles, ['.eai/deploy-doctor.json']);
+    assert.deepStrictEqual(consumedPayloads[0].evidenceIssues, []);
     assert.strictEqual(eventHandlers.consumerCount(), 0);
   });
 
@@ -67,6 +72,7 @@ suite('enterpriseai deployment readiness gate (extension integration)', () => {
           runId: 'run_029_unsafe',
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_unsafe',
+          deploymentTaskText,
           requiredFiles: ['/etc/passwd'],
           blockCompletionOnFailure: true,
         },

@@ -93,6 +93,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
       deploymentTaskId: 'task_deploy_01',
       readinessPassed: false,
       missingFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+      evidenceIssues: ['DEPLOYMENT_TASK_BINDING_MISSING'],
       validatedAt: '2026-04-09T00:25:00Z',
     },
   };
