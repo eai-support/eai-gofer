@@ -13,6 +13,22 @@ const MAX_ARTIFACT_BYTES = 64 * 1024;
 // as a hard error rather than hashed in full: this bounds worst-case memory
 // use independent of the provider payload cap.
 const MAX_ARTIFACT_READ_BYTES = 8 * 1024 * 1024;
+const DELIVERY_ARTIFACTS = [
+  'goal-ledger.json',
+  'spec.md',
+  'plan.md',
+  'tasks.md',
+  'decisions.md',
+  'traceability.md',
+  'test-spec.md',
+  'change-manifest.json',
+  'blast-radius-report.md',
+];
+const COMPLETE_EVIDENCE_EVENTS = new Set([
+  'before_task_batch',
+  'after_material_finding',
+  'before_validation',
+]);
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 // O_NOFOLLOW is unavailable on Windows; the bitwise OR silently contributes
@@ -188,12 +204,14 @@ function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCas
 const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
 const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 
-export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env } = {}) {
+export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env, keychain } = {}) {
   assertSafeEventName(event);
   const resolvedWorkspace = await assertSafeWorkspaceRoot(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
   const policy = await readConfinedJson(resolvedWorkspace, POLICY_RELATIVE_PATH);
-  if (!policy.enabled) return { status: 'disabled', event };
+  const credentials = await credentialStatus({ workspace, env, keychain });
+  const globallyConnected = credentials.source === 'macos_keychain';
+  if (!policy.enabled && !globallyConnected) return { status: 'disabled', event };
   // A syntactically valid but malformed enabled policy must not silently
   // bypass its own gate: `confidence < undefined` is always false in JS, so
   // a missing/non-numeric minimumConfidence would otherwise let any
@@ -204,16 +222,15 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     throw new Error('Gofer TypeSafe policy is enabled but malformed (events or minimumConfidence).');
   }
   if (!policy.events.includes(event)) return { status: 'disabled', event };
-  const credentials = await credentialStatus({ workspace, env });
   if (!credentials.configured) return { status: 'not_configured', event };
-  const artifacts = await Promise.all(['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md', 'decisions.md', 'traceability.md'].map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
+  const artifacts = await Promise.all(DELIVERY_ARTIFACTS.map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
   // A missing artifact is not the same as an empty one: recorded so the
   // receipt is auditable, even though an early-stage feature legitimately
   // has not written every document yet (the feature directory itself
   // already had to exist, per confined() above).
   const missingArtifacts = artifacts.filter(([, info]) => !info.present).map(([name]) => name);
   const state = Object.fromEntries(artifacts.map(([name, { present, sha256, sent }]) => [name, { present, sha256, content: sent }]));
-  const { apiKey } = await resolveApiKey({ workspace, env });
+  const { apiKey } = await resolveApiKey({ workspace, env, keychain });
   let response;
   try {
     response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
@@ -221,7 +238,10 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ model: 'jev-latest', state: JSON.stringify(state), questions: {
         goal_alignment: { type: 'choice', instructions: 'Does the current work remain aligned to the approved goal and specification?', criteria: { aligned: 'The work remains aligned.', partial: 'The work needs document reconciliation.', conflict: 'The work conflicts with approved direction.' } },
-        required_action: { type: 'choice', instructions: 'What is the required delivery action?', criteria: { continue: 'Continue within the approved path.', reconcile: 'Reconcile affected artefacts before work continues.', ask_user: 'A material user decision is required.' } },
+        specification_currency: { type: 'choice', instructions: 'Compare the supplied specification, plan, tasks, decisions, traceability, and change manifest. Are the stated implementation paths, completed-task status, commit evidence, and material changes internally consistent and current? Select partial only when you can identify a concrete missing or stale record.', criteria: { aligned: 'All supplied delivery records agree on the current implementation and no concrete stale or missing record is present.', partial: 'A concrete delivery record is missing, stale, or inconsistent and needs reconciliation.', conflict: 'The recorded implementation conflicts with the approved specification or decision.' } },
+        test_coverage: { type: 'choice', instructions: 'Does the test specification map the changed behavior to executable owning-repository tests and any required eai-testing-dev release evidence?', criteria: { aligned: 'The changed behavior has complete executable coverage.', partial: 'The test evidence is incomplete or stale.', conflict: 'The test evidence contradicts the claimed behavior.' } },
+        blast_radius: { type: 'choice', instructions: 'Does the change manifest and blast-radius report cover all affected interfaces, packages, release surfaces, dependencies, rollback paths, and external test contracts?', criteria: { aligned: 'The blast radius is complete and contained.', partial: 'The blast-radius evidence is incomplete or stale.', conflict: 'The reported blast radius conflicts with the changed surface.' } },
+        required_action: { type: 'choice', instructions: 'Choose the action required by the four evidence judgments. Select continue when all four are aligned, reconcile when any is partial or evidence is missing, and ask_user only for a genuine conflict requiring a new business decision.', criteria: { continue: 'All four evidence judgments are aligned.', reconcile: 'At least one evidence judgment is partial or missing.', ask_user: 'A conflict requires a material user decision.' } },
       } }),
     });
   } catch (error) {
@@ -235,14 +255,20 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   try { payload = await response.json(); } catch { return { status: 'unavailable', event, reason: 'invalid_response_body' }; }
   const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
   const alignmentAnswer = answers.goal_alignment || {};
+  const specificationAnswer = answers.specification_currency || {};
+  const testAnswer = answers.test_coverage || {};
+  const blastRadiusAnswer = answers.blast_radius || {};
   const actionAnswer = answers.required_action || {};
   const alignment = normalizeAnswer(alignmentAnswer.choice);
+  const specification = normalizeAnswer(specificationAnswer.choice);
+  const testCoverage = normalizeAnswer(testAnswer.choice);
+  const blastRadius = normalizeAnswer(blastRadiusAnswer.choice);
   const action = normalizeAnswer(actionAnswer.choice);
   // An invalid or out-of-range confidence must count as zero, not be
   // dropped: dropping it would let one bad value be outweighed by the
   // other, and an out-of-range value (e.g. 2) would otherwise satisfy the
   // minimum-confidence check on a malformed response.
-  const confidences = [alignmentAnswer, actionAnswer].map((answer) => {
+  const confidences = [alignmentAnswer, specificationAnswer, testAnswer, blastRadiusAnswer, actionAnswer].map((answer) => {
     const value = Number(answer.confidence);
     return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
   });
@@ -250,11 +276,13 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   // An answer outside the known choice set fails toward reconcile, not
   // toward a silent aligned pass: an unexpected label must not be read as
   // "everything is fine".
-  const recognized = KNOWN_ALIGNMENTS.has(alignment) && KNOWN_ACTIONS.has(action);
-  const status = alignment === 'conflict' || action === 'ask_user' ? 'conflict'
-    : !recognized || confidence < policy.minimumConfidence || alignment === 'partial' || action === 'reconcile' ? 'reconcile'
+  const evidenceAlignments = [alignment, specification, testCoverage, blastRadius];
+  const recognized = evidenceAlignments.every((value) => KNOWN_ALIGNMENTS.has(value)) && KNOWN_ACTIONS.has(action);
+  const missingRequiredEvidence = COMPLETE_EVIDENCE_EVENTS.has(event) && missingArtifacts.length > 0;
+  const status = evidenceAlignments.includes('conflict') || action === 'ask_user' ? 'conflict'
+    : !recognized || missingRequiredEvidence || confidence < policy.minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' ? 'reconcile'
     : 'aligned';
-  const receipt = { schemaVersion: 1, provider: 'typesafe', event, status, confidence, missingArtifacts, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { sha256 }]) => [name, sha256])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
+  const receipt = { schemaVersion: 2, provider: 'typesafe', event, status, confidence, missingArtifacts, missingRequiredEvidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { sha256 }]) => [name, sha256])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, specification_currency: { choice: specificationAnswer.choice || null, confidence: specificationAnswer.confidence ?? null }, test_coverage: { choice: testAnswer.choice || null, confidence: testAnswer.confidence ?? null }, blast_radius: { choice: blastRadiusAnswer.choice || null, confidence: blastRadiusAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
   const receiptRelativeDir = path.join('evidence', 'semantic-review');
   await assertNoSymlinkComponents(featureDir, receiptRelativeDir);
   const receiptDir = path.join(featureDir, receiptRelativeDir);
