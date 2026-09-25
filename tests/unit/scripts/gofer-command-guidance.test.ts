@@ -1,8 +1,60 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
+const EAI_HOSTING_CONTRACT_SURFACES = [
+  '.agents/AGENTS.md',
+  '.agents/skills/eai/SKILL.md',
+  '.claude/commands/eai.md',
+  '.claude/skills/eai/SKILL.md',
+  '.gemini/commands/gofer/eai.md',
+  '.github/prompts/eai.prompt.md',
+  '.github/skills/eai/SKILL.md',
+  '.grok/skills/eai/SKILL.md',
+  '.system/skills/eai/SKILL.md',
+  'extension/resources/claude-commands/eai.md',
+  'extension/resources/claude-skills/eai/SKILL.md',
+  'extension/resources/copilot-prompts/eai.prompt.md',
+  'extension/resources/gemini/commands/gofer/eai.md',
+  'extension/resources/github-skills/eai/SKILL.md',
+  'extension/resources/grok-skills/eai/SKILL.md',
+  'plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/.claude/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.gemini/commands/gofer/eai.md',
+  'plugins/eai-gofer/.github/prompts/eai.prompt.md',
+  'plugins/eai-gofer/.github/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.grok/skills/eai/SKILL.md',
+  'plugins/eai-gofer/commands/eai.md',
+  'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.grok/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/commands/eai.md',
+  'plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md',
+  'plugins/eai-gofer/skills/eai/SKILL.md',
+  'skills/eai/SKILL.md',
+] as const;
+
+const PORTABLE_DEPLOY_DOCTOR_COMMAND =
+  'eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json';
+
+const ENTERPRISEAI_DOCTOR_GUIDANCE_SURFACES = [
+  '.specify/commands/4_gofer_tasks.md',
+  '.specify/commands/5_gofer_implement.md',
+  'extension/resources/specify-commands/4_gofer_tasks.md',
+  'extension/resources/specify-commands/5_gofer_implement.md',
+  'plugins/eai-gofer/.specify/commands/4_gofer_tasks.md',
+  'plugins/eai-gofer/.specify/commands/5_gofer_implement.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.specify/commands/4_gofer_tasks.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.specify/commands/5_gofer_implement.md',
+  'tests/fixtures/golden/claude-commands/4_gofer_tasks.md',
+  'tests/fixtures/golden/claude-commands/5_gofer_implement.md',
+] as const;
 
 describe('Gofer public execution-depth guidance', () => {
   it('keeps business-friendly progress guidance in every command source', () => {
@@ -77,6 +129,93 @@ describe('Gofer public execution-depth guidance', () => {
         'Do not invent, guess, or complete EAI CLI commands from memory'
       );
       expect(content, file).toContain('eai <command> --help');
+    }
+  });
+
+  it('routes EAI-managed hosting through the canonical CLI with exact-operation recovery', () => {
+    const canonicalContract = buildEaiHostingAndDeploymentContract();
+
+    for (const file of EAI_HOSTING_CONTRACT_SURFACES) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain(canonicalContract);
+      expect(content, file).toContain(
+        'Where should this app run: EAI-managed Azure, your Azure, or local only?'
+      );
+      expect(content, file).toContain('eai deploy app <app-key> --target eai');
+      expect(content, file).toContain('eai deploy doctor --help');
+      expect(content, file).toContain('same EAI actor through its browser handoff');
+      expect(content, file).toContain(
+        'Who should maintain the app source: EAI-maintained or My GitHub?'
+      );
+      expect(content, file).toContain('--source eai-managed');
+      expect(content, file).toContain('--source customer-owned');
+      expect(content, file).toContain(
+        'Do not require an origin remote, a customer push, customer write access to the EAI repository'
+      );
+      expect(content, file).toContain(
+        'Never treat an accepted bundle or `pending_review` receipt as deployment success'
+      );
+      expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
+      expect(content, file).toContain(
+        '--source eai-managed --target-tenant-id <runtime-tenant> [--environment preview]'
+      );
+      expect(content, file).toContain(
+        '--installation-id <positive-id> --target-tenant-id <runtime-tenant> [--branch main]'
+      );
+      expect(content, file).not.toContain('[--target-tenant-id <id>]');
+      expect(content, file).toContain(
+        '--target-tenant-id <runtime-tenant> --resume <operation-id>'
+      );
+      expect(content, file).toContain('same tenant flags and `--retry <operation-id>`');
+      expect(content, file).toContain(
+        'Never omit the target tenant or substitute the latest operation'
+      );
+      expect(content, file).toContain(
+        'Before running any returned action that re-invokes `eai deploy app`, verify it names the same `<app-key>`, uses `--target eai`, passes the same `--tenant-id <app-scope-tenant>` and `--target-tenant-id <runtime-tenant>`, addresses `<operation-id>` explicitly, and uses `--format json`'
+      );
+      expect(content, file).toContain(
+        'stop and report the inconsistent CLI action instead of running it or repairing it from memory'
+      );
+      expect(content, file).toContain('`classification: succeeded`');
+      expect(content, file).toContain('`requiresTenantInfra: false`');
+      expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
+      expect(content, file).toContain('derive the active URL from the exact PublicAPI operation');
+      expect(content, file).toContain('atomically write the receipt');
+      expect(content, file).toContain('source and configuration digests');
+      expect(content, file).toContain('authenticated readiness');
+      expect(content, file).toContain(
+        'retain the selected initial command plus that complete inline doctor command'
+      );
+      expect(content, file).toContain(
+        'requires exactly one `--target eai` and `--format json` on the initial command'
+      );
+      expect(content, file).toContain('stale, malformed, failing, or unrelated evidence');
+      expect(content, file).toContain('missing tenant repository connection');
+      expect(content, file).toContain('OpenID Connect (OIDC)');
+      expect(content, file).toContain('TenantInfra acceptance');
+      expect(content, file).toContain('GitHub App private key');
+      expect(content, file).toContain(
+        'Keep customer Azure and local deployment behavior unchanged'
+      );
+    }
+
+    expect(canonicalContract).not.toContain('mkdir -p .eai');
+    expect(canonicalContract).not.toContain('> .eai/deploy-doctor.json');
+  });
+
+  it('uses portable operation-bound doctor evidence in EnterpriseAI pipeline guidance', () => {
+    for (const file of ENTERPRISEAI_DOCTOR_GUIDANCE_SURFACES) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+
+      expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
+      expect(content, file).toContain('[hosting:eai-managed]');
+      expect(content, file).toContain('operation-bound');
+      expect(content, file).toMatch(/resolved\s+operation ID/i);
+      expect(content, file).toContain('`--target eai`');
+      expect(content, file).toContain('`--format json`');
+      expect(content, file).toMatch(/target(?:,| and|.*?)output mode/s);
+      expect(content, file).not.toContain('mkdir -p .eai');
+      expect(content, file).not.toContain('> .eai/deploy-doctor.json');
     }
   });
 

@@ -21,6 +21,10 @@ import { runCompatibilityAndParityGate } from '../../../extension/src/services/e
 import { updateExtensionMessaging } from '../../../extension/src/services/enterpriseai/internalApi/UpdateExtensionMessaging';
 import { validateDeploymentReadiness } from '../../../extension/src/services/enterpriseai/internalApi/ValidateDeploymentReadiness';
 import { workflowActivateProfile } from '../../../extension/src/services/enterpriseai/internalApi/WorkflowActivateProfile';
+import {
+  buildManagedDeployDoctorEvidence,
+  MANAGED_DEPLOY_TASK_TEXT,
+} from '../../fixtures/enterpriseai/managed-deploy-doctor-evidence';
 
 function createFixtureDir(prefix: string): string {
   return path.join(
@@ -118,6 +122,8 @@ function createInternalApiPayloadFixtures(): Record<
       runId: 'run_001',
       stage: 'implementation',
       deploymentTaskId: 'task_deploy_001',
+      deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+      receiptValidationMode: 'operation-bound',
       requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
       blockCompletionOnFailure: true,
     },
@@ -194,7 +200,7 @@ describe('enterpriseai internal API + external posture contract coverage (root i
       fs.mkdirSync(path.join(deploymentFixtureDir, '.eai'), { recursive: true });
       fs.writeFileSync(
         path.join(deploymentFixtureDir, '.eai', 'deploy-doctor.json'),
-        '{"status":"pass"}\n',
+        `${JSON.stringify(buildManagedDeployDoctorEvidence(), null, 2)}\n`,
         'utf8'
       );
       fs.writeFileSync(
@@ -330,6 +336,8 @@ describe('enterpriseai internal API + external posture contract coverage (root i
           runId: 'run_coverage_001',
           stage: 'implementation',
           deploymentTaskId: 'task_deploy_coverage',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json', '.env.example'],
           blockCompletionOnFailure: true,
         },
@@ -338,6 +346,7 @@ describe('enterpriseai internal API + external posture contract coverage (root i
         }
       );
       coveredContracts.add(iap011.contractId);
+      expect(iap011.response.readinessPassed).toBe(true);
 
       expect(Array.from(coveredContracts).sort()).toEqual([...INTERNAL_API_CONTRACT_IDS].sort());
 

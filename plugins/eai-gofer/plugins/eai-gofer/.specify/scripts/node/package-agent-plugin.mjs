@@ -12,7 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
-import { buildAuthAccessDecisionContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
+import { buildAuthAccessDecisionContract, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -455,7 +455,9 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 5. Use \`eai errors explain <code-or-reason> --format json\` after errors when the CLI advertises it.
 6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
 7. Record the verified command and source in \`eai-preflight.md\`, \`service-fit-matrix.md\`, or the active feature notes before the command changes files or external systems.
-8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.`;
+8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
+
+${buildEaiHostingAndDeploymentContract()}`;
 }
 
 function buildEaiPlatformDecisionSection() {

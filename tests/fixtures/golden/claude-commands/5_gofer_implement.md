@@ -844,9 +844,14 @@ preflight is migration-only and runs only when `workflowProfile` is explicitly
 
 Before any deployment task emitted by `/4_gofer_tasks` completes, this stage
 MUST execute deployment preflight checks for the runtime contract and deploy
-doctor gate. A task that invokes `eai deploy` is not marked complete until all
-of the following files are present at the workspace root and pass their
-readiness checks:
+doctor gate. The task's checkbox line determines the validation mode:
+
+- `[hosting:eai-managed]` uses the strict operation-bound receipt gate below.
+- Customer Azure and local-only task text retain the prior required-file
+  presence gate and are not required to carry an EAI-managed operation binding.
+
+An EAI-managed task is not marked complete until all of the following files
+are present at the workspace root and pass their readiness checks:
 
 | Required File             | Purpose                                                        |
 | ------------------------- | -------------------------------------------------------------- |
@@ -857,9 +862,33 @@ Required commands:
 
 ```bash
 eai runtime validate
-mkdir -p .eai
-eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
+eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json
 ```
+
+The CLI derives the active URL from the exact operation, verifies its
+deployment, runtime, source, and configuration bindings, runs authenticated
+readiness, and atomically writes the receipt.
+
+Keep the selected initial EAI-managed deployment command and this doctor phase
+inside one `[hosting:eai-managed]` task. Run the initial command while the task
+remains in progress, and retain its resolved app key, `--target eai`,
+`--tenant-id`, `--target-tenant-id`, selected `--source eai-managed` or
+`--source customer-owned`, and `--format json` on the task's checkbox line. Do not
+create a later dependent post-deploy checkbox: the initial marked task itself cannot
+complete until this gate has the receipt.
+
+After the exact operation exists and before requesting task completion, update
+the EAI-managed deployment task's checkbox line in `tasks.md` so it retains
+`[hosting:eai-managed]` and its inline doctor command contains the resolved
+operation ID, app key, app-scope tenant, and runtime tenant. The gate independently
+parses the selected initial command's app key, app-scope tenant, runtime tenant,
+source mode, target, and output mode. It requires `--target eai` and `--format
+json`, and the initial and doctor app and tenant values must match before the gate
+parses `eai.managed-deploy-doctor-evidence.v1`. It then requires passing
+receipt and doctor status plus authenticated readiness, rejects recorded failures,
+and compares the receipt's source mode and four operation fields with the task. A
+stale, malformed, failing, cross-command, or unrelated receipt cannot clear the
+gate.
 
 `/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass
@@ -871,6 +900,19 @@ search.
 
 - If any required file is missing, the stage emits `EVT-012` via the
   deployment-readiness event bus and blocks task completion.
+- If an `[hosting:eai-managed]` task line lacks the resolved doctor command,
+  regenerate or update that task after the operation exists, rerun the exact
+  command, and retry.
+- If the receipt schema, status, authenticated readiness, source/configuration,
+  deployment/runtime, timestamp, or task binding is invalid, the stage records
+  non-secret evidence reasons in the optional `EVT-012` `evidenceIssues` field
+  and blocks task completion. Existing v1 event payloads without that additive
+  field remain valid.
+- Recovery instructions must follow the reported condition: restore and
+  validate a missing runtime contract; generate a missing receipt after the
+  operation exists; regenerate only a missing/invalid managed task binding;
+  rerun doctor for invalid or mismatched evidence; and fix failed readiness
+  checks before rerunning doctor.
 - Paths are resolved relative to the workspace root. Any attempt to resolve a
   required file outside the workspace (for example `/etc/passwd`) throws
   `IMPL_DEPLOYMENT_PATH_INVALID`.
