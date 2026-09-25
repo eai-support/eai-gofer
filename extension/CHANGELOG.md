@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.13.2] - 2026-09-25
+
+Auto-release
+
 ## [3.13.1] - 2026-09-25
 
 Standardize EAI PublicAPI guidance on current interfaces and add regression coverage
