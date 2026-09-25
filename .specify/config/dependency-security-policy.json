@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "gofer.dependency-security-policy/v1",
+  "policyVersion": "1.0.0",
+  "minimumReleaseAgeDays": 15,
+  "maximumExceptionDays": 7,
+  "blockKnownMalware": true,
+  "blockVulnerabilitySeverities": ["high", "critical"],
+  "requireExactVersion": true,
+  "requireIntegrity": true,
+  "requireScannerEvidence": true,
+  "reviewSignals": ["install-scripts", "native-code", "binary-artifact", "maintainer-change", "missing-provenance"],
+  "waivableFindings": ["release-age"]
+}
