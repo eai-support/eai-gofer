@@ -782,10 +782,10 @@ the EAI-managed deployment task is marked complete.
        Never substitute it for the EAI-maintained command.
      - Run the selected initial command without marking the task complete. After
        it returns the exact operation ID, update this same task's checkbox line
-       to retain `[hosting:eai-managed]` and include the fully resolved doctor
-       command below. Run doctor, then request completion. Do not create a
-       separate dependent post-deploy checkbox whose prerequisite is this
-       receipt-gated task.
+       to retain `[hosting:eai-managed]`, that selected initial command with its
+       resolved `--source`, and the fully resolved doctor command below. Run
+       doctor, then request completion. Do not create a separate dependent
+       post-deploy checkbox whose prerequisite is this receipt-gated task.
    - For **customer Azure**, include `[hosting:customer-azure]` and retain the
      existing approved customer-owned Azure deployment path and credentials.
      Do not add an EAI-managed operation or source command.
@@ -799,9 +799,10 @@ the EAI-managed deployment task is marked complete.
    - After deployment returns the exact operation ID, replace every placeholder
      in this command with the resolved operation ID, app key, app-scope tenant, and
      runtime tenant. Put that complete inline command on the same deployment task's
-     checkbox line in `tasks.md` before requesting completion. The shared gate
-     reads that task line as the independent binding source; an EAI-managed
-     task with a placeholder or missing resolved command cannot pass.
+     checkbox line in `tasks.md` before requesting completion, and keep the selected
+     initial command with `--source eai-managed` or `--source customer-owned` on
+     that line. The shared gate reads both commands as independent binding sources;
+     an EAI-managed task with a placeholder or missing resolved command cannot pass.
    - The CLI derives the active URL from the exact operation, verifies its
      deployment, runtime, source, and configuration bindings, runs authenticated
      readiness, and atomically writes the receipt. The receipt captures runtime

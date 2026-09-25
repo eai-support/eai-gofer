@@ -3,10 +3,14 @@ export const MANAGED_DEPLOY_BINDING = Object.freeze({
   appKey: 'planning-portal',
   tenantId: 'app-tenant',
   targetTenantId: 'runtime-tenant',
+  sourceMode: 'eai-managed',
 });
 
 export const MANAGED_DEPLOY_TASK_TEXT =
   '[hosting:eai-managed] Run `eai deploy app planning-portal --target eai --tenant-id app-tenant --source eai-managed --target-tenant-id runtime-tenant --format json`, then validate the same task with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
+
+export const CUSTOMER_OWNED_DEPLOY_TASK_TEXT =
+  '[hosting:eai-managed] Run `eai deploy app planning-portal --target eai --tenant-id app-tenant --source customer-owned --repo enterprise/planning-portal --installation-id 123 --target-tenant-id runtime-tenant --format json`, then validate the same task with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
 
 export interface ManagedDeployEvidenceOverrides {
   schemaVersion?: unknown;
@@ -50,7 +54,6 @@ export function buildManagedDeployDoctorEvidence(
     observedAt: '2026-09-25T05:00:00.000Z',
     operation: {
       ...MANAGED_DEPLOY_BINDING,
-      sourceMode: 'source-unknown',
       status: 'active',
       configHash: `sha256:${'b'.repeat(64)}`,
       ...overrides.operation,

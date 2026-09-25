@@ -77,7 +77,10 @@ interface DeploymentEvidenceBinding {
   appKey: string;
   tenantId: string;
   targetTenantId: string;
+  sourceMode: ManagedDeploySourceMode;
 }
+
+type ManagedDeploySourceMode = 'eai-managed' | 'customer-owned';
 
 interface TaskBindingResult {
   binding: DeploymentEvidenceBinding | null;
@@ -187,19 +190,57 @@ function isSafeManagedDeployIdentifier(value: unknown): value is string {
   return typeof value === 'string' && MANAGED_DEPLOY_IDENTIFIER_PATTERN.test(value);
 }
 
+function isManagedDeploySourceMode(value: unknown): value is ManagedDeploySourceMode {
+  return value === 'eai-managed' || value === 'customer-owned';
+}
+
 function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResult {
-  const commandMatches = Array.from(
+  const initialCommandMatches = Array.from(
+    deploymentTaskText.matchAll(/`(eai\s+deploy\s+app(?:\s+[^`]*)?)`/g),
+    (match: RegExpMatchArray): string => match[1].trim()
+  );
+  const doctorCommandMatches = Array.from(
     deploymentTaskText.matchAll(/`(eai\s+deploy\s+doctor(?:\s+[^`]*)?)`/g),
     (match: RegExpMatchArray): string => match[1].trim()
   );
-  if (commandMatches.length !== 1) {
+  if (initialCommandMatches.length === 0 || doctorCommandMatches.length === 0) {
     return {
       binding: null,
       issues: ['DEPLOYMENT_TASK_BINDING_MISSING'],
     };
   }
+  if (initialCommandMatches.length !== 1 || doctorCommandMatches.length !== 1) {
+    return {
+      binding: null,
+      issues: ['DEPLOYMENT_TASK_BINDING_INVALID'],
+    };
+  }
 
-  const tokens = commandMatches[0].split(/\s+/);
+  const initialTokens = initialCommandMatches[0].split(/\s+/);
+  const sourceFlagPositions = initialTokens.reduce<number[]>(
+    (positions: number[], token: string, index: number): number[] => {
+      if (token === '--source') {
+        positions.push(index);
+      }
+      return positions;
+    },
+    []
+  );
+  const sourceMode =
+    sourceFlagPositions.length === 1 ? initialTokens[sourceFlagPositions[0] + 1] : undefined;
+  if (
+    initialTokens[0] !== 'eai' ||
+    initialTokens[1] !== 'deploy' ||
+    initialTokens[2] !== 'app' ||
+    !isManagedDeploySourceMode(sourceMode)
+  ) {
+    return {
+      binding: null,
+      issues: ['DEPLOYMENT_TASK_BINDING_INVALID'],
+    };
+  }
+
+  const tokens = doctorCommandMatches[0].split(/\s+/);
   const expectedFlagPositions = [
     [3, '--operation-id'],
     [5, '--app-key'],
@@ -246,6 +287,7 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
       appKey,
       tenantId,
       targetTenantId,
+      sourceMode,
     },
     issues: [],
   };
@@ -349,7 +391,7 @@ function validateManagedDeployDoctorEvidence(
     Number(deployment.expectedLatestVersion) >= 0 &&
     deployment.latestPointerVersion === deployment.expectedLatestVersion;
   const structureIsValid =
-    isNonEmptyString(operation.sourceMode) &&
+    isManagedDeploySourceMode(operation.sourceMode) &&
     typeof operation.configHash === 'string' &&
     SHA256_PATTERN.test(operation.configHash) &&
     hasValidSourceBinding(evidence.sourceBinding) &&
@@ -396,6 +438,11 @@ function validateManagedDeployDoctorEvidence(
     expected?: string;
     issue: string;
   }> = [
+    {
+      actual: operation.sourceMode,
+      expected: expected?.sourceMode,
+      issue: 'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
+    },
     {
       actual: operation.operationId,
       expected: expected?.operationId,

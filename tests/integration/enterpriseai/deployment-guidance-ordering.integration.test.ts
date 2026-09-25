@@ -8,6 +8,7 @@ import {
 import { createDeploymentReadinessEventHandlers } from '../../../extension/src/services/enterpriseai/events/DeploymentReadinessEvents';
 import {
   buildManagedDeployDoctorEvidence,
+  CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
   MANAGED_DEPLOY_TASK_TEXT,
 } from '../../fixtures/enterpriseai/managed-deploy-doctor-evidence';
 
@@ -53,7 +54,10 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       'Run the selected initial command without marking the task complete'
     );
     expect(tasksCommand).toContain('same deployment task');
-    expect(tasksCommand).toContain('separate dependent post-deploy checkbox');
+    expect(tasksCommand).toContain('that selected initial command with its');
+    expect(tasksCommand).toContain('resolved `--source`');
+    expect(tasksCommand).toContain('reads both commands as independent binding sources');
+    expect(tasksCommand).toMatch(/separate dependent\s+post-deploy checkbox/);
     expect(tasksCommand).not.toContain('4. **EAI-managed post-deploy smoke gate');
     expect(tasksCommand).not.toContain(
       'runtime contract and\ndeploy-doctor evidence exist before any deploy command runs'
@@ -74,7 +78,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(implementCommand).toContain('.eai/deploy-doctor.json');
     expect(implementCommand).toContain(portableDoctorCommand);
     expect(implementCommand).toContain('eai.managed-deploy-doctor-evidence.v1');
-    expect(implementCommand).toContain('stale, malformed, failing');
+    expect(implementCommand).toMatch(/stale,\s+malformed, failing/);
     expect(implementCommand).toContain(
       '[hosting:eai-managed]` uses the strict operation-bound receipt gate'
     );
@@ -82,7 +86,9 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(implementCommand).toContain('optional `EVT-012` `evidenceIssues` field');
     expect(implementCommand).toContain('Recovery instructions must follow the reported condition');
     expect(implementCommand).toContain('inside one `[hosting:eai-managed]` task');
-    expect(implementCommand).toContain('Do not create a later dependent post-deploy checkbox');
+    expect(implementCommand).toMatch(/selected initial\s+command's source mode/);
+    expect(implementCommand).toContain("receipt's source mode and four operation fields");
+    expect(implementCommand).toMatch(/Do not create a later dependent\s+post-deploy checkbox/);
     expect(implementCommand).not.toContain('mkdir -p .eai');
     expect(implementCommand).not.toContain('> .eai/deploy-doctor.json');
   });
@@ -154,14 +160,27 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     }
   });
 
-  it('allows only an exact passing task-bound managed deployment receipt', async () => {
-    const fixturesDir = createFixtureDir('fixtures-deployment-evidence-exact');
+  it.each([
+    [
+      'EAI-maintained source',
+      MANAGED_DEPLOY_TASK_TEXT,
+      buildManagedDeployDoctorEvidence({ operation: { sourceMode: 'eai-managed' } }),
+    ],
+    [
+      'customer-owned source',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
+      buildManagedDeployDoctorEvidence({ operation: { sourceMode: 'customer-owned' } }),
+    ],
+  ])('allows an exact passing task-bound receipt for %s', async (label, taskText, evidence) => {
+    const fixturesDir = createFixtureDir(
+      `fixtures-deployment-evidence-exact-${label.replace(/[^a-z]+/gi, '-').toLowerCase()}`
+    );
     fs.rmSync(fixturesDir, { recursive: true, force: true });
     fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
     fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
     fs.writeFileSync(
       path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
-      `${JSON.stringify(buildManagedDeployDoctorEvidence(), null, 2)}\n`
+      `${JSON.stringify(evidence, null, 2)}\n`
     );
 
     try {
@@ -170,7 +189,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           runId: 'run_exact_receipt',
           stage: 'implementation',
           deploymentTaskId: 'task_exact_receipt',
-          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          deploymentTaskText: taskText,
           receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
@@ -188,6 +207,11 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
   });
 
   it.each([
+    [
+      'source mode',
+      buildManagedDeployDoctorEvidence({ operation: { sourceMode: 'customer-owned' } }),
+      'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
+    ],
     [
       'operation ID',
       buildManagedDeployDoctorEvidence({ operation: { operationId: 'operation-other' } }),
@@ -431,7 +455,18 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     }
   });
 
-  it('fails legacy task text without a resolved operation binding', async () => {
+  it.each([
+    [
+      'legacy task text without a resolved operation binding',
+      '[hosting:eai-managed] Deploy app to EnterpriseAI production',
+      'DEPLOYMENT_TASK_BINDING_MISSING',
+    ],
+    [
+      'task text with an unresolved initial source mode',
+      MANAGED_DEPLOY_TASK_TEXT.replace('--source eai-managed', '--source <source-mode>'),
+      'DEPLOYMENT_TASK_BINDING_INVALID',
+    ],
+  ])('fails %s', async (_label, taskText, expectedIssue) => {
     const fixturesDir = createFixtureDir('fixtures-deployment-evidence-legacy-task');
     fs.rmSync(fixturesDir, { recursive: true, force: true });
     fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
@@ -447,7 +482,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
           runId: 'run_legacy_task',
           stage: 'implementation',
           deploymentTaskId: 'task_legacy_task',
-          deploymentTaskText: '[hosting:eai-managed] Deploy app to EnterpriseAI production',
+          deploymentTaskText: taskText,
           receiptValidationMode: 'operation-bound',
           requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
           blockCompletionOnFailure: true,
@@ -456,7 +491,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       );
 
       expect(result.response.readinessPassed).toBe(false);
-      expect(result.response.evidenceIssues).toEqual(['DEPLOYMENT_TASK_BINDING_MISSING']);
+      expect(result.response.evidenceIssues).toEqual([expectedIssue]);
       expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
     } finally {
       fs.rmSync(fixturesDir, { recursive: true, force: true });

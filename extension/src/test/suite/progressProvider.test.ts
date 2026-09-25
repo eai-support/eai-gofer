@@ -22,7 +22,7 @@ function buildManagedDeployDoctorEvidence(): Record<string, unknown> {
       appKey: 'planning-portal',
       tenantId: 'app-tenant',
       targetTenantId: 'runtime-tenant',
-      sourceMode: 'source-unknown',
+      sourceMode: 'eai-managed',
       status: 'active',
       configHash: `sha256:${'b'.repeat(64)}`,
     },
@@ -552,6 +552,39 @@ created: "2025-10-22"
         (error: unknown): boolean =>
           error instanceof Error &&
           error.message.includes('DOCTOR_EVIDENCE_OPERATION_ID_MISMATCH') &&
+          error.message.includes('Confirm the task identifiers') &&
+          !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
+      );
+    });
+
+    test('should reject a receipt from the other managed source mode', async () => {
+      const specId = '012e2-enterpriseai-source-mode-mismatch';
+      await setWorkflowProfile('enterpriseai');
+      await createTestSpecWithTasks(specId, 'Source Mode Mismatch Recovery', 'in_progress', [
+        {
+          id: 'T001',
+          desc: `Deploy app to EnterpriseAI production ${MANAGED_DEPLOY_TASK_SUFFIX}`,
+          status: 'pending',
+        },
+      ]);
+      const evidence = buildManagedDeployDoctorEvidence();
+      (evidence.operation as Record<string, unknown>).sourceMode = 'customer-owned';
+      await fs.writeFile(path.join(tempDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      await fs.mkdir(path.join(tempDir, '.eai'), { recursive: true });
+      await fs.writeFile(
+        path.join(tempDir, '.eai', 'deploy-doctor.json'),
+        JSON.stringify(evidence)
+      );
+
+      await progressProvider.getChildren();
+      progressProvider.refresh();
+      await waitForTreeUpdate(progressProvider);
+
+      await assert.rejects(
+        progressProvider.updateTaskStatus(specId, 'T001', 'completed'),
+        (error: unknown): boolean =>
+          error instanceof Error &&
+          error.message.includes('DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH') &&
           error.message.includes('Confirm the task identifiers') &&
           !error.message.includes('Regenerate or update this [hosting:eai-managed] task')
       );
