@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
@@ -13,6 +13,12 @@ const semanticUrl = new URL(
   import.meta.url
 );
 const directories: string[] = [];
+let previousSharedCredentialSetting: string | undefined;
+
+beforeEach(() => {
+  previousSharedCredentialSetting = process.env.GOFER_DISABLE_SHARED_CREDENTIALS;
+  process.env.GOFER_DISABLE_SHARED_CREDENTIALS = '1';
+});
 
 async function fixture() {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'gofer-typesafe-'));
@@ -38,10 +44,30 @@ async function fixture() {
   );
   await writeFile(path.join(featureDir, 'goal-ledger.json'), '{"goal":"deliver"}');
   await writeFile(path.join(featureDir, 'spec.md'), '# Spec');
+  await writeFile(path.join(featureDir, 'plan.md'), '# Plan');
+  await writeFile(path.join(featureDir, 'tasks.md'), '# Tasks');
+  await writeFile(path.join(featureDir, 'decisions.md'), '# Decisions');
+  await writeFile(path.join(featureDir, 'traceability.md'), '# Traceability');
+  await writeFile(path.join(featureDir, 'test-spec.md'), '# Test specification');
+  await writeFile(path.join(featureDir, 'change-manifest.json'), '{"files":["src/change.ts"]}');
+  await writeFile(path.join(featureDir, 'blast-radius-report.md'), '# Blast radius\n\nCONTAINED');
   return { workspace, featureDir };
 }
 
+function alignedAnswers(confidence = 0.95) {
+  return {
+    goal_alignment: { choice: 'aligned', confidence },
+    specification_currency: { choice: 'aligned', confidence },
+    test_coverage: { choice: 'aligned', confidence },
+    blast_radius: { choice: 'aligned', confidence },
+    required_action: { choice: 'continue', confidence },
+  };
+}
+
 afterEach(async () => {
+  if (previousSharedCredentialSetting === undefined)
+    delete process.env.GOFER_DISABLE_SHARED_CREDENTIALS;
+  else process.env.GOFER_DISABLE_SHARED_CREDENTIALS = previousSharedCredentialSetting;
   await Promise.all(
     directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))
   );
@@ -119,6 +145,144 @@ describe('TypeSafe semantic governance', () => {
     ).toBe(false);
   });
 
+  it('connects once through a shared keychain and resolves it from another workspace', async () => {
+    const first = await fixture();
+    const second = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    let stored = '';
+    const keychain = {
+      read: vi.fn(async () => stored),
+      write: vi.fn(async (key: string) => {
+        stored = key;
+      }),
+      remove: vi.fn(async () => {
+        const existed = Boolean(stored);
+        stored = '';
+        return existed;
+      }),
+    };
+
+    const connected = await credentials.connectShared({
+      workspace: first.workspace,
+      key: 'shared-secret-value',
+      keychain,
+    });
+    expect(connected).toMatchObject({
+      configured: true,
+      source: 'macos_keychain',
+      sharedAcrossLocalWorkspaces: true,
+    });
+    expect(
+      await credentials.resolveApiKey({
+        workspace: second.workspace,
+        env: {},
+        keychain,
+      })
+    ).toEqual({ apiKey: 'shared-secret-value', source: 'macos_keychain' });
+
+    const disconnected = await credentials.disconnectShared({
+      workspace: first.workspace,
+      keychain,
+    });
+    expect(disconnected.removedSharedCredential).toBe(true);
+    expect(
+      await credentials.resolveApiKey({
+        workspace: second.workspace,
+        env: {},
+        keychain,
+      })
+    ).toEqual({ apiKey: '', source: 'none' });
+  });
+
+  it('rejects scoped status because status reports effective precedence', async () => {
+    const credentials = await import(credentialsUrl.href);
+    expect(credentials.parseArgs(['--status'])).toMatchObject({ action: 'status' });
+    expect(() => credentials.parseArgs(['--status', '--scope', 'project'])).toThrow(
+      '--status reports the effective credential and does not accept --scope.'
+    );
+  });
+
+  it('keeps Jev optional but activates a disabled workspace when a shared key exists', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    const keychain = { read: vi.fn(async () => 'shared-secret-value') };
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: alignedAnswers(0.96),
+          }),
+          { status: 200 }
+        )
+    );
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+      env: {},
+      keychain,
+    });
+    expect(result).toMatchObject({ status: 'aligned', confidence: 0.96 });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer shared-secret-value');
+    const request = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(Object.keys(request.questions)).toEqual(
+      expect.arrayContaining([
+        'goal_alignment',
+        'specification_currency',
+        'test_coverage',
+        'blast_radius',
+        'required_action',
+      ])
+    );
+    const state = JSON.parse(request.state);
+    expect(state).toHaveProperty('test-spec.md');
+    expect(state).toHaveProperty('change-manifest.json');
+    expect(state).toHaveProperty('blast-radius-report.md');
+  });
+
+  it('forces reconciliation when Jev reports stale specifications, tests, or blast radius', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    for (const field of ['specification_currency', 'test_coverage', 'blast_radius']) {
+      const answers = alignedAnswers(0.99);
+      answers[field as keyof typeof answers] = { choice: 'partial', confidence: 0.99 };
+      const result = await semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl: vi.fn(async () => new Response(JSON.stringify({ answers }), { status: 200 })),
+      });
+      expect(result.status).toBe('reconcile');
+    }
+  });
+
+  it('uses environment then project then shared keychain credential precedence', async () => {
+    const { workspace } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const keychain = { read: vi.fn(async () => 'shared-value') };
+    expect(await credentials.resolveApiKey({ workspace, env: {}, keychain })).toEqual({
+      apiKey: 'shared-value',
+      source: 'macos_keychain',
+    });
+    await credentials.connect({ workspace, key: 'project-value' });
+    expect(await credentials.resolveApiKey({ workspace, env: {}, keychain })).toEqual({
+      apiKey: 'project-value',
+      source: 'project_secret_file',
+    });
+    expect(
+      await credentials.resolveApiKey({
+        workspace,
+        env: { TYPESAFE_API_KEY: 'environment-value' },
+        keychain,
+      })
+    ).toEqual({ apiKey: 'environment-value', source: 'environment' });
+  });
+
   it('does not call the provider when review is disabled or no credential exists', async () => {
     const { workspace, featureDir } = await fixture();
     const semantic = await import(semanticUrl.href);
@@ -157,6 +321,7 @@ describe('TypeSafe semantic governance', () => {
         new Response(
           JSON.stringify({
             answers: {
+              ...alignedAnswers(0.99),
               goal_alignment: { choice: 'conflict', confidence: 0.99 },
               required_action: { choice: 'ask_user', confidence: 0.99 },
             },
@@ -223,8 +388,8 @@ describe('TypeSafe semantic governance', () => {
         new Response(
           JSON.stringify({
             answers: {
+              ...alignedAnswers(0.99),
               goal_alignment: { choice: 'unclear', confidence: 0.99 },
-              required_action: { choice: 'continue', confidence: 0.99 },
             },
           }),
           { status: 200 }
@@ -263,10 +428,7 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
-              goal_alignment: { choice: 'aligned', confidence: 0.95 },
-              required_action: { choice: 'continue', confidence: 0.95 },
-            },
+            answers: alignedAnswers(),
           }),
           { status: 200 }
         )
@@ -319,10 +481,7 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
-              goal_alignment: { choice: 'aligned', confidence: 0.95 },
-              required_action: { choice: 'continue', confidence: 0.95 },
-            },
+            answers: alignedAnswers(),
           }),
           { status: 200 }
         )
@@ -447,8 +606,8 @@ describe('TypeSafe semantic governance', () => {
         new Response(
           JSON.stringify({
             answers: {
+              ...alignedAnswers(0.99),
               goal_alignment: { choice: 'aligned', confidence: 'not-a-number' },
-              required_action: { choice: 'continue', confidence: 0.99 },
             },
           }),
           { status: 200 }
@@ -523,8 +682,8 @@ describe('TypeSafe semantic governance', () => {
         new Response(
           JSON.stringify({
             answers: {
+              ...alignedAnswers(0.99),
               goal_alignment: { choice: 'aligned', confidence: 2 },
-              required_action: { choice: 'continue', confidence: 0.99 },
             },
           }),
           { status: 200 }
@@ -552,19 +711,18 @@ describe('TypeSafe semantic governance', () => {
     ).rejects.toThrow('exceeds the maximum readable size');
   });
 
-  it('records missing artifacts in the receipt without blocking early-stage documents', async () => {
+  it('forces reconciliation when delivery evidence is missing before validation', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
+    await unlink(path.join(featureDir, 'test-spec.md'));
+    await unlink(path.join(featureDir, 'blast-radius-report.md'));
     const fetchImpl = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
-              goal_alignment: { choice: 'aligned', confidence: 0.95 },
-              required_action: { choice: 'continue', confidence: 0.95 },
-            },
+            answers: alignedAnswers(),
           }),
           { status: 200 }
         )
@@ -576,9 +734,10 @@ describe('TypeSafe semantic governance', () => {
       fetchImpl,
     });
     expect(result.missingArtifacts).toEqual(
-      expect.arrayContaining(['plan.md', 'tasks.md', 'decisions.md', 'traceability.md'])
+      expect.arrayContaining(['test-spec.md', 'blast-radius-report.md'])
     );
-    expect(result.status).toBe('aligned');
+    expect(result.missingRequiredEvidence).toBe(true);
+    expect(result.status).toBe('reconcile');
   });
 
   it('truncates the sent artifact by UTF-8 bytes, not UTF-16 code units', async () => {
@@ -594,10 +753,7 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
-              goal_alignment: { choice: 'aligned', confidence: 0.95 },
-              required_action: { choice: 'continue', confidence: 0.95 },
-            },
+            answers: alignedAnswers(),
           }),
           { status: 200 }
         )

@@ -383,20 +383,32 @@ npm run gofer:package-plugin -- --sync-repo
 TypeSafe adds an independent, bounded signal for long-running delivery work. It
 does not replace the specification, tests, priority controls, or human approval.
 
-From the repository where Gofer is installed, connect once:
+On macOS, connect once per macOS user from any updated Gofer workspace. That
+single connection is then available to every local Gofer workspace used by Codex
+CLI or Codex Desktop:
 
 ```bash
 node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect
 ```
 
-The prompt stores the key only in the ignored private file
-`.specify/secrets/typesafe.env`, enables the non-secret policy, and does not
-print the key. A process-level `TYPESAFE_API_KEY` takes priority for CI or a
-managed surface. Remove the project key and disable review with:
+The command stores the key in the current user's macOS Keychain. It does not
+print the key. Gofer remains fully operational when Jev is not connected. Once
+connected, the shared credential is discovered automatically by every updated
+local Gofer workspace. A project secret can still override the shared key:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect --scope project
+```
+
+A process-level `TYPESAFE_API_KEY` takes priority for CI or a managed surface.
+Remove the shared key from this macOS user with:
 
 ```bash
 node .specify/scripts/node/gofer-typesafe-credentials.mjs --disconnect
 ```
+
+Use `--disconnect --scope project` to remove only a project override. On
+non-macOS systems, `--connect` falls back to project scope.
 
 Run a review at a Gofer delivery checkpoint with:
 

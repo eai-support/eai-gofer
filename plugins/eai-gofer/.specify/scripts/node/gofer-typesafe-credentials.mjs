@@ -2,20 +2,92 @@
 
 import { constants } from 'fs';
 import { promises as fs } from 'fs';
+import { execFile, spawn } from 'child_process';
 import path from 'path';
 import process from 'process';
+import { promisify } from 'util';
 
 const SECRET_RELATIVE_PATH = path.join('.specify', 'secrets', 'typesafe.env');
 const POLICY_RELATIVE_PATHS = [
   path.join('.specify', 'config', 'typesafe-semantic-review.json'),
   path.join('.specify', 'config', 'typesafe-learning-review.json'),
 ];
+const KEYCHAIN_SERVICE = 'com.enterpriseai.gofer.jev';
+const KEYCHAIN_ACCOUNT = 'shared-api-key';
+const execFileAsync = promisify(execFile);
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const action = argv.find((value) => value === '--connect' || value === '--disconnect' || value === '--status');
-  if (!action || argv.length !== 1) throw new Error('Usage: --connect | --disconnect | --status');
-  return action.slice(2);
+  const scopeIndex = argv.indexOf('--scope');
+  const scope = scopeIndex === -1 ? (process.platform === 'darwin' ? 'shared' : 'project') : argv[scopeIndex + 1];
+  const expectedLength = scopeIndex === -1 ? 1 : 3;
+  if (!action || argv.length !== expectedLength || !['project', 'shared'].includes(scope)) {
+    throw new Error('Usage: --connect | --disconnect | --status [--scope project|shared]');
+  }
+  if (action === '--status' && scopeIndex !== -1) {
+    throw new Error('--status reports the effective credential and does not accept --scope.');
+  }
+  return { action: action.slice(2), scope };
 }
+
+const macOSKeychain = {
+  async has() {
+    if (process.platform !== 'darwin') return false;
+    try {
+      await execFileAsync('/usr/bin/security', [
+        'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE,
+      ], { encoding: 'utf8', maxBuffer: 64 * 1024 });
+      return true;
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return false;
+      throw new Error('Gofer could not check the shared Jev credential in macOS Keychain.');
+    }
+  },
+  async read() {
+    if (process.platform !== 'darwin') return '';
+    try {
+      const { stdout } = await execFileAsync('/usr/bin/security', [
+        'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE, '-w',
+      ], { encoding: 'utf8', maxBuffer: 64 * 1024 });
+      return String(stdout).trim();
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return '';
+      throw new Error('Gofer could not read the shared Jev credential from macOS Keychain.');
+    }
+  },
+  async write(key) {
+    if (process.platform !== 'darwin') throw new Error('Shared Jev credentials require macOS Keychain.');
+    const encoded = Buffer.from(String(key), 'utf8').toString('hex');
+    const child = spawn('/usr/bin/security', ['-i'], { stdio: ['pipe', 'ignore', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      if (stderr.length < 64 * 1024) stderr += chunk.toString('utf8');
+    });
+    child.stdin.end(
+      `add-generic-password -a "${KEYCHAIN_ACCOUNT}" -s "${KEYCHAIN_SERVICE}" ` +
+      `-l "EAI Gofer Jev API key" -U -X ${encoded}\n`
+    );
+    const exitCode = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code) => resolve(code));
+    });
+    if (exitCode !== 0 || stderr.includes('SecKeychainItem')) {
+      throw new Error('macOS Keychain did not save the shared Jev credential.');
+    }
+  },
+  async remove() {
+    if (process.platform !== 'darwin') return false;
+    try {
+      await execFileAsync('/usr/bin/security', [
+        'delete-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE,
+      ]);
+      return true;
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return false;
+      throw new Error('Gofer could not remove the shared Jev credential from macOS Keychain.');
+    }
+  },
+};
 
 // A lexical check alone does not stop a symlinked intermediate directory
 // (e.g. .specify/secrets) from redirecting the confined path outside the
@@ -248,24 +320,34 @@ async function promptForKey() {
   return String(key).trim();
 }
 
-export async function credentialStatus({ workspace = process.cwd(), env = process.env } = {}) {
-  const { source } = await resolveApiKey({ workspace, env });
+export async function credentialStatus({ workspace = process.cwd(), env = process.env, keychain = macOSKeychain } = {}) {
+  const { source } = await resolveApiKey({ workspace, env, keychain });
   return {
     configured: source !== 'none',
     source,
-    secretPath: SECRET_RELATIVE_PATH,
+    secretPath: source === 'project_secret_file' ? SECRET_RELATIVE_PATH : null,
+    sharedAcrossLocalWorkspaces: source === 'macos_keychain',
   };
 }
 
-export async function resolveApiKey({ workspace = process.cwd(), env = process.env } = {}) {
+export async function resolveApiKey({ workspace = process.cwd(), env = process.env, keychain = macOSKeychain } = {}) {
   const environmentKey = String(env.TYPESAFE_API_KEY || '').trim();
   if (environmentKey) return { apiKey: environmentKey, source: 'environment' };
   const fileKey = await readSecretFile(await confinedPath(workspace, SECRET_RELATIVE_PATH));
-  return { apiKey: fileKey, source: fileKey ? 'project_secret_file' : 'none' };
+  if (fileKey) return { apiKey: fileKey, source: 'project_secret_file' };
+  if (env.GOFER_DISABLE_SHARED_CREDENTIALS !== '1') {
+    const sharedKey = String(await keychain.read()).trim();
+    if (sharedKey) return { apiKey: sharedKey, source: 'macos_keychain' };
+  }
+  return { apiKey: '', source: 'none' };
 }
 
-export async function requestTypeSafeEvaluation({ workspace, env = process.env, fetchImpl = globalThis.fetch, policy, projection, rubric }) {
-  const { apiKey } = await resolveApiKey({ workspace, env });
+export async function sharedCredentialConfigured({ keychain = macOSKeychain } = {}) {
+  return keychain.has();
+}
+
+export async function requestTypeSafeEvaluation({ workspace, env = process.env, fetchImpl = globalThis.fetch, policy, projection, rubric, keychain = macOSKeychain }) {
+  const { apiKey, source } = await resolveApiKey({ workspace, env, keychain });
   if (!apiKey) return { status: 'not_configured', networkCalled: false };
   let response;
   try {
@@ -299,7 +381,7 @@ export async function requestTypeSafeEvaluation({ workspace, env = process.env, 
       chunks.push(Buffer.from(value));
     }
     const raw = Buffer.concat(chunks, bytes).toString('utf8');
-    return { status: 'received', networkCalled: true, payload: JSON.parse(raw) };
+    return { status: 'received', networkCalled: true, credentialSource: source, payload: JSON.parse(raw) };
   } catch {
     return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
   }
@@ -317,6 +399,16 @@ export async function connect({ workspace = process.cwd(), key } = {}) {
   return { configured: true, source: process.env.TYPESAFE_API_KEY ? 'environment' : 'project_secret_file', secretPath: SECRET_RELATIVE_PATH };
 }
 
+export async function connectShared({ workspace = process.cwd(), key, keychain = macOSKeychain } = {}) {
+  await assertSafeWorkspaceRoot(workspace);
+  const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
+  if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
+  await keychain.write(resolvedKey);
+  const stored = String(await keychain.read()).trim();
+  if (!stored) throw new Error('macOS Keychain saved no Jev credential.');
+  return { configured: true, source: 'macos_keychain', secretPath: null, sharedAcrossLocalWorkspaces: true };
+}
+
 export async function disconnect({ workspace = process.cwd() } = {}) {
   const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const existed = await existingFile(secretPath);
@@ -325,9 +417,18 @@ export async function disconnect({ workspace = process.cwd() } = {}) {
   return { removedProjectSecret: existed, environmentStillConfigured: Boolean(process.env.TYPESAFE_API_KEY), secretPath: SECRET_RELATIVE_PATH };
 }
 
+export async function disconnectShared({ workspace = process.cwd(), keychain = macOSKeychain } = {}) {
+  await assertSafeWorkspaceRoot(workspace);
+  const removed = await keychain.remove();
+  return { removedSharedCredential: removed, source: 'macos_keychain', sharedAcrossLocalWorkspaces: false };
+}
+
 async function main() {
-  const action = parseArgs(process.argv.slice(2));
-  const result = action === 'connect' ? await connect() : action === 'disconnect' ? await disconnect() : await credentialStatus();
+  const { action, scope } = parseArgs(process.argv.slice(2));
+  const result = action === 'status' ? await credentialStatus()
+    : action === 'connect' && scope === 'shared' ? await connectShared()
+    : action === 'disconnect' && scope === 'shared' ? await disconnectShared()
+    : action === 'connect' ? await connect() : await disconnect();
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
