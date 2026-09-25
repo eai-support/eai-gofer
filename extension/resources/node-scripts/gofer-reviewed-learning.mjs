@@ -6,7 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
-import { requestTypeSafeEvaluation } from './gofer-typesafe-credentials.mjs';
+import { requestTypeSafeEvaluation, sharedCredentialConfigured } from './gofer-typesafe-credentials.mjs';
 import { loadActiveBenchmarkVerifierKey, resolveTrustedEvaluatorPublicKey,
   VERIFIER_EVALUATOR } from './gofer-trusted-evaluator.mjs';
 import { promptHidden } from './gofer-tty-prompt.mjs';
@@ -48,6 +48,13 @@ function canonical(value) {
 
 function text(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function credentialSourceLabel(value) {
+  if (value === 'environment') return 'environment';
+  if (value === 'project_secret_file') return 'project_secret_file';
+  if (value === 'macos_keychain') return 'macos_keychain';
+  return 'none';
 }
 
 function validTime(value) {
@@ -611,6 +618,7 @@ export async function evaluateTrace({
   dryRun = false,
   fetchImpl = globalThis.fetch,
   env = process.env,
+  keychain,
 }) {
   const root = await safeWorkspace(workspace);
   const policy = await loadPolicy(root);
@@ -643,7 +651,15 @@ export async function evaluateTrace({
       projectionBytes: Buffer.byteLength(canonical(projection), 'utf8'),
     };
   }
-  if (!policy.enabled) return { status: 'disabled', networkCalled: false, projectionHash, rubricHash };
+  // Check Keychain metadata only. The secret stays outside this
+  // content-addressing module and cannot enter a stored digest.
+  const sharedConfigured =
+    policy.enabled || env.GOFER_DISABLE_SHARED_CREDENTIALS === '1'
+      ? false
+      : await sharedCredentialConfigured({ keychain });
+  if (!policy.enabled && !sharedConfigured) {
+    return { status: 'disabled', networkCalled: false, projectionHash, rubricHash };
+  }
   const providerResult = await requestTypeSafeEvaluation({
     workspace: root,
     env,
@@ -651,11 +667,14 @@ export async function evaluateTrace({
     policy,
     projection,
     rubric,
+    keychain,
   });
   if (providerResult.status !== 'received') {
     return { ...providerResult, projectionHash, rubricHash };
   }
-  const credentialSource = text(env.TYPESAFE_API_KEY) ? 'environment' : 'project_secret_file';
+  // Persist only a fixed label. Never carry provider credential data into
+  // content-addressed evaluation or candidate records.
+  const credentialSource = credentialSourceLabel(providerResult.credentialSource);
   const { payload } = providerResult;
   const answers = answerMap(payload);
   const probabilities = {

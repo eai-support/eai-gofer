@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, symlink, utimes, writeFile } from 'node:f
 import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../.specify/scripts/node/gofer-trusted-evaluator.mjs', async () => {
   const { generateKeyPairSync } = await import('node:crypto');
@@ -36,6 +36,12 @@ import {
 } from '../../../.specify/scripts/node/gofer-reviewed-learning.mjs';
 
 const roots: string[] = [];
+let previousSharedCredentialSetting: string | undefined;
+
+beforeEach(() => {
+  previousSharedCredentialSetting = process.env.GOFER_DISABLE_SHARED_CREDENTIALS;
+  process.env.GOFER_DISABLE_SHARED_CREDENTIALS = '1';
+});
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
@@ -129,6 +135,9 @@ const proposal = {
 };
 
 afterEach(async () => {
+  if (previousSharedCredentialSetting === undefined)
+    delete process.env.GOFER_DISABLE_SHARED_CREDENTIALS;
+  else process.env.GOFER_DISABLE_SHARED_CREDENTIALS = previousSharedCredentialSetting;
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
   vi.clearAllMocks();
 });
@@ -282,7 +291,13 @@ describe('Gofer reviewed learning', () => {
   it('does not call Jev while the policy is disabled', async () => {
     const { workspace, trace } = await fixture();
     const fetchImpl = vi.fn();
-    const result = await evaluateTrace({ workspace, trace, proposal, fetchImpl });
+    const result = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl,
+      keychain: { has: vi.fn(async () => false) },
+    });
     expect(result.status).toBe('disabled');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -332,6 +347,43 @@ describe('Gofer reviewed learning', () => {
       'https://api.typesafe.ai/v1/systemone',
       expect.objectContaining({ method: 'POST' })
     );
+  });
+
+  it('uses the shared macOS credential for optional learning across workspaces', async () => {
+    const { workspace, trace } = await fixture(false);
+    const result = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl: vi.fn(async () => response()),
+      env: {},
+      keychain: {
+        has: vi.fn(async () => true),
+        read: vi.fn(async () => 'shared-key'),
+      },
+    });
+    expect(result.status).toBe('candidate');
+    expect(result.evaluation.evaluator.credentialSource).toBe('macos_keychain');
+  });
+
+  it('honours the shared-credential disable flag before Keychain activation', async () => {
+    const { workspace, trace } = await fixture(false);
+    const fetchImpl = vi.fn(async () => response());
+    const keychain = {
+      has: vi.fn(async () => true),
+      read: vi.fn(async () => 'shared-key'),
+    };
+    const result = await evaluateTrace({
+      workspace,
+      trace,
+      proposal,
+      fetchImpl,
+      env: { GOFER_DISABLE_SHARED_CREDENTIALS: '1' },
+      keychain,
+    });
+    expect(result.status).toBe('disabled');
+    expect(keychain.has).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('keeps evaluation identity stable and records the actual credential source', async () => {
