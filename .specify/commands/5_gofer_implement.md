@@ -425,6 +425,39 @@ Extract from tasks.md:
 
 ## Step 7: Execute Implementation
 
+### Dependency Admission Before Package Execution
+
+When a task adds or changes a dependency manifest or lockfile, do not execute
+new package code before admission evidence passes.
+
+1. Use a trusted ecosystem adapter or protected CI scanner to produce
+   `gofer.dependency-evidence/v1` evidence for every introduced direct and
+   transitive package version.
+2. Run the packaged validator with the canonical policy:
+
+   ```sh
+   node .specify/scripts/node/gofer-dependency-admission.mjs \
+     --input <dependency-evidence.json> \
+     --policy .specify/config/dependency-security-policy.json \
+     --exceptions <dependency-security-exceptions.json> \
+     --output <dependency-admission-report.json>
+   ```
+
+3. Omit `--exceptions` when no exception is approved. A security-fix exception
+   may waive only release age for one exact package version. It cannot waive
+   malware, integrity, invalid-evidence, or unresolved High/Critical findings.
+4. A `block` result stops dependency installation. A `review` result requires
+   the task's named reviewer before lifecycle scripts run.
+5. After admission passes, perform the first install with lifecycle scripts
+   disabled and a frozen lockfile. Run approved lifecycle scripts only in the
+   restricted build job required by the active plan.
+6. Store the report as task evidence. Do not store registry credentials,
+   tokens, private tenant data, or unredacted internal package metadata.
+
+If the evidence adapter or required scanner is unavailable, mark dependency
+work blocked. Do not treat package age alone, an unchanged manifest, or a
+successful install as safety evidence.
+
 ### Loop Contract Preflight
 
 Before editing code, run:

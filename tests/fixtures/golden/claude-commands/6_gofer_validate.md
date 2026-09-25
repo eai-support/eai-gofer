@@ -798,6 +798,32 @@ Logs', 'PII Risk', 'Metric Coverage Delta', 'Trace Propagation'."
 
 ### Agent 11: Dependency & Submodule Impact (with npm audit delta)
 
+Before dependency code execution or a merge-ready decision, validate every
+introduced direct and transitive package through the provider-neutral
+dependency admission contract:
+
+```sh
+node .specify/scripts/node/gofer-dependency-admission.mjs \
+  --input <dependency-evidence.json> \
+  --policy .specify/config/dependency-security-policy.json \
+  --exceptions <dependency-security-exceptions.json> \
+  --output <dependency-admission-report.json>
+```
+
+The evidence must come from trusted registry and vulnerability or malware
+scanners, cover the full changed dependency graph, and identify its scanner.
+Treat `block` as Red and `review` as Yellow until the named review completes.
+Known malware, missing required integrity, invalid evidence, and unresolved
+High/Critical vulnerabilities cannot be waived. An urgent-security exception
+can waive only the 15-day release-age finding for its exact package version,
+must name the fixed vulnerability, owner, reason, evidence, and expiry, and
+must remain within the policy's maximum exception duration.
+
+Record the report path, policy version, scanner identity, exceptions applied,
+and the first script-disabled frozen install in the validation evidence. When
+dependency files did not change, say so and continue the existing audit and
+release rescan requirements.
+
 ```
 Task: subagent_type="research-dependency-evaluator", model="haiku"
 Prompt: "Dependency and submodule blast-radius analysis for feature
