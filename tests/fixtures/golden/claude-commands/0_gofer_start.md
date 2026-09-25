@@ -502,8 +502,8 @@ with an unrelated non-EAI stack.
      `eai resources storage doctor --tenant-id <tenant-id> --format json` and
      treat fulltext, hybrid, and vector as separate readiness states. Prefer
      `eai resources search "<query>" --fulltext` until doctor reports semantic
-     search modes ready. Do not apply this fallback to legacy v1/v3 or active
-     ResourceAPI behavior.
+     search modes ready. Apply this fallback only to the published passive
+     ResourceAPI search contract.
    - Use the EAI scenario library to map the business problem to the common
      four-step pattern: capture demand/context, prepare the decision, execute
      and collaborate, then resolve/explain/improve.

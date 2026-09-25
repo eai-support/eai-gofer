@@ -241,7 +241,7 @@ catalog:
       - 'If capabilities.search.fulltext is true, retry with eai resources search "<query>" --fulltext --tenant-id <tenant-id>'
       - 'Use --hybrid or --vector only after capabilities.search.hybrid or capabilities.search.vector is true'
       - 'If semantic search is required for the scenario, record a platform capability gap in service-fit-matrix.md'
-      - 'Do not apply this fallback to legacy v1/v3 or active ResourceAPI behavior'
+      - 'Apply this fallback only to the published passive ResourceAPI search contract'
     nextGate: resource_search_mode_selected
   - errorId: EAI_WORKFLOW_NOT_READY
     match:

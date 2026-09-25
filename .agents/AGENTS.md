@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-09-24T02:47:29.711Z
+Generated: 2026-09-25T03:26:37.206Z
 
 ## Public Entrypoints
 

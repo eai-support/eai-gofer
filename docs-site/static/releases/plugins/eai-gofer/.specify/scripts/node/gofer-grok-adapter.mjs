@@ -181,3 +181,4 @@ export function grokExecutableVersion(executable) {
   try { return execFileSync(executable, ['--version'], { encoding: 'utf8', timeout: 5000 }).trim(); }
   catch { return null; }
 }
+
