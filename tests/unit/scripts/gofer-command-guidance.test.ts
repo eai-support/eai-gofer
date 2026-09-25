@@ -1,8 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
+const EAI_HOSTING_CONTRACT_SURFACES = [
+  '.agents/AGENTS.md',
+  '.agents/skills/eai/SKILL.md',
+  '.claude/commands/eai.md',
+  '.claude/skills/eai/SKILL.md',
+  '.gemini/commands/gofer/eai.md',
+  '.github/prompts/eai.prompt.md',
+  '.github/skills/eai/SKILL.md',
+  '.grok/skills/eai/SKILL.md',
+  '.system/skills/eai/SKILL.md',
+  'extension/resources/claude-commands/eai.md',
+  'extension/resources/claude-skills/eai/SKILL.md',
+  'extension/resources/copilot-prompts/eai.prompt.md',
+  'extension/resources/gemini/commands/gofer/eai.md',
+  'extension/resources/github-skills/eai/SKILL.md',
+  'extension/resources/grok-skills/eai/SKILL.md',
+  'plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/.claude/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.gemini/commands/gofer/eai.md',
+  'plugins/eai-gofer/.github/prompts/eai.prompt.md',
+  'plugins/eai-gofer/.github/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.grok/skills/eai/SKILL.md',
+  'plugins/eai-gofer/commands/eai.md',
+  'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.claude/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.gemini/commands/gofer/eai.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.github/prompts/eai.prompt.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.github/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/.grok/skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/commands/eai.md',
+  'plugins/eai-gofer/plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md',
+  'plugins/eai-gofer/skills/eai/SKILL.md',
+  'skills/eai/SKILL.md',
+] as const;
 
 describe('Gofer public execution-depth guidance', () => {
   it('keeps business-friendly progress guidance in every command source', () => {
@@ -81,35 +117,28 @@ describe('Gofer public execution-depth guidance', () => {
   });
 
   it('routes EAI-managed hosting through the canonical CLI with exact-operation recovery', () => {
-    for (const file of [
-      '.claude/commands/eai.md',
-      '.github/prompts/eai.prompt.md',
-      '.agents/skills/eai/SKILL.md',
-      '.system/skills/eai/SKILL.md',
-      '.claude/skills/eai/SKILL.md',
-      '.github/skills/eai/SKILL.md',
-      '.grok/skills/eai/SKILL.md',
-      '.gemini/commands/gofer/eai.md',
-      'skills/eai/SKILL.md',
-      'plugins/eai-gofer/skills/eai/SKILL.md',
-      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
-      'extension/resources/claude-skills/eai/SKILL.md',
-      'extension/resources/copilot-prompts/eai.prompt.md',
-      'extension/resources/gemini/commands/gofer/eai.md',
-      'extension/resources/grok-skills/eai/SKILL.md',
-    ]) {
+    const canonicalContract = buildEaiHostingAndDeploymentContract();
+
+    for (const file of EAI_HOSTING_CONTRACT_SURFACES) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-      expect(content, file).toContain('## EAI Hosting And Deployment Contract');
+      expect(content, file).toContain(canonicalContract);
       expect(content, file).toContain(
         'Where should this app run: EAI-managed Azure, your Azure, or local only?'
       );
       expect(content, file).toContain('eai deploy app <app-key> --target eai');
+      expect(content, file).toContain('eai deploy doctor --help');
       expect(content, file).toContain('same EAI actor through its browser handoff');
-      expect(content, file).toContain('Who should maintain the app source: EAI-maintained or My GitHub?');
+      expect(content, file).toContain(
+        'Who should maintain the app source: EAI-maintained or My GitHub?'
+      );
       expect(content, file).toContain('--source eai-managed');
       expect(content, file).toContain('--source customer-owned');
-      expect(content, file).toContain('Do not require an origin remote, a customer push, customer write access to the EAI repository');
-      expect(content, file).toContain('Never treat an accepted bundle or `pending_review` receipt as deployment success');
+      expect(content, file).toContain(
+        'Do not require an origin remote, a customer push, customer write access to the EAI repository'
+      );
+      expect(content, file).toContain(
+        'Never treat an accepted bundle or `pending_review` receipt as deployment success'
+      );
       expect(content, file).toContain('--repo <owner/name> --installation-id <positive-id>');
       expect(content, file).toContain('--target-tenant-id <id>');
       expect(content, file).toContain(
@@ -122,8 +151,12 @@ describe('Gofer public execution-depth guidance', () => {
       expect(content, file).toContain('`classification: succeeded`');
       expect(content, file).toContain('`requiresTenantInfra: false`');
       expect(content, file).toContain(
-        'eai deploy doctor --url <activeUrl> --format json > .eai/deploy-doctor.json'
+        'eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json'
       );
+      expect(content, file).toContain('derive the active URL from the exact PublicAPI operation');
+      expect(content, file).toContain('atomically write the receipt');
+      expect(content, file).toContain('source and configuration digests');
+      expect(content, file).toContain('authenticated readiness');
       expect(content, file).toContain('missing tenant repository connection');
       expect(content, file).toContain('OpenID Connect (OIDC)');
       expect(content, file).toContain('TenantInfra acceptance');
@@ -132,6 +165,9 @@ describe('Gofer public execution-depth guidance', () => {
         'Keep customer Azure and local deployment behavior unchanged'
       );
     }
+
+    expect(canonicalContract).not.toContain('mkdir -p .eai');
+    expect(canonicalContract).not.toContain('> .eai/deploy-doctor.json');
   });
 
   it('keeps the generated Grok skill on the current Gofer version', () => {

@@ -7,7 +7,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildContinuationContractSection, buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
+import {
+  buildContinuationContractSection,
+  buildEaiHostingAndDeploymentContract,
+} from '../../../.specify/scripts/node/generate-commands.mjs';
 import {
   FULL_COMMAND_FILES,
   PUBLIC_ENTRYPOINT_COUNT,
@@ -20,6 +23,24 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SCRIPT_PATH = path.join(REPO_ROOT, '.specify', 'scripts', 'node', 'package-agent-plugin.mjs');
 const VERSION = '3.4.0';
 const FIRST_RUN_TRIGGER = 'Treat `Get started with EAI` as the first-run trigger';
+const PACKAGED_EAI_CONTRACT_ENTRIES = [
+  '.claude/skills/eai/SKILL.md',
+  '.gemini/commands/gofer/eai.md',
+  '.github/prompts/eai.prompt.md',
+  '.github/skills/eai/SKILL.md',
+  '.grok/skills/eai/SKILL.md',
+  'commands/eai.md',
+  'plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/.claude/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.gemini/commands/gofer/eai.md',
+  'plugins/eai-gofer/.github/prompts/eai.prompt.md',
+  'plugins/eai-gofer/.github/skills/eai/SKILL.md',
+  'plugins/eai-gofer/.grok/skills/eai/SKILL.md',
+  'plugins/eai-gofer/commands/eai.md',
+  'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+  'plugins/eai-gofer/skills/eai/SKILL.md',
+  'skills/eai/SKILL.md',
+] as const;
 
 function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
@@ -196,13 +217,17 @@ describe('Gofer agent plugin package', () => {
         expect(zipListing).toContain(required);
       }
       expect(zipEntries).not.toContain('eai-gofer/.vscode/mcp.json');
-      for (const entry of [
-        'eai-gofer/plugin-skills/eai/SKILL.md',
-        'eai-gofer/skills/eai/SKILL.md',
-        'eai-gofer/plugins/eai-gofer/skills/eai/SKILL.md',
-      ]) {
-        const shippedSkill = execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8' });
-        expect(shippedSkill, entry).toContain(buildEaiHostingAndDeploymentContract());
+      const canonicalHostingContract = buildEaiHostingAndDeploymentContract();
+      for (const relativeEntry of PACKAGED_EAI_CONTRACT_ENTRIES) {
+        const stagedContent = fs.readFileSync(path.join(pluginRoot, relativeEntry), 'utf8');
+        const zipEntry = `eai-gofer/${relativeEntry}`;
+        const archivedContent = execFileSync('unzip', ['-p', zipPath, zipEntry], {
+          encoding: 'utf8',
+        });
+
+        expect(stagedContent, relativeEntry).toContain(canonicalHostingContract);
+        expect(archivedContent, zipEntry).toBe(stagedContent);
+        expect(archivedContent, zipEntry).toContain(canonicalHostingContract);
       }
 
       const copilotManifest = readJson<{

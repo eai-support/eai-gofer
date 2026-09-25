@@ -9,12 +9,11 @@ with exact-operation resume and actionable setup recovery (#3503).
 
 ## [3.13.1] - 2026-09-25
 
-Standardize EAI PublicAPI guidance on current interfaces and add regression
-coverage
+Standardize EAI PublicAPI guidance on current interfaces and add regression coverage
 
 ## [3.13.0] - 2026-09-23
 
-Add first-run welcome, review-gated learning, and verified runtime cleanup.
+Add first-run welcome, review-gated learning, and verified runtime cleanup
 
 ## [3.12.9] - 2026-09-19
 
