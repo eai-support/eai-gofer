@@ -10,7 +10,7 @@ import { createDeploymentReadinessEventHandlers } from '../../../services/enterp
 suite('enterpriseai deployment readiness gate (extension integration)', () => {
   const fixturesDir = path.join(__dirname, 'fixtures-deployment-readiness-gate');
   const deploymentTaskText =
-    '[hosting:eai-managed] Validate with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
+    '[hosting:eai-managed] Run `eai deploy app planning-portal --target eai --tenant-id app-tenant --source eai-managed --target-tenant-id runtime-tenant --format json`, then validate the same task with `eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json`';
 
   setup(async () => {
     await fs.rm(fixturesDir, { recursive: true, force: true });

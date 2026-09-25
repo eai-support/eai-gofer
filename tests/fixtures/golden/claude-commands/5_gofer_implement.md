@@ -869,6 +869,11 @@ The CLI derives the active URL from the exact operation, verifies its
 deployment, runtime, source, and configuration bindings, runs authenticated
 readiness, and atomically writes the receipt.
 
+Keep the selected initial EAI-managed deployment command and this doctor phase
+inside one `[hosting:eai-managed]` task. Run the initial command while the task
+remains in progress. Do not create a later dependent post-deploy checkbox: the
+initial marked task itself cannot complete until this gate has the receipt.
+
 After the exact operation exists and before requesting task completion, update
 the EAI-managed deployment task's checkbox line in `tasks.md` so it retains
 `[hosting:eai-managed]` and its inline doctor command contains the resolved

@@ -7,7 +7,9 @@ import { ProgressProvider } from '../../progressProvider';
 
 const MANAGED_DEPLOY_DOCTOR_COMMAND =
   'eai deploy doctor --operation-id operation-123 --app-key planning-portal --tenant-id app-tenant --target-tenant-id runtime-tenant --evidence-out .eai/deploy-doctor.json --format json';
-const MANAGED_DEPLOY_TASK_SUFFIX = `[hosting:eai-managed] with \`${MANAGED_DEPLOY_DOCTOR_COMMAND}\``;
+const MANAGED_INITIAL_DEPLOY_COMMAND =
+  'eai deploy app planning-portal --target eai --tenant-id app-tenant --source eai-managed --target-tenant-id runtime-tenant --format json';
+const MANAGED_DEPLOY_TASK_SUFFIX = `[hosting:eai-managed] with \`${MANAGED_INITIAL_DEPLOY_COMMAND}\`, then \`${MANAGED_DEPLOY_DOCTOR_COMMAND}\``;
 
 function buildManagedDeployDoctorEvidence(): Record<string, unknown> {
   const activeUrl = 'https://planning.example.com';

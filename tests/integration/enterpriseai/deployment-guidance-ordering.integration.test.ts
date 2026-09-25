@@ -39,6 +39,7 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(tasksCommand).toContain('eai verify');
     expect(tasksCommand).toContain('eai deploy trigger --repo <org/repo>');
     expect(tasksCommand).toContain('Hosting- and source-specific deployment task');
+    expect(tasksCommand).toContain('emit exactly one two-phase deployment task');
     expect(tasksCommand).toContain('[hosting:eai-managed]');
     expect(tasksCommand).toContain('--source eai-managed');
     expect(tasksCommand).toContain('--source customer-owned');
@@ -48,11 +49,19 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(tasksCommand).toContain('[hosting:local-only]');
     expect(tasksCommand).toContain('runtime contract must pass before any deploy command runs');
     expect(tasksCommand).toContain('only after the exact operation exists');
+    expect(tasksCommand).toContain(
+      'Run the selected initial command without marking the task complete'
+    );
+    expect(tasksCommand).toContain('same deployment task');
+    expect(tasksCommand).toContain('separate dependent post-deploy checkbox');
+    expect(tasksCommand).not.toContain('4. **EAI-managed post-deploy smoke gate');
     expect(tasksCommand).not.toContain(
       'runtime contract and\ndeploy-doctor evidence exist before any deploy command runs'
     );
     expect(tasksCommand).toContain(portableDoctorCommand);
-    expect(tasksCommand).toContain('Put that complete inline command on the post-deploy task');
+    expect(tasksCommand).toContain(
+      "Put that complete inline command on the same deployment task's"
+    );
     expect(tasksCommand).toContain(
       'task with a placeholder or missing resolved command cannot pass'
     );
@@ -72,6 +81,8 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(implementCommand).toContain('retain the prior required-file');
     expect(implementCommand).toContain('optional `EVT-012` `evidenceIssues` field');
     expect(implementCommand).toContain('Recovery instructions must follow the reported condition');
+    expect(implementCommand).toContain('inside one `[hosting:eai-managed]` task');
+    expect(implementCommand).toContain('Do not create a later dependent post-deploy checkbox');
     expect(implementCommand).not.toContain('mkdir -p .eai');
     expect(implementCommand).not.toContain('> .eai/deploy-doctor.json');
   });
