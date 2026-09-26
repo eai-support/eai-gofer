@@ -53,6 +53,20 @@ describe('npm dependency evidence integration', () => {
     ).toEqual(['direct@2.0.0', 'transitive@3.0.0']);
   });
 
+  it('rejects a lockfile package whose declared name conflicts with its install path', () => {
+    const forged = structuredClone(changedLock);
+    forged.packages['node_modules/direct'].name = 'trusted-package';
+    expect(() => changedLockfilePackages(forged, baseLock)).toThrow(/does not match its path/i);
+  });
+
+  it('rejects conflicting integrity for the same changed package version', () => {
+    const conflicting = structuredClone(changedLock);
+    conflicting.packages['node_modules/parent/node_modules/direct'] = {
+      name: 'direct', version: '2.0.0', integrity: 'sha512-conflict',
+    };
+    expect(() => changedLockfilePackages(conflicting, baseLock)).toThrow(/conflicting integrity/i);
+  });
+
   it('builds trusted evidence that the admission engine can evaluate', async () => {
     const evidence = await buildNpmDependencyEvidence({
       lockfiles: ['package-lock.json'],

@@ -141,6 +141,16 @@ describe('dependency admission', () => {
     ).toThrow(/older than 24 hours/i);
   });
 
+  it('rejects timestamps that are not ISO-8601 UTC', () => {
+    expect(() =>
+      evaluateDependencyAdmission({
+        policy,
+        evidence: { ...evidence(), generatedAt: 'September 25, 2026' },
+        now: NOW,
+      })
+    ).toThrow(/ISO-8601 UTC/i);
+  });
+
   it('rejects duplicate package identities and non-exact versions', () => {
     const duplicate = evidence();
     duplicate.packages.push({ ...duplicate.packages[0] });
@@ -181,6 +191,7 @@ describe('dependency admission', () => {
     ['wrong version', { version: '1.2.4' }],
     ['missing owner', { owner: '' }],
     ['missing vulnerability', { vulnerabilityIds: ['CVE-2026-9999'] }],
+    ['non-CVE vulnerability', { vulnerabilityIds: ['GHSA-1234-5678-90ab'] }],
   ])('does not apply an %s exception', (_label, overrides) => {
     const report = evaluateDependencyAdmission({
       policy,
@@ -248,7 +259,7 @@ describe('dependency admission', () => {
     });
   });
 
-  it('returns exit code 1 for review when CI requires an allow decision', async () => {
+  it('returns exit code 1 for review without an optional CI flag', async () => {
     const directory = await mkdtemp(path.join(tmpdir(), 'gofer-admission-review-'));
     const inputPath = path.join(directory, 'input.json');
     const policyPath = path.join(directory, 'policy.json');
@@ -262,7 +273,6 @@ describe('dependency admission', () => {
         inputPath,
         '--policy',
         policyPath,
-        '--require-allow',
         '--now',
         NOW,
       ])

@@ -25,11 +25,14 @@ function fail(message) {
 }
 
 function packageNameFromPath(packagePath, entry) {
-  if (typeof entry.name === 'string' && entry.name.trim()) return entry.name.trim().toLowerCase();
   const marker = 'node_modules/';
   const index = packagePath.lastIndexOf(marker);
   if (index < 0) return '';
-  return packagePath.slice(index + marker.length).toLowerCase();
+  const name = packagePath.slice(index + marker.length).toLowerCase();
+  if (typeof entry.name === 'string' && entry.name.trim() && entry.name.trim().toLowerCase() !== name) {
+    fail(`Lockfile package ${packagePath} has a name that does not match its path`);
+  }
+  return name;
 }
 
 export function lockfilePackages(lockfile) {
@@ -50,8 +53,16 @@ export function lockfilePackages(lockfile) {
 export function changedLockfilePackages(current, base) {
   const known = new Set(lockfilePackages(base).map((item) => `${item.name}\u0000${item.version}\u0000${item.integrity}`));
   const changed = lockfilePackages(current).filter((item) => !known.has(`${item.name}\u0000${item.version}\u0000${item.integrity}`));
-  return [...new Map(changed.map((item) => [`${item.name}@${item.version}`, item])).values()]
-    .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+  const unique = new Map();
+  for (const item of changed) {
+    const identity = `${item.name}@${item.version}`;
+    const previous = unique.get(identity);
+    if (previous && previous.integrity !== item.integrity) {
+      fail(`Changed package ${identity} has conflicting integrity values`);
+    }
+    unique.set(identity, item);
+  }
+  return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
 }
 
 async function readJson(filePath, label) {
@@ -65,7 +76,11 @@ async function readJson(filePath, label) {
 async function gitFile(ref, filePath) {
   try {
     const { stdout } = await execFileAsync('git', ['show', `${ref}:${filePath}`], { maxBuffer: 32 * 1024 * 1024 });
-    return JSON.parse(stdout);
+    const audit = JSON.parse(stdout);
+    if (!audit || typeof audit !== 'object' || Array.isArray(audit) || !audit.vulnerabilities || typeof audit.vulnerabilities !== 'object' || Array.isArray(audit.vulnerabilities) || audit.error) {
+      fail(`npm audit returned incomplete evidence for ${lockfilePath}`);
+    }
+    return audit;
   } catch {
     fail(`Base lockfile is unavailable at ${ref}:${filePath}`);
   }

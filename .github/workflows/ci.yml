@@ -34,7 +34,6 @@ jobs:
       - name: Build dependency evidence before package installation
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           base_sha="$BASE_SHA"
           if [ -z "$base_sha" ] || [ "$base_sha" = "0000000000000000000000000000000000000000" ]; then
@@ -44,7 +43,9 @@ jobs:
             --base-ref "$base_sha" \
             --lockfile package-lock.json \
             --lockfile extension/package-lock.json \
+            --lockfile extension/language-server/package-lock.json \
             --lockfile language-server/package-lock.json \
+            --lockfile docs-site/package-lock.json \
             --output dependency-evidence.json
 
       - name: Enforce dependency admission before package installation

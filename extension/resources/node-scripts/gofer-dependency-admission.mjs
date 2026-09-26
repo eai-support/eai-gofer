@@ -51,6 +51,9 @@ function stringArray(value, label) {
 
 function timestamp(value, label) {
   const raw = nonEmptyString(value, label);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(raw)) {
+    fail(`${label} must be an ISO-8601 UTC timestamp`);
+  }
   const milliseconds = Date.parse(raw);
   if (!Number.isFinite(milliseconds)) fail(`${label} must be a valid ISO-8601 timestamp`);
   return { raw: new Date(milliseconds).toISOString(), milliseconds };
@@ -149,7 +152,7 @@ function validUrgentException(candidate, pkg, policy, nowMs) {
   if (candidate.type !== 'urgent-security-fix' || candidate.package !== pkg.name || candidate.version !== pkg.version) return false;
   const requiredStrings = ['id', 'owner', 'reason', 'evidence', 'createdAt', 'expiresAt'];
   if (requiredStrings.some((key) => typeof candidate[key] !== 'string' || !candidate[key].trim())) return false;
-  if (!Array.isArray(candidate.vulnerabilityIds) || candidate.vulnerabilityIds.length === 0 || candidate.vulnerabilityIds.some((id) => typeof id !== 'string' || !id.trim())) return false;
+  if (!Array.isArray(candidate.vulnerabilityIds) || candidate.vulnerabilityIds.length === 0 || candidate.vulnerabilityIds.some((id) => typeof id !== 'string' || !/^CVE-\d{4}-\d{4,}$/i.test(id.trim()))) return false;
   const createdMs = Date.parse(candidate.createdAt);
   const expiresMs = Date.parse(candidate.expiresAt);
   if (!Number.isFinite(createdMs) || !Number.isFinite(expiresMs)) return false;
@@ -277,7 +280,7 @@ export async function runCli(args = process.argv.slice(2)) {
   const output = `${JSON.stringify(report, null, 2)}\n`;
   if (options.output) await writeFile(options.output, output, { encoding: 'utf8', flag: 'w', mode: 0o600 });
   else process.stdout.write(output);
-  return report.decision === 'block' || (options.requireAllow && report.decision === 'review') ? 1 : 0;
+  return report.decision === 'allow' ? 0 : 1;
 }
 
 const directRun = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
