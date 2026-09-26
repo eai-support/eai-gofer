@@ -76,12 +76,10 @@ async function readJson(filePath, label) {
 async function gitFile(ref, filePath) {
   try {
     const { stdout } = await execFileAsync('git', ['show', `${ref}:${filePath}`], { maxBuffer: 32 * 1024 * 1024 });
-    const audit = JSON.parse(stdout);
-    if (!audit || typeof audit !== 'object' || Array.isArray(audit) || !audit.vulnerabilities || typeof audit.vulnerabilities !== 'object' || Array.isArray(audit.vulnerabilities) || audit.error) {
-      fail(`npm audit returned incomplete evidence for ${lockfilePath}`);
-    }
-    return audit;
-  } catch {
+    return JSON.parse(stdout);
+  } catch (error) {
+    const stderr = typeof error === 'object' && error !== null && 'stderr' in error ? String(error.stderr) : '';
+    if (/exists on disk, but not in/.test(stderr)) return { packages: {} };
     fail(`Base lockfile is unavailable at ${ref}:${filePath}`);
   }
 }
@@ -149,7 +147,11 @@ export async function npmAudit(lockfilePath) {
     stdout = captured;
   }
   try {
-    return JSON.parse(stdout);
+    const audit = JSON.parse(stdout);
+    if (!audit || typeof audit !== 'object' || Array.isArray(audit) || !audit.vulnerabilities || typeof audit.vulnerabilities !== 'object' || Array.isArray(audit.vulnerabilities) || audit.error) {
+      fail(`npm audit returned incomplete evidence for ${lockfilePath}`);
+    }
+    return audit;
   } catch {
     fail(`npm audit returned invalid JSON for ${lockfilePath}`);
   }
@@ -250,12 +252,14 @@ export async function buildNpmDependencyEvidence({ lockfiles, baseRef, now = new
   if (typeof baseRef !== 'string' || !baseRef.trim()) fail('--base-ref is required');
   const grouped = new Map();
   for (const lockfilePath of [...new Set(lockfiles)].sort()) {
-    const [current, base, audit, baseAudit] = await Promise.all([
+    const [current, base, audit] = await Promise.all([
       lockfileReader(lockfilePath, `Current lockfile ${lockfilePath}`),
       baseLoader(baseRef, lockfilePath),
       auditLoader(lockfilePath),
-      baseAuditLoader(lockfilePath, baseRef),
     ]);
+    const baseAudit = Object.keys(base.packages || {}).length > 0
+      ? await baseAuditLoader(lockfilePath, baseRef)
+      : { vulnerabilities: {} };
     for (const pkg of changedLockfilePackages(current, base)) {
       const key = `${pkg.name}@${pkg.version}`;
       const existing = grouped.get(key);
