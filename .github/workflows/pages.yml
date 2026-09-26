@@ -49,7 +49,7 @@ jobs:
           cache-dependency-path: docs-site/package-lock.json
 
       - name: Install docs-site dependencies
-        run: cd docs-site && npm ci
+        run: cd docs-site && npm ci --ignore-scripts
 
       - name: Build Docusaurus docs site
         run: cd docs-site && npm run build

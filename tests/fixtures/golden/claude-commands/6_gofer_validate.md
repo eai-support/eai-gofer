@@ -802,6 +802,44 @@ Logs', 'PII Risk', 'Metric Coverage Delta', 'Trace Propagation'."
 
 ### Agent 11: Dependency & Submodule Impact (with npm audit delta)
 
+Before dependency code execution or a merge-ready decision, validate every
+introduced direct and transitive package through the provider-neutral
+dependency admission contract:
+
+```sh
+node .specify/scripts/node/gofer-npm-dependency-evidence.mjs \
+  --base-ref <base-commit> \
+  --lockfile package-lock.json \
+  --output <dependency-evidence.json>
+
+node .specify/scripts/node/gofer-dependency-admission.mjs \
+  --input <dependency-evidence.json> \
+  --policy .specify/config/dependency-security-policy.json \
+  --exceptions .github/dependency-security-exceptions.json \
+  --require-allow \
+  --output <dependency-admission-report.json>
+```
+
+For npm, the evidence adapter compares the proposed and base lockfiles,
+including direct and transitive packages. It reads exact-version publication,
+integrity, and provenance data from npm; vulnerability data from npm audit;
+and malware advisories from GitHub. Missing, stale, malformed, or unavailable
+evidence fails closed. Treat `block` as Red and `review` as Yellow. Protected
+CI requires `allow` before installation or merge.
+Known malware, missing required integrity, invalid evidence, and unresolved
+High/Critical vulnerabilities cannot be waived. An urgent-security exception
+can waive only the 15-day release-age finding for its exact package version,
+must name the fixed vulnerability, owner, reason, evidence, and expiry, and
+must remain within the policy's maximum exception duration. The adapter proves
+the named vulnerability was present in the base lockfile and absent from the
+proposed lockfile before it records the fix.
+
+Record the report path, policy version, scanner identity, exceptions applied,
+and the first `npm ci --ignore-scripts` install in the validation evidence.
+Publish the concise admission summary on the pull request. When dependency
+files did not change, say so and continue the existing audit and release
+rescan requirements.
+
 ```
 Task: subagent_type="research-dependency-evaluator", model="haiku"
 Prompt: "Dependency and submodule blast-radius analysis for feature

@@ -172,7 +172,7 @@ describe('desktop protocol release gate', () => {
     const archive = steps.find((step) => step.name === 'Create Release Archive')?.run;
     expect(archive).toContain('cp package.json package-lock.json release-assets/orchestrator/');
     expect(archive).toContain(
-      '(cd release-assets/orchestrator && npm ci --omit=dev --ignore-scripts)'
+      '(cd release-assets/orchestrator && npm ci --ignore-scripts --omit=dev)'
     );
     expect(archive).toContain('cp -R dist release-assets/orchestrator/dist');
     const check = steps.find((step) => step.name === 'Test extracted archive runtimes')!;

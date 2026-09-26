@@ -68,7 +68,7 @@ jobs:
       # as invalid for ^7.0.1 (it satisfies it), which aborts `vsce package`.
       # Pin a known-good npm so the Marketplace packaging step is deterministic.
       - name: Pin npm
-        run: npm install -g npm@10.9.2
+        run: npm install -g npm@10.9.2 --ignore-scripts
 
       - name: Install VS Code Test Runtime
         run: |
@@ -102,9 +102,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          npm ci
-          npm --prefix extension ci
-          npm --prefix language-server ci
+          npm ci --ignore-scripts
+          npm --prefix extension ci --ignore-scripts
+          npm --prefix language-server ci --ignore-scripts
           npm --prefix eai-app-template ci --ignore-scripts
 
       - name: Regenerate Command Surfaces
@@ -176,7 +176,7 @@ jobs:
           cp -R dist/. release-assets/orchestrator/
           cp -R dist release-assets/orchestrator/dist
           cp package.json package-lock.json release-assets/orchestrator/
-          (cd release-assets/orchestrator && npm ci --omit=dev --ignore-scripts)
+          (cd release-assets/orchestrator && npm ci --ignore-scripts --omit=dev)
           cp -R extension/dist/. release-assets/extension/
           cp -R language-server/dist/. release-assets/language-server/
           cp -R language-server/dist language-server/node_modules release-assets/language-server/

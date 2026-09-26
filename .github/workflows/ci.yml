@@ -10,11 +10,99 @@ env:
   NODE_VERSION: '24.x'
 
 jobs:
+  dependency-admission:
+    name: Dependency Admission
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Build dependency evidence before package installation
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base_sha="$BASE_SHA"
+          if [ -z "$base_sha" ] || [ "$base_sha" = "0000000000000000000000000000000000000000" ]; then
+            base_sha="$(git rev-parse HEAD^)"
+          fi
+          node .specify/scripts/node/gofer-npm-dependency-evidence.mjs \
+            --base-ref "$base_sha" \
+            --lockfile package-lock.json \
+            --lockfile extension/package-lock.json \
+            --lockfile extension/language-server/package-lock.json \
+            --lockfile language-server/package-lock.json \
+            --lockfile docs-site/package-lock.json \
+            --output dependency-evidence.json
+
+      - name: Enforce dependency admission before package installation
+        run: |
+          set +e
+          node .specify/scripts/node/gofer-dependency-admission.mjs \
+            --input dependency-evidence.json \
+            --policy .specify/config/dependency-security-policy.json \
+            --exceptions .github/dependency-security-exceptions.json \
+            --require-allow \
+            --output dependency-admission-report.json
+          admission_status=$?
+          node .specify/scripts/node/gofer-dependency-admission-summary.mjs \
+            --input dependency-admission-report.json \
+            --output dependency-admission-summary.md
+          summary_status=$?
+          if [ "$summary_status" -ne 0 ]; then
+            exit "$summary_status"
+          fi
+          exit "$admission_status"
+
+      - name: Publish dependency admission result
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- gofer-dependency-admission -->';
+            const body = fs.existsSync('dependency-admission-summary.md')
+              ? fs.readFileSync('dependency-admission-summary.md', 'utf8')
+              : `${marker}\n## Dependency admission: Blocked\n\nEvidence collection failed. Fix the evidence source before dependency installation or merge.`;
+            const comments = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const previous = comments.data.find((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
+
+      - name: Upload dependency admission evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-admission-${{ github.run_number }}
+          path: |
+            dependency-evidence.json
+            dependency-admission-report.json
+            dependency-admission-summary.md
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Job 1: Code Quality & Testing
   quality-gates:
     name: Code Quality Gates
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: dependency-admission
 
     steps:
       - name: Checkout Repository
@@ -32,7 +120,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run ESLint
         run: npm run lint
@@ -207,7 +295,7 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: quality-gates
+    needs: [dependency-admission, quality-gates]
 
     strategy:
       matrix:
@@ -224,19 +312,19 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies (Root)
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install Extension Dependencies
         if: matrix.component == 'extension'
         run: |
           cd extension
-          npm ci
+          npm ci --ignore-scripts
 
       - name: Install Language Server Dependencies
         if: matrix.component == 'language-server'
         run: |
           cd language-server
-          npm ci
+          npm ci --ignore-scripts
 
       - name: Build Orchestrator
         if: matrix.component == 'orchestrator'
@@ -308,7 +396,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build Project
         run: npm run build
@@ -340,6 +428,7 @@ jobs:
     # This job installs three Node workspaces before it can run any checks.
     # Five minutes can expire during a cold dependency restore.
     timeout-minutes: 15
+    needs: dependency-admission
 
     steps:
       - name: Checkout Repository
@@ -352,7 +441,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: TypeScript Type Check
         run: npx tsc --noEmit
@@ -360,13 +449,13 @@ jobs:
       - name: Check Extension Types
         run: |
           cd extension
-          npm ci
+          npm ci --ignore-scripts
           npx tsc --noEmit
 
       - name: Check Language Server Types
         run: |
           cd language-server
-          npm ci
+          npm ci --ignore-scripts
           npx tsc --noEmit
 
   # Job 4: Security Audit
@@ -375,6 +464,7 @@ jobs:
     runs-on: ubuntu-latest
     # Allow a cold dependency restore to finish before the audit begins.
     timeout-minutes: 15
+    needs: dependency-admission
 
     steps:
       - name: Checkout Repository
@@ -387,7 +477,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run Security Audit
         run: npm audit --audit-level=moderate
@@ -420,11 +510,11 @@ jobs:
       - name: Install Dependencies
         if: github.ref == 'refs/heads/main'
         run: |
-          npm ci
+          npm ci --ignore-scripts
           cd extension
-          npm ci
+          npm ci --ignore-scripts
           cd ../language-server
-          npm ci
+          npm ci --ignore-scripts
 
       - name: Build All Components
         if: github.ref == 'refs/heads/main'
@@ -454,7 +544,7 @@ jobs:
     name: Coverage Report
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: test
+    needs: [dependency-admission, test]
 
     steps:
       - name: Checkout Repository
@@ -467,7 +557,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run Tests with Coverage
         run: npm run test:coverage || npm test
