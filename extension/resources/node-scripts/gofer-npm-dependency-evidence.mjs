@@ -28,11 +28,22 @@ function packageNameFromPath(packagePath, entry) {
   const marker = 'node_modules/';
   const index = packagePath.lastIndexOf(marker);
   if (index < 0) return '';
-  const name = packagePath.slice(index + marker.length).toLowerCase();
-  if (typeof entry.name === 'string' && entry.name.trim() && entry.name.trim().toLowerCase() !== name) {
+  const pathName = packagePath.slice(index + marker.length).toLowerCase();
+  const declaredName = typeof entry.name === 'string' ? entry.name.trim().toLowerCase() : '';
+  let resolvedName = '';
+  if (typeof entry.resolved === 'string') {
+    try {
+      const pathname = new URL(entry.resolved).pathname;
+      const separator = pathname.lastIndexOf('/-/');
+      if (separator > 1) resolvedName = decodeURIComponent(pathname.slice(1, separator)).toLowerCase();
+    } catch {
+      fail(`Lockfile package ${packagePath} has an invalid resolved URL`);
+    }
+  }
+  if (declaredName && declaredName !== pathName && declaredName !== resolvedName) {
     fail(`Lockfile package ${packagePath} has a name that does not match its path`);
   }
-  return name;
+  return declaredName || pathName;
 }
 
 export function lockfilePackages(lockfile) {
