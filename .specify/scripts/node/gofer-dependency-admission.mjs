@@ -73,6 +73,7 @@ function validatePolicy(value) {
     ...policy,
     policyVersion: nonEmptyString(policy.policyVersion, 'policyVersion'),
     minimumReleaseAgeDays: finiteInteger(policy.minimumReleaseAgeDays, 'minimumReleaseAgeDays'),
+    maximumEvidenceAgeHours: finiteInteger(policy.maximumEvidenceAgeHours, 'maximumEvidenceAgeHours', 1),
     maximumExceptionDays: finiteInteger(policy.maximumExceptionDays, 'maximumExceptionDays', 1),
     blockVulnerabilitySeverities: blockingSeverities,
     reviewSignals,
@@ -83,7 +84,11 @@ function validatePolicy(value) {
 function validateEvidence(value, policy, nowMs) {
   const evidence = object(value, 'Evidence');
   if (evidence.schemaVersion !== EVIDENCE_SCHEMA) fail(`Unsupported evidence schema: ${evidence.schemaVersion ?? 'missing'}`);
-  timestamp(evidence.generatedAt, 'generatedAt');
+  const generatedAt = timestamp(evidence.generatedAt, 'generatedAt');
+  if (generatedAt.milliseconds > nowMs) fail('generatedAt cannot be in the future');
+  if (nowMs - generatedAt.milliseconds > policy.maximumEvidenceAgeHours * 60 * 60 * 1000) {
+    fail(`Evidence is older than ${policy.maximumEvidenceAgeHours} hours`);
+  }
   if (policy.requireScannerEvidence) {
     const scanner = object(evidence.scanner, 'scanner');
     nonEmptyString(scanner.name, 'scanner.name');
@@ -248,6 +253,10 @@ function parseArguments(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
+    if (flag === '--require-allow') {
+      options.requireAllow = true;
+      continue;
+    }
     if (!['--input', '--policy', '--exceptions', '--output', '--now'].includes(flag) || !args[index + 1] || args[index + 1].startsWith('--')) {
       fail(`Invalid argument: ${flag}`);
     }
@@ -268,7 +277,7 @@ export async function runCli(args = process.argv.slice(2)) {
   const output = `${JSON.stringify(report, null, 2)}\n`;
   if (options.output) await writeFile(options.output, output, { encoding: 'utf8', flag: 'w', mode: 0o600 });
   else process.stdout.write(output);
-  return report.decision === 'block' ? 1 : 0;
+  return report.decision === 'block' || (options.requireAllow && report.decision === 'review') ? 1 : 0;
 }
 
 const directRun = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;

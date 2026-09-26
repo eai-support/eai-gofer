@@ -2,6 +2,7 @@
   "schemaVersion": "gofer.dependency-security-policy/v1",
   "policyVersion": "1.0.0",
   "minimumReleaseAgeDays": 15,
+  "maximumEvidenceAgeHours": 24,
   "maximumExceptionDays": 7,
   "blockKnownMalware": true,
   "blockVulnerabilitySeverities": ["high", "critical"],

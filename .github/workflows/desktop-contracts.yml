@@ -43,11 +43,11 @@ jobs:
           cache: npm
           cache-dependency-path: language-server/package-lock.json
       - name: Install server dependencies
-        run: npm ci --prefix language-server
+        run: npm ci --ignore-scripts --prefix language-server
       - name: Test actual MCP and LSP processes
         run: npm run test:mcp-protocol
       - name: Install portable harness test dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Test portable acceptance, recovery and metrics without retries
         run: npx vitest run tests/unit/scripts/gofer-acceptance-check.test.ts tests/unit/scripts/gofer-execution-recovery.test.ts tests/unit/scripts/gofer-execution-metrics.test.ts --retry 0
 
@@ -70,9 +70,9 @@ jobs:
           cache: npm
       - name: Install build dependencies
         run: |
-          npm ci
-          npm ci --prefix extension
-          npm ci --prefix language-server
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix extension
+          npm ci --ignore-scripts --prefix language-server
       - name: Package extension without installation
         working-directory: extension
         run: npx @vscode/vsce package --no-dependencies --out /tmp/gofer-desktop-test.vsix

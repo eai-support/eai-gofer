@@ -17,6 +17,7 @@ const policy = {
   schemaVersion: 'gofer.dependency-security-policy/v1',
   policyVersion: '1.0.0',
   minimumReleaseAgeDays: 15,
+  maximumEvidenceAgeHours: 24,
   maximumExceptionDays: 7,
   blockKnownMalware: true,
   blockVulnerabilitySeverities: ['high', 'critical'],
@@ -130,6 +131,16 @@ describe('dependency admission', () => {
     ]);
   });
 
+  it('fails closed for stale evidence', () => {
+    expect(() =>
+      evaluateDependencyAdmission({
+        policy,
+        evidence: { ...evidence(), generatedAt: '2026-09-23T23:59:59.000Z' },
+        now: NOW,
+      })
+    ).toThrow(/older than 24 hours/i);
+  });
+
   it('rejects duplicate package identities and non-exact versions', () => {
     const duplicate = evidence();
     duplicate.packages.push({ ...duplicate.packages[0] });
@@ -235,5 +246,26 @@ describe('dependency admission', () => {
       evaluatedAt: NOW,
       decision: 'block',
     });
+  });
+
+  it('returns exit code 1 for review when CI requires an allow decision', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'gofer-admission-review-'));
+    const inputPath = path.join(directory, 'input.json');
+    const policyPath = path.join(directory, 'policy.json');
+    await writeFile(inputPath, JSON.stringify(evidence({ signals: ['native-code'] })));
+    await writeFile(policyPath, JSON.stringify(policy));
+
+    await expect(
+      execFileAsync(process.execPath, [
+        '.specify/scripts/node/gofer-dependency-admission.mjs',
+        '--input',
+        inputPath,
+        '--policy',
+        policyPath,
+        '--require-allow',
+        '--now',
+        NOW,
+      ])
+    ).rejects.toMatchObject({ code: 1 });
   });
 });
