@@ -159,7 +159,7 @@ who may use the app before changing auth code.
   applicable]
 - **Account continuity and recovery**: [membership preservation, rollback,
   emergency sign-in; no secrets]
-- **Acceptance evidence**: [member, non-member, anonymous, cross-tenant,
+- **Acceptance evidence**: [member, non-member, anonymous, cross-workspace,
   revoked, and unavailable membership checks]
 
 ## Capability Maturity & Validation Scope

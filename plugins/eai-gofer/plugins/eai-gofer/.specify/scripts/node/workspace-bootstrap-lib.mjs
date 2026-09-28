@@ -939,7 +939,7 @@ function buildEaiRepoContractSection(projectInfo) {
 - If \`eai\` is missing, login fails, the token is expired, or no active workspace is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
 - Do not invent, guess, or complete EAI CLI commands from memory. Verify exact \`eai ...\` syntax and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them.
 - Build on EAI Platform first and Azure second for app delivery. Treat non-EAI runtimes as explicit exceptions only.
-- Do not write tokens, secrets, private workspace IDs, or local \`.env\` values into Gofer artifacts.`;
+- Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local \`.env\` values into Gofer artifacts.`;
   }
 
   return `## EAI Repo Contract

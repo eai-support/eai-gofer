@@ -62,7 +62,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /eai provision entra --force\s+--redirect-uri\s+<confirmed-callback-uri>/
     );
     expect(scenarioCommand).toContain(
-      'Never write exact private URLs, workspace IDs, client IDs, tokens, or debug output'
+      'Never write exact private URLs, workspace IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, or debug output'
     );
     expect(scenarioCommand).toContain(
       'eai resources storage doctor --tenant-id <workspace-id> --format json'

@@ -19,7 +19,7 @@ app template for EnterpriseAI app-delivery work.
 
 1. Browser code calls the local app BFF at `/api/eai/...`.
 2. Browser streaming uses `/api/eai/stream/...`.
-3. The BFF or server helpers attach auth, tenant, and correlation headers.
+3. The BFF or server helpers attach auth, workspace context, and correlation headers.
 4. The frontend never receives direct downstream database, blob, search, or
    PublicAPI credentials.
 5. Use the published PublicAPI route family through the template SDK, named
@@ -36,11 +36,11 @@ app template for EnterpriseAI app-delivery work.
 - Use the CLI for setup and verification:
   - `eai login`
   - `eai workspace select <workspace-slug>`
-  - `eai types validate --tenant-key <key> --tenant-id <tenant-id>`
-  - `eai types seed --tenant-key <key> --tenant-id <tenant-id>`
-  - `eai types diff --tenant-key <key> --tenant-id <tenant-id>`
-  - `eai resources schema --tenant-id <tenant-id>`
-  - `eai verify calls --tenant-id <tenant-id> --resource-type <type>`
+  - `eai types validate --tenant-key <key> --tenant-id <workspace-id>`
+  - `eai types seed --tenant-key <key> --tenant-id <workspace-id>`
+  - `eai types diff --tenant-key <key> --tenant-id <workspace-id>`
+  - `eai resources schema --tenant-id <workspace-id>`
+  - `eai verify calls --tenant-id <workspace-id> --resource-type <type>`
 
 Do not describe retired templates as canonical scaffolds. The surviving public
 scaffold is the EAI App Template.

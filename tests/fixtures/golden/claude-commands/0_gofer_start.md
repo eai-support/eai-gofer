@@ -255,7 +255,7 @@ Before any EAI CLI, login, workspace, template, or app-enrollment action:
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private workspace IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 **Authentication Access Decision**
 
@@ -529,7 +529,7 @@ with an unrelated non-EAI stack.
      provider SDKs or provider keys.
    - Ask the user only when the choice affects cost, security, compliance,
      deployment, data residency, external systems, or material business scope.
-   - Keep private workspace IDs, tokens, secrets, and `.env.local` contents out of
+   - Keep private workspace IDs, Entra/CIAM authority tenant IDs, tokens, secrets, and `.env.local` contents out of
      Gofer artifacts. Record only product-safe readiness states and evidence.
    - Treat `.specify/references/platform/eai-repo-contract.md` and
      `.specify/references/platform/eai-error-catalog.yaml` as the repo-owned
@@ -544,7 +544,7 @@ with an unrelated non-EAI stack.
      selection, and `eai provision entra --force --redirect-uri
      <confirmed-callback-uri>` before suggesting manual Azure Portal edits. Use
      `--debug` only when the user approves it, and redact private hostnames,
-     workspace IDs, client IDs, and tokens before writing artifacts.
+     workspace IDs, Entra/CIAM authority tenant IDs, client IDs, and tokens before writing artifacts.
 
 ### EAI Preflight Artifact
 
@@ -562,7 +562,7 @@ For EAI app delivery, create or update
 | Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |
 | Drift readiness | `eai template check` / `eai gofer refresh --check` result or `E001` explanation |
 | App enrollment | Existing app, new app to create, or blocked pending user confirmation |
-| Entra redirect readiness | Redacted callback route pattern, Entra directory/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, workspace IDs, client IDs, tokens, or debug output to committed artifacts. |
+| Entra redirect readiness | Redacted callback route pattern, Entra directory/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, workspace IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, or debug output to committed artifacts. |
 | Block catalog readiness | Available block commands and package profile compatibility evidence |
 | App stack policy | EAI Platform including app template first, Azure second, or approved exception |
 | Next action | Continue discovery, initialize template, request account/workspace access, or stop |

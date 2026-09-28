@@ -475,7 +475,7 @@ ${buildAuthAccessDecisionContract()}
 5. When an EAI capability becomes required, run the first-run/setup path from \`.specify/commands/gofer_eai_first_run.md\`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that \`eai init\` completed.
 7. After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` when available before guessing remediation.
-8. Do not write tokens, secrets, private workspace IDs, or local \`.env\` values into artifacts.
+8. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local \`.env\` values into artifacts.
 
 ${buildVerifiedEaiCliCommandContract()}
 
@@ -879,7 +879,7 @@ Before any EAI CLI, login, workspace, template, or app-enrollment action:
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update \`spec.md\`, \`plan.md\`, \`tasks.md\`, \`traceability.md\`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private workspace IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local \`.env\` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 ${buildAuthAccessDecisionContract()}
 `.trim();

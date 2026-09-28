@@ -37,7 +37,7 @@ only when the contract permits it. Do not assume direct membership is the only
 valid form of membership.
 
 A session, shared CIAM `tid`, matching email domain, hidden button, or selected
-CLI tenant is not app authorization. The CLI operator is not the runtime user.
+CLI workspace access is not app authorization. The CLI operator is not the runtime user.
 Unknown, unavailable, revoked, or expired authorization must fail closed. Define
 bounded cache expiry and revocation handling. Never keep access forever because
 an earlier session was valid.

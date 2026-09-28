@@ -167,7 +167,7 @@ Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Ve
 5. When an EAI capability becomes required, run the first-run/setup path from `.specify/commands/gofer_eai_first_run.md`, then require canonical template evidence before that capability can complete.
 6. Do not accept copied marker files, a partial scaffold, or a custom template as proof that `eai init` completed.
 7. After any `eai` error, run `eai errors explain <code-or-reason> --format json` when available before guessing remediation.
-8. Do not write tokens, secrets, private workspace IDs, or local `.env` values into artifacts.
+8. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local `.env` values into artifacts.
 
 ## Verified EAI CLI Command Contract
 

@@ -221,7 +221,7 @@ catalog:
     meaning: PublicAPI could not resolve a usable ResourceAPI install for the tenant-scoped request.
     likelyCause: Either workspace context was inconsistent across path and headers, or the workspace metadata/schema projection is incomplete for this app.
     recovery:
-      - 'Compare /v4/platform/tenants/<tenant-id>/resource-metadata with /v4/data/resources/<tenant-id>/storage before concluding the tenant is unprovisioned'
+      - 'Compare /v4/platform/tenants/<workspace-id>/resource-metadata with /v4/data/resources/<workspace-id>/storage before concluding the workspace is unprovisioned'
       - 'If the same /storage request flips between 200 and 503 by header mode, treat it as a tenant-context contract mismatch first'
       - 'Check publishedObjectTypes in tenant resource metadata and treat it as operational state'
       - 'Run eai resources storage doctor --tenant-id <tenant-id> --format json'

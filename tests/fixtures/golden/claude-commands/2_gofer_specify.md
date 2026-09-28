@@ -74,7 +74,7 @@ Before any EAI CLI, login, workspace, template, or app-enrollment action:
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private workspace IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 **Authentication Access Decision**
 
@@ -260,7 +260,7 @@ testable requirements.
 4. Use non-EAI platforms only as explicit exceptions.
 5. Include acceptance criteria for login, workspace selection, storage behavior,
    workflow readiness, AI-service behavior, and error recovery when relevant.
-6. Keep secrets, private workspace IDs, and `.env` values out of `spec.md`.
+6. Keep secrets, private workspace IDs, Entra/CIAM authority tenant IDs, and `.env` values out of `spec.md`.
 
 ## Outline
 

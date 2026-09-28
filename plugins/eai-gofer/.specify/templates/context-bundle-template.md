@@ -59,7 +59,7 @@ rationale.
 | Area                | Decision / Assumption  | Evidence              |
 | ------------------- | ---------------------- | --------------------- |
 | Object types        | {{object-types}}       | {{path-or-reference}} |
-| Tenant boundaries   | {{tenant-boundaries}}  | {{path-or-reference}} |
+| Workspace boundaries | {{tenant-boundaries}} | {{path-or-reference}} |
 | APIs/events         | {{api-event-surfaces}} | {{path-or-reference}} |
 | Deployment target   | {{target-env}}         | {{path-or-reference}} |
 | Validation criteria | {{criteria}}           | {{path-or-reference}} |
