@@ -107,7 +107,7 @@ this gate order:
 5. `eai app provision`
 6. `eai provision entra` when required
 7. `eai env pull` when required
-8. `eai types validate --tenant-key <key> --tenant-id <workspace-id>`
+8. `eai types validate --tenant-key <key> --tenant-id <tenant-id>`
 9. `eai types seed`
 10. `eai types diff`
 11. `eai resources schema`
@@ -162,10 +162,11 @@ identity provisioning problems first. Confirm login and workspace with
 workspace if needed, then run the advertised equivalent of
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>`. Record
 only a redacted callback route in Gofer artifacts. Use `--debug` only with
-explicit user approval, and redact private hostnames, Entra/CIAM authority
-tenant IDs, client IDs, tokens, and raw debug output before writing artifacts.
-Use Azure Portal edits only when the installed EAI CLI does not advertise an
-Entra provisioning path or the CLI reports an operator-only block.
+explicit user approval, and redact private hostnames, private workspace/platform
+tenant IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, and raw debug
+output before writing artifacts. Use Azure Portal edits only when the installed
+EAI CLI does not advertise an Entra provisioning path or the CLI reports an
+operator-only block.
 
 ## Privacy And Safety
 

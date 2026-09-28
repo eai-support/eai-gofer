@@ -87,7 +87,7 @@ catalog:
       - 'Retry user lookup through /v4/platform/tenants/<tenant-id>/users/by-email?email=<email>'
       - 'Retry membership lookup through /v4/platform/tenants/<tenant-id>/users/<oid>/memberships'
       - 'Keep workspace member and role-definition reads on /v4/platform/tenants/<tenant-id>/members and /v4/platform/tenants/<tenant-id>/role-definitions'
-      - 'If tenant-scoped routes still return MISSING_TENANT, capture redacted route shape, HTTP status, server code, CLI version, active workspace slug, and deployed PublicAPI/AdminAPI versions for platform support'
+      - 'If workspace-scoped routes still return MISSING_TENANT, capture redacted route shape, HTTP status, server code, CLI version, active workspace slug, and deployed PublicAPI/AdminAPI versions for platform support'
     nextGate: tenant_scoped_platform_route_verified
   - errorId: EAI_ENTRA_REDIRECT_URI_MISMATCH
     match:
@@ -105,7 +105,7 @@ catalog:
       - 'eai workspace select <workspace-slug-or-id> when the active workspace is wrong'
       - 'Confirm the callback route from the failing browser log in the active session; record only a redacted pattern such as https://<app-host>/api/auth/callback/...'
       - 'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
-      - 'Use --debug only with explicit user approval, and redact private hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing artifacts'
+      - 'Use --debug only with explicit user approval, and redact private hostnames, workspace IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, and raw debug output before writing artifacts'
       - 'Retry the sign-in flow and confirm the authorize request now uses the registered redirect_uri'
       - 'If mismatch persists, align AUTH_ENTRA_CLIENT_ID or ENTRA_CLIENT_ID with the Entra app registration returned by EAI'
     nextGate: entra_redirect_registered
@@ -118,7 +118,7 @@ catalog:
     likelyCause: Template init has not run in this repo or folder.
     recovery:
       - 'Run /gofer:eai-first-run'
-      - 'Confirm folder choice and tenant'
+      - 'Confirm folder choice and workspace'
       - 'eai init <app-name> --skip-prompts --company-workspace <active-workspace-id>'
     nextGate: template_ready
   - errorId: EAI_TEMPLATE_DRIFT
@@ -221,8 +221,8 @@ catalog:
     meaning: PublicAPI could not resolve a usable ResourceAPI install for the tenant-scoped request.
     likelyCause: Either workspace context was inconsistent across path and headers, or the workspace metadata/schema projection is incomplete for this app.
     recovery:
-      - 'Compare /v4/platform/tenants/<workspace-id>/resource-metadata with /v4/data/resources/<workspace-id>/storage before concluding the workspace is unprovisioned'
-      - 'If the same /storage request flips between 200 and 503 by header mode, treat it as a tenant-context contract mismatch first'
+      - 'Compare /v4/platform/tenants/<tenant-id>/resource-metadata with /v4/data/resources/<tenant-id>/storage before concluding the workspace is unprovisioned'
+      - 'If the same /storage request flips between 200 and 503 by header mode, treat it as a workspace-context contract mismatch first'
       - 'Check publishedObjectTypes in tenant resource metadata and treat it as operational state'
       - 'Run eai resources storage doctor --tenant-id <tenant-id> --format json'
       - 'Inspect the app BFF or proxy before escalating to a platform-only fault'

@@ -316,10 +316,10 @@ eai workspace list --format json
 Then retry through workspace-scoped V4 platform routes:
 
 ```text
-/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>
-/v4/platform/tenants/<workspace-id>/users/<oid>/memberships
-/v4/platform/tenants/<workspace-id>/members
-/v4/platform/tenants/<workspace-id>/role-definitions
+/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>
+/v4/platform/tenants/<tenant-id>/users/<oid>/memberships
+/v4/platform/tenants/<tenant-id>/members
+/v4/platform/tenants/<tenant-id>/role-definitions
 ```
 
 If those still fail, escalate with redacted route shape, HTTP status, server

@@ -1010,9 +1010,9 @@ separation from `tasks.md`:
   before treating it as a workspace-member data issue. Run `eai errors explain
   app_token_tenant_context_required --format json` when advertised, confirm
   `eai whoami` and `eai workspace list --format json`, and retry through
-  `/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>`,
-  `/v4/platform/tenants/<workspace-id>/users/<oid>/memberships`,
-  `/v4/platform/tenants/<workspace-id>/members`, and
+  `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
+  `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
+  `/v4/platform/tenants/<tenant-id>/members`, and
   `/v4/platform/tenants/<tenant-id>/role-definitions`. Do not change Entra,
   databases, workspace members, or role definitions until the workspace-scoped route
   check is complete; if it still fails, escalate with redacted route shape,

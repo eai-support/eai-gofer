@@ -327,6 +327,8 @@ When first-run setup is needed, Gofer:
   confirms the active workspace, then runs
   `eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>`
   when approved
+- For older CLI versions that do not advertise `--company-workspace`, use the
+  `--company-tenant` compatibility alias.
 - treats `E001` from `eai verify`, `eai template check`, or
   `eai doctor --check-updates` as "this repo is not yet an EAI app project",
   then offers initialization instead of leaving the user at a dead end

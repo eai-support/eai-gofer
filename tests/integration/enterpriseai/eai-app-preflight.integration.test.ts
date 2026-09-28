@@ -41,7 +41,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('eai workflow readiness --format json');
     expect(scenarioCommand).toContain('eai app create <name>');
     expect(scenarioCommand).toContain(
-      'eai app provision <key> --tenant-id <workspace-id> --select --format json'
+      'eai app provision <key> --tenant-id <tenant-id> --select --format json'
     );
     expect(scenarioCommand).toContain('The EAI CLI is the only app-manifest request serializer');
     expect(scenarioCommand).toContain('Apply one Object Type identifier contract everywhere');
@@ -54,7 +54,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /app_manifest_validation_failed[\s\S]*eai update --check[\s\S]*upgrade_required[\s\S]*approval[\s\S]*eai update[\s\S]*before repeating validation/
     );
     expect(scenarioCommand).toContain(
-      'eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --dry-run --format json'
+      'eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --dry-run --format json'
     );
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
@@ -65,7 +65,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       'Never write exact private URLs, workspace IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, or debug output'
     );
     expect(scenarioCommand).toContain(
-      'eai resources storage doctor --tenant-id <workspace-id> --format json'
+      'eai resources storage doctor --tenant-id <tenant-id> --format json'
     );
     expect(scenarioCommand).toContain('.specify/references/platform/eai-repo-contract.md');
     expect(scenarioCommand).toContain('.specify/references/platform/eai-error-catalog.yaml');
@@ -147,7 +147,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(canonicalTemplate).toContain('Entra redirect readiness');
     expect(canonicalTemplate).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
     expect(canonicalTemplate).toContain(
-      'eai resources storage doctor --tenant-id <workspace-id> --format json'
+      'eai resources storage doctor --tenant-id <tenant-id> --format json'
     );
     expect(mirroredTemplate).toContain('App Stack Policy');
     expect(mirroredTemplate).toContain('Execution Order And Gate Tracking');

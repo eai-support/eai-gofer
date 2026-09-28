@@ -334,6 +334,8 @@ with an unrelated non-EAI stack.
      runs `eai init <project-name> --skip-prompts --company-workspace
      <active-workspace-id>` when approved, verifies Gofer files, and then returns
      here.
+     For older CLI versions that do not advertise `--company-workspace`, use
+     the `--company-tenant` compatibility alias.
    - If `/0_gofer_start` is unavailable in a new repo, the user should run
      the plugin-level `/gofer:eai-first-run` command after installing or
      updating the Gofer plugin.
@@ -399,10 +401,10 @@ with an unrelated non-EAI stack.
      start by changing workspace members, role definitions, Entra configuration,
      databases, or cloud portals. Confirm `eai whoami` and `eai workspace list
      --format json`, then retry through workspace-scoped V4 platform routes:
-     `/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>`,
-     `/v4/platform/tenants/<workspace-id>/users/<oid>/memberships`,
-     `/v4/platform/tenants/<workspace-id>/members`, and
-     `/v4/platform/tenants/<workspace-id>/role-definitions`. If those still fail,
+     `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
+     `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
+     `/v4/platform/tenants/<tenant-id>/members`, and
+     `/v4/platform/tenants/<tenant-id>/role-definitions`. If those still fail,
      escalate with redacted route shape, status, server code, CLI version,
      active workspace slug, and deployed PublicAPI/AdminAPI versions if visible.
    - Use JSON only where the CLI advertises it. `eai workspace list --format json`
@@ -447,19 +449,19 @@ with an unrelated non-EAI stack.
      json` to confirm the workspace's current app enrollments.
    - Before creating anything remote, ask the user to confirm the app name,
      app key, company workspace, and any child-workspace boundary.
-   - If confirmed, use `eai app create <name> --tenant-id <workspace-id>
+   - If confirmed, use `eai app create <name> --tenant-id <tenant-id>
      --format json` or the currently advertised equivalent from `eai
      --describe`.
    - Record the selected app key with `eai app select <key> --format json`
      when available.
    - Do not claim platform readiness from app creation alone. Later stages must
-     keep real EAI app gates separate: `eai app provision <key> --tenant-id <workspace-id> --select --format json`,
+     keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
      `eai types validate`,
-     `eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --dry-run --format json`,
-     `eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --format json`,
-     `eai types diff`, `eai resources schema --tenant-id <workspace-id> --format json`,
-     `eai resources storage doctor --tenant-id <workspace-id> --format json`,
-     `eai verify storage --tenant-id <workspace-id>`, workflow readiness, and
+     `eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --dry-run --format json`,
+     `eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --format json`,
+     `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
+     `eai resources storage doctor --tenant-id <tenant-id> --format json`,
+     `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
      preview/runtime readiness.
    - The EAI CLI is the only app-manifest request serializer. Keep the
      PascalCase source `name` and explicit kebab-case source `slug`, but do not
@@ -503,7 +505,7 @@ with an unrelated non-EAI stack.
      platform resource fields, actions, events, and workflow availability
      instead of guessing.
    - For v4 passive ResourceAPI search requirements, run or plan to run
-     `eai resources storage doctor --tenant-id <workspace-id> --format json` and
+     `eai resources storage doctor --tenant-id <tenant-id> --format json` and
      treat fulltext, hybrid, and vector as separate readiness states. Prefer
      `eai resources search "<query>" --fulltext` until doctor reports semantic
      search modes ready. Apply this fallback only to the published passive

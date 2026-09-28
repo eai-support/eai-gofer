@@ -76,29 +76,29 @@ The CLI keeps the technical option names `--tenant-id` for the workspace ID and
 enrollment check | `eai app list --format json` | {{result_or_not_run}} | | App
 selection | `eai app select <key> --format json` | {{result_or_not_run}} | | App
 resource provisioning |
-`eai app provision <key> --tenant-id <workspace-id> --select --format json` |
+`eai app provision <key> --tenant-id <tenant-id> --select --format json` |
 {{result_or_not_run}} | | Entra provisioning | `eai provision entra` |
 {{result_or_not_run}} | | Entra redirect recovery |
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>`; artifact
 uses redacted callback route only | {{result_or_not_run}} | | Environment pull |
 `eai env pull` | {{result_or_not_run}} | | Object-type validation |
-`eai types validate --tenant-key <scope-key> --tenant-id <workspace-id>` |
+`eai types validate --tenant-key <scope-key> --tenant-id <tenant-id>` |
 {{result_or_not_run}} | | Object-type dry-run gate |
-`eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --dry-run --format json`
+`eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --dry-run --format json`
 | {{preferred_shape_and_exact_pairs_only}} | | Object-type publish |
-`eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --format json`
+`eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --format json`
 | {{result_or_not_run}} | | Object-type convergence |
-`eai types diff --tenant-key <scope-key> --tenant-id <workspace-id>` |
+`eai types diff --tenant-key <scope-key> --tenant-id <tenant-id>` |
 {{result_or_not_run}} | | Resource schema |
-`eai resources schema --tenant-id <workspace-id> --format json` |
+`eai resources schema --tenant-id <tenant-id> --format json` |
 {{result_or_not_run}} | | Storage status |
-`eai resources storage status --tenant-id <workspace-id> --format json` |
+`eai resources storage status --tenant-id <tenant-id> --format json` |
 {{result_or_not_run}} | | Storage doctor |
-`eai resources storage doctor --tenant-id <workspace-id> --format json` |
+`eai resources storage doctor --tenant-id <tenant-id> --format json` |
 {{result_or_not_run}} | | Storage verify |
-`eai verify storage --tenant-id <workspace-id>` | {{result_or_not_run}} | |
+`eai verify storage --tenant-id <tenant-id>` | {{result_or_not_run}} | |
 Resource call verify |
-`eai verify calls --tenant-id <workspace-id> --resource-type <resource-type>` |
+`eai verify calls --tenant-id <tenant-id> --resource-type <resource-type>` |
 {{result_or_not_run}} | | Workflow readiness check |
 `eai workflow readiness --format json` | {{result_or_not_run}} | | Block catalog
 check | `eai blocks list --format json` | {{result_or_not_run}} | | Block
@@ -161,15 +161,15 @@ rationale, owner, expiry, and validation evidence.
 ## Recovery Rules
 
 - If `eai types seed` fails with an app-resources/provisioning error, return to
-  `eai app provision <key> --tenant-id <workspace-id> --select --format json`
-  and `eai types validate --tenant-key <scope-key> --tenant-id <workspace-id>`,
-  then keep `Object-type publish` blocked.
+  `eai app provision <key> --tenant-id <tenant-id> --select --format json` and
+  `eai types validate --tenant-key <scope-key> --tenant-id <tenant-id>`, then
+  keep `Object-type publish` blocked.
 - If `eai resources schema`, storage endpoints, app endpoints, or preview URLs
   return `503` or equivalent readiness failures, run
-  `eai resources storage status --tenant-id <workspace-id> --format json`,
-  `eai resources storage doctor --tenant-id <workspace-id> --format json`, and
-  `eai verify storage --tenant-id <workspace-id>` before claiming schema or
-  preview readiness.
+  `eai resources storage status --tenant-id <tenant-id> --format json`,
+  `eai resources storage doctor --tenant-id <tenant-id> --format json`, and
+  `eai verify storage --tenant-id <tenant-id>` before claiming schema or preview
+  readiness.
 - If v4 passive ResourceAPI search reports `resource_search_embedding_required`,
   `search_embedding_required`, or missing vector embedding readiness, inspect
   `capabilities.search` from storage doctor. Use full-text search when

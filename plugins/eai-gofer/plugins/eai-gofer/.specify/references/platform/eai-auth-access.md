@@ -3,7 +3,8 @@
 ## Business Decision
 
 Sign-in confirms who a person is. It does not grant workspace access. An EAI
-workspace is an application tenant, not the shared CIAM directory.
+workspace is the app's access boundary. It is separate from the shared CIAM
+sign-in directory.
 
 When authentication enters scope, ask:
 
@@ -66,9 +67,9 @@ evidence.
    callback settings, and required claims. Transfer secrets only through an
    approved protected channel, never chat, specs, source, or logs.
 5. Have an authorized EAI operator configure the provider and associate the
-   intended user flow and apps. A workspace admin role does not grant
-   administration of the shared Entra directory. Protect other workspaces'
-   flows.
+   intended user flow and apps. The platform role ID `tenant-admin` grants
+   workspace admin access. That role does not grant administration of the shared
+   Entra directory. Protect other workspaces' flows.
 6. Plan existing-account continuity and preserve memberships and roles. Never
    link identities by email alone. Keep a tested emergency admin sign-in path.
 7. Test a pilot user, a denied user, session creation, and a protected EAI API
