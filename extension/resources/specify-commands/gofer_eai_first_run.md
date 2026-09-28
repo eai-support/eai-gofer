@@ -297,8 +297,10 @@ approves the role change:
 eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json
 ```
 
-Then verify the read-back and tell the affected app user to sign out and sign
-back in because Auth.js session or JWT role data may be cached.
+The value `tenant-admin` is the platform role ID. Describe it to users as
+workspace admin access. Then verify the read-back and tell the affected app
+user to sign out and sign back in because Auth.js session or JWT role data may
+be cached.
 
 If platform user lookup or membership prerequisite calls fail with
 `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
@@ -314,10 +316,10 @@ eai workspace list --format json
 Then retry through workspace-scoped V4 platform routes:
 
 ```text
-/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>
-/v4/platform/tenants/<tenant-id>/users/<oid>/memberships
-/v4/platform/tenants/<tenant-id>/members
-/v4/platform/tenants/<tenant-id>/role-definitions
+/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>
+/v4/platform/tenants/<workspace-id>/users/<oid>/memberships
+/v4/platform/tenants/<workspace-id>/members
+/v4/platform/tenants/<workspace-id>/role-definitions
 ```
 
 If those still fail, escalate with redacted route shape, HTTP status, server

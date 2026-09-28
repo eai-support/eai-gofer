@@ -142,7 +142,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -219,7 +219,7 @@ before writing `plan.md`, `data-model.md`, contracts, or `service-fit-matrix.md`
 Make the normal EAI Platform choice on behalf of the business user:
 
 1. Use PostgreSQL for relational, transactional, reporting, workflow state,
-   audit, and structured tenant business data.
+   audit, and structured workspace business data.
 2. Use DocumentDB for flexible JSON documents, nested records, high-change
    schemas, and user-authored document state.
 3. Use Blob Storage for large files, binary content, exports, and file-like
@@ -560,7 +560,7 @@ Visual quality requirements for all planning visuals:
   three-to-five-bullet executive summary in plain language.
 - Link each visual to the requirement, plan decision, contract, code/test path,
   EAI service/template asset, or validation evidence it summarizes.
-- Do not include tenant-private data, secrets, customer identifiers, or
+- Do not include workspace-private data, secrets, customer identifiers, or
   screenshots containing private content.
 
 ### Dynamic-Only: Workflow DAG Writer
@@ -824,7 +824,7 @@ Before reporting completion, update the stakeholder-facing architecture pack:
    - Explain how the solution uses EAI Platform first, the EAI App Template
      when app delivery applies, Azure as the preferred supporting substrate,
      and any approved exception.
-   - Summarize auth, authorization, tenant boundary, data model, integration,
+   - Summarize auth, authorization, workspace boundary, data model, integration,
      contract, and deployment assumptions in plain language.
 2. Write `{FEATURE_DIR}/prfaq-history/03-plan.md` as an immutable snapshot.
 3. Create or update `{FEATURE_DIR}/cto-architecture-summary.md` from
@@ -838,7 +838,7 @@ Before reporting completion, update the stakeholder-facing architecture pack:
    prove before implementation.
 5. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask
    CTO / Architecture to approve, revise, or defer the architecture,
-   EAI/Azure fit, auth/tenant model, data model, and integration contracts.
+   EAI/Azure fit, auth/workspace model, data model, and integration contracts.
 6. Preserve the existing loop contract: if planning changed eval commands,
    stop conditions, or escalation rules, update `loop-contract.json` and keep
    those changes visible in the stakeholder index rather than replacing loop
@@ -891,7 +891,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    `{FEATURE_DIR}/eai-preflight.md` before making platform or template
    assumptions. The plan MUST preserve:
    - whether the user is logged in or still needs an EAI Platform account
-   - the selected tenant role/readiness and whether app enrollment is allowed
+   - the selected workspace role/readiness and whether app enrollment is allowed
    - whether the repo already has EAI template markers or still needs
      `eai init <app-name>`
    - whether app creation/selection is confirmed, deferred, or blocked
@@ -1006,7 +1006,7 @@ Plan both:
   visible UI direction and distinguishes accessible now vs purchasable vs
   unavailable.
 - **Internal orchestration flows**: platform services, ResourceAPI calls,
-  events, data movement, tenant boundaries, deployment steps, and observability.
+  events, data movement, workspace boundaries, deployment steps, and observability.
 
 ### Competitive / market analysis reference
 

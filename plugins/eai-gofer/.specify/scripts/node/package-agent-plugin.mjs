@@ -455,7 +455,7 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 5. Use \`eai errors explain <code-or-reason> --format json\` after errors when the CLI advertises it.
 6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
 7. Record the verified command and source in \`eai-preflight.md\`, \`service-fit-matrix.md\`, or the active feature notes before the command changes files or external systems.
-8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.`;
+8. For commands that create, deploy, publish, change workspace data or access, change Entra, or spend money, confirm with the user after verification and before execution.`;
 }
 
 function buildEaiPlatformDecisionSection() {
@@ -590,7 +590,7 @@ ${buildJourneyStateSection()}
 
 ## First EAI Platform App
 
-If the user is starting a first EAI Platform app, use the public \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, \`eai init\`, and Gofer scaffold readiness with user approval gates.
+If the user is starting a first EAI Platform app, use the public \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, \`eai init\`, and Gofer scaffold readiness with user approval gates.
 
 ## EAI CLI Discovery And Recovery
 
@@ -600,7 +600,7 @@ If the user is starting a first EAI Platform app, use the public \`eai\` entrypo
 - If advertised, run \`eai agent guide --format json\` before planning or fixing EAI workflows.
 - After any \`eai\` error, run \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
 - If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
-- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --workspace <workspace-id> --search <email> --format json\`; use \`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.
+- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --workspace <workspace-id> --search <email> --format json\`; use \`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. The platform role ID \`tenant-admin\` means workspace admin access. Then tell the app user to sign out and sign back in.
 - Use \`eai publicapi\` only for authorized PublicAPI \`/v4/...\` routes.
 
 ${buildVerifiedEaiCliCommandContract()}
@@ -702,7 +702,7 @@ ${buildDeliveryDisciplineContract()}
 
 ## EAI App Template Gate
 
-Apply the capability validation rules above before EAI template, tenant, authentication, or deployment work.
+Apply the capability validation rules above before EAI template, workspace, authentication, or deployment work.
 
 `;
 
@@ -898,11 +898,11 @@ That host publishes:
 
 ## First EAI Platform App
 
-Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, workspace, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI workspace/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, tenant, \`eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, workspace, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI workspace/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, workspace access, \`eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
 
 Gofer does not invent EAI CLI commands. It verifies command paths and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them. If the installed CLI does not list a command, Gofer does not run it.
 
-For EAI errors, Gofer expects agents to run live EAI guidance first, use \`.specify/references/platform/eai-error-catalog.yaml\` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --workspace <workspace-id> --search <email> --format json\`; use \`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm workspace context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
+For EAI errors, Gofer expects agents to run live EAI guidance first, use \`.specify/references/platform/eai-error-catalog.yaml\` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --workspace <workspace-id> --search <email> --format json\`; use \`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. The platform role ID \`tenant-admin\` grants workspace admin access. For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm workspace context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 
 If \`/eai\` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
 

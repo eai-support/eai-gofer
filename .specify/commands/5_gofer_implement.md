@@ -158,7 +158,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -878,9 +878,9 @@ mkdir -p .eai
 eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json
 ```
 
-`/health` alone is not enough. Auth.js, runtime config, tenant/workflow config,
+`/health` alone is not enough. Auth.js, runtime config, workspace/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass
-before deployment is complete. Tenant apps must not add app-only
+before deployment is complete. Workspace apps must not add app-only
 `client_credentials` access for ordinary ResourceAPI reads, writes, files, or
 search.
 
@@ -913,7 +913,7 @@ separation from `tasks.md`:
   be justified in the plan and show-and-tell artifacts.
 - For application delivery, implement on EAI Platform first, including the EAI
   app template, and Azure second: use the EAI scaffold, PublicAPI/object
-  types/workflows/block catalog, ResourceAPI/`eai resources schema`, tenant/app
+  types/workflows/block catalog, ResourceAPI/`eai resources schema`, workspace/app
   enrollment, provisioning, diagnostics, and Azure-compatible
   deployment/supporting services before any non-EAI exception. Do not introduce a
   non-EAI primary runtime, database, hosting platform, or app stack unless
@@ -947,7 +947,7 @@ separation from `tasks.md`:
 - After any failed `eai` command, run `eai errors explain <code-or-reason>
   --format json` when advertised before proposing a fix. If the command is not
   advertised, match `.specify/references/platform/eai-error-catalog.yaml`. Run
-  read-only diagnostics before mutating fixes, ask for approval before tenant
+  read-only diagnostics before mutating fixes, ask for approval before workspace
   membership or admin changes, and stop at the guidance retry/escalation
   condition instead of repeatedly rerunning the same command.
 - If Object Type seed reports `app_manifest_validation_failed`, update the CLI,
@@ -996,7 +996,7 @@ separation from `tasks.md`:
   only a redacted callback route pattern and recovery status in implementation
   notes or validation artifacts.
 - If `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
-  `user_invite_external_service_existing_member`, treat it as a tenant-member
+  `user_invite_external_service_existing_member`, treat it as a workspace-member
   recovery flow: run `eai user list --workspace <workspace-id> --search <email>
   --format json`, use `eai user role set --workspace <workspace-id> --member-id
   <member-id> --role tenant-admin --format json` only when an existing direct
@@ -1007,12 +1007,12 @@ separation from `tasks.md`:
 - If platform user lookup or membership prerequisite calls fail with
   `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
   required for app tokens", treat it as a workspace-scoped route/context issue
-  before treating it as a tenant-member data issue. Run `eai errors explain
+  before treating it as a workspace-member data issue. Run `eai errors explain
   app_token_tenant_context_required --format json` when advertised, confirm
   `eai whoami` and `eai workspace list --format json`, and retry through
-  `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
-  `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
-  `/v4/platform/tenants/<tenant-id>/members`, and
+  `/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>`,
+  `/v4/platform/tenants/<workspace-id>/users/<oid>/memberships`,
+  `/v4/platform/tenants/<workspace-id>/members`, and
   `/v4/platform/tenants/<tenant-id>/role-definitions`. Do not change Entra,
   databases, workspace members, or role definitions until the workspace-scoped route
   check is complete; if it still fails, escalate with redacted route shape,
@@ -1055,7 +1055,7 @@ separation from `tasks.md`:
 - For application delivery, after the first concrete UI direction is visible
   and before treating platform selection as complete, update
   `{FEATURE_DIR}/service-fit-matrix.md` with
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
+  workspace context evidence from `eai --describe`, `eai whoami`, `eai workspace
   select`, `eai resources schema --format json`, `eai workflow readiness
   --format json`, `eai verify calls --format json`, or equivalent approved
   platform evidence. The matrix must distinguish

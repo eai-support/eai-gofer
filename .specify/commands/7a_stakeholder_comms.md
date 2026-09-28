@@ -160,7 +160,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -261,7 +261,7 @@ Instead, inform the user that validation must pass first.
    - `working-backwards-prfaq.md` — Running product release PR/FAQ and internal FAQ
    - `stakeholder-review-index.md` — Review status and required approvals
    - `business-owner-summary.md` — Business scenario, process, value, assumptions
-   - `cto-architecture-summary.md` — Architecture, EAI Platform/Azure fit, auth/tenant/data/contracts
+   - `cto-architecture-summary.md` — Architecture, EAI Platform/Azure fit, auth/workspace/data/contracts
    - `ciso-security-summary.md` — Security posture, controls, residual risk, validation evidence
    - `problem-brief.md` — Original problem and business case
    - `discovery.md` — Business discovery context
@@ -536,7 +536,7 @@ Generate these additional decks under `{FEATURE_DIR}/presentations/`:
 | `business.marp.md` | Business owner | User journey, operational value, adoption |
 | `internal-delivery.marp.md` | Delivery lead | Dependency plan, red/green loop, delivery risks |
 | `enterprise-architecture.marp.md` | Enterprise architecture | Platform fit, context bundle, contract pack, reuse decisions |
-| `ciso.marp.md` | CISO | Identity, tenant boundary, controls, residual risk |
+| `ciso.marp.md` | CISO | Identity, workspace boundary, controls, residual risk |
 | `data-architecture.marp.md` | Data architecture | Object types, lineage, quality, governance |
 | `cio.marp.md` | CIO | Platform strategy, operating model, reuse roadmap |
 | `cfo.marp.md` | CFO | Investment case, benefit tracking, cost risk |

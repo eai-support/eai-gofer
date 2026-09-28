@@ -141,7 +141,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -321,7 +321,7 @@ If discovery.md exists:
      app journey is required
    - AI-Augmented Journey → If app delivery, preserve the four-step-or-fewer
      journey as the scope spine for research
-   - EAI Preflight → If present, preserve CLI install/login/tenant/template/app
+   - EAI Preflight → If present, preserve CLI install/login/workspace/template/app
      readiness decisions and do not re-ask for information already confirmed
    - Shared numbered-stage contract → if non-app, preserve the current shared
      stages without adding app-only preview or service-fit requirements
@@ -528,9 +528,9 @@ explicitly `enterpriseai`, generate:
    - Relevant existing specs, code paths, platform references, and API surfaces.
    - EAI preflight summary: CLI version, login/account status, workspace readiness,
      template initialization state, app enrollment readiness, block catalog
-     readiness, and next action. Do not include tokens, secrets, tenant-private
+     readiness, and next action. Do not include tokens, secrets, workspace-private
      payloads, or `.env.local` values.
-   - EnterpriseAI object types, tenant assumptions, deployment target, and
+   - EnterpriseAI object types, workspace assumptions, deployment target, and
      validation criteria.
    - A compact "what the next agent needs" section to avoid dumping entire
      source files into later stages.
@@ -592,7 +592,7 @@ explicitly `enterpriseai`, generate:
      `https://eai-support.github.io/eai/scenarios`, and
      `https://github.com/eai-support/eai-app-template`.
    - Record whether `eai --describe` found the expected scaffolding,
-     authentication, tenant, app, resource schema, workflow
+     authentication, workspace, app, resource schema, workflow
      readiness, block catalog, diagnostics, Gofer-refresh, and template-check
      commands.
    - Record whether `eai update --check` reports the installed CLI is current
@@ -791,7 +791,7 @@ Reference `.specify/specs/{feature}/loop-contract.json` and capture:
 - **EnterpriseAI Object Types**: [Known or candidate object types]
 - **EAI Platform Services and Azure Capabilities**: [Primary platform services,
   supporting Azure services, and any blocked capabilities]
-- **Tenant and Deployment Assumptions**: [Tenant, identity, runtime, target environment]
+- **Workspace and Deployment Assumptions**: [Workspace, identity, runtime, target environment]
 - **Validation Criteria**: [Business, security, data, architecture, and operational checks]
 
 ## Reuse-Before-Create Scan

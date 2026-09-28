@@ -160,7 +160,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -218,7 +218,7 @@ evidence.
 
 ## Safety Rules
 
-1. Do not copy private brand guides, logos, screenshots, client names, tenant
+1. Do not copy private brand guides, logos, screenshots, client names, workspace
    IDs, or internal marks into a public Gofer bundle.
 2. In the public `eai-gofer` repo, ship only neutral placeholders and reusable
    template tokens.
@@ -399,7 +399,7 @@ npx marp path/to/deck.md --preview=false --allow-local-files
 Validation fails if:
 
 - `brand-profile.json` is invalid JSON.
-- Private credentials or tenant-specific secrets appear in the brand profile.
+- Private credentials or workspace-specific secrets appear in the brand profile.
 - A logo path is referenced as approved but does not exist.
 - A generated stakeholder document lacks an executive summary.
 - A diagram/deck becomes unreadable without the brand assets.

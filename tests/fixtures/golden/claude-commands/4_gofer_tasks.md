@@ -141,7 +141,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -720,9 +720,9 @@ deploy-doctor evidence exist before any deploy command runs.
    - If `{FEATURE_DIR}/eai-preflight.md` is missing, stale, or blocked, emit
      only the smallest runnable unblock tasks before normal build tasks:
      install/update `eai`, run `eai login`, run `eai workspace select`, confirm a
-     workspace admin membership (`tenant-admin`) with `eai workspace list --format json`, initialize
+     workspace admin membership (platform role ID `tenant-admin`) with `eai workspace list --format json`, initialize
      the EAI app template with `eai init <app-name> --skip-prompts
-     --company-workspace <tenant-id>` when confirmed, enter the created app folder,
+     --company-workspace <workspace-id>` when confirmed, enter the created app folder,
      and run `node .specify/scripts/node/eai-app-template-readiness.mjs --root
      . --json`.
    - Do not emit EAI app enrollment, object-type, EAI service-fit, or deployment
@@ -731,19 +731,19 @@ deploy-doctor evidence exist before any deploy command runs.
      when the active specification records EAI capabilities as `planned` or
      `not_applicable`.
    - Never invent workspace IDs, app keys, app URLs, or platform capabilities.
-     Use `eai --describe`, public EAI docs, and the user's confirmed tenant/app
+     Use `eai --describe`, public EAI docs, and the user's confirmed workspace/app
      selection as evidence.
    - Do not emit tasks that establish a non-EAI primary runtime, database,
      hosting platform, or app framework. Non-EAI technologies can appear only as
      approved integration/migration/exception tasks after the EAI Platform/Azure
      fit is recorded.
 1. **EAI App Template scaffolding -> `eai init`**
-   - Command: `eai init <app-name> --skip-prompts --company-workspace <tenant-id>`
+   - Command: `eai init <app-name> --skip-prompts --company-workspace <workspace-id>`
    - Produces the working directory and provider-neutral `eai.runtime.json`
      expected by subsequent runtime and deployment tasks.
 2. **Local validation -> `eai runtime validate` and `eai verify`**
    - Commands: `eai runtime validate` and `eai verify`
-   - Confirms the runtime contract, tenant/workflow configuration, and platform
+   - Confirms the runtime contract, workspace/workflow configuration, and platform
      readiness before any deploy attempt.
 3. **Pinned `eai major.minor` deployment tasks -> `eai deploy`**
    - Command: `eai deploy trigger --repo <org/repo>`
@@ -751,7 +751,7 @@ deploy-doctor evidence exist before any deploy command runs.
 4. **Post-deploy smoke gate -> `eai deploy doctor`**
    - Command: `mkdir -p .eai && eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json`
    - Captures black-box runtime smoke evidence for `/health`, Auth.js,
-     PublicAPI/BFF reachability, tenant/workflow config, and declared smoke
+     PublicAPI/BFF reachability, workspace/workflow config, and declared smoke
      tests.
 
 <!-- prettier-ignore -->
@@ -824,7 +824,7 @@ evidence:
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,
-  permissions/tenant boundaries, APIs/events, deployment assumptions, and
+  permissions/workspace boundaries, APIs/events, deployment assumptions, and
   acceptance tests.
 - AI-augmented journey tasks for app delivery: one task group for each of the
   four-or-fewer journey steps covering user experience, chatbot/voice/
@@ -863,7 +863,7 @@ evidence:
   - update `ui-show-and-tell.md` with what was shown, where it opened, what the
     user said, what changed next, and any unresolved UX issues
 - App-delivery service-fit tasks that update `service-fit-matrix.md` using
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
+  workspace context evidence from `eai --describe`, `eai whoami`, `eai workspace
   select`, `eai resources schema --format json`, `eai workflow readiness
   --format json`, `eai verify calls --format json`, or equivalent approved
   platform evidence.

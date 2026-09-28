@@ -160,7 +160,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -1280,9 +1280,9 @@ or visual-test evidence.
 - Traceability: each visual links to the requirement, plan, contract, code/test,
   EAI service/template asset, or validation evidence it summarizes.
 - Freshness: validation must check whether visuals changed or were reapproved
-  after spec, plan, code, tenant/auth, or validation changes; stale visuals fail
+  after spec, plan, code, workspace/auth, or validation changes; stale visuals fail
   Category 7 even when the code passes.
-- Public safety: visuals must not expose tenant-private data, secrets, customer
+- Public safety: visuals must not expose workspace-private data, secrets, customer
   identifiers, internal-only architecture names, or screenshots containing
   private content.
 
@@ -2071,7 +2071,7 @@ review report are written:
      on `validation-report.md`, `blast-radius-report.md`,
      `goal-rebaseline-report.md`, and `loop-audit-report.md`.
    - Fill Internal FAQ CISO / Risk with data handled, identity controls,
-     tenant boundaries, secrets handling, residual risks, validation evidence,
+     workspace boundaries, secrets handling, residual risks, validation evidence,
      and launch gates.
    - Update "What happens if something goes wrong?" with rollback/support
      evidence from validation and blast-radius analysis.
@@ -2080,7 +2080,7 @@ review report are written:
 3. Create or update `{FEATURE_DIR}/ciso-security-summary.md` from
    `.specify/templates/ciso-security-summary-template.md` using
    `validation-report.md`, `blast-radius-report.md`, `audit-history.md`,
-   `visuals/risk-heatmap.md`, auth/tenant evidence, secrets/data handling
+   `visuals/risk-heatmap.md`, auth/workspace evidence, secrets/data handling
    evidence, and loop audit evidence.
 4. Refresh `{FEATURE_DIR}/business-owner-summary.md` with final validation
    status, business value confidence, and any validated/disproven assumptions.

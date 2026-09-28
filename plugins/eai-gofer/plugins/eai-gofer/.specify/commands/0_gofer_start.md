@@ -116,7 +116,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -282,7 +282,7 @@ Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Ve
 
 ## EAI App Delivery Preflight
 
-Run this when the active feature requires EAI Platform services, a tenant,
+Run this when the active feature requires EAI Platform services, a workspace,
 authentication, an EAI app integration, or deployment. Do not run it for
 explicit non-app work or an early local MVP that does not yet include those
 capabilities. Record deferred EAI capabilities as `planned`, not as failures.
@@ -304,7 +304,7 @@ For application delivery, Gofer MUST use this stack order:
 
 1. **EAI Platform first, including the EAI app template**: EAI app template, EAI
    CLI, PublicAPI, object types, workflows, block catalog, ResourceAPI/resource
-   schema, tenant/app enrollment, identity, provisioning, diagnostics, and
+   schema, workspace/app enrollment, identity, provisioning, diagnostics, and
    documented EAI platform services are one EAI Platform app substrate.
 2. **Azure second**: Azure services that are already part of, documented for, or
    compatible with the EAI Platform operating model, especially deployment,
@@ -317,7 +317,7 @@ For application delivery, Gofer MUST use this stack order:
 
 Application-specific logic, adapters, UI extensions, and tests belong inside the
 EAI Platform/EAI app template scaffold and must obey package-profile,
-public-readiness, tenant, and security constraints. They are implementation
+public-readiness, workspace, and security constraints. They are implementation
 inside the primary substrate, not a separate stack tier.
 
 If a required capability is not accessible in EAI Platform or Azure, record it
@@ -330,7 +330,7 @@ with an unrelated non-EAI stack.
 1. **Classify the build path**
    - Treat the work as EAI app delivery when the user asks to build an app,
      dashboard, portal, workflow, form, chatbot, app,
-     tenant-scoped business experience, or durable user-facing product.
+     workspace-scoped business experience, or durable user-facing product.
    - If the user is only doing research, docs, audit, migration planning, or
      non-EAI application work, record that EAI preflight is not applicable.
    - If the user asks for a non-EAI app stack, ask whether they want to leave the
@@ -347,7 +347,7 @@ with an unrelated non-EAI stack.
      Linux, Windows, GitHub Codespaces, Claude Code, Codex, Copilot,
      Google Antigravity, Grok Build, and VS Code. It checks first, asks only when
      action is needed, installs the EAI
-     CLI when approved, checks `eai update --check`, confirms login and tenant,
+     CLI when approved, checks `eai update --check`, confirms login and workspace,
      runs `eai init <project-name> --skip-prompts --company-workspace
      <active-workspace-id>` when approved, verifies Gofer files, and then returns
      here.
@@ -416,10 +416,10 @@ with an unrelated non-EAI stack.
      start by changing workspace members, role definitions, Entra configuration,
      databases, or cloud portals. Confirm `eai whoami` and `eai workspace list
      --format json`, then retry through workspace-scoped V4 platform routes:
-     `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
-     `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
-     `/v4/platform/tenants/<tenant-id>/members`, and
-     `/v4/platform/tenants/<tenant-id>/role-definitions`. If those still fail,
+     `/v4/platform/tenants/<workspace-id>/users/by-email?email=<email>`,
+     `/v4/platform/tenants/<workspace-id>/users/<oid>/memberships`,
+     `/v4/platform/tenants/<workspace-id>/members`, and
+     `/v4/platform/tenants/<workspace-id>/role-definitions`. If those still fail,
      escalate with redacted route shape, status, server code, CLI version,
      active workspace slug, and deployed PublicAPI/AdminAPI versions if visible.
    - Use JSON only where the CLI advertises it. `eai workspace list --format json`
@@ -435,8 +435,8 @@ with an unrelated non-EAI stack.
    - If not logged in or the token is expired, run `eai login` and then
      `eai workspace select`.
    - Run `eai workspace list --format json` and require at least one accessible workspace
-     membership for EAI app delivery. Prefer a `tenant-admin` membership because
-     app enrollment and provisioning are workspace admin actions.
+     membership for EAI app delivery. Prefer workspace admin access. The
+     platform role ID is `tenant-admin`; describe it to users as workspace admin.
    - If no workspace is available, tell the user they need an EAI Platform account
      and workspace access before Gofer can build an EAI app. Do not fabricate
      workspace IDs or continue into implementation.
@@ -444,7 +444,7 @@ with an unrelated non-EAI stack.
    - Run `node .specify/scripts/node/eai-app-template-readiness.mjs --root .
      --json` when available.
    - A missing checker or any status other than `ready` blocks the EAI
-     integration, tenant, or deployment capability. It does not block unrelated
+     integration, workspace, or deployment capability. It does not block unrelated
      local MVP research, specification, UI, or source work.
    - The check must prove `.eai-manifest.json` eai-init provenance and the
      supported app-template contract, including `eai.runtime.json` and the EAI
@@ -460,23 +460,23 @@ with an unrelated non-EAI stack.
      `eai verify`, `eai template check --format json`, and
      `eai gofer refresh --check --format json` before continuing.
 7. **Check app enrollment capability before EAI delivery planning**
-   - Once app name and tenant are confirmed, run `eai app list --format
+   - Once app name and workspace are confirmed, run `eai app list --format
      json` to confirm the workspace's current app enrollments.
    - Before creating anything remote, ask the user to confirm the app name,
-     app key, company workspace, and any child-tenant boundary.
-   - If confirmed, use `eai app create <name> --tenant-id <tenant-id>
+     app key, company workspace, and any child-workspace boundary.
+   - If confirmed, use `eai app create <name> --tenant-id <workspace-id>
      --format json` or the currently advertised equivalent from `eai
      --describe`.
    - Record the selected app key with `eai app select <key> --format json`
      when available.
    - Do not claim platform readiness from app creation alone. Later stages must
-     keep real EAI app gates separate: `eai app provision <key> --tenant-id <tenant-id> --select --format json`,
+     keep real EAI app gates separate: `eai app provision <key> --tenant-id <workspace-id> --select --format json`,
      `eai types validate`,
-     `eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json`,
-     `eai types seed --tenant-key <key> --tenant-id <tenant-id> --format json`,
-     `eai types diff`, `eai resources schema --tenant-id <tenant-id> --format json`,
-     `eai resources storage doctor --tenant-id <tenant-id> --format json`,
-     `eai verify storage --tenant-id <tenant-id>`, workflow readiness, and
+     `eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --dry-run --format json`,
+     `eai types seed --tenant-key <scope-key> --tenant-id <workspace-id> --format json`,
+     `eai types diff`, `eai resources schema --tenant-id <workspace-id> --format json`,
+     `eai resources storage doctor --tenant-id <workspace-id> --format json`,
+     `eai verify storage --tenant-id <workspace-id>`, workflow readiness, and
      preview/runtime readiness.
    - The EAI CLI is the only app-manifest request serializer. Keep the
      PascalCase source `name` and explicit kebab-case source `slug`, but do not
@@ -520,7 +520,7 @@ with an unrelated non-EAI stack.
      platform resource fields, actions, events, and workflow availability
      instead of guessing.
    - For v4 passive ResourceAPI search requirements, run or plan to run
-     `eai resources storage doctor --tenant-id <tenant-id> --format json` and
+     `eai resources storage doctor --tenant-id <workspace-id> --format json` and
      treat fulltext, hybrid, and vector as separate readiness states. Prefer
      `eai resources search "<query>" --fulltext` until doctor reports semantic
      search modes ready. Apply this fallback only to the published passive
@@ -531,7 +531,7 @@ with an unrelated non-EAI stack.
    - Create or update `{FEATURE_DIR}/service-fit-matrix.md` with the recommended
      EAI Platform services, the reason for each choice, and any gap or exception.
    - Prefer PostgreSQL for relational, transactional, reporting, workflow state,
-     audit, and structured tenant business data.
+     audit, and structured workspace business data.
    - Prefer DocumentDB for flexible JSON documents, nested records, high-change
      schemas, and user-authored document state.
    - Prefer Blob Storage for large files, binary content, exports, and
@@ -557,7 +557,7 @@ with an unrelated non-EAI stack.
      `EAI_ENTRA_REDIRECT_URI_MISMATCH` in `eai-preflight.md` with a redacted
      callback route pattern such as `https://<app-host>/api/auth/callback/...`.
      Keep the exact callback URI and any debug output in the active terminal or
-     user-approved local notes only. Recover through EAI login, tenant
+     user-approved local notes only. Recover through EAI login, workspace
      selection, and `eai provision entra --force --redirect-uri
      <confirmed-callback-uri>` before suggesting manual Azure Portal edits. Use
      `--debug` only when the user approves it, and redact private hostnames,
@@ -575,11 +575,11 @@ For EAI app delivery, create or update
 | CLI capability source | `eai --describe` timestamp and relevant commands found |
 | Object Type seed adapter | `eai agent guide --format json` includes `app-manifest-name-slug-negotiation-v1`; dry run preserves exact name/slug pairs; mutating result records the shape used |
 | Login status | Logged in / needs login / account required, without tokens or secrets |
-| Workspace readiness | Active tenant status, role category, whether app enrollment is allowed |
+| Workspace readiness | Workspace status, role category, whether app enrollment is allowed |
 | Template readiness | Already EAI template / needs `eai init` / non-EAI repo decision |
 | Drift readiness | `eai template check` / `eai gofer refresh --check` result or `E001` explanation |
 | App enrollment | Existing app, new app to create, or blocked pending user confirmation |
-| Entra redirect readiness | Redacted callback route pattern, tenant/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, workspace IDs, client IDs, tokens, or debug output to committed artifacts. |
+| Entra redirect readiness | Redacted callback route pattern, Entra directory/client alignment state, and `AADSTS50011` recovery status. Never write exact private URLs, workspace IDs, client IDs, tokens, or debug output to committed artifacts. |
 | Block catalog readiness | Available block commands and package profile compatibility evidence |
 | App stack policy | EAI Platform including app template first, Azure second, or approved exception |
 | Next action | Continue discovery, initialize template, request account/workspace access, or stop |
@@ -944,7 +944,7 @@ Classify as non-app only when the user is asking for work such as:
 
 If non-app, first confirm once:
 
-> This looks like non-app work, so I will skip EAI tenant/app setup and continue
+> This looks like non-app work, so I will skip EAI workspace/app setup and continue
 > the Gofer research/docs path. Is that right?
 
 If the user confirms, record this explicitly in `discovery.md`:
@@ -992,7 +992,7 @@ into four business-goal-driven stages unless the user explicitly rejects that
 structure.
 
 Before journey mapping for EAI app delivery, complete the **EAI App Delivery
-Preflight** above. If the EAI CLI, login, tenant, template, or app enrollment
+Preflight** above. If the EAI CLI, login, workspace, template, or app enrollment
 readiness is blocked, pause the EAI build path and explain the smallest next
 step. Do not proceed to plan/tasks/implementation for an EAI app until
 `.specify/specs/{feature}/eai-preflight.md` records a ready or explicitly
@@ -1566,7 +1566,7 @@ When the workflow profile is explicitly `enterpriseai`:
 - All recommended scenarios must map to an EnterpriseAI app
   (business analysis → EAI services → deployment target).
 - Maintain a running domain model using the user's vocabulary. Ask adaptive
-  follow-up questions that clarify actors, object types, workflows, tenant
+  follow-up questions that clarify actors, object types, workflows, workspace
   boundaries, decision owners, and measurable value.
 - Before recommending a new object type, API, workflow, module, or spec concept,
   require a reuse-before-create scan: reuse existing, extend existing, or create
@@ -1584,16 +1584,16 @@ stages to create these artifacts without re-interviewing the user:
 | `ui-review-log.md` | App-delivery-only iteration log: every UI-facing change, helper command, opened URL, screenshot/browser evidence, requested changes, accepted changes, unresolved issues |
 | `ui-show-and-tell.md` | App-delivery-only show-and-tell record: latest opened URL, helper run evidence, screenshot/browser evidence, user feedback, branding notes, component exceptions, and unresolved UX issues |
 | `service-fit-matrix.md` | App-delivery-only service selection evidence: desired platform capability, evidence source, accessible now vs purchasable vs unavailable, selected direction |
-| `eai-preflight.md` | App-delivery-only EAI readiness evidence: CLI install/version, login status, tenant role, template initialization state, app enrollment readiness, block catalog readiness, and next action |
-| `context-bundle.md` | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, tenant assumptions, API surfaces, deployment assumptions, validation criteria |
-| `contract-pack.md` | Actors, object types, workflows/journeys, four-step AI assistance contract, permissions, tenant boundaries, APIs/events, runtime assumptions, acceptance tests |
+| `eai-preflight.md` | App-delivery-only EAI readiness evidence: CLI install/version, login status, workspace role, template initialization state, app enrollment readiness, block catalog readiness, and next action |
+| `context-bundle.md` | Compact feature context, selected scenario, app/non-app decision, AI-augmented journey summary, EnterpriseAI object types, workspace assumptions, API surfaces, deployment assumptions, validation criteria |
+| `contract-pack.md` | Actors, object types, workflows/journeys, four-step AI assistance contract, permissions, workspace boundaries, APIs/events, runtime assumptions, acceptance tests |
 | `reuse-scan.md` | Existing specs, platform references, object types, APIs, workflows, modules, and the reuse/extend/create decision |
 | `audit-history.md` | Stable finding IDs, recurring-finding history, accepted exceptions, owner, expiry, and review cadence |
 | `working-backwards-prfaq.md` | Product release PR/FAQ: headline, customer problem, launch description, external FAQ, internal FAQ, evidence links, and review asks |
 | `prfaq-history/` | Stage-by-stage immutable PR/FAQ snapshots: `00-business-scenario.md` through `06-validate.md` |
 | `business-owner-summary.md` | Business scenario, process change, business case, metrics, assumptions, and Business Owner review ask |
 | `cto-architecture-summary.md` | EAI Platform/Azure architecture, auth, tenancy, data, contracts, diagrams, and CTO review ask |
-| `ciso-security-summary.md` | Security posture, identity/tenant controls, secrets/data handling, residual risk, validation evidence, and CISO review ask |
+| `ciso-security-summary.md` | Security posture, identity/workspace controls, secrets/data handling, residual risk, validation evidence, and CISO review ask |
 | `stakeholder-review-index.md` | One-page index of review-ready artifacts, current status, reviewer, and approve/revise/defer response contract |
 
 Use these artifacts as decision evidence for executive, architecture, CISO,

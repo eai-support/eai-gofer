@@ -157,7 +157,7 @@ Before routing work, decide where the user is now.
 
 ## First EAI Platform App
 
-If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant, `eai init`, and Gofer scaffold readiness with user approval gates.
+If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, `eai init`, and Gofer scaffold readiness with user approval gates.
 
 ## MVP Capability-Based Validation
 
@@ -183,7 +183,7 @@ Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Ve
 
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -199,7 +199,7 @@ Before technical escalation, attach fresh diagnosis through the blocker helper's
 
 ## EAI App Template Gate
 
-Apply the capability validation rules above before EAI template, tenant, authentication, or deployment work.
+Apply the capability validation rules above before EAI template, workspace, authentication, or deployment work.
 
 ## First Conversation
 
@@ -244,7 +244,7 @@ I’ll walk you through the whole process and ask short questions as we go. Tell
 - If advertised, run `eai agent guide --format json` before planning or fixing EAI workflows.
 - After any `eai` error, run `eai errors explain <code-or-reason> --format json` before guessing remediation.
 - If `eai errors explain` is unavailable, match `.specify/references/platform/eai-error-catalog.yaml`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
-- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
+- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval. The platform role ID `tenant-admin` means workspace admin access. Then tell the app user to sign out and sign back in.
 - For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
 
@@ -259,7 +259,7 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 5. Use `eai errors explain <code-or-reason> --format json` after errors when the CLI advertises it.
 6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
 7. Record the verified command and source in `eai-preflight.md`, `service-fit-matrix.md`, or the active feature notes before the command changes files or external systems.
-8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
+8. For commands that create, deploy, publish, change workspace data or access, change Entra, or spend money, confirm with the user after verification and before execution.
 
 ## EAI Platform Decision Contract
 
