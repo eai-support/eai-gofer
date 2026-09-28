@@ -40,7 +40,7 @@ Before app-delivery research, planning, implementation, or validation:
    - `eai --describe`
    - `eai agent guide --format json` when advertised
    - `eai whoami`
-   - `eai tenant list --format json`
+   - `eai workspace list --format json`
    - `eai provision entra` when advertised and identity setup is in scope
 6. Do not invent, guess, or complete EAI CLI commands from memory. Before
    suggesting or running an `eai ...` command, verify the exact command and
@@ -102,7 +102,7 @@ this gate order:
 
 1. Template init or verify current template ownership
 2. Dependency install
-3. Login and tenant selection
+3. Login and workspace selection
 4. App list/create/select
 5. `eai app provision`
 6. `eai provision entra` when required
@@ -143,22 +143,23 @@ When an EAI CLI or platform command fails:
 6. Do not invent a new order or mark the repo ready when a prior gate is still
    blocked.
 
-For tenant member or admin changes, prefer `eai user invite`, `eai user list`,
-`eai user roles`, and `eai user role set` over direct database edits or cloud
-portal changes. If `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx
-status, or the `user_invite_external_service_existing_member` reason, check for
-an existing direct member with
-`eai user list --tenant <tenant-id> --search <email> --format json`. If a direct
-member exists and the user approves, update the role with
-`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json`,
+For workspace member or admin changes, prefer `eai user invite`,
+`eai user list`, `eai user roles`, and `eai user role set` over direct database
+edits or cloud portal changes. If `eai user invite` fails with
+`EXTERNAL_SERVICE_ERROR`, a 5xx status, or the
+`user_invite_external_service_existing_member` reason, check for an existing
+direct member with
+`eai user list --workspace <workspace-id> --search <email> --format json`. If a
+direct member exists and the user approves, update the role with
+`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json`,
 verify the read-back, and tell the affected app user to sign out and sign back
 in because Auth.js session or JWT role data may be cached.
 
 For Entra browser sign-in failures, treat `AADSTS50011`, redirect URI mismatch
 messages, and `/api/auth/callback/microsoft-entra-id` callback errors as EAI
-identity provisioning problems first. Confirm login and tenant with `eai whoami`
-and `eai tenant list --format json`, select the correct tenant if needed, then
-run the advertised equivalent of
+identity provisioning problems first. Confirm login and workspace with
+`eai whoami` and `eai workspace list --format json`, select the correct
+workspace if needed, then run the advertised equivalent of
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>`. Record
 only a redacted callback route in Gofer artifacts. Use `--debug` only with
 explicit user approval, and redact private hostnames, tenant IDs, client IDs,

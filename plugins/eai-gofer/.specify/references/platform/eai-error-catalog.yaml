@@ -36,7 +36,7 @@ catalog:
     recovery:
       - 'eai login'
       - 'eai whoami'
-      - 'eai tenant list --format json'
+      - 'eai workspace list --format json'
     nextGate: tenant_ready
   - errorId: EAI_TENANT_ACCESS_REQUIRED
     match:
@@ -44,11 +44,11 @@ catalog:
         - 'no tenant'
         - 'tenant required'
         - 'insufficient tenant role'
-    meaning: The user lacks the tenant context needed for app delivery.
-    likelyCause: No membership, wrong tenant, or insufficient role.
+    meaning: The user lacks the workspace access needed for app delivery.
+    likelyCause: No membership, the wrong workspace, or an insufficient role.
     recovery:
-      - 'eai tenant list --format json'
-      - 'eai tenant select <tenant-slug>'
+      - 'eai workspace list --format json'
+      - 'eai workspace select <workspace-slug>'
       - 'eai whoami'
     nextGate: tenant_ready
   - errorId: EAI_USER_INVITE_EXTERNAL_SERVICE_EXISTING_MEMBER
@@ -59,15 +59,15 @@ catalog:
         - 'Invite failed'
         - 'eai user invite'
         - '502'
-    meaning: A tenant member invite or role assignment reached an external service failure, and the target person may already exist as a direct tenant member with the wrong role.
-    likelyCause: The invite/add path failed after, or despite, an existing tenant member record. Retrying the same invite may not change the member role.
+    meaning: A workspace member invite or role assignment reached an external service failure, and the target person may already have direct workspace membership with the wrong role.
+    likelyCause: The invite/add path failed after, or despite, an existing workspace member record. Retrying the same invite may not change the member role.
     recovery:
       - 'Run eai errors explain user_invite_external_service_existing_member --format json when advertised'
       - 'eai whoami'
-      - 'eai user roles --tenant <tenant-id> --format json'
-      - 'eai user list --tenant <tenant-id> --search <email> --format json'
-      - 'If an existing direct member is present and the user approves, run eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
-      - 'Verify the member read-back with eai user list --tenant <tenant-id> --search <email> --format json'
+      - 'eai user roles --workspace <workspace-id> --format json'
+      - 'eai user list --workspace <workspace-id> --search <email> --format json'
+      - 'If an existing direct member is present and the user approves, run eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
+      - 'Verify the member read-back with eai user list --workspace <workspace-id> --search <email> --format json'
       - 'Tell the affected app user to sign out and sign back in because Auth.js session or JWT role data may be cached'
       - 'Do not edit databases or cloud portals directly unless EAI guidance reports an operator-only block'
     nextGate: tenant_member_role_verified
@@ -77,17 +77,17 @@ catalog:
         - 'app_token_tenant_context_required'
         - 'MISSING_TENANT'
         - 'Tenant context required for app tokens'
-    meaning: A platform automation app-token user lookup reached EAI but did not carry the required tenant context.
+    meaning: A platform automation app-token user lookup reached EAI but did not carry the required workspace context.
     likelyCause: The caller used a root platform user or membership route such as /v4/platform/users/by-email or /v4/platform/users/{oid}/memberships instead of the tenant-scoped /v4/platform/tenants/{tenantId}/... route family, or the target environment has not deployed the matching PublicAPI/AdminAPI tenant-scoped routing hardening.
     recovery:
       - 'Run eai errors explain app_token_tenant_context_required --format json when advertised'
       - 'eai whoami'
-      - 'eai tenant list --format json'
-      - 'Do not start by changing tenant members, role definitions, Entra configuration, databases, or cloud portals'
+      - 'eai workspace list --format json'
+      - 'Do not start by changing workspace members, role definitions, Entra configuration, databases, or cloud portals'
       - 'Retry user lookup through /v4/platform/tenants/<tenant-id>/users/by-email?email=<email>'
       - 'Retry membership lookup through /v4/platform/tenants/<tenant-id>/users/<oid>/memberships'
-      - 'Keep tenant member and role-definition reads on /v4/platform/tenants/<tenant-id>/members and /v4/platform/tenants/<tenant-id>/role-definitions'
-      - 'If tenant-scoped routes still return MISSING_TENANT, capture redacted route shape, HTTP status, server code, CLI version, active tenant slug, and deployed PublicAPI/AdminAPI versions for platform support'
+      - 'Keep workspace member and role-definition reads on /v4/platform/tenants/<tenant-id>/members and /v4/platform/tenants/<tenant-id>/role-definitions'
+      - 'If tenant-scoped routes still return MISSING_TENANT, capture redacted route shape, HTTP status, server code, CLI version, active workspace slug, and deployed PublicAPI/AdminAPI versions for platform support'
     nextGate: tenant_scoped_platform_route_verified
   - errorId: EAI_ENTRA_REDIRECT_URI_MISMATCH
     match:
@@ -101,8 +101,8 @@ catalog:
     likelyCause: Preview or deployed host changed, Entra provisioning has not been refreshed for the app, or the runtime client ID points at an app registration without the confirmed callback URI.
     recovery:
       - 'eai whoami'
-      - 'eai tenant list --format json'
-      - 'eai tenant select <tenant-slug-or-id> when the active tenant is wrong'
+      - 'eai workspace list --format json'
+      - 'eai workspace select <workspace-slug-or-id> when the active workspace is wrong'
       - 'Confirm the callback route from the failing browser log in the active session; record only a redacted pattern such as https://<app-host>/api/auth/callback/...'
       - 'eai provision entra --force --redirect-uri <confirmed-callback-uri>'
       - 'Use --debug only with explicit user approval, and redact private hostnames, tenant IDs, client IDs, tokens, and raw debug output before writing artifacts'
@@ -119,7 +119,7 @@ catalog:
     recovery:
       - 'Run /gofer:eai-first-run'
       - 'Confirm folder choice and tenant'
-      - 'eai init <app-name> --skip-prompts --company-tenant <active-tenant-id>'
+      - 'eai init <app-name> --skip-prompts --company-workspace <active-workspace-id>'
     nextGate: template_ready
   - errorId: EAI_TEMPLATE_DRIFT
     match:
@@ -153,7 +153,7 @@ catalog:
         - 'select app first'
         - 'app key required'
     meaning: App-scoped work started before selecting the target app.
-    likelyCause: '`eai app select` has not been run for the active tenant.'
+    likelyCause: '`eai app select` has not been run for the active workspace.'
     recovery:
       - 'eai app list --format json'
       - 'eai app select <key> --format json'
@@ -210,7 +210,7 @@ catalog:
       - 'Retry the same /v4/data/resources/<tenant-id>/... request in four modes: path tenant only, tenant header only, X-Tenant-Id only, and both headers'
       - 'Inspect the app BFF or proxy and confirm it forwards both tenant and X-Tenant-Id server-authoritatively for tenant-scoped calls'
       - 'Use eai publicapi get /v4/platform/tenants/<tenant-id>/resource-metadata to confirm the tenant-level public contract'
-      - 'Use eai resources storage doctor --tenant-id <tenant-id> --format json after tenant context is fixed'
+      - 'Use eai resources storage doctor --tenant-id <tenant-id> --format json after workspace context is fixed'
     nextGate: tenant_context_resolved
   - errorId: EAI_RESOURCEAPI_INSTALL_UNAVAILABLE
     match:
@@ -219,7 +219,7 @@ catalog:
         - 'install_registry_no_match'
         - 'RESOURCEAPI_INSTALL_REGISTRY_NO_MATCH'
     meaning: PublicAPI could not resolve a usable ResourceAPI install for the tenant-scoped request.
-    likelyCause: Either tenant context was inconsistent across path and headers, or the tenant metadata/schema projection is incomplete for this app.
+    likelyCause: Either workspace context was inconsistent across path and headers, or the workspace metadata/schema projection is incomplete for this app.
     recovery:
       - 'Compare /v4/platform/tenants/<tenant-id>/resource-metadata with /v4/data/resources/<tenant-id>/storage before concluding the tenant is unprovisioned'
       - 'If the same /storage request flips between 200 and 503 by header mode, treat it as a tenant-context contract mismatch first'

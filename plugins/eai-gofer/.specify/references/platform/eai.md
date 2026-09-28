@@ -28,7 +28,7 @@ access. Confirm client SSO separately; sign-in never replaces authorization.
   - `eai --describe`
   - `eai agent guide --format json` when advertised
   - `eai whoami`
-  - `eai tenant list --format json`
+  - `eai workspace list --format json`
 - When the repo is already an EAI app project, also check:
   - `eai template check --format json`
   - `eai gofer refresh --check --format json`
@@ -61,7 +61,7 @@ Unless the live CLI advertises a different dependency order:
 
 1. Confirm template ownership or initialize with `eai init`
 2. Install dependencies
-3. Confirm login and tenant selection
+3. Confirm login and workspace selection
 4. Confirm or create/select the app
 5. Provision app resources
 6. Run object-type validation and publish
@@ -99,13 +99,13 @@ the failure to a recovery path, then use
 Record the blocked gate in `.specify/specs/{feature}/eai-preflight.md`, and
 avoid inventing a new order.
 
-For tenant member or admin changes, use EAI CLI membership commands first. If
+For workspace member or admin changes, use EAI CLI membership commands first. If
 `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx status, or the
 `user_invite_external_service_existing_member` reason, check whether the person
 already exists with
-`eai user list --tenant <tenant-id> --search <email> --format json`. If a direct
-member exists and the user approves the role change, use
-`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json`,
+`eai user list --workspace <workspace-id> --search <email> --format json`. If a
+direct member exists and the user approves the role change, use
+`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json`,
 verify the read-back, then tell the affected app user to sign out and sign back
 in because Auth.js session or JWT role data may be cached. Do not use direct
 database edits or cloud portal changes unless EAI guidance reports an

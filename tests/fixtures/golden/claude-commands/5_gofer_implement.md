@@ -60,27 +60,27 @@ Do not apply later delivery requirements to an early MVP.
 
 ## Application Classification And EAI Preflight
 
-Before any EAI CLI, login, tenant, template, or app-enrollment action:
+Before any EAI CLI, login, workspace, template, or app-enrollment action:
 
 1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in `.specify/commands/0_gofer_start.md`.
 2. Create `.specify/specs/{feature}/` and record the active delivery scope before app or operator-tool source work.
-3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai tenant select`, `eai init`, or `/gofer:eai-first-run`.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai workspace select`, `eai init`, or `/gofer:eai-first-run`.
 5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
-6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
+6. When the feature uses EAI Platform services, requires a workspace, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
 7. When the feature creates, changes, or validates an EAI Platform app integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`. A missing checker or status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
 8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
 9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 **Authentication Access Decision**
 
 When adding or changing authentication, read `.specify/references/platform/eai-auth-access.md`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to `workspace-only`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
 
-Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-workspace requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -153,7 +153,7 @@ Jev must judge goal alignment, specification currency, executable test coverage,
 
 Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
-Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a workspace, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 <!-- gofer:business-progress:end -->
 
@@ -960,7 +960,7 @@ separation from `tasks.md`:
   `eai verify storage --tenant-id <tenant-id>` in the recovery order recorded
   by the preflight artifact instead of improvising a new sequence. Use EAI
   `--debug` flags only with explicit user approval, and never write private
-  hostnames, tenant IDs, client IDs, tokens, or raw debug output to committed
+  hostnames, workspace IDs, client IDs, tokens, or raw debug output to committed
   artifacts.
 - For v4 passive ResourceAPI search, treat `capabilities.search.fulltext`,
   `capabilities.search.hybrid`, and `capabilities.search.vector` from
@@ -974,14 +974,14 @@ separation from `tasks.md`:
   "reply URL specified in the request does not match", or
   `/api/auth/callback/microsoft-entra-id`, match
   `EAI_ENTRA_REDIRECT_URI_MISMATCH` in the error catalog. Confirm `eai whoami`
-  and tenant selection first, then use EAI Entra provisioning to register the
+  and workspace selection first, then use EAI Entra provisioning to register the
   confirmed callback URI before asking the user to edit Azure manually. Record
   only a redacted callback route pattern and recovery status in implementation
   notes or validation artifacts.
 - If `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx response, or
   `user_invite_external_service_existing_member`, treat it as a tenant-member
-  recovery flow: run `eai user list --tenant <tenant-id> --search <email>
-  --format json`, use `eai user role set --tenant <tenant-id> --member-id
+  recovery flow: run `eai user list --workspace <workspace-id> --search <email>
+  --format json`, use `eai user role set --workspace <workspace-id> --member-id
   <member-id> --role tenant-admin --format json` only when an existing direct
   member is verified and the user approves, verify the read-back, and tell the
   affected app user to sign out and sign back in because Auth.js session or JWT
@@ -989,17 +989,17 @@ separation from `tasks.md`:
   unless EAI guidance reports an operator-only block.
 - If platform user lookup or membership prerequisite calls fail with
   `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
-  required for app tokens", treat it as a tenant-scoped route/context issue
+  required for app tokens", treat it as a workspace-scoped route/context issue
   before treating it as a tenant-member data issue. Run `eai errors explain
   app_token_tenant_context_required --format json` when advertised, confirm
-  `eai whoami` and `eai tenant list --format json`, and retry through
+  `eai whoami` and `eai workspace list --format json`, and retry through
   `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
   `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,
   `/v4/platform/tenants/<tenant-id>/members`, and
   `/v4/platform/tenants/<tenant-id>/role-definitions`. Do not change Entra,
-  databases, tenant members, or role definitions until the tenant-scoped route
+  databases, workspace members, or role definitions until the workspace-scoped route
   check is complete; if it still fails, escalate with redacted route shape,
-  status, server code, CLI version, active tenant slug, and deployed
+  status, server code, CLI version, active workspace slug, and deployed
   PublicAPI/AdminAPI versions if visible.
 - For application delivery, implement the four-step-or-fewer AI-augmented
   process as the user-facing spine. Each step must preserve its business goal,

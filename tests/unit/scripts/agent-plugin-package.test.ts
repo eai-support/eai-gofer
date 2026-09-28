@@ -263,7 +263,7 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('eai errors explain <code-or-reason> --format json');
       expect(readme).toContain('does not invent EAI CLI commands');
       expect(readme).toContain(
-        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+        'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(readme).toContain('App-Native Surfaces And Repo Scripts');
       expect(readme).toContain('Update Cleanup');
@@ -281,7 +281,7 @@ describe('Gofer agent plugin package', () => {
       expect(umbrellaSkill).toContain('eai <command> --help');
       expect(umbrellaSkill).toContain('If the command is not listed or help fails, do not run it');
       expect(umbrellaSkill).toContain(
-        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+        'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
       );
       expect(umbrellaSkill).toContain('eai publicapi');
       expect(umbrellaSkill).toContain('## Controlled English Contract');
