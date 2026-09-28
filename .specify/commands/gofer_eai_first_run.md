@@ -426,6 +426,9 @@ run the advertised equivalent of:
 eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>
 ```
 
+For older CLI versions that do not advertise `--company-workspace`, use the
+`--company-tenant` compatibility alias.
+
 If the CLI requires additional safe answers, gather them first. If the repo is
 non-empty and not an EAI app, ask whether to initialize a new sibling EAI app
 directory or stop.

@@ -590,7 +590,7 @@ ${buildJourneyStateSection()}
 
 ## First EAI Platform App
 
-If the user is starting a first EAI Platform app, use the public \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, \`eai init\`, and Gofer scaffold readiness with user approval gates.
+If the user is starting a first EAI Platform app, use the public \`eai\` entrypoint, then follow the first-run/setup contract in \`.specify/commands/gofer_eai_first_run.md\` when it is present. It is allowed before \`.specify/\` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, \`eai init\`, and Gofer scaffold readiness with user approval gates. For older CLI versions that do not advertise \`--company-workspace\`, use the \`--company-tenant\` compatibility alias.
 
 ## EAI CLI Discovery And Recovery
 
@@ -898,7 +898,7 @@ That host publishes:
 
 ## First EAI Platform App
 
-Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, workspace, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI workspace/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, workspace access, \`eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces.
+Start with \`/eai\`, \`#eai\`, or \`$eai\` depending on the host. Gofer first classifies the request. If it is EAI app delivery or ambiguous, Gofer continues directly to EAI readiness and routes internally to the first-run setup contract when a new user, machine, repo, workspace, or EAI app template is not ready. If it is clearly non-app work, Gofer asks once before skipping EAI workspace/app setup and continuing the relevant research, documentation, audit, migration, or planning path. The setup path is allowed before \`.specify/\` exists. It checks Git, Node.js, npm, EAI CLI, registry, \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\` when advertised, login, workspace access, \`eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>\`, Gofer scaffold readiness, and \`eai errors explain <code-or-reason> --format json\` for recovery across macOS, Linux, Windows, and GitHub Codespaces. For older CLI versions that do not advertise \`--company-workspace\`, use the \`--company-tenant\` compatibility alias.
 
 Gofer does not invent EAI CLI commands. It verifies command paths and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them. If the installed CLI does not list a command, Gofer does not run it.
 

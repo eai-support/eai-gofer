@@ -157,7 +157,7 @@ Before routing work, decide where the user is now.
 
 ## First EAI Platform App
 
-If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, `eai init`, and Gofer scaffold readiness with user approval gates.
+If the user is starting a first EAI Platform app, use the public `eai` entrypoint, then follow the first-run/setup contract in `.specify/commands/gofer_eai_first_run.md` when it is present. It is allowed before `.specify/` exists and checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, workspace access, `eai init`, and Gofer scaffold readiness with user approval gates. For older CLI versions that do not advertise `--company-workspace`, use the `--company-tenant` compatibility alias.
 
 ## MVP Capability-Based Validation
 

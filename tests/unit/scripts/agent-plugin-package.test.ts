@@ -101,6 +101,7 @@ describe('Gofer agent plugin package', () => {
       const pluginRoot = path.join(outDir, `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
       expect(readme).toContain('Copilot, Grok,\nand VS Code');
+      expect(readme).toContain('`--company-tenant` compatibility alias');
       expect(readme).toContain('No static provider default qualifies a model');
       expect(readme).not.toContain('Copilot\ndefaults to `Auto`');
       for (const manifest of [
