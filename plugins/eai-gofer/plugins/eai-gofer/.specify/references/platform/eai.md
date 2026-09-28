@@ -113,8 +113,8 @@ operator-only block.
 
 If a browser sign-in flow reports `AADSTS50011` or a Microsoft Entra redirect
 URI mismatch, do not start with manual Azure Portal edits. Confirm the EAI login
-and identity-provider tenant, confirm the callback URI from the failing authorize request in the
-active session, then run the advertised
+and identity-provider tenant, confirm the callback URI from the failing
+authorize request in the active session, then run the advertised
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>` path and
 retry sign-in. Record only a redacted callback route in Gofer artifacts. Use
 `--debug` only with explicit user approval, and redact private hostnames,

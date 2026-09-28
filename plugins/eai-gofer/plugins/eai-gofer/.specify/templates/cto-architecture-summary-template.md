@@ -48,7 +48,7 @@ If a branded Marp deck is produced, use the approved theme path from
 | -------------------- | ------------------------------- | -------- |
 | Authentication       | {{auth-summary}}                | {{path}} |
 | Authorization        | {{authorization-summary}}       | {{path}} |
-| Workspace boundaries | {{tenant-boundary-summary}}    | {{path}} |
+| Workspace boundaries | {{tenant-boundary-summary}}     | {{path}} |
 | Data model           | {{object-types-and-data-model}} | {{path}} |
 | API/events/contracts | {{contract-summary}}            | {{path}} |
 

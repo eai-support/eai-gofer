@@ -112,7 +112,8 @@ hide uncertainty or change scope.
 - **Architecture direction**: {{architecture-summary}}
 - **EAI Platform fit**: {{eai-platform-components-and-template-use}}
 - **Azure fit**: {{azure-services-and-why}}
-- **Auth, workspace boundaries, data, integration**: {{auth-tenant-data-contract-summary}}
+- **Auth, workspace boundaries, data, integration**:
+  {{auth-tenant-data-contract-summary}}
 
 ### CISO / Risk
 

@@ -36,15 +36,15 @@ flowchart LR
 
 ## Current Status
 
-| Area                                 | What it means in plain language                             | Status        | Current work | Issue / fix | Business impact |
-| ------------------------------------ | ----------------------------------------------------------- | ------------- | ------------ | ----------- | --------------- | ---------------- | ----------------- | ---------- |
-| Users and business process           | Who this helps and what process improves                    | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| App experience                       | Screens, forms, guidance, and user flow                     | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| EAI Platform                         | App template, object types, workflow, and platform services | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| Data, workflow, and documents        | Information captured, processed, stored, and reported       | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| Login, workspace, and security controls | Who can access the app and how sensitive data is protected | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| External integrations                | Systems connected to the app                                | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
-| Preview, release, and support        | How users see it, test it, and receive updates              | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| Area                                    | What it means in plain language                             | Status        | Current work | Issue / fix | Business impact |
+| --------------------------------------- | ----------------------------------------------------------- | ------------- | ------------ | ----------- | --------------- | ---------------- | ----------------- | ---------- |
+| Users and business process              | Who this helps and what process improves                    | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| App experience                          | Screens, forms, guidance, and user flow                     | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| EAI Platform                            | App template, object types, workflow, and platform services | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| Data, workflow, and documents           | Information captured, processed, stored, and reported       | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| Login, workspace, and security controls | Who can access the app and how sensitive data is protected  | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| External integrations                   | Systems connected to the app                                | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
+| Preview, release, and support           | How users see it, test it, and receive updates              | {{not-started | working      | ready       | blocked}}       | {{current-work}} | {{issue-or-none}} | {{impact}} |
 
 ## Latest Plain-Language Update
 

@@ -33,8 +33,8 @@ Before app-delivery research, planning, implementation, or validation:
 2. Read `.specify/references/platform/eai-error-catalog.yaml`.
 3. Read `.specify/references/platform/eai-service-patterns.md` before choosing
    storage, workflow, content, search, AI, or integration services.
-4. If CLI, login, workspace, template, or Gofer readiness is missing or stale, run
-   `/gofer:eai-first-run`.
+4. If CLI, login, workspace, template, or Gofer readiness is missing or stale,
+   run `/gofer:eai-first-run`.
 5. Use current CLI discovery instead of memory:
    - `eai update --check`
    - `eai --describe`
@@ -53,13 +53,13 @@ Before app-delivery research, planning, implementation, or validation:
 
 ## Workspace Data Access Rule
 
-Workspace apps access EAI data as the signed-in user. Browser code calls the local
-BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's session
-token. Do not add app-only `client_credentials` helpers, `EAI_SERVICE_*`, or
-`OBO_*` credentials for normal ResourceAPI reads, writes, files, or search. If
-work must continue after the user leaves the page, create/request a platform
-workflow/job from the signed-in user flow and pass workspace, app, user, and
-purpose context into it.
+Workspace apps access EAI data as the signed-in user. Browser code calls the
+local BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's
+session token. Do not add app-only `client_credentials` helpers,
+`EAI_SERVICE_*`, or `OBO_*` credentials for normal ResourceAPI reads, writes,
+files, or search. If work must continue after the user leaves the page,
+create/request a platform workflow/job from the signed-in user flow and pass
+workspace, app, user, and purpose context into it.
 
 ## Stack Policy
 
@@ -162,10 +162,10 @@ identity provisioning problems first. Confirm login and workspace with
 workspace if needed, then run the advertised equivalent of
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>`. Record
 only a redacted callback route in Gofer artifacts. Use `--debug` only with
-explicit user approval, and redact private hostnames, Entra/CIAM authority tenant IDs, client IDs,
-tokens, and raw debug output before writing artifacts. Use Azure Portal edits
-only when the installed EAI CLI does not advertise an Entra provisioning path or
-the CLI reports an operator-only block.
+explicit user approval, and redact private hostnames, Entra/CIAM authority
+tenant IDs, client IDs, tokens, and raw debug output before writing artifacts.
+Use Azure Portal edits only when the installed EAI CLI does not advertise an
+Entra provisioning path or the CLI reports an operator-only block.
 
 ## Privacy And Safety
 

@@ -15,7 +15,8 @@ OverwriteNoticeWhenApplicable:
 - It keeps brand choices explicit so generated summaries, PR/FAQs, diagrams, and
   decks stay consistent.
 - It should reference approved brand assets without embedding private logos,
-  credentials, workspace IDs, Entra/CIAM authority tenant IDs, or customer-confidential data.
+  credentials, workspace IDs, Entra/CIAM authority tenant IDs, or
+  customer-confidential data.
 
 ## Brand Sources
 
