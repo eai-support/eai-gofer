@@ -116,6 +116,38 @@ describe('Gofer pre-edit readiness check', () => {
     expect(result).toMatchObject({ status: 'ready', task: 'T001', jev: { selected: false } });
   });
 
+  it('does not read a file descriptor that no longer matches the approved path', async () => {
+    await createValidFeature();
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'gofer-pre-edit-outside-'));
+    const outsideFile = path.join(outside, 'spec.md');
+    await fs.writeFile(outsideFile, 'Sensitive content outside the workspace.', 'utf8');
+    const specPath = path.join(await fs.realpath(featureDir), 'spec.md');
+    const outsideHandle = await fs.open(outsideFile, 'r');
+    const outsideRead = vi.spyOn(outsideHandle, 'readFile');
+    const openFile = vi.fn(async (target: string, flags: number) =>
+      target === specPath ? outsideHandle : fs.open(target, flags)
+    );
+
+    try {
+      const result = await checkPreEdit(
+        {
+          workspace,
+          featureDir: '.specify/specs/test-feature',
+          task: 'T001',
+          changedFiles: ['.specify/scripts/node/new-helper.mjs'],
+        },
+        { openFile }
+      );
+
+      expect(result.status).toBe('blocked');
+      expect(result.findings).toContain('INVALID_FILE:spec.md');
+      expect(outsideRead).not.toHaveBeenCalled();
+    } finally {
+      await outsideHandle.close().catch(() => {});
+      await fs.rm(outside, { recursive: true, force: true });
+    }
+  });
+
   it('blocks a changed file outside the approved task scope', async () => {
     await createValidFeature();
 

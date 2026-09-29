@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { lstat, readFile, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
@@ -9,6 +10,7 @@ import { runSemanticReview } from './gofer-semantic-drift.mjs';
 
 const MAX_DOCUMENT_BYTES = 4 * 1024 * 1024;
 const MAX_CONTEXT_FILE_BYTES = 16 * 1024;
+const NO_FOLLOW = process.platform === 'win32' ? 0 : (constants.O_NOFOLLOW ?? 0);
 const PLACEHOLDER_MARKERS = [
   '[FEATURE NAME]',
   '[###-feature-name]',
@@ -38,11 +40,32 @@ async function assertNoSymlinkPath(root, target) {
   }
 }
 
-async function safeFile(root, target, limit = MAX_DOCUMENT_BYTES) {
+function sameFileIdentity(left, right) {
+  return left.dev !== undefined && left.ino !== undefined &&
+    right.dev !== undefined && right.ino !== undefined &&
+    left.dev === right.dev && left.ino === right.ino;
+}
+
+async function safeFile(root, target, limit = MAX_DOCUMENT_BYTES, openFile = open) {
   await assertNoSymlinkPath(root, target);
-  const info = await lstat(target);
-  if (!info.isFile() || info.size > limit) throw new Error('A required feature file is missing, not regular, or too large.');
-  return readFile(target, 'utf8');
+  const handle = await openFile(target, constants.O_RDONLY | NO_FOLLOW);
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > limit) {
+      throw new Error('A required feature file is missing, not regular, or too large.');
+    }
+    // Recheck the resolved path after opening, then compare it with the open
+    // file identity. Reads come from the validated handle, not the path, so a
+    // swap between lstat and open cannot redirect content outside the workspace.
+    await assertNoSymlinkPath(root, target);
+    const current = await lstat(target);
+    if (current.isSymbolicLink() || !sameFileIdentity(opened, current)) {
+      throw new Error('A required feature file changed while it was being opened.');
+    }
+    return await handle.readFile({ encoding: 'utf8' });
+  } finally {
+    await handle.close();
+  }
 }
 
 function hasTemplateMarker(content) {
@@ -70,7 +93,7 @@ function parseArgs(argv) {
   return options;
 }
 
-export async function checkPreEdit(options, { semanticReview = runSemanticReview } = {}) {
+export async function checkPreEdit(options, { semanticReview = runSemanticReview, openFile = open } = {}) {
   const workspace = await realpath(path.resolve(options.workspace));
   const featureDir = path.resolve(workspace, options.featureDir);
   await assertNoSymlinkPath(workspace, featureDir);
@@ -81,7 +104,7 @@ export async function checkPreEdit(options, { semanticReview = runSemanticReview
   const contents = {};
   for (const file of ['goal-ledger.json', 'spec.md', 'plan.md', 'tasks.md']) {
     try {
-      contents[file] = await safeFile(workspace, path.join(featureDir, file));
+      contents[file] = await safeFile(workspace, path.join(featureDir, file), MAX_DOCUMENT_BYTES, openFile);
       if (!contents[file].trim()) findings.push(`EMPTY_FILE:${file}`);
       else if (hasTemplateMarker(contents[file])) findings.push(`TEMPLATE_FILE:${file}`);
     } catch (error) {
@@ -133,7 +156,7 @@ export async function checkPreEdit(options, { semanticReview = runSemanticReview
   }
   let chatContext;
   try {
-    chatContext = await safeFile(featureDir, contextPath, MAX_CONTEXT_FILE_BYTES);
+    chatContext = await safeFile(featureDir, contextPath, MAX_CONTEXT_FILE_BYTES, openFile);
   } catch {
     return { status: 'blocked', findings: ['CHAT_CONTEXT_FILE_MISSING_OR_INVALID'], task: options.task };
   }
