@@ -340,6 +340,35 @@ async function inspectWorkspacePath(
   };
 }
 
+async function isCanonicalClaudeAgentsAlias(workspaceRoot, relativePath) {
+  if (relativePath !== 'CLAUDE.md') {
+    return false;
+  }
+
+  const resolvedRoot = await assertSafeWorkspaceRoot(workspaceRoot);
+  const aliasPath = path.join(resolvedRoot, relativePath);
+  const before = await lstatIfExists(aliasPath);
+  if (!before?.isSymbolicLink() || (await fs.readlink(aliasPath)) !== 'AGENTS.md') {
+    return false;
+  }
+
+  const agentsTarget = await inspectWorkspacePath(resolvedRoot, 'AGENTS.md', {
+    leafType: 'file',
+    allowMissing: true,
+  });
+  if (!agentsTarget.exists) {
+    return false;
+  }
+
+  const after = await lstatIfExists(aliasPath);
+  return Boolean(
+    after?.isSymbolicLink() &&
+      before.dev === after.dev &&
+      before.ino === after.ino &&
+      (await fs.readlink(aliasPath)) === 'AGENTS.md'
+  );
+}
+
 async function ensureSafeWorkspaceDirectory(workspaceRoot, relativePath, dryRun) {
   const { resolvedRoot, targetPath, relativeTarget } = resolveConfinedWorkspacePath(
     workspaceRoot,
@@ -1194,6 +1223,10 @@ export async function readManagedVersion(workspaceRoot) {
 async function collectMissingPaths(workspaceRoot, relativePaths) {
   const missing = [];
   for (const relativePath of relativePaths) {
+    if (await isCanonicalClaudeAgentsAlias(workspaceRoot, relativePath)) {
+      continue;
+    }
+
     const target = await inspectWorkspacePath(workspaceRoot, relativePath, {
       leafType: 'any',
       allowMissing: true,
@@ -1631,15 +1664,17 @@ export async function bootstrapWorkspace({
     changed.push('AGENTS.md');
   }
 
-  if (
-    await ensureAlwaysOnEaiSection(
-      workspaceRoot,
-      'CLAUDE.md',
-      buildClaudeMd(projectInfo),
-      dryRun
-    )
-  ) {
-    changed.push('CLAUDE.md');
+  if (!(await isCanonicalClaudeAgentsAlias(workspaceRoot, 'CLAUDE.md'))) {
+    if (
+      await ensureAlwaysOnEaiSection(
+        workspaceRoot,
+        'CLAUDE.md',
+        buildClaudeMd(projectInfo),
+        dryRun
+      )
+    ) {
+      changed.push('CLAUDE.md');
+    }
   }
 
   if (
