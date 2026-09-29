@@ -311,7 +311,7 @@ Keep this instruction.
     expect(agents).toContain('Do not invent, guess, or complete EAI CLI commands from memory');
     expect(agents).toContain('command-specific `--help`');
     expect(agents).toContain(
-      'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+      'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
     );
     expect(agents).toContain('sign out and sign back in');
     expect(agents).toContain('app_token_tenant_context_required');

@@ -934,26 +934,26 @@ function buildEaiRepoContractSection(projectInfo) {
   if (!projectInfo.eaiInitialized) {
     return `## EAI Platform Readiness
 
-- Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI tenant/app setup.
+- Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI workspace/app setup.
 - This repo is not confirmed as EAI-initialized yet. Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery.
-- If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
+- If \`eai\` is missing, login fails, the token is expired, or no active workspace is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
 - Do not invent, guess, or complete EAI CLI commands from memory. Verify exact \`eai ...\` syntax and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them.
 - Build on EAI Platform first and Azure second for app delivery. Treat non-EAI runtimes as explicit exceptions only.
-- Do not write tokens, secrets, private tenant IDs, or local \`.env\` values into Gofer artifacts.`;
+- Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local \`.env\` values into Gofer artifacts.`;
   }
 
   return `## EAI Repo Contract
 
 - This repo appears to be initialized from the EAI app template. Before app-delivery work, read \`.specify/references/platform/eai-repo-contract.md\` and \`.specify/references/platform/eai-error-catalog.yaml\`.
-- Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI tenant/app setup.
-- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery. If \`eai\` is missing, login fails, the token is expired, or no active tenant is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
-- If CLI, login, tenant, template, or Gofer readiness is missing or stale during app delivery, use the public \`eai\` entrypoint and the internal first-run setup contract before building.
+- Classify the request before EAI readiness. If it is EAI app delivery or ambiguous, continue directly to EAI readiness. If it is clearly non-app work, confirm once before skipping EAI workspace/app setup.
+- Run \`eai whoami\` only for EAI app delivery work or explicit EAI CLI recovery. If \`eai\` is missing, login fails, the token is expired, or no active workspace is visible during app delivery, use the public \`eai\` entrypoint and the internal \`.specify/commands/gofer_eai_first_run.md\` setup contract before building.
+- If CLI, login, workspace, template, or Gofer readiness is missing or stale during app delivery, use the public \`eai\` entrypoint and the internal first-run setup contract before building.
 - Use \`eai update --check\`, \`eai --describe\`, \`eai agent guide --format json\`, \`eai template check --format json\`, \`eai gofer refresh --check --format json\`, and \`eai workflow readiness --format json\` when the CLI advertises them before assuming the repo is current.
 - Do not invent, guess, or complete EAI CLI commands from memory. Verify exact \`eai ...\` syntax and flags with \`eai --describe\` and command-specific \`--help\` before suggesting or running them. If the installed CLI does not list a command, do not run it.
 - After any \`eai\` command error, use \`eai errors explain <code-or-reason> --format json\` before guessing remediation.
 - If \`eai errors explain\` is unavailable, match \`.specify/references/platform/eai-error-catalog.yaml\`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
-- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --tenant <tenant-id> --search <email> --format json\`; use \`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval, then tell the app user to sign out and sign back in.
-- For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm tenant context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
+- For \`eai user invite\` 5xx or \`EXTERNAL_SERVICE_ERROR\`, check existing members with \`eai user list --workspace <workspace-id> --search <email> --format json\`; use \`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json\` only after verification and user approval. The platform role ID \`tenant-admin\` means workspace admin access. Then tell the app user to sign out and sign back in.
+- For \`MISSING_TENANT\`, \`app_token_tenant_context_required\`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run \`eai errors explain app_token_tenant_context_required --format json\`, confirm workspace context, and retry \`/v4/platform/tenants/<tenant-id>/...\` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 - Build on EAI Platform first and Azure second. Treat non-EAI runtimes as explicit exceptions only.
 - Keep provisioning, types seed, schema/storage health, workflow readiness, and preview as separate gates.`;
 }
@@ -1065,7 +1065,7 @@ ${buildCodeStyleSection(projectInfo)}
 
 ## Gofer Pipeline
 
-This project uses Gofer for spec-driven development. Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+This project uses Gofer for spec-driven development. Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline (Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate). Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI workspace/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 Each feature should carry a bounded loop contract:
 
@@ -1129,7 +1129,7 @@ ${buildAlwaysOnEaiSection()}
 
 ## Gofer Pipeline
 
-Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
+Run \`/eai\` in Claude, Copilot, Antigravity, Grok, or VS Code, and \`$eai\` in Codex, to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate. Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI workspace/app setup. Artifacts go to \`.specify/specs/{feature}/\`.
 
 For each active feature, keep \`loop-contract.json\`, \`loop-ledger.jsonl\`, and
 \`loop-audit-report.md\` in the feature directory. The loop contract bounds
@@ -1156,7 +1156,7 @@ ${buildAlwaysOnEaiSection()}
 
 This project uses Gofer for spec-driven development. Run \`/eai\` to start or continue the core pipeline: Gofer Start -> research -> specify -> plan -> tasks -> implement -> validate.
 
-Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI tenant/app setup. Artifacts in \`.specify/specs/{feature}/\`.
+Gofer routes internally through \`.specify/commands/*.md\` contracts; validation is the terminal quality gate and includes the final engineering review loop. Before EAI readiness, classify the request: app delivery continues directly, while clear non-app work asks once before skipping EAI workspace/app setup. Artifacts in \`.specify/specs/{feature}/\`.
 
 ${eaiSection}
 

@@ -91,9 +91,21 @@ describe('enterpriseai persona marp deck pack (root integration)', () => {
         expect(content).toContain('Context Bundle');
         expect(content).toContain('Contract Pack');
         expect(content).toContain('Reuse-Before-Create');
+        expect(content).toContain('workspace assumptions');
+        expect(content).toContain('Permissions and workspace boundaries');
+        expect(content).not.toContain('tenant assumptions');
+        expect(content).not.toContain('tenant boundary');
         expect(content).toContain('Audit History');
         expect(content).toContain('Red/Green Validation Loop');
         expect(content).toContain('Success Metrics');
+
+        if (persona === 'ciso') {
+          expect(content).toContain(
+            'Identity, workspace boundary, data protection, control evidence, and residual risk.'
+          );
+          expect(content).toContain('Workspace["Workspace boundary"]');
+          expect(content).toContain('Actors, permissions, workspace boundary');
+        }
       }
     } finally {
       fs.rmSync(fixturesDir, { recursive: true, force: true });

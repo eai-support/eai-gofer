@@ -208,8 +208,9 @@ describe('InstructionGenerator', () => {
       expect(agents).toContain('eai agent guide --format json');
       expect(agents).toContain('eai errors explain <code-or-reason> --format json');
       expect(agents).toContain(
-        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+        'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
       );
+      expect(agents).toContain('confirm workspace context');
       expect(agents).toContain('sign out and sign back in');
       expect(agents).toContain('app_token_tenant_context_required');
       expect(agents).toContain('/v4/platform/tenants/<tenant-id>/...');

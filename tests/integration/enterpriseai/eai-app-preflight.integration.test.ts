@@ -28,7 +28,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(scenarioCommand).toContain('app-manifest-name-slug-negotiation-v1');
     expect(scenarioCommand).toContain('does not prove deployed receiver support');
     expect(scenarioCommand).toContain('eai login');
-    expect(scenarioCommand).toContain('eai tenant list --format json');
+    expect(scenarioCommand).toContain('eai workspace list --format json');
     expect(scenarioCommand).toContain('eai init <app-name>');
     expect(scenarioCommand).toContain(
       'node .specify/scripts/node/eai-app-template-readiness.mjs --root .'
@@ -54,7 +54,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /app_manifest_validation_failed[\s\S]*eai update --check[\s\S]*upgrade_required[\s\S]*approval[\s\S]*eai update[\s\S]*before repeating validation/
     );
     expect(scenarioCommand).toContain(
-      'eai types seed --tenant-key <key> --tenant-id <tenant-id> --dry-run --format json'
+      'eai types seed --tenant-key <scope-key> --tenant-id <tenant-id> --dry-run --format json'
     );
     expect(scenarioCommand).toContain('AADSTS50011');
     expect(scenarioCommand).toContain('EAI_ENTRA_REDIRECT_URI_MISMATCH');
@@ -62,7 +62,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
       /eai provision entra --force\s+--redirect-uri\s+<confirmed-callback-uri>/
     );
     expect(scenarioCommand).toContain(
-      'Never write exact private URLs, tenant IDs, client IDs, tokens, or debug output'
+      'Never write exact private URLs, workspace IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, or debug output'
     );
     expect(scenarioCommand).toContain(
       'eai resources storage doctor --tenant-id <tenant-id> --format json'
@@ -172,15 +172,17 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('Use --debug only with explicit user approval');
   });
 
-  it('catalogs tenant member invite external-service failures as an EAI-led recovery path', () => {
+  it('catalogs workspace member invite external-service failures as an EAI-led recovery path', () => {
     const catalog = readRepoFile('.specify/references/platform/eai-error-catalog.yaml');
 
     expect(catalog).toContain('EAI_USER_INVITE_EXTERNAL_SERVICE_EXISTING_MEMBER');
     expect(catalog).toContain('user_invite_external_service_existing_member');
     expect(catalog).toContain('EXTERNAL_SERVICE_ERROR');
-    expect(catalog).toContain('eai user list --tenant <tenant-id> --search <email> --format json');
     expect(catalog).toContain(
-      'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+      'eai user list --workspace <workspace-id> --search <email> --format json'
+    );
+    expect(catalog).toContain(
+      'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
     );
     expect(catalog).toContain('Auth.js session or JWT role data may be cached');
     expect(catalog).toContain('Do not edit databases or cloud portals directly');
@@ -196,7 +198,7 @@ describe('enterpriseai eai app delivery preflight (root integration)', () => {
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>');
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/users/<oid>/memberships');
     expect(catalog).toContain('/v4/platform/tenants/<tenant-id>/role-definitions');
-    expect(catalog).toContain('Do not start by changing tenant members');
+    expect(catalog).toContain('Do not start by changing workspace members');
   });
 
   it('updates an outdated CLI before retrying app-manifest validation', () => {
