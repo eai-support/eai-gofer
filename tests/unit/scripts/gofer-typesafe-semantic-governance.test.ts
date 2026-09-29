@@ -32,7 +32,7 @@ async function fixture() {
       schemaVersion: 1,
       enabled: false,
       provider: 'typesafe',
-      events: ['before_validation'],
+      events: ['before_validation', 'chat_readiness'],
       minimumConfidence: 0.85,
       uncertainAction: 'reconcile',
       conflictAction: 'block_affected_task',
@@ -55,12 +55,18 @@ async function fixture() {
 }
 
 function alignedAnswers(confidence = 0.95) {
+  const alignmentProbabilities = { aligned: confidence, partial: 1 - confidence, conflict: 0 };
+  const actionProbabilities = { continue: confidence, reconcile: 1 - confidence, ask_user: 0 };
   return {
-    goal_alignment: { choice: 'aligned', confidence },
-    specification_currency: { choice: 'aligned', confidence },
-    test_coverage: { choice: 'aligned', confidence },
-    blast_radius: { choice: 'aligned', confidence },
-    required_action: { choice: 'continue', confidence },
+    goal_alignment: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
+    specification_currency: {
+      choice: 'aligned',
+      confidence,
+      probabilities: alignmentProbabilities,
+    },
+    test_coverage: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
+    blast_radius: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
+    required_action: { choice: 'continue', confidence, probabilities: actionProbabilities },
   };
 }
 
@@ -237,7 +243,7 @@ describe('TypeSafe semantic governance', () => {
         'required_action',
       ])
     );
-    const state = JSON.parse(request.state);
+    const state = request.state;
     expect(state).toHaveProperty('test-spec.md');
     expect(state).toHaveProperty('change-manifest.json');
     expect(state).toHaveProperty('blast-radius-report.md');
@@ -311,6 +317,128 @@ describe('TypeSafe semantic governance', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('runs an explicit chat-readiness check with bounded redacted context when policy is otherwise disabled', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            answers: {
+              ...alignedAnswers(0.97),
+              chat_readiness: { choice: 'ready', confidence: 0.96 },
+            },
+          }),
+          { status: 200 }
+        )
+    );
+    const chatContext =
+      'Request: check this chat. TYPESAFE_API_KEY=chat-secret Bearer abcdefghi ' + 'x'.repeat(6000);
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'chat_readiness',
+      chatContext,
+      onDemand: true,
+      env: { TYPESAFE_API_KEY: 'provider-secret' },
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({ status: 'aligned', confidence: 0.96 });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    const request = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+    expect(request.questions.chat_readiness).toMatchObject({ type: 'choice' });
+    expect(request.questions.chat_readiness.instructions).toContain(
+      'current goal, specification, plan, tasks, decisions, and approved edit scope'
+    );
+    const state = request.state;
+    expect(state.chat_context.content).toContain('[REDACTED]');
+    expect(state.chat_context.content).not.toContain('chat-secret');
+    expect(state.chat_context.content).not.toContain('abcdefghi');
+    expect(Buffer.byteLength(state.chat_context.content, 'utf8')).toBeGreaterThan(4096);
+    expect(state.chat_context.content).toContain('x'.repeat(6000));
+    expect(state.chat_context.summaryOnly).toBe(true);
+    expect(request).not.toHaveProperty('user');
+    expect(result).toHaveProperty('chatContextSha256');
+
+    const receipt = JSON.parse(
+      await readFile(
+        path.join(featureDir, 'evidence', 'semantic-review', 'chat_readiness.json'),
+        'utf8'
+      )
+    );
+    expect(receipt.chatContextSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(receipt)).not.toContain('Request: check this chat');
+    expect(JSON.stringify(receipt)).not.toContain('provider-secret');
+  });
+
+  it('blocks chat readiness when Jev requests reconciliation or has low confidence', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    const reconcile = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'chat_readiness',
+      chatContext: 'The current request and feature goal.',
+      onDemand: true,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+      fetchImpl: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              answers: {
+                ...alignedAnswers(0.99),
+                chat_readiness: { choice: 'reconcile', confidence: 0.99 },
+              },
+            }),
+            { status: 200 }
+          )
+      ),
+    });
+    expect(reconcile.status).toBe('reconcile');
+
+    const uncertain = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'chat_readiness',
+      chatContext: 'The current request and feature goal.',
+      onDemand: true,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+      fetchImpl: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              answers: {
+                ...alignedAnswers(0.99),
+                chat_readiness: { choice: 'ready', confidence: 0.44 },
+              },
+            }),
+            { status: 200 }
+          )
+      ),
+    });
+    expect(uncertain.status).toBe('reconcile');
+  });
+
+  it('does not call Jev for chat readiness without a context summary', async () => {
+    const { workspace, featureDir } = await fixture();
+    const semantic = await import(semanticUrl.href);
+    const fetchImpl = vi.fn();
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'chat_readiness',
+      onDemand: true,
+      env: { TYPESAFE_API_KEY: 'test-key' },
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'chat_context_missing' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('writes a hash-bound receipt and blocks a provider conflict', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
@@ -345,6 +473,41 @@ describe('TypeSafe semantic governance', () => {
     );
     expect(receipt.artifacts['spec.md']).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(receipt)).not.toContain('secret-value');
+  });
+
+  it('preserves an existing version-2 receipt before writing the version-3 receipt', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const receiptDir = path.join(featureDir, 'evidence', 'semantic-review');
+    await mkdir(receiptDir, { recursive: true });
+    const previous =
+      JSON.stringify({
+        schemaVersion: 2,
+        provider: 'typesafe',
+        event: 'before_validation',
+        status: 'reconcile',
+        confidence: 0.72,
+      }) + '\n';
+    await writeFile(path.join(receiptDir, 'before_validation.json'), previous);
+
+    await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl: vi.fn(
+        async () => new Response(JSON.stringify({ answers: alignedAnswers() }), { status: 200 })
+      ),
+    });
+
+    expect(await readFile(path.join(receiptDir, 'before_validation.v2.json'), 'utf8')).toBe(
+      previous
+    );
+    expect(
+      JSON.parse(await readFile(path.join(receiptDir, 'before_validation.json'), 'utf8'))
+        .schemaVersion
+    ).toBe(3);
   });
 
   it('reports unavailable, not an uncaught exception, on a network failure or timeout', async () => {
@@ -470,22 +633,14 @@ describe('TypeSafe semantic governance', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('binds the receipt hash to the full artifact content, not the truncated slice sent to the provider', async () => {
+  it('does not call Jev when complete state exceeds the safe input budget', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const oversized = `${'a'.repeat(64 * 1024)}TAIL_DRIFT_MARKER`;
+    const oversized = `${'a'.repeat(40 * 1024)}TAIL_DRIFT_MARKER`;
     await writeFile(path.join(featureDir, 'spec.md'), oversized);
-    const fetchImpl = vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({
-            answers: alignedAnswers(),
-          }),
-          { status: 200 }
-        )
-    );
+    const fetchImpl = vi.fn();
     const result = await semantic.runSemanticReview({
       workspace,
       featureDir,
@@ -493,10 +648,26 @@ describe('TypeSafe semantic governance', () => {
       fetchImpl,
     });
     expect(result.artifacts['spec.md']).toBe(createHash('sha256').update(oversized).digest('hex'));
-    const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
-    const sentState = JSON.parse(sentBody.state);
-    expect(sentState['spec.md'].content.length).toBe(64 * 1024);
-    expect(sentState['spec.md'].content).not.toContain('TAIL_DRIFT_MARKER');
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      reason: 'input_budget_exceeded',
+      requestSent: false,
+    });
+    expect(result.artifactCoverage['spec.md']).toMatchObject({
+      sourceBytes: Buffer.byteLength(oversized),
+      sentBytes: 0,
+      complete: true,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const receipt = JSON.parse(
+      await readFile(
+        path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'),
+        'utf8'
+      )
+    );
+    expect(receipt.schemaVersion).toBe(3);
+    expect(receipt.inputBudget.withinLimits).toBe(false);
+    expect(JSON.stringify(receipt)).not.toContain(oversized);
   });
 
   it('rejects a credential path routed through a symlinked directory', async () => {
@@ -740,33 +911,133 @@ describe('TypeSafe semantic governance', () => {
     expect(result.status).toBe('reconcile');
   });
 
-  it('truncates the sent artifact by UTF-8 bytes, not UTF-16 code units', async () => {
+  it('measures structured request size from UTF-8 bytes rather than JavaScript code units', async () => {
+    const semantic = await import(semanticUrl.href);
+    const questions = {
+      one: { type: 'choice', instructions: 'Check this.', criteria: { yes: 'Yes', no: 'No' } },
+    };
+    const ascii = semantic.measureTypeSafeInputBudget({ value: 'a'.repeat(10_000) }, questions);
+    const multibyte = semantic.measureTypeSafeInputBudget({ value: '€'.repeat(10_000) }, questions);
+    expect(ascii.stateBytes).toBeLessThan(multibyte.stateBytes);
+    expect(multibyte.stateBytes).toBeGreaterThan(30_000);
+    expect(multibyte.withinLimits).toBe(false);
+  });
+
+  it('sends complete structured artifacts and records actual usage and the weakest Jev answer', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    // Each euro sign is 1 UTF-16 code unit but 3 UTF-8 bytes: a code-unit
-    // truncation would let this through far past the 64 KiB byte bound.
-    const oversized = '€'.repeat(64 * 1024);
-    await writeFile(path.join(featureDir, 'spec.md'), oversized, 'utf8');
+    const completeSpec = `${'S'.repeat(12_000)}END_OF_SPEC`;
+    await writeFile(path.join(featureDir, 'spec.md'), completeSpec, 'utf8');
+    const answers = alignedAnswers(0.96);
+    answers.goal_alignment = {
+      choice: 'aligned',
+      confidence: 0.72,
+      probabilities: { aligned: 0.72, partial: 0.23, conflict: 0.05 },
+    };
     const fetchImpl = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
-            answers: alignedAnswers(),
+            model: 'jev-1.13.0',
+            usage: { input_tokens: 3210, output_tokens: 44 },
+            answers,
           }),
           { status: 200 }
         )
     );
-    await semantic.runSemanticReview({
+
+    const result = await semantic.runSemanticReview({
       workspace,
       featureDir,
       event: 'before_validation',
       fetchImpl,
     });
-    const sentBody = JSON.parse(fetchImpl.mock.calls[0][1].body);
-    const sentState = JSON.parse(sentBody.state);
-    expect(Buffer.byteLength(sentState['spec.md'].content, 'utf8')).toBeLessThanOrEqual(64 * 1024);
+    expect(result.status).toBe('reconcile');
+    expect(result.confidence).toBe(0.72);
+    expect(result.confidenceGate).toMatchObject({
+      minimum: 0.85,
+      observed: 0.72,
+      belowMinimum: true,
+      weakestQuestion: {
+        id: 'goal_alignment',
+        choice: 'aligned',
+        confidence: 0.72,
+        closestAlternative: { choice: 'partial', probability: 0.23 },
+      },
+    });
+    expect(result).toMatchObject({
+      model: 'jev-1.13.0',
+      usage: { inputTokens: 3210, outputTokens: 44 },
+    });
+    const request = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+    expect(typeof request.state).toBe('object');
+    expect(request.state['spec.md'].content).toBe(completeSpec);
+    expect(request.state['spec.md'].content).toContain('END_OF_SPEC');
+    expect(request).not.toHaveProperty('user');
+    expect(JSON.stringify(request)).not.toContain('secret-value');
+    const receipt = JSON.parse(
+      await readFile(
+        path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'),
+        'utf8'
+      )
+    );
+    expect(receipt.schemaVersion).toBe(3);
+    expect(receipt.usage).toEqual({ inputTokens: 3210, outputTokens: 44 });
+    expect(receipt.confidenceGate.weakestQuestion.probabilities).toEqual({
+      aligned: 0.72,
+      partial: 0.23,
+      conflict: 0.05,
+    });
+    expect(JSON.stringify(receipt)).not.toContain(completeSpec);
+    expect(JSON.stringify(receipt)).not.toContain('secret-value');
+  });
+
+  it('keeps provider errors bounded and reports unknown causes without storing echoed content', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const privateValue = 'PRIVATE_CUSTOMER_TEXT_98421';
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            code: 'invalid_request',
+            message: `Rejected ${privateValue}`,
+            detail: [
+              {
+                loc: ['body', 'questions', 'goal_alignment'],
+                type: 'invalid_choice',
+                msg: privateValue,
+              },
+            ],
+          }),
+          { status: 400, headers: { 'x-request-id': 'req_12345' } }
+        )
+    );
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      reason: 'provider_http_error',
+      requestSent: true,
+    });
+    expect(result.providerError).toMatchObject({
+      httpStatus: 400,
+      requestId: 'req_12345',
+      code: 'invalid_request',
+      validation: [{ location: 'body.questions.goal_alignment', type: 'invalid_choice' }],
+    });
+    expect(JSON.stringify(result)).not.toContain(privateValue);
+    expect(JSON.stringify(result)).not.toContain('Rejected');
+    expect(JSON.stringify(result)).not.toContain('secret-value');
   });
 
   it('rejects a workspace root that is itself a symlink', async () => {
