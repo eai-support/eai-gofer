@@ -3,7 +3,8 @@
 ## Business Decision
 
 Sign-in confirms who a person is. It does not grant workspace access. An EAI
-workspace is an application tenant, not the shared CIAM directory.
+workspace is the app's access boundary. It is separate from the shared CIAM
+sign-in directory.
 
 When authentication enters scope, ask:
 
@@ -37,18 +38,18 @@ only when the contract permits it. Do not assume direct membership is the only
 valid form of membership.
 
 A session, shared CIAM `tid`, matching email domain, hidden button, or selected
-CLI tenant is not app authorization. The CLI operator is not the runtime user.
-Unknown, unavailable, revoked, or expired authorization must fail closed. Define
-bounded cache expiry and revocation handling. Never keep access forever because
-an earlier session was valid.
+CLI workspace access is not app authorization. The CLI operator is not the
+runtime user. Unknown, unavailable, revoked, or expired authorization must fail
+closed. Define bounded cache expiry and revocation handling. Never keep access
+forever because an earlier session was valid.
 
 ## Separate Sign-In Decision
 
 Ask whether users should use normal EAI sign-in or their company sign-in through
 EAI. This does not change the app's workspace access policy. For client SSO,
 prefer federation through EAI's identity layer so platform sessions, API
-audiences, tenant membership, and permission checks remain intact. Do not point
-the app directly at a client issuer and assume EAI APIs accept it.
+audiences, workspace membership, and permission checks remain intact. Do not
+point the app directly at a client issuer and assume EAI APIs accept it.
 
 Discover the installed CLI with `eai --describe` and exact command help. Never
 invent an `eai sso` command. Check the deployed platform contract and tenant
@@ -56,7 +57,7 @@ entitlement before offering a configuration action. Provider capability, backend
 source, a setup menu, and successful end-to-end sign-in are different levels of
 evidence.
 
-## Tenant Admin SSO Setup
+## Workspace Admin SSO Setup
 
 1. Confirm the EAI workspace, app, current access decision, and SSO entitlement.
 2. Identify the client's identity administrator and approved provider.
@@ -66,8 +67,9 @@ evidence.
    callback settings, and required claims. Transfer secrets only through an
    approved protected channel, never chat, specs, source, or logs.
 5. Have an authorized EAI operator configure the provider and associate the
-   intended user flow and apps. An EAI tenant-admin role does not itself grant
-   administration of the shared Entra directory. Protect other tenants' flows.
+   intended user flow and apps. The platform role ID `tenant-admin` grants
+   workspace admin access. That role does not grant administration of the shared
+   Entra directory. Protect other workspaces' flows.
 6. Plan existing-account continuity and preserve memberships and roles. Never
    link identities by email alone. Keep a tested emergency admin sign-in path.
 7. Test a pilot user, a denied user, session creation, and a protected EAI API
