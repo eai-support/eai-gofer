@@ -60,6 +60,7 @@ export function buildManagedDeployDoctorEvidence(
     },
     sourceBinding: {
       repository: 'enterprise/planning-portal',
+      installationId: 123,
       commitSha: 'a'.repeat(40),
       workflowPath: '.github/workflows/eai-app.yml',
       ref: 'refs/heads/main',
@@ -74,10 +75,35 @@ export function buildManagedDeployDoctorEvidence(
       },
       latestPointerVersion: 3,
       expectedLatestVersion: 3,
-      requiresTenantInfra: false,
+      requiresTenantInfra: true,
       ...overrides.deployment,
     },
     authenticatedReadiness: overrides.authenticatedReadiness ?? true,
     doctor,
   };
+}
+
+/** Mirrors the authoritative CLI doctor fields rather than its user-facing source choices. */
+export function buildCliManagedDeployDoctorEvidence(
+  sourceMode: 'source-unknown' | 'eai-cli-generated'
+): Record<string, unknown> {
+  return buildManagedDeployDoctorEvidence({
+    operation: { sourceMode },
+    sourceBinding: {
+      repositoryId: 456,
+      sourceCommitSha: 'a'.repeat(40),
+      ...(sourceMode === 'eai-cli-generated' ? { reviewHeadSha: 'a'.repeat(40) } : {}),
+      workflowHeadBranch: 'main',
+      workflowRunId: 789,
+      workflowBlobSha: 'c'.repeat(40),
+      collectorDigest: `sha256:${'d'.repeat(64)}`,
+      artifactDigest: `sha256:${'e'.repeat(64)}`,
+      imageArtifact: {
+        id: 901,
+        name: 'eai-generated-app-image',
+        archiveDigest: `sha256:${'f'.repeat(64)}`,
+      },
+      imageDigest: `sha256:${'0'.repeat(64)}`,
+    },
+  });
 }

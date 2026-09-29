@@ -7,6 +7,7 @@ import {
 } from '../../../extension/src/services/enterpriseai/internalApi/ValidateDeploymentReadiness';
 import { createDeploymentReadinessEventHandlers } from '../../../extension/src/services/enterpriseai/events/DeploymentReadinessEvents';
 import {
+  buildCliManagedDeployDoctorEvidence,
   buildManagedDeployDoctorEvidence,
   CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
   MANAGED_DEPLOY_TASK_TEXT,
@@ -178,6 +179,38 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
       buildManagedDeployDoctorEvidence({ operation: { sourceMode: 'customer-owned' } }),
     ],
+    [
+      'CLI EAI-maintained wire source',
+      MANAGED_DEPLOY_TASK_TEXT,
+      buildCliManagedDeployDoctorEvidence('eai-cli-generated'),
+    ],
+    [
+      'CLI customer-owned wire source',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
+      buildCliManagedDeployDoctorEvidence('source-unknown'),
+    ],
+    [
+      'case-insensitive GitHub repository and string installation ID',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT.replace(
+        'enterprise/planning-portal',
+        'Enterprise/Planning-Portal'
+      ),
+      buildManagedDeployDoctorEvidence({
+        operation: { sourceMode: 'source-unknown' },
+        sourceBinding: { installationId: '123' },
+      }),
+    ],
+    [
+      'explicit customer source branch and workflow',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT.replace(
+        '--source customer-owned',
+        '--source customer-owned --branch feature/support --workflow .github/workflows/eai-app.yml'
+      ),
+      buildManagedDeployDoctorEvidence({
+        operation: { sourceMode: 'source-unknown' },
+        sourceBinding: { ref: 'refs/heads/feature/support' },
+      }),
+    ],
   ])('allows an exact passing task-bound receipt for %s', async (label, taskText, evidence) => {
     const fixturesDir = createFixtureDir(
       `fixtures-deployment-evidence-exact-${label.replace(/[^a-z]+/gi, '-').toLowerCase()}`
@@ -208,6 +241,212 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
       expect(result.response.evidenceIssues).toEqual([]);
       expect(result.response.deploymentTaskCompletionAllowed).toBe(true);
       expect(result.emittedEvent.payload.evidenceIssues).toEqual([]);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    [
+      'customer receipt for an EAI-maintained task',
+      MANAGED_DEPLOY_TASK_TEXT,
+      'source-unknown',
+      'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
+    ],
+    [
+      'EAI-maintained receipt for a customer task',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
+      'eai-cli-generated',
+      'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
+    ],
+    [
+      'unknown source mode',
+      CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
+      'unknown-source',
+      'DOCTOR_EVIDENCE_SCHEMA_INVALID',
+    ],
+  ])('blocks %s', async (_label, taskText, sourceMode, issue) => {
+    const fixturesDir = createFixtureDir('fixtures-source-mode-binding');
+    fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    fs.writeFileSync(
+      path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+      JSON.stringify(buildManagedDeployDoctorEvidence({ operation: { sourceMode } }))
+    );
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_source_mode_binding',
+          stage: 'implementation',
+          deploymentTaskId: 'task_source_mode_binding',
+          deploymentTaskText: taskText,
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+      expect(result.response.evidenceIssues).toContain(issue);
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['repository', { repository: 'enterprise/another-app' }, 'DOCTOR_EVIDENCE_REPOSITORY_MISMATCH'],
+    ['installation', { installationId: 456 }, 'DOCTOR_EVIDENCE_INSTALLATION_ID_MISMATCH'],
+    ['branch', { ref: 'refs/heads/another-branch' }, 'DOCTOR_EVIDENCE_BRANCH_MISMATCH'],
+    [
+      'workflow',
+      { workflowPath: '.github/workflows/another.yml' },
+      'DOCTOR_EVIDENCE_WORKFLOW_MISMATCH',
+    ],
+    ['missing repository', { repository: undefined }, 'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID'],
+    [
+      'missing installation',
+      { installationId: undefined },
+      'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID',
+    ],
+    ['missing branch', { ref: undefined }, 'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID'],
+    ['missing workflow', { workflowPath: undefined }, 'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID'],
+    [
+      'unsafe installation',
+      { installationId: Number.MAX_SAFE_INTEGER + 1 },
+      'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID',
+    ],
+    [
+      'placeholder installation',
+      { installationId: '<installation>' },
+      'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID',
+    ],
+    [
+      'dot-segment repository',
+      { repository: 'enterprise/..' },
+      'DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID',
+    ],
+  ])(
+    'blocks customer completion for a receipt with crossed or invalid %s',
+    async (_label, sourceBinding, issue) => {
+      const fixturesDir = createFixtureDir('fixtures-customer-source-evidence');
+      fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+      fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      fs.writeFileSync(
+        path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+        JSON.stringify(
+          buildManagedDeployDoctorEvidence({
+            operation: { sourceMode: 'customer-owned' },
+            sourceBinding,
+          })
+        )
+      );
+      try {
+        const result = await validateDeploymentReadiness(
+          {
+            runId: 'run_customer_source_evidence',
+            stage: 'implementation',
+            deploymentTaskId: 'task_customer_source_evidence',
+            deploymentTaskText: CUSTOMER_OWNED_DEPLOY_TASK_TEXT,
+            receiptValidationMode: 'operation-bound',
+            requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+            blockCompletionOnFailure: true,
+          },
+          { workspaceRoot: fixturesDir }
+        );
+        expect(result.response.readinessPassed).toBe(false);
+        expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+        expect(result.response.evidenceIssues).toContain(issue);
+        expect(result.emittedEvent.payload.evidenceIssues).toContain(issue);
+      } finally {
+        fs.rmSync(fixturesDir, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([
+    ['missing repository', '--repo enterprise/planning-portal', ''],
+    [
+      'duplicate repository',
+      '--repo enterprise/planning-portal',
+      '--repo enterprise/planning-portal --repo enterprise/another-app',
+    ],
+    [
+      'mixed repository flag forms',
+      '--repo enterprise/planning-portal',
+      '--repo enterprise/planning-portal --repo=enterprise/another-app',
+    ],
+    ['placeholder repository', '--repo enterprise/planning-portal', '--repo <owner/name>'],
+    ['dot-segment repository', '--repo enterprise/planning-portal', '--repo enterprise/..'],
+    ['missing installation', '--installation-id 123', ''],
+    [
+      'duplicate installation',
+      '--installation-id 123',
+      '--installation-id 123 --installation-id 456',
+    ],
+    [
+      'mixed installation flag forms',
+      '--installation-id 123',
+      '--installation-id 123 --installation-id=456',
+    ],
+    ['placeholder installation', '--installation-id 123', '--installation-id <positive-id>'],
+    ['zero installation', '--installation-id 123', '--installation-id 0'],
+    ['fractional installation', '--installation-id 123', '--installation-id 1.5'],
+    ['unsafe installation', '--installation-id 123', '--installation-id 9007199254740992'],
+    ['missing branch value', '--source customer-owned', '--source customer-owned --branch'],
+    [
+      'duplicate branch',
+      '--source customer-owned',
+      '--source customer-owned --branch main --branch feature/support',
+    ],
+    ['placeholder branch', '--source customer-owned', '--source customer-owned --branch <branch>'],
+    [
+      'noncanonical branch flag',
+      '--source customer-owned',
+      '--source customer-owned --branch=another',
+    ],
+    ['missing workflow value', '--source customer-owned', '--source customer-owned --workflow'],
+    [
+      'duplicate workflow',
+      '--source customer-owned',
+      '--source customer-owned --workflow .github/workflows/eai-app.yml --workflow .github/workflows/eai-app.yml',
+    ],
+    [
+      'noncanonical workflow',
+      '--source customer-owned',
+      '--source customer-owned --workflow .github/workflows/another.yml',
+    ],
+    [
+      'noncanonical workflow flag',
+      '--source customer-owned',
+      '--source customer-owned --workflow=.github/workflows/another.yml',
+    ],
+  ])('blocks customer completion when the task has %s', async (_label, from, to) => {
+    const fixturesDir = createFixtureDir('fixtures-customer-source-task');
+    fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    fs.writeFileSync(
+      path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+      JSON.stringify(
+        buildManagedDeployDoctorEvidence({ operation: { sourceMode: 'customer-owned' } })
+      )
+    );
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_customer_source_task',
+          stage: 'implementation',
+          deploymentTaskId: 'task_customer_source_task',
+          deploymentTaskText: CUSTOMER_OWNED_DEPLOY_TASK_TEXT.replace(from, to),
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.deploymentTaskCompletionAllowed).toBe(false);
+      expect(result.response.evidenceIssues).toContain('DEPLOYMENT_TASK_BINDING_INVALID');
     } finally {
       fs.rmSync(fixturesDir, { recursive: true, force: true });
     }
@@ -377,6 +616,20 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
 
   it.each([
     ['malformed JSON', '{not-json', 'DOCTOR_EVIDENCE_INVALID_JSON'],
+    [
+      'non-TenantInfra deployment',
+      JSON.stringify(
+        buildManagedDeployDoctorEvidence({ deployment: { requiresTenantInfra: false } })
+      ),
+      'DOCTOR_EVIDENCE_SCHEMA_INVALID',
+    ],
+    [
+      'missing TenantInfra deployment binding',
+      JSON.stringify(
+        buildManagedDeployDoctorEvidence({ deployment: { requiresTenantInfra: undefined } })
+      ),
+      'DOCTOR_EVIDENCE_SCHEMA_INVALID',
+    ],
     [
       'wrong schema',
       JSON.stringify(buildManagedDeployDoctorEvidence({ schemaVersion: 'legacy.v0' })),

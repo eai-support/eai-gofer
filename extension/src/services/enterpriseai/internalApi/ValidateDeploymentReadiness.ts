@@ -71,6 +71,16 @@ const MANAGED_DEPLOY_DOCTOR_READ_CHUNK_BYTES = 64 * 1024;
 const MANAGED_DEPLOY_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
+const CUSTOMER_REPOSITORY_PATTERN = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/;
+const CUSTOMER_BRANCH_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$/;
+const MANAGED_DEPLOY_WORKFLOW_PATH = '.github/workflows/eai-app.yml';
+
+interface CustomerSourceBinding {
+  repository: string;
+  installationId: string;
+  ref: string;
+  workflowPath: string;
+}
 
 interface DeploymentEvidenceBinding {
   operationId: string;
@@ -78,6 +88,7 @@ interface DeploymentEvidenceBinding {
   tenantId: string;
   targetTenantId: string;
   sourceMode: ManagedDeploySourceMode;
+  customerSource?: CustomerSourceBinding;
 }
 
 type ManagedDeploySourceMode = 'eai-managed' | 'customer-owned';
@@ -194,22 +205,66 @@ function isManagedDeploySourceMode(value: unknown): value is ManagedDeploySource
   return value === 'eai-managed' || value === 'customer-owned';
 }
 
-function extractUniqueCommandFlagValue(tokens: readonly string[], flag: string): string | null {
-  const positions = tokens.reduce<number[]>(
-    (matches: number[], token: string, index: number): number[] => {
-      if (token === flag) {
-        matches.push(index);
-      }
-      return matches;
-    },
-    []
-  );
-  if (positions.length !== 1) {
-    return null;
-  }
+function receiptSourceMode(value: unknown): ManagedDeploySourceMode | undefined {
+  if (value === 'eai-cli-generated' || value === 'eai-managed') return 'eai-managed';
+  if (value === 'source-unknown' || value === 'customer-owned') return 'customer-owned';
+  return undefined;
+}
 
-  const value = tokens[positions[0] + 1];
-  return value && !value.startsWith('--') ? value : null;
+function normalizeRepository(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = CUSTOMER_REPOSITORY_PATTERN.exec(value);
+  return match && !match.slice(1).some((part): boolean => part === '.' || part === '..')
+    ? value.toLowerCase()
+    : undefined;
+}
+
+function normalizeInstallationId(value: unknown): string | undefined {
+  if (typeof value !== 'number' && typeof value !== 'string') return undefined;
+  if (typeof value === 'string' && !/^[1-9][0-9]*$/.test(value)) return undefined;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? String(id) : undefined;
+}
+
+function readCustomerSourceBinding(value: unknown): CustomerSourceBinding | undefined {
+  if (!isRecord(value)) return undefined;
+  const repository = normalizeRepository(value.repository);
+  const installationId = normalizeInstallationId(value.installationId);
+  const branch =
+    typeof value.ref === 'string' && value.ref.startsWith('refs/heads/')
+      ? value.ref.slice('refs/heads/'.length)
+      : undefined;
+  return repository &&
+    installationId &&
+    branch &&
+    CUSTOMER_BRANCH_PATTERN.test(branch) &&
+    typeof value.workflowPath === 'string' &&
+    value.workflowPath.length > 0
+    ? { repository, installationId, ref: value.ref as string, workflowPath: value.workflowPath }
+    : undefined;
+}
+
+function optionalCommandFlag(
+  tokens: readonly string[],
+  flag: string,
+  defaultValue: string
+): string | null {
+  if (tokens.some((token): boolean => token.startsWith(`${flag}=`))) return null;
+  return tokens.includes(flag) ? extractUniqueCommandFlagValue(tokens, flag) : defaultValue;
+}
+
+function extractUniqueCommandFlagValue(tokens: readonly string[], flag: string): string | null {
+  let value: string | null = null;
+  let found = false;
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index].startsWith(`${flag}=`)) return null;
+    if (tokens[index] !== flag) continue;
+    if (found) return null;
+    found = true;
+    const next = tokens[index + 1];
+    value = next && !next.startsWith('--') ? next : null;
+  }
+  return value;
 }
 
 function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResult {
@@ -256,6 +311,25 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
       binding: null,
       issues: ['DEPLOYMENT_TASK_BINDING_INVALID'],
     };
+  }
+
+  let customerSource: CustomerSourceBinding | undefined;
+  if (sourceMode === 'customer-owned') {
+    const branch = optionalCommandFlag(initialTokens, '--branch', 'main');
+    const workflowPath = optionalCommandFlag(
+      initialTokens,
+      '--workflow',
+      MANAGED_DEPLOY_WORKFLOW_PATH
+    );
+    customerSource = readCustomerSourceBinding({
+      repository: extractUniqueCommandFlagValue(initialTokens, '--repo'),
+      installationId: extractUniqueCommandFlagValue(initialTokens, '--installation-id'),
+      ref: branch === null ? undefined : `refs/heads/${branch}`,
+      workflowPath,
+    });
+    if (!customerSource || workflowPath !== MANAGED_DEPLOY_WORKFLOW_PATH) {
+      return { binding: null, issues: ['DEPLOYMENT_TASK_BINDING_INVALID'] };
+    }
   }
 
   const tokens = doctorCommandMatches[0].split(/\s+/);
@@ -317,6 +391,7 @@ function parseDeploymentTaskBinding(deploymentTaskText: string): TaskBindingResu
       tenantId,
       targetTenantId,
       sourceMode,
+      customerSource,
     },
     issues: [],
   };
@@ -413,6 +488,7 @@ function validateManagedDeployDoctorEvidence(
 
   const checks = doctor.checks;
   const observedAt = evidence.observedAt;
+  const sourceMode = receiptSourceMode(operation.sourceMode);
   const pointersAreValid =
     Number.isSafeInteger(deployment.latestPointerVersion) &&
     Number.isSafeInteger(deployment.expectedLatestVersion) &&
@@ -420,14 +496,14 @@ function validateManagedDeployDoctorEvidence(
     Number(deployment.expectedLatestVersion) >= 0 &&
     deployment.latestPointerVersion === deployment.expectedLatestVersion;
   const structureIsValid =
-    isManagedDeploySourceMode(operation.sourceMode) &&
+    sourceMode !== undefined &&
     typeof operation.configHash === 'string' &&
     SHA256_PATTERN.test(operation.configHash) &&
     hasValidSourceBinding(evidence.sourceBinding) &&
     isNonEmptyString(deployment.deploymentId) &&
     isHttpsUrl(deployment.activeUrl) &&
     hasValidRuntimeIdentity(deployment.runtimeIdentity) &&
-    deployment.requiresTenantInfra === false &&
+    deployment.requiresTenantInfra === true &&
     pointersAreValid &&
     isNonEmptyString(doctor.contract) &&
     isHttpsUrl(doctor.url) &&
@@ -468,7 +544,7 @@ function validateManagedDeployDoctorEvidence(
     issue: string;
   }> = [
     {
-      actual: operation.sourceMode,
+      actual: sourceMode,
       expected: expected?.sourceMode,
       issue: 'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
     },
@@ -501,6 +577,23 @@ function validateManagedDeployDoctorEvidence(
       bindingCheck.actual !== bindingCheck.expected
     ) {
       issues.push(bindingCheck.issue);
+    }
+  }
+
+  if (sourceMode === 'customer-owned' || expected?.sourceMode === 'customer-owned') {
+    const customerSource = readCustomerSourceBinding(evidence.sourceBinding);
+    if (!customerSource) {
+      issues.push('DOCTOR_EVIDENCE_CUSTOMER_SOURCE_INVALID');
+    } else if (expected?.customerSource) {
+      const customerBindingChecks = [
+        ['repository', 'DOCTOR_EVIDENCE_REPOSITORY_MISMATCH'],
+        ['installationId', 'DOCTOR_EVIDENCE_INSTALLATION_ID_MISMATCH'],
+        ['ref', 'DOCTOR_EVIDENCE_BRANCH_MISMATCH'],
+        ['workflowPath', 'DOCTOR_EVIDENCE_WORKFLOW_MISMATCH'],
+      ] as const;
+      for (const [field, issue] of customerBindingChecks) {
+        if (customerSource[field] !== expected.customerSource[field]) issues.push(issue);
+      }
     }
   }
 
@@ -652,6 +745,7 @@ function assertValidEventPayload(payload: DeploymentReadinessValidatedEventPaylo
   }
 }
 
+/** Strict completion requires the selected operation and source, not merely a saved receipt. */
 export async function validateDeploymentReadiness(
   request: ValidateDeploymentReadinessRequest,
   options: ValidateDeploymentReadinessOptions = {}

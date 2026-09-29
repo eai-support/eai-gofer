@@ -127,6 +127,7 @@
             ".specify/templates/eai-preflight-template.md",
             "AGENTS.md",
             "extension/resources/**",
+            "extension/src/services/enterpriseai/internalApi/ValidateDeploymentReadiness.ts",
             "plugins/eai-gofer/**",
             "scripts/verify-eai-refresh-layout.mjs",
             "release.sh",
@@ -134,6 +135,9 @@
             "tasks/lessons.md",
             "tasks/todo.md",
             "tests/fixtures/golden/claude-commands/**",
+            "tests/fixtures/enterpriseai/managed-deploy-doctor-evidence.ts",
+            "tests/integration/enterpriseai/deployment-guidance-ordering.integration.test.ts",
+            "tests/integration/enterpriseai/internal-api-contract-coverage.integration.test.ts",
             "tests/unit/scripts/agent-plugin-package.test.ts",
             "tests/unit/scripts/agents-md-shape.test.ts",
             "tests/unit/scripts/byte-equivalence.test.ts",
@@ -146,6 +150,8 @@
             "tests/unit/release/release-verification.test.ts"
           ],
           "required_repo_tests": [
+            "tests/integration/enterpriseai/deployment-guidance-ordering.integration.test.ts",
+            "tests/integration/enterpriseai/internal-api-contract-coverage.integration.test.ts",
             "tests/unit/release/eai-refresh-layout.test.ts",
             "tests/unit/release/release-verification.test.ts",
             "tests/unit/scripts/agent-plugin-package.test.ts",

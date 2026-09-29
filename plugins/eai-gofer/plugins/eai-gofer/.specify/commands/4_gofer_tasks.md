@@ -788,6 +788,12 @@ the EAI-managed deployment task is marked complete.
        and the fully resolved doctor command below. Run doctor, then request
        completion. Do not create a separate dependent
        post-deploy checkbox whose prerequisite is this receipt-gated task.
+       For customer-owned source, also retain the exact `--repo` and
+       `--installation-id`, and any selected `--branch` and `--workflow` on that
+       initial command. The receipt must match the repository, installation,
+       branch, and workflow; omitted branch and workflow mean `main` and
+       `.github/workflows/eai-app.yml`. Missing, duplicated, placeholder, or
+       crossed customer source bindings block completion.
    - For **customer Azure**, include `[hosting:customer-azure]` and retain the
      existing approved customer-owned Azure deployment path and credentials.
      Do not add an EAI-managed operation or source command.

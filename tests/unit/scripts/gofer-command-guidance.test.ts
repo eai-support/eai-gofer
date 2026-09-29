@@ -177,7 +177,9 @@ describe('Gofer public execution-depth guidance', () => {
         'stop and report the inconsistent CLI action instead of running it or repairing it from memory'
       );
       expect(content, file).toContain('`classification: succeeded`');
-      expect(content, file).toContain('`requiresTenantInfra: false`');
+      expect(content, file).toContain('`requiresTenantInfra: true`');
+      expect(content, file).toContain('retain its exact `--repo`, `--installation-id`');
+      expect(content, file).toContain('require the receipt to match all four source fields');
       expect(content, file).toContain(PORTABLE_DEPLOY_DOCTOR_COMMAND);
       expect(content, file).toContain('derive the active URL from the exact PublicAPI operation');
       expect(content, file).toContain('atomically write the receipt');

@@ -907,6 +907,18 @@ and compares the receipt's source mode and four operation fields with the task. 
 stale, malformed, failing, cross-command, or unrelated receipt cannot clear the
 gate.
 
+For customer-owned source, retain the resolved `--repo`, `--installation-id`,
+and any selected `--branch` and `--workflow` in the initial task command. The gate
+also matches the receipt's exact repository, positive installation ID, branch,
+and workflow. Omitted branch and workflow use the CLI defaults `main` and
+`.github/workflows/eai-app.yml`. GitHub repository names are case-insensitive;
+installation IDs must be positive safe integers. The CLI receipt's
+`source-unknown` maps only to customer-owned source, and `eai-cli-generated`
+maps only to EAI-maintained source. Unknown or crossed modes block completion.
+`requiresTenantInfra: true` identifies a TenantInfra-backed deployment; it is
+not a pending-work flag. Completion still requires active deployment, matching
+pointer versions, runtime identity, and passing authenticated doctor evidence.
+
 `/health` alone is not enough. Auth.js, runtime config, workspace/workflow config,
 user-delegated PublicAPI BFF reachability, and declared smoke tests must pass
 before deployment is complete. Workspace apps must not add app-only
