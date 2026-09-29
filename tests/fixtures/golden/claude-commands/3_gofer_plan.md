@@ -61,27 +61,27 @@ Do not apply later delivery requirements to an early MVP.
 
 ## Application Classification And EAI Preflight
 
-Before any EAI CLI, login, tenant, template, or app-enrollment action:
+Before any EAI CLI, login, workspace, template, or app-enrollment action:
 
 1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in `.specify/commands/0_gofer_start.md`.
 2. Create `.specify/specs/{feature}/` and record the active delivery scope before app or operator-tool source work.
-3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai tenant select`, `eai init`, or `/gofer:eai-first-run`.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai workspace select`, `eai init`, or `/gofer:eai-first-run`.
 5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
-6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
+6. When the feature uses EAI Platform services, requires a workspace, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
 7. When the feature creates, changes, or validates an EAI Platform app integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`. A missing checker or status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
 8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
 9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 **Authentication Access Decision**
 
 When adding or changing authentication, read `.specify/references/platform/eai-auth-access.md`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to `workspace-only`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
 
-Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-workspace requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -142,7 +142,7 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
-For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, tenant smoke, or release-evidence surface.
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
@@ -154,7 +154,7 @@ Jev must judge goal alignment, specification currency, executable test coverage,
 
 Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
-Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a workspace, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 <!-- gofer:business-progress:end -->
 
@@ -219,7 +219,7 @@ before writing `plan.md`, `data-model.md`, contracts, or `service-fit-matrix.md`
 Make the normal EAI Platform choice on behalf of the business user:
 
 1. Use PostgreSQL for relational, transactional, reporting, workflow state,
-   audit, and structured tenant business data.
+   audit, and structured workspace business data.
 2. Use DocumentDB for flexible JSON documents, nested records, high-change
    schemas, and user-authored document state.
 3. Use Blob Storage for large files, binary content, exports, and file-like
@@ -560,7 +560,7 @@ Visual quality requirements for all planning visuals:
   three-to-five-bullet executive summary in plain language.
 - Link each visual to the requirement, plan decision, contract, code/test path,
   EAI service/template asset, or validation evidence it summarizes.
-- Do not include tenant-private data, secrets, customer identifiers, or
+- Do not include workspace-private data, secrets, customer identifiers, or
   screenshots containing private content.
 
 ### Dynamic-Only: Workflow DAG Writer
@@ -824,7 +824,7 @@ Before reporting completion, update the stakeholder-facing architecture pack:
    - Explain how the solution uses EAI Platform first, the EAI App Template
      when app delivery applies, Azure as the preferred supporting substrate,
      and any approved exception.
-   - Summarize auth, authorization, tenant boundary, data model, integration,
+   - Summarize auth, authorization, workspace boundary, data model, integration,
      contract, and deployment assumptions in plain language.
 2. Write `{FEATURE_DIR}/prfaq-history/03-plan.md` as an immutable snapshot.
 3. Create or update `{FEATURE_DIR}/cto-architecture-summary.md` from
@@ -838,7 +838,7 @@ Before reporting completion, update the stakeholder-facing architecture pack:
    prove before implementation.
 5. Update `{FEATURE_DIR}/stakeholder-review-index.md` and explicitly ask
    CTO / Architecture to approve, revise, or defer the architecture,
-   EAI/Azure fit, auth/tenant model, data model, and integration contracts.
+   EAI/Azure fit, auth/workspace model, data model, and integration contracts.
 6. Preserve the existing loop contract: if planning changed eval commands,
    stop conditions, or escalation rules, update `loop-contract.json` and keep
    those changes visible in the stakeholder index rather than replacing loop
@@ -891,7 +891,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    `{FEATURE_DIR}/eai-preflight.md` before making platform or template
    assumptions. The plan MUST preserve:
    - whether the user is logged in or still needs an EAI Platform account
-   - the selected tenant role/readiness and whether app enrollment is allowed
+   - the selected workspace role/readiness and whether app enrollment is allowed
    - whether the repo already has EAI template markers or still needs
      `eai init <app-name>`
    - whether app creation/selection is confirmed, deferred, or blocked
@@ -899,7 +899,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - the last completed gate, blocked gate, and next recovery command from the
      EAI preflight artifact
    If EAI readiness is blocked, plan only the smallest unblock task group and
-   do not invent object types, tenant IDs, app keys, or platform capabilities.
+   do not invent object types, workspace IDs, app keys, or platform capabilities.
 3. **EAI app lifecycle ordering handoff** — keep the platform lifecycle
    explicit inside the plan. Resource provisioning, object-type publish,
    schema/storage health, workflow readiness, and preview readiness must remain
@@ -971,7 +971,7 @@ When the workflow profile is `enterpriseai`, `plan.md` MUST capture:
    - purchasable but unavailable now
    - unavailable without new platform work
    The plan must source this evidence from `eai --describe`, `eai whoami`,
-   `eai tenant select`, `eai resources schema --format json`,
+   `eai workspace select`, `eai resources schema --format json`,
    `eai verify calls --format json`, `eai workflow readiness [workflow-key]
    --format json`, `eai workflow status <workflow-key>`, `eai workflow request
    <workflow-key>`, `eai provision entra --rotate-secret`, or documented
@@ -1006,7 +1006,7 @@ Plan both:
   visible UI direction and distinguishes accessible now vs purchasable vs
   unavailable.
 - **Internal orchestration flows**: platform services, ResourceAPI calls,
-  events, data movement, tenant boundaries, deployment steps, and observability.
+  events, data movement, workspace boundaries, deployment steps, and observability.
 
 ### Competitive / market analysis reference
 

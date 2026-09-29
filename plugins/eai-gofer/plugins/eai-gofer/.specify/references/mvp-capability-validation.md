@@ -31,13 +31,13 @@ Use one state for every relevant capability:
 
 ## Conditional Gates
 
-| Capability                   | Required when                                                                                                     | Not required when                                          |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| EAI CLI and tenant readiness | The current feature uses EAI Platform services or the user asks to prepare an EAI deployment.                     | Local MVP work does not use EAI services yet.              |
-| EAI app template readiness   | The feature creates, changes, or validates an EAI Platform app integration.                                       | The local MVP has not entered EAI integration scope.       |
-| Authentication journey       | The specification includes sign-in, protected content, user roles, or a deployment target that requires identity. | Authentication is explicitly out of the current MVP scope. |
-| Deployment evidence          | The user asks to deploy or the feature claims a deployed outcome.                                                 | Local development and preview only.                        |
-| Browser preview evidence     | The feature changes user-facing behaviour.                                                                        | Non-app work or no user-facing change.                     |
+| Capability                      | Required when                                                                                                     | Not required when                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| EAI CLI and workspace readiness | The current feature uses EAI Platform services or the user asks to prepare an EAI deployment.                     | Local MVP work does not use EAI services yet.              |
+| EAI app template readiness      | The feature creates, changes, or validates an EAI Platform app integration.                                       | The local MVP has not entered EAI integration scope.       |
+| Authentication journey          | The specification includes sign-in, protected content, user roles, or a deployment target that requires identity. | Authentication is explicitly out of the current MVP scope. |
+| Deployment evidence             | The user asks to deploy or the feature claims a deployed outcome.                                                 | Local development and preview only.                        |
+| Browser preview evidence        | The feature changes user-facing behaviour.                                                                        | Non-app work or no user-facing change.                     |
 
 ## Authentication Journey
 
@@ -53,7 +53,7 @@ checks:
 
 Use `.specify/references/platform/eai-auth-access.md` for the access decision.
 Record owner confirmation of `workspace-only` (default) or explicitly approved
-`platform-authenticated` access. Test non-members, cross-tenant requests,
+`platform-authenticated` access. Test non-members, cross-workspace requests,
 revocation, and unavailable membership checks. Sign-in alone is not permission.
 Client SSO is a separate choice. Changing the provider must not widen access.
 Require a real federated journey before claiming that SSO is verified.

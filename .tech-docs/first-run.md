@@ -90,9 +90,9 @@ For a first EAI Platform app, run:
 /eai I want to create my first EAI Platform app
 ```
 
-Gofer checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login, tenant
-access, project folder, EAI app template readiness, and Gofer scaffold health
-before design work begins.
+Gofer checks Git, Node.js, npm, the scoped EAI registry, EAI CLI, login,
+workspace access, project folder, EAI app template readiness, and Gofer scaffold
+health before design work begins.
 
 In VS Code, **Gofer: Initialize Repository** remains available when you only
 need the repo-owned Gofer scaffold.
@@ -186,7 +186,7 @@ Use the host-specific command syntax:
 | VS Code            | Run **Gofer: Initialize Repository**, then ask your connected assistant with `/eai ...` |
 
 For first EAI Platform app setup, use the same `/eai` command. It will handle
-EAI CLI, login, tenant, app template, and Gofer scaffold readiness before it
+EAI CLI, login, workspace, app template, and Gofer scaffold readiness before it
 starts feature design.
 
 Answer the questions Gofer asks about business value, users, constraints,
