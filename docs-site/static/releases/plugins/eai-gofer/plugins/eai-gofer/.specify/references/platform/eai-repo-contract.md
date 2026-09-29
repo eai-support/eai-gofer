@@ -33,14 +33,14 @@ Before app-delivery research, planning, implementation, or validation:
 2. Read `.specify/references/platform/eai-error-catalog.yaml`.
 3. Read `.specify/references/platform/eai-service-patterns.md` before choosing
    storage, workflow, content, search, AI, or integration services.
-4. If CLI, login, tenant, template, or Gofer readiness is missing or stale, run
-   `/gofer:eai-first-run`.
+4. If CLI, login, workspace, template, or Gofer readiness is missing or stale,
+   run `/gofer:eai-first-run`.
 5. Use current CLI discovery instead of memory:
    - `eai update --check`
    - `eai --describe`
    - `eai agent guide --format json` when advertised
    - `eai whoami`
-   - `eai tenant list --format json`
+   - `eai workspace list --format json`
    - `eai provision entra` when advertised and identity setup is in scope
 6. Do not invent, guess, or complete EAI CLI commands from memory. Before
    suggesting or running an `eai ...` command, verify the exact command and
@@ -51,15 +51,15 @@ Before app-delivery research, planning, implementation, or validation:
    - `eai gofer refresh --check --format json`
    - `eai workflow readiness --format json` when advertised by the CLI
 
-## Tenant Data Access Rule
+## Workspace Data Access Rule
 
-Tenant apps access EAI data as the signed-in user. Browser code calls the local
-BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's session
-token. Do not add app-only `client_credentials` helpers, `EAI_SERVICE_*`, or
-`OBO_*` credentials for normal ResourceAPI reads, writes, files, or search. If
-work must continue after the user leaves the page, create/request a platform
-workflow/job from the signed-in user flow and pass tenant, app, user, and
-purpose context into it.
+Workspace apps access EAI data as the signed-in user. Browser code calls the
+local BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's
+session token. Do not add app-only `client_credentials` helpers,
+`EAI_SERVICE_*`, or `OBO_*` credentials for normal ResourceAPI reads, writes,
+files, or search. If work must continue after the user leaves the page,
+create/request a platform workflow/job from the signed-in user flow and pass
+workspace, app, user, and purpose context into it.
 
 ## Stack Policy
 
@@ -78,7 +78,7 @@ For normal app work, make the best EAI Platform service choice for the business
 user and record it in `service-fit-matrix.md`.
 
 - Use PostgreSQL for relational, transactional, reporting, workflow state,
-  audit, and structured tenant business data.
+  audit, and structured workspace business data.
 - Use DocumentDB for flexible JSON documents, nested records, high-change
   schemas, and user-authored document state.
 - Use Blob Storage for large files, binary content, exports, and file-like
@@ -102,7 +102,7 @@ this gate order:
 
 1. Template init or verify current template ownership
 2. Dependency install
-3. Login and tenant selection
+3. Login and workspace selection
 4. App list/create/select
 5. `eai app provision`
 6. `eai provision entra` when required
@@ -134,7 +134,7 @@ When an EAI CLI or platform command fails:
    before guessing platform internals.
 3. Run read-only diagnostics from the guidance before mutating fixes. Apply a
    mutating fix only when it is listed by live EAI guidance or the fallback
-   catalog and the user has approved any admin or tenant-membership change.
+   catalog and the user has approved any admin or workspace-membership change.
 4. Record the command shape, status, server code, request ID when present, last
    completed gate, blocked gate, and next recovery command in
    `.specify/specs/{feature}/eai-preflight.md`.
@@ -143,31 +143,33 @@ When an EAI CLI or platform command fails:
 6. Do not invent a new order or mark the repo ready when a prior gate is still
    blocked.
 
-For tenant member or admin changes, prefer `eai user invite`, `eai user list`,
-`eai user roles`, and `eai user role set` over direct database edits or cloud
-portal changes. If `eai user invite` fails with `EXTERNAL_SERVICE_ERROR`, a 5xx
-status, or the `user_invite_external_service_existing_member` reason, check for
-an existing direct member with
-`eai user list --tenant <tenant-id> --search <email> --format json`. If a direct
-member exists and the user approves, update the role with
-`eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json`,
+For workspace member or admin changes, prefer `eai user invite`,
+`eai user list`, `eai user roles`, and `eai user role set` over direct database
+edits or cloud portal changes. If `eai user invite` fails with
+`EXTERNAL_SERVICE_ERROR`, a 5xx status, or the
+`user_invite_external_service_existing_member` reason, check for an existing
+direct member with
+`eai user list --workspace <workspace-id> --search <email> --format json`. If a
+direct member exists and the user approves, update the role with
+`eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json`,
 verify the read-back, and tell the affected app user to sign out and sign back
 in because Auth.js session or JWT role data may be cached.
 
 For Entra browser sign-in failures, treat `AADSTS50011`, redirect URI mismatch
 messages, and `/api/auth/callback/microsoft-entra-id` callback errors as EAI
-identity provisioning problems first. Confirm login and tenant with `eai whoami`
-and `eai tenant list --format json`, select the correct tenant if needed, then
-run the advertised equivalent of
+identity provisioning problems first. Confirm login and workspace with
+`eai whoami` and `eai workspace list --format json`, select the correct
+workspace if needed, then run the advertised equivalent of
 `eai provision entra --force --redirect-uri <confirmed-callback-uri>`. Record
 only a redacted callback route in Gofer artifacts. Use `--debug` only with
-explicit user approval, and redact private hostnames, tenant IDs, client IDs,
-tokens, and raw debug output before writing artifacts. Use Azure Portal edits
-only when the installed EAI CLI does not advertise an Entra provisioning path or
-the CLI reports an operator-only block.
+explicit user approval, and redact private hostnames, private workspace/platform
+tenant IDs, Entra/CIAM authority tenant IDs, client IDs, tokens, and raw debug
+output before writing artifacts. Use Azure Portal edits only when the installed
+EAI CLI does not advertise an Entra provisioning path or the CLI reports an
+operator-only block.
 
 ## Privacy And Safety
 
 - Do not record tokens, secrets, or `.env.local` values in Gofer artifacts.
-- Record tenant and app state in product-safe labels only.
+- Record workspace and app state in product-safe labels only.
 - Keep repo-owned fallback references public-safe and non-sensitive.

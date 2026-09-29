@@ -159,7 +159,7 @@ who may use the app before changing auth code.
   applicable]
 - **Account continuity and recovery**: [membership preservation, rollback,
   emergency sign-in; no secrets]
-- **Acceptance evidence**: [member, non-member, anonymous, cross-tenant,
+- **Acceptance evidence**: [member, non-member, anonymous, cross-workspace,
   revoked, and unavailable membership checks]
 
 ## Capability Maturity & Validation Scope
@@ -208,7 +208,7 @@ before work continues. Explain the effect in plain language.
 
 - **Capability selection must happen**: after the first visible UI direction and
   before plan/tasks are considered complete
-- **Evidence sources**: [`eai --describe`, `eai whoami`, `eai tenant select`,
+- **Evidence sources**: [`eai --describe`, `eai whoami`, `eai workspace select`,
   `eai resources schema`, `eai verify calls --format json`, or approved
   equivalent]
 - **Decision states**: [accessible now | purchasable but unavailable now |

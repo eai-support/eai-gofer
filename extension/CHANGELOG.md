@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.13.3] - 2026-09-29
+
+Use workspace language in customer guidance
+
 ## [3.13.2] - 2026-09-25
 
 Auto-release
