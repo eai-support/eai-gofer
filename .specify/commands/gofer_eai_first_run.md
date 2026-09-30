@@ -392,8 +392,9 @@ Use the deterministic app-template gate when it exists:
 node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json
 ```
 
-The gate requires the `.eai-manifest.json` provenance written by `eai init`
-and the supported EAI app-template contract:
+The gate requires `.eai-manifest.json` provenance from `eai init` or a
+CLI-verified Portal-generated v2 demo, plus the supported EAI app-template
+contract:
 
 - `.eai-manifest.json`
 - `eai.runtime.json`
@@ -407,7 +408,17 @@ Do not treat copied marker files, a partial scaffold, or a custom template as
 proof that `eai init` completed. A missing checker or any status other than
 `ready` blocks app delivery.
 
-If the gate returns `ready`, run:
+For a Portal-generated demo, locate the trusted installed EAI CLI's absolute
+`dist/index.js` entry outside this repository and rerun the checker with
+`--cli-entry <absolute-installed-cli-entry>`. Require `sourceMode:
+generated-demo`, `adapterStatus: demo-only`, and `ready: true`. This mode
+preserves the existing accepted source, repository, app and URL. Do not run
+`eai init`, `eai gofer refresh`, or a second app creation; use the business card
+and Object Type proposal for planning only. Fixture records and simulated
+actions are not live data or authorized effects. Operational changes require
+separate reviewed bindings, tests and deployment evidence.
+
+If the gate returns `ready` for an `eai init` project, run:
 
 ```bash
 eai verify
