@@ -455,6 +455,17 @@ with an unrelated non-EAI stack.
      treat fixture rows or simulated actions as real tenant capabilities.
      A later operational revision needs separate authorized data/action
      bindings, reviewed source changes, tests and deployment evidence.
+   - For that continuation, use `eai app continue-demo --plan-read-only` to
+     inspect one existing app-owned Object Type. The gated
+     `--prepare-operational-pr` path reserves exact source authority and opens
+     a customer draft PR; it does not merge or deploy. After human review,
+     `--complete-operational-pr` accepts only the post-ACTIVE signed receipt.
+     A selected-create binding requires explicit fields and a separately
+     enabled host route; bounded JSON/CSV import requires a completed signed
+     operational source and explicit `--apply-import`. Never turn sample
+     records into customer data or write through the generated iframe.
+     Current live create authorization requires tenant-builder or higher;
+     ordinary tenant members remain denied.
    - Do not accept copied marker files, a partial scaffold, or a custom
      template as readiness evidence.
    - For a new or empty app workspace, ask:

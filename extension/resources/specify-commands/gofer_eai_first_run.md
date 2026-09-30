@@ -417,6 +417,13 @@ preserves the existing accepted source, repository, app and URL. Do not run
 and Object Type proposal for planning only. Fixture records and simulated
 actions are not live data or authorized effects. Operational changes require
 separate reviewed bindings, tests and deployment evidence.
+Use `eai app continue-demo --plan-read-only` to inspect one app-owned Object
+Type. Its gated operational PR path only prepares a customer review from signed
+source authority; completion requires a merged review and the same app's
+post-ACTIVE receipt. Selected create is explicit and host-owned. JSON/CSV
+import requires the completed operational source and an explicit apply step;
+sample fixture rows are never imported automatically.
+The live create path currently requires tenant-builder or higher.
 
 If the gate returns `ready` for an `eai init` project, run:
 
