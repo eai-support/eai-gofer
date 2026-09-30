@@ -137,6 +137,64 @@ describe('Gofer workspace bootstrap scripts', () => {
     }
   });
 
+  it('accepts and preserves only the canonical CLAUDE.md -> AGENTS.md alias', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'AGENTS.md'), '# Local instructions\n');
+    fs.symlinkSync('AGENTS.md', path.join(workspaceRoot, 'CLAUDE.md'));
+
+    const initial = runJson(CHECK_SCRIPT, [
+      '--workspace',
+      workspaceRoot,
+      '--host',
+      'claude',
+      '--json',
+    ]);
+    expect(initial.exitCode).toBe(2);
+    expect(initial.payload.status).toBe('missing');
+    expect(initial.payload.missingHost).not.toContain('CLAUDE.md');
+
+    const bootstrap = runJson(BOOTSTRAP_SCRIPT, ['--workspace', workspaceRoot, '--host', 'claude']);
+    expect(bootstrap.exitCode).toBe(0);
+    expect(bootstrap.payload.status).toBe('healthy');
+    expect(fs.lstatSync(path.join(workspaceRoot, 'CLAUDE.md')).isSymbolicLink()).toBe(true);
+    expect(fs.readlinkSync(path.join(workspaceRoot, 'CLAUDE.md'))).toBe('AGENTS.md');
+    expect(fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf8')).toContain(
+      'gofer:always-on-eai:start'
+    );
+
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-bootstrap-outside-'));
+    try {
+      fs.unlinkSync(path.join(workspaceRoot, 'CLAUDE.md'));
+      fs.symlinkSync(path.join(outside, 'instructions.md'), path.join(workspaceRoot, 'CLAUDE.md'));
+      const unsafe = runRaw(CHECK_SCRIPT, [
+        '--workspace',
+        workspaceRoot,
+        '--host',
+        'claude',
+        '--json',
+      ]);
+      expect(unsafe.status).toBe(1);
+      expect(unsafe.stdout).toBe('');
+      expect(unsafe.stderr).toContain('symbolic links are not allowed in managed paths');
+
+      fs.unlinkSync(path.join(workspaceRoot, 'CLAUDE.md'));
+      fs.unlinkSync(path.join(workspaceRoot, 'AGENTS.md'));
+      fs.symlinkSync(path.join(outside, 'instructions.md'), path.join(workspaceRoot, 'AGENTS.md'));
+      fs.symlinkSync('AGENTS.md', path.join(workspaceRoot, 'CLAUDE.md'));
+      const unsafeTarget = runRaw(CHECK_SCRIPT, [
+        '--workspace',
+        workspaceRoot,
+        '--host',
+        'claude',
+        '--json',
+      ]);
+      expect(unsafeTarget.status).toBe(1);
+      expect(unsafeTarget.stdout).toBe('');
+      expect(unsafeTarget.stderr).toContain('symbolic links are not allowed in managed paths');
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   it('reports missing then bootstraps a healthy Claude workspace without repo-local mirrors', () => {
     const initial = runJson(CHECK_SCRIPT, [
       '--workspace',
