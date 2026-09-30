@@ -7,6 +7,10 @@ All notable changes to the Gofer extension will be documented in this file.
 Add the EAI-managed hosting choice and hand deployment to the canonical EAI CLI
 with exact-operation resume and actionable setup recovery (#3503).
 
+## [3.13.4] - 2026-09-29
+
+Jev evidence safety and blocker guidance
+
 ## [3.13.3] - 2026-09-29
 
 Use workspace language in customer guidance

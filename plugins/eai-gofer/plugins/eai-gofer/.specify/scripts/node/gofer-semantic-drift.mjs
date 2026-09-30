@@ -8,7 +8,18 @@ import process from 'process';
 import { credentialStatus, resolveApiKey } from './gofer-typesafe-credentials.mjs';
 
 const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-review.json');
-const MAX_ARTIFACT_BYTES = 64 * 1024;
+const TYPE_SAFE_TOTAL_INPUT_LIMIT = 64 * 1024;
+const TYPE_SAFE_STATE_QUESTION_LIMIT = 32 * 1024;
+const TYPE_SAFE_SAFETY_RESERVE_BYTES = 4 * 1024;
+const MAX_PROVIDER_ERROR_BYTES = 4 * 1024;
+const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
+const REQUESTED_MODEL = 'jev-latest';
+const CHAT_SECRET_PATTERNS = [
+  /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
+  /\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{12,}\b/g,
+  /\bTYPESAFE_API_KEY\s*=\s*[^\s]+/gi,
+  /\b(?:api[-_]?key|access[-_]?token|password|secret|token)\s*=\s*[^\s&]+/gi,
+];
 // A local artifact far larger than any real spec/plan/tasks file is treated
 // as a hard error rather than hashed in full: this bounds worst-case memory
 // use independent of the provider payload cap.
@@ -24,11 +35,6 @@ const DELIVERY_ARTIFACTS = [
   'change-manifest.json',
   'blast-radius-report.md',
 ];
-const COMPLETE_EVIDENCE_EVENTS = new Set([
-  'before_task_batch',
-  'after_material_finding',
-  'before_validation',
-]);
 
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 // O_NOFOLLOW is unavailable on Windows; the bitwise OR silently contributes
@@ -49,25 +55,6 @@ async function assertNotSymlink(target) {
 async function openExistingNoFollow(target, flags) {
   await assertNotSymlink(target);
   return fs.open(target, flags | noFollowFlag);
-}
-// A byte-count slice can land mid-sequence; decoding that with toString('utf8')
-// replaces the fragment with U+FFFD (3 bytes), which can grow back past the
-// bound it was meant to enforce. Back up to the sequence boundary instead.
-function truncateUtf8(buffer, maxBytes) {
-  // Note: still checked when buffer.length === maxBytes exactly, since that
-  // is precisely the case a capped collector produces when the source has
-  // more data — the boundary byte may be mid-sequence.
-  if (buffer.length < maxBytes) return buffer;
-  let cut = maxBytes;
-  let i = maxBytes - 1;
-  while (i > 0 && (buffer[i] & 0xc0) === 0x80) i--;
-  const lead = buffer[i];
-  let seqLen = 1;
-  if ((lead & 0xe0) === 0xc0) seqLen = 2;
-  else if ((lead & 0xf0) === 0xe0) seqLen = 3;
-  else if ((lead & 0xf8) === 0xf0) seqLen = 4;
-  if (i + seqLen > maxBytes) cut = i;
-  return buffer.subarray(0, cut);
 }
 // assertNoSymlinkComponents only walks descendants of root; it never checks
 // root itself. A caller-supplied workspace that is a symlink (or missing, or
@@ -156,18 +143,10 @@ async function readConfinedJson(workspace, relativePath) {
   const handle = await openExistingNoFollow(target, constants.O_RDONLY);
   try { return JSON.parse(await handle.readFile('utf8')); } finally { await handle.close(); }
 }
-// The hash must bind the full file, not the truncated slice sent to the
-// provider: hashing only the truncated content would leave drift past
-// MAX_ARTIFACT_BYTES invisible to the receipt. Hash incrementally rather than
-// materializing the whole file as one string, so a large local artifact
-// cannot exhaust memory even though only a bounded prefix is ever sent.
-// MAX_ARTIFACT_BYTES bounds the actual UTF-8 payload sent, not the JS
-// string's UTF-16 code-unit length, so a non-ASCII file cannot exceed the
-// advertised provider payload bound. Opened with O_NOFOLLOW so a same-account
-// symlink swap between validation and read cannot redirect the artifact to a
-// file outside the workspace. A missing artifact is reported as absent, not
-// silently treated as an empty file — the caller must fail closed on that,
-// not risk a false "aligned" verdict built from missing documents.
+// Hash and retain the complete bounded text so the provider never judges an
+// artifact prefix. The local read cap bounds memory. Open with O_NOFOLLOW so a
+// same-account symlink swap cannot redirect the read. Missing artifacts stay
+// distinct from empty files and fail closed before any provider request.
 async function readArtifact(target) {
   let handle;
   try { handle = await openExistingNoFollow(target, constants.O_RDONLY); }
@@ -180,38 +159,215 @@ async function readArtifact(target) {
     if (!info.isFile()) throw new Error('Gofer feature artifact must be a regular file.');
     if (info.size > MAX_ARTIFACT_READ_BYTES) throw new Error('Gofer feature artifact exceeds the maximum readable size.');
     const hash = createHash('sha256');
-    const sentChunks = [];
-    let sentBytes = 0;
+    const contentChunks = [];
+    let fullBytes = 0;
     // autoClose defaults to true, which would close the handle at EOF and
     // make the finally block's own close() below fail on an already-closed
     // handle. The finally block owns the close; the stream must not race it.
     for await (const chunk of handle.createReadStream({ autoClose: false })) {
+      fullBytes += chunk.length;
+      if (fullBytes > MAX_ARTIFACT_READ_BYTES) throw new Error('Gofer feature artifact exceeds the maximum readable size.');
       hash.update(chunk);
-      if (sentBytes < MAX_ARTIFACT_BYTES) {
-        const remaining = MAX_ARTIFACT_BYTES - sentBytes;
-        const piece = chunk.length > remaining ? chunk.subarray(0, remaining) : chunk;
-        sentChunks.push(piece);
-        sentBytes += piece.length;
-      }
+      contentChunks.push(chunk);
     }
-    const sent = truncateUtf8(Buffer.concat(sentChunks), MAX_ARTIFACT_BYTES).toString('utf8');
-    return { present: true, sha256: hash.digest('hex'), sent };
+    const content = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(contentChunks));
+    return { present: true, sha256: hash.digest('hex'), bytes: fullBytes, content, complete: true };
   } finally { await handle.close(); }
 }
 function normalizeAnswer(answer) { return String(answer || '').trim().toLowerCase(); }
+function redactChatContext(value) {
+  let redacted = String(value || '');
+  for (const pattern of CHAT_SECRET_PATTERNS) redacted = redacted.replace(pattern, '[REDACTED]');
+  return redacted;
+}
+
+const QUESTION_CHOICES = {
+  goal_alignment: ['aligned', 'partial', 'conflict'],
+  specification_currency: ['aligned', 'partial', 'conflict'],
+  test_coverage: ['aligned', 'partial', 'conflict'],
+  blast_radius: ['aligned', 'partial', 'conflict'],
+  chat_readiness: ['ready', 'reconcile', 'ask_user'],
+  required_action: ['continue', 'reconcile', 'ask_user'],
+};
+
+function buildQuestions(event) {
+  return {
+    goal_alignment: { type: 'choice', instructions: 'Does the current work remain aligned to the approved goal and specification?', criteria: { aligned: 'The work remains aligned.', partial: 'The work needs document reconciliation.', conflict: 'The work conflicts with approved direction.' } },
+    specification_currency: { type: 'choice', instructions: 'Compare the supplied specification, plan, tasks, decisions, traceability, and change manifest. Are the stated implementation paths, completed-task status, commit evidence, and material changes internally consistent and current? Select partial only when you can identify a concrete missing or stale record.', criteria: { aligned: 'All supplied delivery records agree on the current implementation and no concrete stale or missing record is present.', partial: 'A concrete delivery record is missing, stale, or inconsistent and needs reconciliation.', conflict: 'The recorded implementation conflicts with the approved specification or decision.' } },
+    test_coverage: { type: 'choice', instructions: 'Does the test specification map the changed behavior to executable owning-repository tests and any required eai-testing-dev release evidence?', criteria: { aligned: 'The changed behavior has complete executable coverage.', partial: 'The test evidence is incomplete or stale.', conflict: 'The test evidence contradicts the claimed behavior.' } },
+    blast_radius: { type: 'choice', instructions: 'Does the change manifest and blast-radius report cover all affected interfaces, packages, release surfaces, dependencies, rollback paths, and external test contracts?', criteria: { aligned: 'The blast radius is complete and contained.', partial: 'The blast-radius evidence is incomplete or stale.', conflict: 'The reported blast radius conflicts with the changed surface.' } },
+    ...(event === 'chat_readiness' ? { chat_readiness: { type: 'choice', instructions: 'Using the supplied chat context summary and the current goal, specification, plan, tasks, decisions, and approved edit scope, is this chat ready to deliver the requested outcome? Identify any concrete missing context or contradiction.', criteria: { ready: 'The request and constraints are clear, the approved feature records match the current request, and the next task and edit scope are defined.', reconcile: 'The chat context or feature records have a concrete gap or inconsistency that must be reconciled before code edits.', ask_user: 'A material business, security, cost, deployment, or destructive decision requires the user.' } } } : {}),
+    required_action: { type: 'choice', instructions: 'Choose the action required by the evidence judgments. Select continue only when all are aligned; select reconcile when any is partial or evidence is missing; select ask_user only for a genuine conflict requiring a new business decision.', criteria: { continue: 'All evidence judgments are aligned.', reconcile: 'At least one evidence judgment is partial or missing.', ask_user: 'A conflict requires a material user decision.' } },
+  };
+}
+
+// TypeSafe publishes token limits, not a tokenizer endpoint. Count the exact
+// UTF-8 JSON representation as a conservative local upper bound and reserve
+// 4 KiB for provider framing. This is not an exact token estimate.
+export function measureTypeSafeInputBudget(state, questions) {
+  const stateBytes = Buffer.byteLength(JSON.stringify(state), 'utf8');
+  const questionEntries = Object.entries(questions || {});
+  const questionBytes = questionEntries.map(([id, question]) => Buffer.byteLength(JSON.stringify({ [id]: question }), 'utf8'));
+  const longestQuestionBytes = questionBytes.length ? Math.max(...questionBytes) : 0;
+  const allQuestionsBytes = Buffer.byteLength(JSON.stringify(questions || {}), 'utf8');
+  const statePlusLongestQuestionBytes = stateBytes + longestQuestionBytes;
+  const statePlusAllQuestionsBytes = stateBytes + allQuestionsBytes;
+  const safePairLimitBytes = TYPE_SAFE_STATE_QUESTION_LIMIT - TYPE_SAFE_SAFETY_RESERVE_BYTES;
+  const safeTotalLimitBytes = TYPE_SAFE_TOTAL_INPUT_LIMIT - TYPE_SAFE_SAFETY_RESERVE_BYTES;
+  return {
+    basis: 'utf8_serialized_bytes_upper_bound_not_tokenizer',
+    stateBytes,
+    longestQuestionBytes,
+    allQuestionsBytes,
+    statePlusLongestQuestionBytes,
+    statePlusAllQuestionsBytes,
+    safetyReserveBytes: TYPE_SAFE_SAFETY_RESERVE_BYTES,
+    publishedStateQuestionLimit: TYPE_SAFE_STATE_QUESTION_LIMIT,
+    publishedTotalInputLimit: TYPE_SAFE_TOTAL_INPUT_LIMIT,
+    safeStateQuestionLimitBytes: safePairLimitBytes,
+    safeTotalInputLimitBytes: safeTotalLimitBytes,
+    withinLimits: statePlusLongestQuestionBytes <= safePairLimitBytes && statePlusAllQuestionsBytes <= safeTotalLimitBytes,
+  };
+}
+
+async function readBoundedResponseText(response, limit = MAX_PROVIDER_ERROR_BYTES) {
+  if (!response.body) return { text: '', truncated: false };
+  const reader = response.body.getReader();
+  const chunks = [];
+  let bytes = 0;
+  let truncated = false;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const remaining = limit - bytes;
+      if (value.length > remaining) {
+        if (remaining > 0) chunks.push(value.subarray(0, remaining));
+        bytes += Math.max(remaining, 0);
+        truncated = true;
+        await reader.cancel().catch(() => {});
+        break;
+      }
+      chunks.push(value);
+      bytes += value.length;
+    }
+  } finally {
+    try { reader.releaseLock(); } catch {}
+  }
+  return { text: Buffer.concat(chunks).toString('utf8'), truncated };
+}
+
+function safeToken(value, maxLength = 80) {
+  return typeof value === 'string' && value.length <= maxLength && /^[A-Za-z0-9_.:-]+$/.test(value) ? value : null;
+}
+
+function safeLocation(value) {
+  if (!Array.isArray(value)) return null;
+  const segments = value.slice(0, 8).map((segment) => {
+    if (Number.isInteger(segment) && segment >= 0) return String(segment);
+    return safeToken(segment);
+  });
+  return segments.length && segments.every(Boolean) ? segments.join('.') : null;
+}
+
+function providerDiagnostics(response, bodyText, bodyTruncated) {
+  const headers = response.headers;
+  const requestId = safeToken(headers?.get?.('x-request-id') || headers?.get?.('request-id') || '', 128);
+  const diagnostic = { httpStatus: response.status };
+  if (requestId) diagnostic.requestId = requestId;
+  if (bodyTruncated) {
+    diagnostic.bodyTruncated = true;
+    return diagnostic;
+  }
+  let payload;
+  try { payload = JSON.parse(bodyText); } catch { return diagnostic; }
+  const code = safeToken(payload?.code || payload?.type);
+  if (code) diagnostic.code = code;
+  const details = Array.isArray(payload?.detail) ? payload.detail : Array.isArray(payload?.errors) ? payload.errors : [];
+  const validation = details.slice(0, 8).map((item) => ({
+    ...(safeLocation(item?.loc) ? { location: safeLocation(item.loc) } : {}),
+    ...(safeToken(item?.type) ? { type: safeToken(item.type) } : {}),
+  })).filter((item) => item.location || item.type);
+  if (validation.length) diagnostic.validation = validation;
+  return diagnostic;
+}
+
+function normalizeProbabilities(answer, questionId) {
+  if (!answer?.probabilities || typeof answer.probabilities !== 'object' || Array.isArray(answer.probabilities)) return null;
+  const allowed = new Set(QUESTION_CHOICES[questionId] || []);
+  const entries = Object.entries(answer.probabilities).filter(([choice, probability]) =>
+    allowed.has(choice) && typeof probability === 'number' && Number.isFinite(probability) && probability >= 0 && probability <= 1
+  );
+  const total = entries.reduce((sum, [, probability]) => sum + probability, 0);
+  return entries.length && Math.abs(total - 1) <= 0.02 ? Object.fromEntries(entries) : null;
+}
+
+function answerRecord(answer, questionId) {
+  const probabilities = normalizeProbabilities(answer, questionId);
+  const choice = typeof answer?.choice === 'string' && QUESTION_CHOICES[questionId]?.includes(answer.choice) ? answer.choice : null;
+  const closestAlternative = probabilities
+    ? Object.entries(probabilities).filter(([option]) => option !== choice).sort((left, right) => right[1] - left[1])[0]
+    : null;
+  return {
+    choice,
+    confidence: answer?.confidence ?? null,
+    probabilities,
+    closestAlternative: closestAlternative ? { choice: closestAlternative[0], probability: closestAlternative[1] } : null,
+  };
+}
+
+async function saveReceipt(featureDir, event, receipt) {
+  const receiptRelativeDir = path.join('evidence', 'semantic-review');
+  await assertNoSymlinkComponents(featureDir, receiptRelativeDir);
+  const receiptDir = path.join(featureDir, receiptRelativeDir);
+  await fs.mkdir(receiptDir, { recursive: true });
+  const receiptPath = path.join(receiptDir, `${event}.json`);
+  await assertNotSymlink(receiptPath);
+  let previous;
+  try {
+    const previousHandle = await openExistingNoFollow(receiptPath, constants.O_RDONLY);
+    try { previous = await previousHandle.readFile('utf8'); } finally { await previousHandle.close(); }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  if (previous) {
+    let previousVersion;
+    try { previousVersion = JSON.parse(previous).schemaVersion; } catch {}
+    if (previousVersion === 2) {
+      const archivePath = path.join(receiptDir, `${event}.v2.json`);
+      await assertNotSymlink(archivePath);
+      try {
+        const archiveHandle = await fs.open(archivePath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
+        try { await archiveHandle.writeFile(previous); } finally { await archiveHandle.close(); }
+      } catch (error) {
+        if (error?.code !== 'EEXIST') throw error;
+        const archiveHandle = await openExistingNoFollow(archivePath, constants.O_RDONLY);
+        try {
+          if ((await archiveHandle.readFile('utf8')) !== previous) {
+            throw new Error('A different version-2 receipt archive already exists. Preserve it before writing a new review.');
+          }
+        } finally { await archiveHandle.close(); }
+      }
+    }
+  }
+  const receiptHandle = await fs.open(receiptPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, 0o600);
+  try { await receiptHandle.writeFile(`${JSON.stringify(receipt, null, 2)}\n`); } finally { await receiptHandle.close(); }
+  return receipt;
+}
 // A response outside this set is unexpected (a provider bug, a new API
 // version, a malformed payload) and must not be read as a silent pass.
 const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
 const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
+const KNOWN_CHAT_READINESS = new Set(['ready', 'reconcile', 'ask_user']);
 
-export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env, keychain } = {}) {
+export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env, keychain, chatContext, onDemand = false } = {}) {
   assertSafeEventName(event);
   const resolvedWorkspace = await assertSafeWorkspaceRoot(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
   const policy = await readConfinedJson(resolvedWorkspace, POLICY_RELATIVE_PATH);
   const credentials = await credentialStatus({ workspace, env, keychain });
   const globallyConnected = credentials.source === 'macos_keychain';
-  if (!policy.enabled && !globallyConnected) return { status: 'disabled', event };
+  if (!policy.enabled && !globallyConnected && !onDemand) return { status: 'disabled', event };
   // A syntactically valid but malformed enabled policy must not silently
   // bypass its own gate: `confidence < undefined` is always false in JS, so
   // a missing/non-numeric minimumConfidence would otherwise let any
@@ -221,54 +377,149 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       policy.minimumConfidence < 0 || policy.minimumConfidence > 1) {
     throw new Error('Gofer TypeSafe policy is enabled but malformed (events or minimumConfidence).');
   }
-  if (!policy.events.includes(event)) return { status: 'disabled', event };
+  if (!policy.events.includes(event)) return { status: onDemand ? 'not_enabled_for_event' : 'disabled', event };
   if (!credentials.configured) return { status: 'not_configured', event };
+  if (event === 'chat_readiness' && !String(chatContext || '').trim()) {
+    return { status: 'unavailable', event, reason: 'chat_context_missing' };
+  }
+  if (event !== 'chat_readiness' && chatContext !== undefined) {
+    return { status: 'unavailable', event, reason: 'chat_context_not_allowed_for_event' };
+  }
   const artifacts = await Promise.all(DELIVERY_ARTIFACTS.map(async (name) => [name, await readArtifact(path.join(featureDir, name))]));
-  // A missing artifact is not the same as an empty one: recorded so the
-  // receipt is auditable, even though an early-stage feature legitimately
-  // has not written every document yet (the feature directory itself
-  // already had to exist, per confined() above).
   const missingArtifacts = artifacts.filter(([, info]) => !info.present).map(([name]) => name);
-  const state = Object.fromEntries(artifacts.map(([name, { present, sha256, sent }]) => [name, { present, sha256, content: sent }]));
+  const artifactHashes = Object.fromEntries(artifacts.map(([name, info]) => [name, info.sha256]));
+  const artifactCoverage = Object.fromEntries(artifacts.map(([name, info]) => [name, {
+    present: info.present,
+    complete: Boolean(info.complete),
+    sourceBytes: info.bytes ?? 0,
+    sentBytes: 0,
+  }]));
+  const state = Object.fromEntries(artifacts.map(([name, info]) => [name, {
+    present: info.present,
+    complete: Boolean(info.complete),
+    sha256: info.sha256,
+    byteLength: info.bytes ?? 0,
+    content: info.content,
+  }]));
+  const redactedChatContext = event === 'chat_readiness' ? redactChatContext(chatContext) : '';
+  const chatContextSha256 = event === 'chat_readiness' ? digest(redactedChatContext) : null;
+  const chatContextBytes = event === 'chat_readiness' ? Buffer.byteLength(redactedChatContext, 'utf8') : null;
+  if (event === 'chat_readiness') {
+    state.chat_context = {
+      present: Boolean(redactedChatContext),
+      complete: true,
+      summaryOnly: true,
+      sha256: chatContextSha256,
+      byteLength: chatContextBytes,
+      content: redactedChatContext,
+    };
+  }
+  const questions = buildQuestions(event);
+  const inputBudget = measureTypeSafeInputBudget(state, questions);
+  const missingRequiredEvidence = missingArtifacts.length > 0;
+  const baseReceipt = {
+    schemaVersion: 3,
+    provider: 'typesafe',
+    event,
+    status: 'unavailable',
+    reason: null,
+    requestAttempted: false,
+    requestSent: false,
+    requestedModel: REQUESTED_MODEL,
+    model: null,
+    usage: null,
+    inputBudget,
+    missingArtifacts,
+    missingRequiredEvidence,
+    policySha256: digest(JSON.stringify(policy)),
+    artifacts: artifactHashes,
+    artifactCoverage,
+    ...(event === 'chat_readiness' ? { chatContextSha256, chatContextBytes } : {}),
+    confidence: null,
+    confidenceGate: {
+      minimum: policy.minimumConfidence,
+      observed: null,
+      belowMinimum: null,
+      weakestQuestion: null,
+    },
+    answers: {},
+    providerError: null,
+  };
+  if (missingRequiredEvidence) {
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      status: 'reconcile',
+      reason: 'required_artifacts_missing',
+    });
+  }
+  if (!inputBudget.withinLimits) {
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      status: 'unavailable',
+      reason: 'input_budget_exceeded',
+    });
+  }
+
   const { apiKey } = await resolveApiKey({ workspace, env, keychain });
   let response;
   try {
+    baseReceipt.requestAttempted = true;
     response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
       method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
       signal: AbortSignal.timeout(10_000),
-      body: JSON.stringify({ model: 'jev-latest', state: JSON.stringify(state), questions: {
-        goal_alignment: { type: 'choice', instructions: 'Does the current work remain aligned to the approved goal and specification?', criteria: { aligned: 'The work remains aligned.', partial: 'The work needs document reconciliation.', conflict: 'The work conflicts with approved direction.' } },
-        specification_currency: { type: 'choice', instructions: 'Compare the supplied specification, plan, tasks, decisions, traceability, and change manifest. Are the stated implementation paths, completed-task status, commit evidence, and material changes internally consistent and current? Select partial only when you can identify a concrete missing or stale record.', criteria: { aligned: 'All supplied delivery records agree on the current implementation and no concrete stale or missing record is present.', partial: 'A concrete delivery record is missing, stale, or inconsistent and needs reconciliation.', conflict: 'The recorded implementation conflicts with the approved specification or decision.' } },
-        test_coverage: { type: 'choice', instructions: 'Does the test specification map the changed behavior to executable owning-repository tests and any required eai-testing-dev release evidence?', criteria: { aligned: 'The changed behavior has complete executable coverage.', partial: 'The test evidence is incomplete or stale.', conflict: 'The test evidence contradicts the claimed behavior.' } },
-        blast_radius: { type: 'choice', instructions: 'Does the change manifest and blast-radius report cover all affected interfaces, packages, release surfaces, dependencies, rollback paths, and external test contracts?', criteria: { aligned: 'The blast radius is complete and contained.', partial: 'The blast-radius evidence is incomplete or stale.', conflict: 'The reported blast radius conflicts with the changed surface.' } },
-        required_action: { type: 'choice', instructions: 'Choose the action required by the four evidence judgments. Select continue when all four are aligned, reconcile when any is partial or evidence is missing, and ask_user only for a genuine conflict requiring a new business decision.', criteria: { continue: 'All four evidence judgments are aligned.', reconcile: 'At least one evidence judgment is partial or missing.', ask_user: 'A conflict requires a material user decision.' } },
-      } }),
+      body: JSON.stringify({ model: REQUESTED_MODEL, state, questions }),
     });
   } catch (error) {
-    // A network failure or timeout is not a verdict. Report it as
-    // unavailable rather than letting the caller's caller see an uncaught
-    // exception where it expects a status.
-    return { status: 'unavailable', event, reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error' };
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      requestSent: null,
+      reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error',
+      artifactCoverage: Object.fromEntries(artifacts.map(([name]) => [name, { ...artifactCoverage[name], sentBytes: null }])),
+    });
   }
-  if (!response.ok) return { status: 'unavailable', event, httpStatus: response.status };
+  baseReceipt.requestSent = true;
+  baseReceipt.artifactCoverage = Object.fromEntries(artifacts.map(([name, info]) => [name, {
+    ...artifactCoverage[name],
+    sentBytes: info.bytes ?? 0,
+  }]));
+  if (!response.ok) {
+    const errorBody = await readBoundedResponseText(response);
+    const providerError = providerDiagnostics(response, errorBody.text, errorBody.truncated);
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      requestSent: true,
+      reason: 'provider_http_error',
+      providerError,
+    });
+  }
+  const responseBody = await readBoundedResponseText(response, MAX_PROVIDER_RESPONSE_BYTES);
+  if (responseBody.truncated) {
+    return saveReceipt(featureDir, event, { ...baseReceipt, reason: 'response_too_large' });
+  }
   let payload;
-  try { payload = await response.json(); } catch { return { status: 'unavailable', event, reason: 'invalid_response_body' }; }
+  try { payload = JSON.parse(responseBody.text); } catch {
+    return saveReceipt(featureDir, event, { ...baseReceipt, reason: 'invalid_response_body' });
+  }
   const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
   const alignmentAnswer = answers.goal_alignment || {};
   const specificationAnswer = answers.specification_currency || {};
   const testAnswer = answers.test_coverage || {};
   const blastRadiusAnswer = answers.blast_radius || {};
   const actionAnswer = answers.required_action || {};
+  const chatReadinessAnswer = answers.chat_readiness || {};
   const alignment = normalizeAnswer(alignmentAnswer.choice);
   const specification = normalizeAnswer(specificationAnswer.choice);
   const testCoverage = normalizeAnswer(testAnswer.choice);
   const blastRadius = normalizeAnswer(blastRadiusAnswer.choice);
   const action = normalizeAnswer(actionAnswer.choice);
+  const chatReadiness = event === 'chat_readiness' ? normalizeAnswer(chatReadinessAnswer.choice) : '';
   // An invalid or out-of-range confidence must count as zero, not be
   // dropped: dropping it would let one bad value be outweighed by the
   // other, and an out-of-range value (e.g. 2) would otherwise satisfy the
   // minimum-confidence check on a malformed response.
-  const confidences = [alignmentAnswer, specificationAnswer, testAnswer, blastRadiusAnswer, actionAnswer].map((answer) => {
+  const responseAnswers = [alignmentAnswer, specificationAnswer, testAnswer, blastRadiusAnswer, actionAnswer,
+    ...(event === 'chat_readiness' ? [chatReadinessAnswer] : [])];
+  const confidences = responseAnswers.map((answer) => {
     const value = Number(answer.confidence);
     return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
   });
@@ -277,23 +528,44 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   // toward a silent aligned pass: an unexpected label must not be read as
   // "everything is fine".
   const evidenceAlignments = [alignment, specification, testCoverage, blastRadius];
-  const recognized = evidenceAlignments.every((value) => KNOWN_ALIGNMENTS.has(value)) && KNOWN_ACTIONS.has(action);
-  const missingRequiredEvidence = COMPLETE_EVIDENCE_EVENTS.has(event) && missingArtifacts.length > 0;
-  const status = evidenceAlignments.includes('conflict') || action === 'ask_user' ? 'conflict'
-    : !recognized || missingRequiredEvidence || confidence < policy.minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' ? 'reconcile'
+  const recognized = evidenceAlignments.every((value) => KNOWN_ALIGNMENTS.has(value)) && KNOWN_ACTIONS.has(action) &&
+    (event !== 'chat_readiness' || KNOWN_CHAT_READINESS.has(chatReadiness));
+  const status = evidenceAlignments.includes('conflict') || action === 'ask_user' || chatReadiness === 'ask_user' ? 'conflict'
+    : !recognized || confidence < policy.minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' || chatReadiness === 'reconcile' ? 'reconcile'
     : 'aligned';
-  const receipt = { schemaVersion: 2, provider: 'typesafe', event, status, confidence, missingArtifacts, missingRequiredEvidence, policySha256: digest(JSON.stringify(policy)), artifacts: Object.fromEntries(artifacts.map(([name, { sha256 }]) => [name, sha256])), answers: { goal_alignment: { choice: alignmentAnswer.choice || null, confidence: alignmentAnswer.confidence ?? null }, specification_currency: { choice: specificationAnswer.choice || null, confidence: specificationAnswer.confidence ?? null }, test_coverage: { choice: testAnswer.choice || null, confidence: testAnswer.confidence ?? null }, blast_radius: { choice: blastRadiusAnswer.choice || null, confidence: blastRadiusAnswer.confidence ?? null }, required_action: { choice: actionAnswer.choice || null, confidence: actionAnswer.confidence ?? null } } };
-  const receiptRelativeDir = path.join('evidence', 'semantic-review');
-  await assertNoSymlinkComponents(featureDir, receiptRelativeDir);
-  const receiptDir = path.join(featureDir, receiptRelativeDir);
-  await fs.mkdir(receiptDir, { recursive: true });
-  const receiptPath = path.join(receiptDir, `${event}.json`);
-  // A prior run's own receipt may already exist and must be replaced; a
-  // symlink there must not be.
-  await assertNotSymlink(receiptPath);
-  const receiptHandle = await fs.open(receiptPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, 0o600);
-  try { await receiptHandle.writeFile(`${JSON.stringify(receipt, null, 2)}\n`); } finally { await receiptHandle.close(); }
-  return receipt;
+  const answerIds = ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
+    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
+  const answerRecords = Object.fromEntries(answerIds.map((id) => [id, answerRecord(answers[id] || {}, id)]));
+  const weakestIndex = confidences.indexOf(confidence);
+  const weakestQuestionId = answerIds[weakestIndex] || null;
+  const weakestQuestion = weakestQuestionId ? answerRecords[weakestQuestionId] : null;
+  const providerModel = safeToken(payload.model, 80);
+  const usage = payload.usage && Number.isSafeInteger(payload.usage.input_tokens) && payload.usage.input_tokens >= 0 &&
+    Number.isSafeInteger(payload.usage.output_tokens) && payload.usage.output_tokens >= 0
+    ? { inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens }
+    : null;
+  return saveReceipt(featureDir, event, {
+    ...baseReceipt,
+    status,
+    reason: status === 'reconcile' ? (confidence < policy.minimumConfidence ? 'confidence_below_minimum_or_evidence_needs_reconciliation' : 'evidence_needs_reconciliation') : null,
+    requestSent: true,
+    model: providerModel,
+    usage,
+    confidence,
+    confidenceGate: {
+      minimum: policy.minimumConfidence,
+      observed: confidence,
+      belowMinimum: confidence < policy.minimumConfidence,
+      weakestQuestion: weakestQuestionId ? {
+        id: weakestQuestionId,
+        choice: weakestQuestion.choice,
+        confidence: weakestQuestion.confidence,
+        probabilities: weakestQuestion.probabilities,
+        closestAlternative: weakestQuestion.closestAlternative,
+      } : null,
+    },
+    answers: answerRecords,
+  });
 }
 // A CI/automation caller must not read "exit 0" as a pass for anything other
 // than a genuine alignment or an intentionally inactive review: reconcile,
