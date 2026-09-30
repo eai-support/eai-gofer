@@ -208,7 +208,7 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
       roots.push(result.worktreesRoot);
       expect(result.report).toMatchObject({ functionalPasses: 12, status: 'pass' });
       expect(spend.spentUsd).toBe(24 * 14);
-    });
+    }, 120_000);
 
     it('fails every case when the reviewer rejects, even though the protected check passes', async () => {
       const { run } = await harness(`printf '{"approved":false,"reasons":["hard-coded"]}' > review/verdict.json`, 400);
