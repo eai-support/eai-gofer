@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
+import { execFile } from 'node:child_process';
 import { promises as fs } from 'fs';
+import { isAbsolute, relative } from 'path';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const MANIFEST_FILE = '.eai-manifest.json';
 const REQUIRED_FILES = [
@@ -16,7 +21,7 @@ const REQUIRED_FILES = [
 ];
 
 function parseArgs(argv) {
-  const args = { root: process.cwd(), json: false };
+  const args = { root: process.cwd(), json: false, cliEntry: undefined };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -24,6 +29,8 @@ function parseArgs(argv) {
       args.root = argv[++index];
     } else if (arg === '--json') {
       args.json = true;
+    } else if (arg === '--cli-entry' && argv[index + 1]) {
+      args.cliEntry = argv[++index];
     }
   }
 
@@ -69,6 +76,36 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function withinRoot(root, candidate) {
+  const fromRoot = relative(root, candidate);
+  return fromRoot === '' || (!fromRoot.startsWith(`..${path.sep}`) && fromRoot !== '..' && !isAbsolute(fromRoot));
+}
+
+async function verifyGeneratedDemo(projectRoot, manifest, cliEntry) {
+  if (typeof cliEntry !== 'string' || !isAbsolute(cliEntry)) return false;
+  try {
+    const entry = await fs.realpath(cliEntry);
+    if (withinRoot(await fs.realpath(projectRoot), entry) || !/\.m?js$/.test(entry) || !(await fs.stat(entry)).isFile())
+      return false;
+    const { stdout } = await execFileAsync(process.execPath, [
+      entry, 'app', 'continue-demo', '--path', projectRoot, '--format', 'json',
+    ], { cwd: projectRoot, timeout: 20_000, maxBuffer: 64_000 });
+    const inspected = JSON.parse(stdout);
+    const digest = manifest.generatedDemo?.artifactDigest;
+    return isRecord(inspected) && inspected.sourceMode === 'admin-portal-generated' &&
+      inspected.appArtifactMode === 'app-v2-demo' && inspected.adapterStatus === 'demo-only' &&
+      inspected.runtimeBindingRecorded === false && inspected.appKey === manifest.appKey &&
+      inspected.acceptedArtifactDigest === digest &&
+      /^sha256:[a-f0-9]{64}$/.test(digest) && /^[a-f0-9]{40}$/.test(inspected.commitSha);
+  } catch {
+    return false;
+  }
+}
+
 function nextAction(status) {
   if (status === 'not_initialized') {
     return 'Run eai init for this app before starting Gofer app delivery.';
@@ -77,7 +114,7 @@ function nextAction(status) {
     return 'Create a supported EAI app with eai init. Do not build over this custom template.';
   }
   if (status === 'invalid_manifest') {
-    return 'Repair or recreate the app through eai init, then run this check again.';
+    return 'Recover the provenance manifest from a trusted source. Do not overwrite a nonempty repository.';
   }
   if (status === 'partial') {
     return 'Complete or recreate the EAI app through eai init, then run this check again.';
@@ -85,7 +122,7 @@ function nextAction(status) {
   return 'Run eai verify and eai template check before implementation.';
 }
 
-export async function checkEaiAppTemplateReadiness(root) {
+export async function checkEaiAppTemplateReadiness(root, { cliEntry } = {}) {
   const projectRoot = path.resolve(root);
   const presence = Object.fromEntries(
     await Promise.all(
@@ -132,6 +169,30 @@ export async function checkEaiAppTemplateReadiness(root) {
       reasons: ['The eai init provenance manifest is not valid JSON.'],
       nextAction: nextAction(status),
     };
+  }
+
+  if (manifest?.sourceMode === 'admin-portal-generated') {
+    const status = 'generated_demo_unverified';
+    const nextAction = 'Preserve this Portal-owned repository. Install the supported EAI CLI and rerun with --cli-entry set to its absolute installed dist/index.js path. Never run eai init or eai gofer refresh over this source.';
+    if (manifest.schemaVersion !== 'eai.generated_app_manifest.v1' ||
+        !isCanonicalTemplateSource(manifest.templateRepository) ||
+        manifest.generatedDemo?.schemaVersion !== 'eai.generated_app_artifact.v2' ||
+        manifest.runtimeBinding !== undefined || missingFiles.length > 0) {
+      return { ready: false, status, sourceMode: 'generated-demo', adapterStatus: 'demo-only',
+        missingFiles, reasons: ['The generated demo manifest or app-template files are unsupported.'], nextAction };
+    }
+    for (const jsonFile of ['eai.runtime.json', 'package.json']) {
+      try { await readJson(path.join(projectRoot, jsonFile)); }
+      catch { return { ready: false, status, sourceMode: 'generated-demo', adapterStatus: 'demo-only',
+        missingFiles, reasons: [`${jsonFile} is not valid JSON.`], nextAction }; }
+    }
+    if (!(await verifyGeneratedDemo(projectRoot, manifest, cliEntry))) {
+      return { ready: false, status, sourceMode: 'generated-demo', adapterStatus: 'demo-only',
+        missingFiles, reasons: ['The installed CLI has not verified this accepted demo and its repository lineage.'], nextAction };
+    }
+    return { ready: true, status: 'ready', sourceMode: 'generated-demo', adapterStatus: 'demo-only',
+      missingFiles, reasons: ['The installed CLI verified the current accepted demo and repository lineage.'],
+      nextAction: 'Continue Gofer planning from this accepted demo. Keep sample data and actions simulated until a separately reviewed, authorized operational revision is deployed. Do not run eai init or eai gofer refresh over this source.' };
   }
 
   const templateSource = manifest?.template?.repo ?? manifest?.template?.displaySource;
@@ -196,7 +257,7 @@ function formatReport(report) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const report = await checkEaiAppTemplateReadiness(args.root);
+  const report = await checkEaiAppTemplateReadiness(args.root, { cliEntry: args.cliEntry });
   process.stdout.write(`${args.json ? JSON.stringify(report, null, 2) : formatReport(report)}\n`);
   process.exitCode = report.ready ? 0 : 2;
 }

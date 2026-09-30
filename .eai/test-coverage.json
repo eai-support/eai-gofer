@@ -120,6 +120,28 @@
           "required_deployed_contracts": []
         },
         {
+          "id": "generated-demo-continuation-readiness",
+          "description": "Gofer accepts an existing Portal-generated demo only after the installed EAI CLI verifies its exact source lineage, and keeps simulated adapters distinct from operational capability.",
+          "owned_paths": [
+            ".specify/scripts/node/eai-app-template-readiness.mjs",
+            ".specify/commands/0_gofer_start.md",
+            ".specify/commands/gofer_eai_first_run.md",
+            "extension/resources/node-scripts/eai-app-template-readiness.mjs",
+            "extension/resources/specify-commands/0_gofer_start.md",
+            "extension/resources/specify-commands/gofer_eai_first_run.md",
+            "tests/fixtures/golden/claude-commands/0_gofer_start.md",
+            "tests/integration/enterpriseai/eai-app-template-readiness.integration.test.ts"
+          ],
+          "required_repo_tests": [
+            "tests/integration/enterpriseai/eai-app-template-readiness.integration.test.ts",
+            "tests/unit/scripts/byte-equivalence.test.ts",
+            "tests/unit/scripts/sync-extension-resources.test.ts"
+          ],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
+        },
+        {
           "id": "object-type-routing-audit-tooling",
           "description": "Immutable Object Type raw-route ownership audit, portable schemas, and deterministic Gofer resource generation checks.",
           "owned_paths": [

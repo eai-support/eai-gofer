@@ -50,13 +50,65 @@ function writeReadyProject(root: string): void {
   }
 }
 
-function run(root: string) {
-  const result = spawnSync(process.execPath, [SCRIPT, '--root', root, '--json'], {
-    encoding: 'utf8',
-  });
+function run(root: string, cliEntry?: string) {
+  const result = spawnSync(
+    process.execPath,
+    [SCRIPT, '--root', root, '--json', ...(cliEntry ? ['--cli-entry', cliEntry] : [])],
+    {
+      encoding: 'utf8',
+    }
+  );
   return {
     ...result,
     report: JSON.parse(result.stdout),
+  };
+}
+
+function writeGeneratedDemo(root: string, overrides: Record<string, unknown> = {}): void {
+  write(
+    root,
+    '.eai-manifest.json',
+    JSON.stringify({
+      schemaVersion: 'eai.generated_app_manifest.v1',
+      sourceMode: 'admin-portal-generated',
+      appKey: 'fleet-demo',
+      templateRepository: 'eai-tools/eai-app-template',
+      generatedDemo: {
+        schemaVersion: 'eai.generated_app_artifact.v2',
+        artifactDigest: `sha256:${'a'.repeat(64)}`,
+      },
+      ...overrides,
+    })
+  );
+  for (const relativePath of requiredFiles) {
+    write(root, relativePath, relativePath.endsWith('.json') ? '{}' : 'template marker\n');
+  }
+}
+
+function fakeCli(response: Record<string, unknown> | string): string {
+  const root = makeRoot();
+  const entry = path.join(root, 'installed-cli.mjs');
+  const output = typeof response === 'string' ? response : JSON.stringify(response);
+  fs.writeFileSync(
+    entry,
+    `if (process.argv.slice(2).join(' ') !==
+    \`app continue-demo --path \${process.argv[5]} --format json\`)
+    process.exit(2);
+  process.stdout.write(${JSON.stringify(output)});`
+  );
+  return entry;
+}
+
+function verifiedDemoOutput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    sourceMode: 'admin-portal-generated',
+    appArtifactMode: 'app-v2-demo',
+    adapterStatus: 'demo-only',
+    runtimeBindingRecorded: false,
+    appKey: 'fleet-demo',
+    acceptedArtifactDigest: `sha256:${'a'.repeat(64)}`,
+    commitSha: 'b'.repeat(40),
+    ...overrides,
   };
 }
 
@@ -183,5 +235,75 @@ describe('EAI app-template readiness gate', () => {
 
     expect(output).not.toContain(privateValue);
     expect(output).not.toContain(root);
+  });
+
+  it('recognizes a Portal-owned demo without suggesting eai init or treating it as operational', () => {
+    const root = makeRoot();
+    writeGeneratedDemo(root);
+
+    const unverified = run(root);
+    expect(unverified.status).toBe(2);
+    expect(unverified.report).toMatchObject({
+      ready: false,
+      status: 'generated_demo_unverified',
+      sourceMode: 'generated-demo',
+      adapterStatus: 'demo-only',
+    });
+    expect(unverified.report.nextAction).toContain('Never run eai init');
+
+    const verified = run(root, fakeCli(verifiedDemoOutput()));
+    expect(verified.status).toBe(0);
+    expect(verified.report).toMatchObject({
+      ready: true,
+      status: 'ready',
+      sourceMode: 'generated-demo',
+      adapterStatus: 'demo-only',
+    });
+    expect(verified.report.nextAction).toContain('Keep sample data and actions simulated');
+  });
+
+  it('fails closed on malformed, legacy, or mismatched CLI inspection', () => {
+    const root = makeRoot();
+    writeGeneratedDemo(root);
+    for (const response of [
+      '{invalid',
+      verifiedDemoOutput({ appArtifactMode: null, runtimeBindingRecorded: true }),
+      verifiedDemoOutput({ acceptedArtifactDigest: `sha256:${'c'.repeat(64)}` }),
+      verifiedDemoOutput({ adapterStatus: 'operational' }),
+    ]) {
+      const result = run(root, fakeCli(response));
+      expect(result.status).toBe(2);
+      expect(result.report.status).toBe('generated_demo_unverified');
+    }
+  });
+
+  it('refuses to execute a CLI entry from the generated repository', () => {
+    const root = makeRoot();
+    writeGeneratedDemo(root);
+    const localEntry = path.join(root, 'node_modules/.bin/fake-cli.mjs');
+    write(
+      root,
+      'node_modules/.bin/fake-cli.mjs',
+      `process.stdout.write(${JSON.stringify(JSON.stringify(verifiedDemoOutput()))});`
+    );
+
+    const result = run(root, localEntry);
+    expect(result.status).toBe(2);
+    expect(result.report.status).toBe('generated_demo_unverified');
+  });
+
+  it('never turns a legacy or mixed-authority generated manifest into a ready app', () => {
+    const root = makeRoot();
+    writeGeneratedDemo(root, { generatedDemo: undefined, runtimeBinding: {} });
+    const result = run(root, fakeCli(verifiedDemoOutput()));
+    expect(result.status).toBe(2);
+    expect(result.report.status).toBe('generated_demo_unverified');
+    expect(result.report.nextAction).toContain('Never run eai init');
+
+    writeGeneratedDemo(root, { schemaVersion: 'eai.generated_app_manifest.v3' });
+    const wrongSchema = run(root, fakeCli(verifiedDemoOutput()));
+    expect(wrongSchema.status).toBe(2);
+    expect(wrongSchema.report.status).toBe('generated_demo_unverified');
+    expect(wrongSchema.report.nextAction).toContain('Never run eai init');
   });
 });

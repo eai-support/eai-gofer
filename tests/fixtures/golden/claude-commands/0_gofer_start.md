@@ -439,9 +439,33 @@ with an unrelated non-EAI stack.
    - A missing checker or any status other than `ready` blocks the EAI
      integration, workspace, or deployment capability. It does not block unrelated
      local MVP research, specification, UI, or source work.
-   - The check must prove `.eai-manifest.json` eai-init provenance and the
-     supported app-template contract, including `eai.runtime.json` and the EAI
-     configuration files.
+   - The check must prove `.eai-manifest.json` eai-init provenance or a
+     CLI-verified Portal-generated v2 demo, plus the supported app-template
+     contract, including `eai.runtime.json` and the EAI configuration files.
+     For a generated demo, locate the installed EAI CLI's absolute
+     `dist/index.js` entry outside the project and rerun the checker with
+     `--cli-entry <absolute-installed-cli-entry>`. The checker invokes
+     `eai app continue-demo` without using the project's PATH or scripts.
+     Require `sourceMode: generated-demo`, `adapterStatus: demo-only`, and
+     `ready: true`; otherwise stop the app-delivery path.
+   - A verified generated demo is an existing Portal-owned app. Preserve its
+     accepted source, manifest, repository and deployment. Do not run
+     `eai init`, `eai gofer refresh`, or app creation over it. Use the accepted
+     business card and Object Type proposal as planning inputs, but do not
+     treat fixture rows or simulated actions as real tenant capabilities.
+     A later operational revision needs separate authorized data/action
+     bindings, reviewed source changes, tests and deployment evidence.
+   - For that continuation, use `eai app continue-demo --plan-read-only` to
+     inspect one existing app-owned Object Type. The gated
+     `--prepare-operational-pr` path reserves exact source authority and opens
+     a customer draft PR; it does not merge or deploy. After human review,
+     `--complete-operational-pr` accepts only the post-ACTIVE signed receipt.
+     A selected-create binding requires explicit fields and a separately
+     enabled host route; bounded JSON/CSV import requires a completed signed
+     operational source and explicit `--apply-import`. Never turn sample
+     records into customer data or write through the generated iframe.
+     Current live create authorization requires tenant-builder or higher;
+     ordinary tenant members remain denied.
    - Do not accept copied marker files, a partial scaffold, or a custom
      template as readiness evidence.
    - For a new or empty app workspace, ask:
@@ -455,6 +479,9 @@ with an unrelated non-EAI stack.
 7. **Check app enrollment capability before EAI delivery planning**
    - Once app name and workspace are confirmed, run `eai app list --format
      json` to confirm the workspace's current app enrollments.
+   - For a verified generated demo, match its existing app key to the
+     enrollment readback. Do not create a second app or provision its proposed
+     Object Types merely because they appear in the accepted demo artifact.
    - Before creating anything remote, ask the user to confirm the app name,
      app key, company workspace, and any child-workspace boundary.
    - If confirmed, use `eai app create <name> --tenant-id <tenant-id>
