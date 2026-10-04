@@ -771,6 +771,14 @@ the EAI-managed deployment task is marked complete.
    - Commands: `eai runtime validate` and `eai verify`
    - Confirms the runtime contract, workspace/workflow configuration, and platform
      readiness before any deploy attempt.
+   - For selected EAI-maintained source, include a read-only source validation
+     task before implementation and after app edits:
+     `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --source eai-managed --json`.
+     Verify `eai deploy source validate --help` first. Preserve an explicitly
+     selected CLI with `--cli <executable>`. Use app-owned extension points and
+     colocated business tests from `.specify/references/platform/eai-app-template.md`.
+     A failed check blocks managed-source readiness and publication. Never omit
+     business changes or restore platform files automatically.
 3. **Hosting- and source-specific deployment task**
    - Read the approved hosting choice from the active specification or plan.
      Do not emit one deployment command for every mode.

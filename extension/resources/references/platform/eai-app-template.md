@@ -29,6 +29,29 @@ app template for EnterpriseAI app-delivery work.
 
 ## Implementation Contract
 
+For EAI-maintained source, plan business changes in app-owned `src/` and
+`public/` extension points and supported root configuration. Keep business tests
+colocated in app-owned `src/`. Preserve the template's authentication, platform
+BFF, launchers, and root platform test harness. Read the installed CLI's
+`eai deploy source validate --help` before using its current source boundary. Do
+not copy its allowlist into Gofer.
+
+After selecting EAI-maintained source, run the read-only managed-source check
+before implementation, after source changes, and before claiming readiness:
+
+```bash
+node .specify/scripts/node/eai-app-template-readiness.mjs --root . --source eai-managed --json
+```
+
+If the app uses an explicitly selected CLI executable, add `--cli <executable>`
+to preserve that selection and its private profile. A missing validator,
+unsupported edit, or malformed result blocks managed-source readiness. The
+checker never publishes, changes the app, or replaces deployment evidence.
+Preserve business changes on failure. Use supported extension points or fix the
+owning template when the requirement needs platform behavior. Do not omit
+business changes, restore files automatically, or broaden publication rules.
+Local-only and customer-owned source retain their own validation paths.
+
 - Use Object Types as the data model contract.
 - Use the template SDK and hooks for resources, documents, and chat.
 - Use config slots with `{ components: [...] }`, not stale array-only slot

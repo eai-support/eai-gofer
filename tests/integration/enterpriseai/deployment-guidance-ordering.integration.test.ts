@@ -28,6 +28,34 @@ function createFixtureDir(prefix: string): string {
 }
 
 describe('enterpriseai deployment guidance ordering (root integration)', () => {
+  it('requires the current selected managed-source boundary before readiness and keeps other hosting modes separate', () => {
+    const check =
+      'node .specify/scripts/node/eai-app-template-readiness.mjs --root . --source eai-managed --json';
+    for (const stage of [
+      '3_gofer_plan.md',
+      '4_gofer_tasks.md',
+      '5_gofer_implement.md',
+      '6_gofer_validate.md',
+    ]) {
+      const command = readCommandFile(stage);
+      expect(command).toContain(check);
+      expect(command).toContain('eai deploy source validate --help');
+      expect(command).toContain('--cli <executable>');
+      expect(command.replace(/\s+/g, ' ')).toMatch(/(?:Never|never|Do not) omit business changes/);
+    }
+    const implement = readCommandFile('5_gofer_implement.md');
+    expect(implement).toContain('sourceValidation.status: passed');
+    expect(implement).toContain('after each source edit batch');
+    expect(implement).toContain(
+      'Local-only and customer-owned source retain their validation paths'
+    );
+    const validate = readCommandFile('6_gofer_validate.md');
+    expect(validate.indexOf('## Managed-Source Readiness Gate')).toBeLessThan(
+      validate.indexOf('## Step 1.5:')
+    );
+    expect(validate).toContain('Do not\napply it to local-only or customer-owned source');
+  });
+
   it('documents scaffold-before-deploy ordering, EAI CLI syntax, and runtime deploy-doctor gating', () => {
     const tasksCommand = readCommandFile('4_gofer_tasks.md');
     const implementCommand = readCommandFile('5_gofer_implement.md');
