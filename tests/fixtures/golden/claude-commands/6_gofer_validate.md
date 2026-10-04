@@ -413,9 +413,12 @@ node .specify/scripts/node/eai-app-template-readiness.mjs --root . --source eai-
 
 Add `--cli <executable>` for the app's explicitly selected CLI. Require
 `ready: true` and `sourceValidation.status: passed`; missing, malformed, or failed
-validation blocks managed-source readiness. Resolve unsupported edits through
-app-owned extension points or the owning template. Do not omit business changes,
-restore files automatically, or weaken publication rules. Recheck after source
+validation blocks managed-source readiness. Include all customer-authored app
+files, including runners, tests, backend code, scripts, documentation, and
+supported dot configuration. Preserve protected EAI authentication,
+platform-service, deployment, and workflow controls. Unsupported custom runtimes
+must fail explicitly. Do not omit business changes or customer app files,
+restore files automatically, or weaken protected controls. Recheck after source
 changes. This gate is read-only and cannot prove deployment success. Do not
 apply it to local-only or customer-owned source.
 

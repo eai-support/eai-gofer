@@ -29,12 +29,13 @@ app template for EnterpriseAI app-delivery work.
 
 ## Implementation Contract
 
-For EAI-maintained source, plan business changes in app-owned `src/` and
-`public/` extension points and supported root configuration. Keep business tests
-colocated in app-owned `src/`. Preserve the template's authentication, platform
-BFF, launchers, and root platform test harness. Read the installed CLI's
-`eai deploy source validate --help` before using its current source boundary. Do
-not copy its allowlist into Gofer.
+For EAI-maintained source, include all customer-authored app files in the
+managed-source upload: UI and backend code, custom runners, tests, scripts,
+documentation, assets, and supported dot configuration. EAI-owned
+authentication, platform-service, deployment, and workflow controls remain
+protected. Credentials and local-tool metadata remain excluded. Read the
+installed CLI's `eai deploy source validate --help` for its normalized source
+boundary. Do not maintain a second allowlist in Gofer.
 
 After selecting EAI-maintained source, run the read-only managed-source check
 before implementation, after source changes, and before claiming readiness:
@@ -47,9 +48,10 @@ If the app uses an explicitly selected CLI executable, add `--cli <executable>`
 to preserve that selection and its private profile. A missing validator,
 unsupported edit, or malformed result blocks managed-source readiness. The
 checker never publishes, changes the app, or replaces deployment evidence.
-Preserve business changes on failure. Use supported extension points or fix the
-owning template when the requirement needs platform behavior. Do not omit
-business changes, restore files automatically, or broaden publication rules.
+Preserve the complete customer app source on failure. An unsupported custom
+runtime is an explicit failure; resolve its compatibility through the owning
+template or a supported runtime. Never omit business changes or customer app
+files, restore files automatically, or weaken protected EAI controls to pass.
 Local-only and customer-owned source retain their own validation paths.
 
 - Use Object Types as the data model contract.

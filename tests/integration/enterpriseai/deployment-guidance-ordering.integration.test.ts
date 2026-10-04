@@ -56,6 +56,37 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     expect(validate).toContain('Do not\napply it to local-only or customer-owned source');
   });
 
+  it('includes complete authored app source while retaining protected EAI controls and explicit runtime failures', () => {
+    const reference = fs
+      .readFileSync(
+        path.join(process.cwd(), '.specify/references/platform/eai-app-template.md'),
+        'utf8'
+      )
+      .replace(/\s+/g, ' ');
+    expect(reference).toContain('include all customer-authored app files');
+    expect(reference).toContain('custom runners, tests, scripts, documentation, assets');
+    expect(reference).toContain('supported dot configuration');
+    expect(reference).toContain('Credentials and local-tool metadata remain excluded');
+    expect(reference).toContain('An unsupported custom runtime is an explicit failure');
+    expect(reference).toContain('Do not maintain a second allowlist in Gofer');
+    expect(reference).not.toContain('Keep business tests colocated');
+    expect(reference).not.toContain('root platform test harness');
+    for (const stage of [
+      '3_gofer_plan.md',
+      '4_gofer_tasks.md',
+      '5_gofer_implement.md',
+      '6_gofer_validate.md',
+    ]) {
+      const guidance = readCommandFile(stage).replace(/\s+/g, ' ');
+      expect(guidance).toContain('Include all customer-authored app files');
+      expect(guidance).toContain('runners, tests, backend code, scripts, documentation');
+      expect(guidance).toContain(
+        'protected EAI authentication, platform-service, deployment, and workflow controls'
+      );
+      expect(guidance).toContain('custom runtimes must fail explicitly');
+    }
+  });
+
   it('documents scaffold-before-deploy ordering, EAI CLI syntax, and runtime deploy-doctor gating', () => {
     const tasksCommand = readCommandFile('4_gofer_tasks.md');
     const implementCommand = readCommandFile('5_gofer_implement.md');
