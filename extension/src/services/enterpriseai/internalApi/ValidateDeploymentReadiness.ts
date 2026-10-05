@@ -434,6 +434,27 @@ function hasValidSourceBinding(value: unknown): boolean {
   return hasCommit || hasBundle;
 }
 
+function hasValidCliSourceBinding(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasValidSourceBinding(value) &&
+    typeof value.sourceCommitSha === 'string' &&
+    COMMIT_SHA_PATTERN.test(value.sourceCommitSha) &&
+    value.sourceCommitSha === value.commitSha &&
+    typeof value.workflowBlobSha === 'string' &&
+    COMMIT_SHA_PATTERN.test(value.workflowBlobSha) &&
+    typeof value.collectorDigest === 'string' &&
+    SHA256_PATTERN.test(value.collectorDigest) &&
+    typeof value.artifactDigest === 'string' &&
+    SHA256_PATTERN.test(value.artifactDigest) &&
+    typeof value.imageDigest === 'string' &&
+    SHA256_PATTERN.test(value.imageDigest) &&
+    isRecord(value.imageArtifact) &&
+    typeof value.imageArtifact.archiveDigest === 'string' &&
+    SHA256_PATTERN.test(value.imageArtifact.archiveDigest)
+  );
+}
+
 function hasValidRuntimeIdentity(value: unknown): boolean {
   return isRecord(value) && isNonEmptyString(value.clientId) && isNonEmptyString(value.principalId);
 }
@@ -499,7 +520,9 @@ function validateManagedDeployDoctorEvidence(
     sourceMode !== undefined &&
     typeof operation.configHash === 'string' &&
     SHA256_PATTERN.test(operation.configHash) &&
-    hasValidSourceBinding(evidence.sourceBinding) &&
+    (operation.sourceMode === 'source-unknown' || operation.sourceMode === 'eai-cli-generated'
+      ? hasValidCliSourceBinding(evidence.sourceBinding)
+      : hasValidSourceBinding(evidence.sourceBinding)) &&
     isNonEmptyString(deployment.deploymentId) &&
     isHttpsUrl(deployment.activeUrl) &&
     hasValidRuntimeIdentity(deployment.runtimeIdentity) &&

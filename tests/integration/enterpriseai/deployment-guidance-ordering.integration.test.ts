@@ -254,10 +254,16 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
         'enterprise/planning-portal',
         'Enterprise/Planning-Portal'
       ),
-      buildManagedDeployDoctorEvidence({
-        operation: { sourceMode: 'source-unknown' },
-        sourceBinding: { installationId: '123' },
-      }),
+      {
+        ...buildCliManagedDeployDoctorEvidence('source-unknown'),
+        sourceBinding: {
+          ...(buildCliManagedDeployDoctorEvidence('source-unknown').sourceBinding as Record<
+            string,
+            unknown
+          >),
+          installationId: '123',
+        },
+      },
     ],
     [
       'explicit customer source branch and workflow',
@@ -265,10 +271,16 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
         '--source customer-owned',
         '--source customer-owned --branch feature/support --workflow .github/workflows/eai-app.yml'
       ),
-      buildManagedDeployDoctorEvidence({
-        operation: { sourceMode: 'source-unknown' },
-        sourceBinding: { ref: 'refs/heads/feature/support' },
-      }),
+      {
+        ...buildCliManagedDeployDoctorEvidence('source-unknown'),
+        sourceBinding: {
+          ...(buildCliManagedDeployDoctorEvidence('source-unknown').sourceBinding as Record<
+            string,
+            unknown
+          >),
+          ref: 'refs/heads/feature/support',
+        },
+      },
     ],
   ])('allows an exact passing task-bound receipt for %s', async (label, taskText, evidence) => {
     const fixturesDir = createFixtureDir(
@@ -306,6 +318,43 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
   });
 
   it.each([
+    'sourceCommitSha',
+    'workflowBlobSha',
+    'collectorDigest',
+    'artifactDigest',
+    'imageDigest',
+  ])('rejects CLI wire evidence missing %s even when generic commitSha remains', async (field) => {
+    const fixturesDir = createFixtureDir('fixtures-cli-wire-source-binding');
+    fs.mkdirSync(path.join(fixturesDir, '.eai'), { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+    const evidence = buildCliManagedDeployDoctorEvidence('eai-cli-generated');
+    const sourceBinding = evidence.sourceBinding as Record<string, unknown>;
+    delete sourceBinding[field];
+    fs.writeFileSync(
+      path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
+      JSON.stringify(evidence)
+    );
+    try {
+      const result = await validateDeploymentReadiness(
+        {
+          runId: 'run_cli_wire_binding',
+          stage: 'implementation',
+          deploymentTaskId: 'task_cli_wire_binding',
+          deploymentTaskText: MANAGED_DEPLOY_TASK_TEXT,
+          receiptValidationMode: 'operation-bound',
+          requiredFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+          blockCompletionOnFailure: true,
+        },
+        { workspaceRoot: fixturesDir }
+      );
+      expect(result.response.readinessPassed).toBe(false);
+      expect(result.response.evidenceIssues).toContain('DOCTOR_EVIDENCE_SCHEMA_INVALID');
+    } finally {
+      fs.rmSync(fixturesDir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
     [
       'customer receipt for an EAI-maintained task',
       MANAGED_DEPLOY_TASK_TEXT,
@@ -330,7 +379,11 @@ describe('enterpriseai deployment guidance ordering (root integration)', () => {
     fs.writeFileSync(path.join(fixturesDir, 'eai.runtime.json'), '{"schemaVersion":1}\n');
     fs.writeFileSync(
       path.join(fixturesDir, '.eai', 'deploy-doctor.json'),
-      JSON.stringify(buildManagedDeployDoctorEvidence({ operation: { sourceMode } }))
+      JSON.stringify(
+        sourceMode === 'source-unknown' || sourceMode === 'eai-cli-generated'
+          ? buildCliManagedDeployDoctorEvidence(sourceMode)
+          : buildManagedDeployDoctorEvidence({ operation: { sourceMode } })
+      )
     );
     try {
       const result = await validateDeploymentReadiness(

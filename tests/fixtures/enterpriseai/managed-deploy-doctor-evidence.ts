@@ -83,16 +83,22 @@ export function buildManagedDeployDoctorEvidence(
   };
 }
 
-/** Mirrors the authoritative CLI doctor fields rather than its user-facing source choices. */
+/** INVARIANT: Keep this source binding independent of the generic fixture so CLI wire regressions cannot inherit a passing fallback. */
 export function buildCliManagedDeployDoctorEvidence(
   sourceMode: 'source-unknown' | 'eai-cli-generated'
 ): Record<string, unknown> {
-  return buildManagedDeployDoctorEvidence({
-    operation: { sourceMode },
+  const base = buildManagedDeployDoctorEvidence({ operation: { sourceMode } });
+  return {
+    ...base,
     sourceBinding: {
+      repository: 'enterprise/planning-portal',
       repositoryId: 456,
+      installationId: 123,
       sourceCommitSha: 'a'.repeat(40),
       ...(sourceMode === 'eai-cli-generated' ? { reviewHeadSha: 'a'.repeat(40) } : {}),
+      commitSha: 'a'.repeat(40),
+      workflowPath: '.github/workflows/eai-app.yml',
+      ref: 'refs/heads/main',
       workflowHeadBranch: 'main',
       workflowRunId: 789,
       workflowBlobSha: 'c'.repeat(40),
@@ -105,5 +111,5 @@ export function buildCliManagedDeployDoctorEvidence(
       },
       imageDigest: `sha256:${'0'.repeat(64)}`,
     },
-  });
+  };
 }

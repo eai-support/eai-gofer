@@ -41,7 +41,7 @@ function buildManagedDeployDoctorEvidence(): Record<string, unknown> {
       },
       latestPointerVersion: 3,
       expectedLatestVersion: 3,
-      requiresTenantInfra: false,
+      requiresTenantInfra: true,
     },
     authenticatedReadiness: true,
     doctor: {

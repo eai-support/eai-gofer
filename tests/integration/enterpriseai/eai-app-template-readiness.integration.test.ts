@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { resolveCliExecution } from '../../../.specify/scripts/node/eai-app-template-readiness.mjs';
 
 const SCRIPT = path.join(process.cwd(), '.specify/scripts/node/eai-app-template-readiness.mjs');
 const tempRoots: string[] = [];
@@ -93,6 +94,48 @@ afterEach(() => {
 });
 
 describe('EAI app-template readiness gate', () => {
+  it('runs a selected Windows npm shim through its verified Node entrypoint without a shell', async () => {
+    const root = makeRoot();
+    const bin = path.join(root, 'node_modules', '.bin');
+    const shim = path.join(bin, 'eai.cmd');
+    const entrypoint = path.join(root, 'node_modules', '@enterpriseai', 'cli', 'dist', 'index.js');
+    write(root, 'node_modules/.bin/eai.cmd', '@echo off\r\n');
+    write(
+      root,
+      'node_modules/@enterpriseai/cli/package.json',
+      JSON.stringify({
+        name: '@enterpriseai/cli',
+        bin: { eai: 'dist/index.js' },
+      })
+    );
+    write(root, 'node_modules/@enterpriseai/cli/dist/index.js', '');
+
+    expect(await resolveCliExecution(shim, 'win32')).toEqual({
+      command: process.execPath,
+      args: [entrypoint, 'deploy', 'source', 'validate', '--format', 'json'],
+    });
+    expect(await resolveCliExecution('eai', 'win32', bin)).toEqual(
+      await resolveCliExecution(shim, 'win32')
+    );
+    expect(await resolveCliExecution(`${shim}&echo injected`, 'win32')).toBeNull();
+  });
+
+  it('rejects an unrelated Windows shim instead of executing its batch content', async () => {
+    const root = makeRoot();
+    const shim = path.join(root, 'eai.cmd');
+    write(root, 'eai.cmd', '@echo off\r\n');
+    write(
+      root,
+      'node_modules/@enterpriseai/cli/package.json',
+      JSON.stringify({
+        name: 'unrelated-cli',
+        bin: { eai: 'dist/index.js' },
+      })
+    );
+    write(root, 'node_modules/@enterpriseai/cli/dist/index.js', '');
+    expect(await resolveCliExecution(shim, 'win32')).toBeNull();
+  });
+
   it.each([['--source'], ['--cli'], ['--source', 'unsupported']])(
     'does not report readiness for malformed selection %j',
     (...args) => {
