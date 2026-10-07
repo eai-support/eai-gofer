@@ -55,6 +55,9 @@ files, restore files automatically, or weaken protected EAI controls to pass.
 Local-only and customer-owned source retain their own validation paths.
 
 - Use Object Types as the data model contract.
+- Keep PascalCase model names separate from the exact stored `slug`. Use
+  lowercase kebab-case slugs in runtime paths and links; never re-derive or
+  rename a historical stored slug.
 - Use the template SDK and hooks for resources, documents, and chat.
 - Use config slots with `{ components: [...] }`, not stale array-only slot
   examples.
