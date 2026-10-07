@@ -359,6 +359,57 @@ describe('key ceremony', () => {
     expect(loaded.keyId).toBe('ceremony-key-1');
   });
 
+  it.each(['replaced bytes', 'symlinked bytes'])(
+    'refuses %s in the account-owned pending registry after the ceremony',
+    async (mutation) => {
+      const t = await trust();
+      await chmod(t.root, 0o700);
+      const protectedDirectory = await makeProtectedDirectory();
+      roots.push(protectedDirectory);
+      const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+      const result = await runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+        keyId: 'ceremony-key-original',
+        registryPath,
+      });
+      const attackerKey = generateKeyPairSync('ed25519')
+        .publicKey.export({
+          type: 'spki',
+          format: 'pem',
+        })
+        .toString();
+      const swappedBytes = `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          evaluators: [
+            {
+              keyId: 'ceremony-key-attacker',
+              host: 'codex',
+              evaluator: VERIFIER,
+              publicKeyPem: attackerKey,
+            },
+          ],
+        },
+        null,
+        2
+      )}\n`;
+      if (mutation === 'replaced bytes') {
+        await writeFile(result.pendingPath, swappedBytes);
+      } else {
+        const attackerPath = path.join(t.root, 'attacker-registry.json');
+        await writeFile(attackerPath, swappedBytes);
+        await rm(result.pendingPath);
+        await symlink(attackerPath, result.pendingPath);
+      }
+
+      expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+      expect(runFixtureInstall(result.installCommands[1], t.root).status).not.toBe(0);
+      await expect(readFile(registryPath)).rejects.toThrow();
+      expect(await readdir(protectedDirectory)).toEqual([]);
+    }
+  );
+
   it('cannot replace a registry installed after the ceremony prints its commands', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
@@ -427,7 +478,7 @@ describe('key ceremony', () => {
     const fixtureBin = path.join(t.root, 'hostile-bin');
     const marker = path.join(t.root, 'hostile-helper-ran');
     await mkdir(fixtureBin);
-    for (const helper of ['mkdir', 'mktemp', 'install', 'link', 'rm']) {
+    for (const helper of ['mkdir', 'mktemp', 'install', 'link', 'rm', 'sha256sum', 'shasum']) {
       await writeFile(
         path.join(fixtureBin, helper),
         `#!/bin/sh\nprintf '%s\\n' '${helper}' >> "$GOFER_FAKE_TOOL_LOG"\nexit 77\n`,

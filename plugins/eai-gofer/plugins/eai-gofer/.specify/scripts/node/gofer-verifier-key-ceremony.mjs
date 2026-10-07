@@ -8,7 +8,7 @@
  * so this tool prints the exact commands and changes nothing outside your
  * trust folder. Run it in a terminal yourself. Do not run it through an agent.
  */
-import { generateKeyPairSync, randomUUID } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
@@ -63,8 +63,10 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
   await writeExclusive(path.join(active, 'heldout-verifier.json'), `${JSON.stringify({ schemaVersion: 1,
     host: 'codex', evaluator: VERIFIER_EVALUATOR, keyId })}\n`);
   const pendingPath = path.join(trustRoot, 'verifier-registry.pending.json');
-  await writeExclusive(pendingPath, `${JSON.stringify({ schemaVersion: 1, evaluators: [
-    { keyId, host: 'codex', evaluator: VERIFIER_EVALUATOR, publicKeyPem }] }, null, 2)}\n`);
+  const pendingBytes = `${JSON.stringify({ schemaVersion: 1, evaluators: [
+    { keyId, host: 'codex', evaluator: VERIFIER_EVALUATOR, publicKeyPem }] }, null, 2)}\n`;
+  await writeExclusive(pendingPath, pendingBytes);
+  const pendingSha256 = createHash('sha256').update(pendingBytes, 'utf8').digest('hex');
   const directory = path.dirname(registryPath);
   const stageTemplate = path.join(directory, `${path.basename(registryPath)}.${keyId}.XXXXXX`);
   const installScript = [
@@ -73,6 +75,9 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
     `stage=$(mktemp ${shellQuote(stageTemplate)})`,
     `trap 'rm -f -- "$stage"' EXIT`,
     `install -o root -m 0644 ${shellQuote(pendingPath)} "$stage"`,
+    // SECURITY: Check the root-owned copy against ceremony bytes, not the mutable pending file.
+    'if command -v sha256sum >/dev/null 2>&1; then staged_hash=$(sha256sum < "$stage"); elif command -v shasum >/dev/null 2>&1; then staged_hash=$(shasum -a 256 < "$stage"); else exit 1; fi',
+    `[ "\${staged_hash%% *}" = ${shellQuote(pendingSha256)} ]`,
     `link "$stage" ${shellQuote(registryPath)}`,
   ].join('; ');
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
