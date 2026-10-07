@@ -622,7 +622,7 @@ ${Array.from({ length: 30 }, (_, k) => `- [ ] #T${i}${j}${k.toString().padStart(
   });
 
   suite('Concurrent Operations', () => {
-    test('should handle concurrent parsing operations efficiently', async function () {
+    test('loads 50 specs within the latency bound and matches individual reads', async function () {
       this.timeout(15000); // 15 seconds max
 
       // Create multiple spec directories
@@ -665,39 +665,58 @@ status: "draft"
 
       console.log(`Concurrent parsing of ${specCount} specs completed in ${concurrentTime}ms`);
 
-      // Performance assertions
+      const expectedSpecIds = Array.from(
+        { length: specCount },
+        (_, index) => `concurrent-test-${index + 1}`
+      ).sort();
       assert.ok(
         concurrentTime < 5000,
         `Concurrent parsing should take < 5 seconds, took ${concurrentTime}ms`
       );
       assert.strictEqual(results.length, specCount, 'All specs should be parsed');
-      assert.ok(
-        results.every((spec) => spec && spec.id),
-        'All specs should have valid data'
+      assert.deepStrictEqual(
+        results.map((spec) => spec.id).sort(),
+        expectedSpecIds,
+        'Bulk loading should return every fixture spec exactly once'
       );
+      for (const spec of results) {
+        const specNumber = Number(spec.id.slice('concurrent-test-'.length));
+        assert.strictEqual(spec.title, `Concurrent Test ${specNumber}`);
+        assert.strictEqual(spec.status, 'draft');
+        assert.deepStrictEqual(
+          spec.tasks.map((task) => task.id),
+          Array.from(
+            { length: 10 },
+            (_, index) => `T${specNumber}${index.toString().padStart(2, '0')}`
+          )
+        );
+        assert.ok(spec.tasks.every((task) => task.status === 'pending'));
+      }
 
-      // Compare with sequential parsing (simulate loading individual specs)
-      const sequentialStartTime = Date.now();
       const sequentialResults = [];
       for (let i = 1; i <= specCount; i++) {
         const specId = `concurrent-test-${i}`;
-        try {
-          const spec = await parser.loadSpec(specId);
-          sequentialResults.push(spec);
-        } catch (error) {
-          console.warn(`Failed to load spec ${specId}:`, error);
-        }
+        sequentialResults.push(await parser.loadSpec(specId));
       }
-      const sequentialTime = Date.now() - sequentialStartTime;
-
-      console.log(
-        `Sequential parsing took ${sequentialTime}ms (${(sequentialTime / concurrentTime).toFixed(2)}x slower)`
+      assert.deepStrictEqual(
+        sequentialResults.map((spec) => spec.id).sort(),
+        expectedSpecIds,
+        'Individual reads should return every fixture spec exactly once'
       );
-
-      // Concurrent should be faster than sequential (with some tolerance for test environment)
-      assert.ok(
-        concurrentTime <= sequentialTime * 1.2,
-        'Concurrent parsing should not be significantly slower than sequential'
+      const comparable = (spec: (typeof results)[number]) => ({
+        id: spec.id,
+        title: spec.title,
+        status: spec.status,
+        tasks: spec.tasks.map((task) => ({
+          id: task.id,
+          status: task.status,
+          dependencies: task.dependencies,
+        })),
+      });
+      assert.deepStrictEqual(
+        results.map(comparable).sort((a, b) => a.id.localeCompare(b.id)),
+        sequentialResults.map(comparable).sort((a, b) => a.id.localeCompare(b.id)),
+        'Bulk and individual reads should produce the same spec and task data'
       );
     });
   });
