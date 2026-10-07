@@ -1,7 +1,18 @@
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { chmod, link, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -42,6 +53,10 @@ async function trust() {
     { mode: 0o600 }
   );
   return { root, workspaceRoot };
+}
+function runFixtureInstall(command: string, cwd: string, env = process.env) {
+  const shellCommand = command.replace(/^sudo /, '').replace('install -o root -m 0644 ', 'cp ');
+  return spawnSync('/bin/sh', ['-c', shellCommand], { cwd, env, encoding: 'utf8' });
 }
 const receiptFor = (keyId: string) => ({
   host: 'codex',
@@ -306,7 +321,10 @@ describe('key ceremony', () => {
     await chmod(t.root, 0o700);
     const protectedDirectory = await makeProtectedDirectory();
     roots.push(protectedDirectory);
-    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const registryPath = path.join(
+      protectedDirectory,
+      "verifier'$(touch injected)`touch also-injected`.json"
+    );
     const result = await runVerifierKeyCeremony({
       trustRoot: t.root,
       getPassphrase: answers(PASSPHRASE, PASSPHRASE),
@@ -317,7 +335,8 @@ describe('key ceremony', () => {
     expect(
       await readFile(path.join(active, 'heldout-verifier.private.enc.json'), 'utf8')
     ).not.toContain('PRIVATE KEY');
-    expect(result.installCommands.join('\n')).toContain('sudo install -o root -g wheel -m 0644');
+    expect(result.installCommands[1]).toContain('link');
+    expect(result.installCommands[1]).toContain('mktemp');
     const options = {
       workspaceRoot: t.workspaceRoot,
       trustRoot: t.root,
@@ -328,33 +347,278 @@ describe('key ceremony', () => {
     await expect(loadActiveBenchmarkVerifierKey(options)).rejects.toThrow(
       'TRUSTED_EVALUATOR_REQUIRED'
     );
-    // Stand-in for the administrator's install step.
-    await writeFile(registryPath, await readFile(result.pendingPath), { mode: 0o644 });
+    // Exercise the printed install path without privilege or changing the real trust root.
+    for (const command of result.installCommands) {
+      expect(runFixtureInstall(command, t.root).status).toBe(0);
+    }
+    expect((await stat(registryPath)).nlink).toBe(1);
+    expect(await readdir(protectedDirectory)).toEqual([path.basename(registryPath)]);
+    await expect(readFile(path.join(t.root, 'injected'))).rejects.toThrow();
+    await expect(readFile(path.join(t.root, 'also-injected'))).rejects.toThrow();
     const loaded = await loadActiveBenchmarkVerifierKey(options);
     expect(loaded.keyId).toBe('ceremony-key-1');
   });
 
-  it('keeps earlier verifier keys in the pending registry', async () => {
+  it('cannot replace a registry installed after the ceremony prints its commands', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
-    const earlier = {
-      keyId: 'earlier-key-1',
-      host: 'codex',
-      evaluator: VERIFIER,
-      publicKeyPem: 'pem',
-    };
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
     const result = await runVerifierKeyCeremony({
       trustRoot: t.root,
       getPassphrase: answers(PASSPHRASE, PASSPHRASE),
-      keyId: 'ceremony-key-2',
-      existingEntries: [earlier],
-      registryPath: '/nonexistent/verifier-registry.json',
+      keyId: 'ceremony-key-3',
+      registryPath,
     });
-    const pending = JSON.parse(await readFile(result.pendingPath, 'utf8'));
-    expect(pending.evaluators.map((entry: { keyId: string }) => entry.keyId)).toEqual([
-      'earlier-key-1',
-      'ceremony-key-2',
-    ]);
+    const original = '{"schemaVersion":1,"evaluators":[]}';
+    await writeFile(registryPath, original, { mode: 0o644 });
+    expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+    expect(runFixtureInstall(result.installCommands[1], t.root).status).not.toBe(0);
+    expect(await readFile(registryPath, 'utf8')).toBe(original);
+    expect(await readdir(protectedDirectory)).toEqual(['verifier-registry.json']);
+    expect((await stat(registryPath)).nlink).toBe(1);
+  });
+
+  it.each(['directory', 'symlink to directory'])(
+    'cannot install inside a late %s at the registry path',
+    async (kind) => {
+      const t = await trust();
+      await chmod(t.root, 0o700);
+      const protectedDirectory = await makeProtectedDirectory();
+      roots.push(protectedDirectory);
+      const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+      const result = await runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+        keyId: 'ceremony-key-directory',
+        registryPath,
+      });
+      if (kind === 'directory') {
+        await mkdir(registryPath);
+      } else {
+        const existingDirectory = path.join(protectedDirectory, 'existing-directory');
+        await mkdir(existingDirectory);
+        await symlink(existingDirectory, registryPath);
+      }
+      expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+      expect(runFixtureInstall(result.installCommands[1], t.root).status).not.toBe(0);
+      expect(await readdir(registryPath)).toEqual([]);
+      expect(await readdir(protectedDirectory)).toEqual(
+        kind === 'directory'
+          ? ['verifier-registry.json']
+          : ['existing-directory', 'verifier-registry.json']
+      );
+    }
+  );
+
+  it('uses system helpers even when the inherited PATH contains hostile commands', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-path',
+      registryPath,
+    });
+    const fixtureBin = path.join(t.root, 'hostile-bin');
+    const marker = path.join(t.root, 'hostile-helper-ran');
+    await mkdir(fixtureBin);
+    for (const helper of ['mkdir', 'mktemp', 'install', 'link', 'rm']) {
+      await writeFile(
+        path.join(fixtureBin, helper),
+        `#!/bin/sh\nprintf '%s\\n' '${helper}' >> "$GOFER_FAKE_TOOL_LOG"\nexit 77\n`,
+        { mode: 0o755 }
+      );
+    }
+    const env = {
+      ...process.env,
+      PATH: `${fixtureBin}:${process.env.PATH}`,
+      GOFER_FAKE_TOOL_LOG: marker,
+    };
+    const run = (command: string) =>
+      spawnSync(
+        '/bin/sh',
+        ['-c', command.replace(/^sudo /, '').replace('install -o root ', 'install ')],
+        { cwd: t.root, env, encoding: 'utf8' }
+      );
+    expect(result.installCommands[0]).toContain('sudo /bin/mkdir');
+    expect(result.installCommands[1]).toContain('PATH=/usr/bin:/bin; export PATH');
+    for (const command of result.installCommands) {
+      expect(run(command).status).toBe(0);
+    }
+    await expect(stat(marker)).rejects.toThrow();
+    expect((await stat(registryPath)).nlink).toBe(1);
+    expect(await readdir(protectedDirectory)).toEqual(['verifier-registry.json']);
+  });
+
+  it('does not trust an installed registry when staging cleanup fails', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-4',
+      registryPath,
+    });
+    const failedCleanup = result.installCommands[1].replace('rm -f -- "$stage"', '/bin/false');
+    expect(failedCleanup).not.toBe(result.installCommands[1]);
+    expect(runFixtureInstall(failedCleanup, t.root).status).not.toBe(0);
+    expect((await stat(registryPath)).nlink).toBe(2);
+    expect((await readdir(protectedDirectory)).length).toBe(2);
+    await expect(
+      loadActiveBenchmarkVerifierKey({
+        workspaceRoot: t.workspaceRoot,
+        trustRoot: t.root,
+        getPassphrase: async () => PASSPHRASE,
+        protectedRegistry: { path: registryPath, ownerUid: uid },
+      })
+    ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+  });
+
+  it('installs a Linux-shaped registry without requiring the wheel group', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(
+      protectedDirectory,
+      'etc',
+      'eai-gofer',
+      'verifier-registry.json'
+    );
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-linux',
+      registryPath,
+    });
+    const run = (command: string) =>
+      spawnSync(
+        '/bin/sh',
+        ['-c', command.replace(/^sudo /, '').replace('install -o root ', 'install ')],
+        {
+          cwd: t.root,
+          encoding: 'utf8',
+        }
+      );
+    expect(run(result.installCommands[0]).status).toBe(0);
+    const withWheel = result.installCommands[1].replace(
+      'install -o root -m 0644',
+      'install -o root -g eai-gofer-nonexistent-group -m 0644'
+    );
+    expect(withWheel).not.toBe(result.installCommands[1]);
+    expect(run(withWheel).status).not.toBe(0);
+    await expect(stat(registryPath)).rejects.toThrow();
+    expect(await readdir(path.dirname(registryPath))).toEqual([]);
+    expect(run(result.installCommands[1]).status).toBe(0);
+    expect((await stat(registryPath)).nlink).toBe(1);
+    const loaded = await loadActiveBenchmarkVerifierKey({
+      workspaceRoot: t.workspaceRoot,
+      trustRoot: t.root,
+      getPassphrase: async () => PASSPHRASE,
+      protectedRegistry: { path: registryPath, ownerUid: uid },
+    });
+    expect(loaded.keyId).toBe('ceremony-key-linux');
+  });
+
+  it('preserves an installed verifier registry without prompting or staging another key', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const original = JSON.stringify({ schemaVersion: 1, evaluators: [{ keyId: 'earlier-key-1' }] });
+    await writeFile(registryPath, original);
+    let prompts = 0;
+    await expect(
+      runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: async () => {
+          prompts++;
+          return PASSPHRASE;
+        },
+        keyId: 'ceremony-key-2',
+        registryPath,
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(0);
+    expect(await readFile(registryPath, 'utf8')).toBe(original);
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.json'))
+    ).rejects.toThrow();
+  });
+
+  it('refuses a protected registry installed while the human is entering a passphrase', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const original = '{"schemaVersion":1,"evaluators":[]}';
+    let prompts = 0;
+    await expect(
+      runVerifierKeyCeremony({
+        trustRoot: t.root,
+        registryPath,
+        getPassphrase: async () => {
+          prompts++;
+          if (prompts === 2) await writeFile(registryPath, original);
+          return PASSPHRASE;
+        },
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(2);
+    expect(await readFile(registryPath, 'utf8')).toBe(original);
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.json'))
+    ).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.private.enc.json'))
+    ).rejects.toThrow();
+  });
+
+  it('rejects a symlinked registry, unreadable path, and caller-supplied registry entries', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const previous = path.join(protectedDirectory, 'previous.json');
+    const linked = path.join(protectedDirectory, 'verifier-registry.json');
+    await writeFile(previous, '{}');
+    await symlink(previous, linked);
+    let prompts = 0;
+    const base = {
+      trustRoot: t.root,
+      getPassphrase: async () => {
+        prompts++;
+        return PASSPHRASE;
+      },
+    };
+    await expect(runVerifierKeyCeremony({ ...base, registryPath: linked })).rejects.toThrow(
+      'VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW'
+    );
+    await expect(
+      runVerifierKeyCeremony({ ...base, registryPath: path.join(previous, 'registry.json') })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    await expect(
+      runVerifierKeyCeremony({
+        ...base,
+        registryPath: path.join(protectedDirectory, 'new.json'),
+        existingEntries: [{ keyId: 'caller-key', evaluator: VERIFIER }],
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(0);
+    expect(await readFile(previous, 'utf8')).toBe('{}');
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
   });
 
   it('refuses mismatched passphrases, a weak one, an existing identity, and a loose trust folder', async () => {

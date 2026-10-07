@@ -93,18 +93,17 @@ characters, twice. Nothing is echoed. Never run it through an agent.
 node .specify/scripts/node/gofer-verifier-key-ceremony.mjs
 ```
 
-It stores only an encrypted key. It prints two `sudo` commands. Run them. They
-install a registry that only an administrator can change:
-
-```bash
-sudo mkdir -p "/Library/Application Support/EAI Gofer"
-sudo install -o root -g wheel -m 0644 ~/.eai-gofer-trust/verifier-registry.pending.json \
-  "/Library/Application Support/EAI Gofer/verifier-registry.json"
-```
+It stores only an encrypted key. It prints two `sudo` commands; run the exact
+printed commands in order. The second command stages a unique root-owned file
+inside the protected directory, hard-links it to the registry only when that
+path is absent, then removes the staging link. If another administrator has
+installed a registry, the link fails without replacing it. Trust is withheld if
+staging cleanup leaves an extra hard link.
 
 A verifier key that your own account registered is **ignored**. Only the
-root-owned registry counts. To add a second key later, run the ceremony again;
-it keeps earlier entries.
+root-owned registry counts. The ceremony is first-key setup only: it refuses to
+create a pending registry when a protected registry exists. Keep that registry
+in place; additional keys need administrator-reviewed rotation.
 
 Delete any old plaintext verifier key. A worker can read it:
 
@@ -115,7 +114,7 @@ rm -f ~/.eai-gofer-trust/staged-keys/heldout-verifier.private.pem
 Check the registry is trusted the way production checks it:
 
 ```bash
-ls -l "/Library/Application Support/EAI Gofer/verifier-registry.json"   # root wheel, -rw-r--r--
+ls -l "/Library/Application Support/EAI Gofer/verifier-registry.json"   # root-owned, -rw-r--r--
 ```
 
 ### 4. Pin the held-out corpus
