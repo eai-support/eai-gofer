@@ -127,6 +127,15 @@ describe('spec artifact guard scripts', () => {
     expect(result.stderr).toContain('real feature specification');
   });
 
+  it('rejects downstream prerequisites when a material spec has no plan', () => {
+    writeFile(path.join(featureDir, 'spec.md'), MATERIAL_SPEC);
+
+    const result = runScript(workspaceRoot, CHECK_PREREQUISITES, ['--json']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('plan.md not found');
+  });
+
   it('allows downstream prerequisites when spec.md is material', () => {
     writeFile(path.join(featureDir, 'spec.md'), MATERIAL_SPEC);
     writeFile(path.join(featureDir, 'plan.md'), '# Plan\n');
