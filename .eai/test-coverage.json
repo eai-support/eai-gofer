@@ -183,7 +183,7 @@
         },
         {
           "id": "gofer-verifier-first-key-ceremony",
-          "description": "First-key verifier setup refuses an installed protected registry before prompting or staging material; activation still requires administrator installation.",
+          "description": "First-key verifier setup refuses an installed protected registry and binds administrator installation to the exact generated pending bytes; activation still requires administrator installation.",
           "owned_paths": [
             ".specify/scripts/node/gofer-verifier-key-ceremony.mjs",
             "docs/verified-autonomous-runtime.md",

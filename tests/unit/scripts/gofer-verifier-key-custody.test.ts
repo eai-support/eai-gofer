@@ -55,7 +55,7 @@ async function trust() {
   return { root, workspaceRoot };
 }
 function runFixtureInstall(command: string, cwd: string, env = process.env) {
-  const shellCommand = command.replace(/^sudo /, '').replace('install -o root -m 0644 ', 'cp ');
+  const shellCommand = command.replace(/^sudo /, '').replace('install -o root ', 'install ');
   return spawnSync('/bin/sh', ['-c', shellCommand], { cwd, env, encoding: 'utf8' });
 }
 const receiptFor = (keyId: string) => ({
@@ -352,11 +352,99 @@ describe('key ceremony', () => {
       expect(runFixtureInstall(command, t.root).status).toBe(0);
     }
     expect((await stat(registryPath)).nlink).toBe(1);
+    expect((await stat(registryPath)).mode & 0o777).toBe(0o644);
     expect(await readdir(protectedDirectory)).toEqual([path.basename(registryPath)]);
     await expect(readFile(path.join(t.root, 'injected'))).rejects.toThrow();
     await expect(readFile(path.join(t.root, 'also-injected'))).rejects.toThrow();
     const loaded = await loadActiveBenchmarkVerifierKey(options);
     expect(loaded.keyId).toBe('ceremony-key-1');
+  });
+
+  it.each(['replaced bytes', 'symlinked bytes'])(
+    'refuses %s in the account-owned pending registry after the ceremony',
+    async (mutation) => {
+      const t = await trust();
+      await chmod(t.root, 0o700);
+      const protectedDirectory = await makeProtectedDirectory();
+      roots.push(protectedDirectory);
+      const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+      const result = await runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+        keyId: 'ceremony-key-original',
+        registryPath,
+      });
+      const attackerKey = generateKeyPairSync('ed25519')
+        .publicKey.export({
+          type: 'spki',
+          format: 'pem',
+        })
+        .toString();
+      const swappedBytes = `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          evaluators: [
+            {
+              keyId: 'ceremony-key-attacker',
+              host: 'codex',
+              evaluator: VERIFIER,
+              publicKeyPem: attackerKey,
+            },
+          ],
+        },
+        null,
+        2
+      )}\n`;
+      if (mutation === 'replaced bytes') {
+        await writeFile(result.pendingPath, swappedBytes);
+      } else {
+        const attackerPath = path.join(t.root, 'attacker-registry.json');
+        await writeFile(attackerPath, swappedBytes);
+        await rm(result.pendingPath);
+        await symlink(attackerPath, result.pendingPath);
+      }
+
+      expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+      expect(runFixtureInstall(result.installCommands[1], t.root).status).not.toBe(0);
+      await expect(readFile(registryPath)).rejects.toThrow();
+      expect(await readdir(protectedDirectory)).toEqual([]);
+    }
+  );
+
+  it('keeps a root-readable pending symlink private until the staged digest rejects it', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    await chmod(protectedDirectory, 0o755);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-private-stage',
+      registryPath,
+    });
+    const secretPath = path.join(t.root, 'root-readable-secret.txt');
+    const secretBytes = 'simulated root-readable secret';
+    await writeFile(secretPath, secretBytes, { mode: 0o600 });
+    await rm(result.pendingPath);
+    await symlink(secretPath, result.pendingPath);
+    const modeCommand =
+      process.platform === 'darwin' ? 'stat -f %Lp "$stage"' : 'stat -c %a "$stage"';
+    const inspectedCommand = result.installCommands[1].replace(
+      'if command -v sha256sum',
+      `stage_mode=$(${modeCommand}); printf 'STAGE_MODE=%s\\n' "$stage_mode"; if command -v sha256sum`
+    );
+    expect(inspectedCommand).not.toBe(result.installCommands[1]);
+
+    expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+    const attempted = runFixtureInstall(inspectedCommand, t.root);
+    expect(attempted.status).not.toBe(0);
+    expect(attempted.stdout).toContain('STAGE_MODE=600');
+    expect(attempted.stdout).not.toContain(secretBytes);
+    await expect(readFile(registryPath)).rejects.toThrow();
+    expect(await readdir(protectedDirectory)).toEqual([]);
+    expect(await readFile(secretPath, 'utf8')).toBe(secretBytes);
   });
 
   it('cannot replace a registry installed after the ceremony prints its commands', async () => {
@@ -427,7 +515,16 @@ describe('key ceremony', () => {
     const fixtureBin = path.join(t.root, 'hostile-bin');
     const marker = path.join(t.root, 'hostile-helper-ran');
     await mkdir(fixtureBin);
-    for (const helper of ['mkdir', 'mktemp', 'install', 'link', 'rm']) {
+    for (const helper of [
+      'mkdir',
+      'mktemp',
+      'install',
+      'link',
+      'rm',
+      'chmod',
+      'sha256sum',
+      'shasum',
+    ]) {
       await writeFile(
         path.join(fixtureBin, helper),
         `#!/bin/sh\nprintf '%s\\n' '${helper}' >> "$GOFER_FAKE_TOOL_LOG"\nexit 77\n`,
@@ -510,7 +607,7 @@ describe('key ceremony', () => {
       );
     expect(run(result.installCommands[0]).status).toBe(0);
     const withWheel = result.installCommands[1].replace(
-      'install -o root -m 0644',
+      'install -o root -m 0600',
       'install -o root -g eai-gofer-nonexistent-group -m 0644'
     );
     expect(withWheel).not.toBe(result.installCommands[1]);
