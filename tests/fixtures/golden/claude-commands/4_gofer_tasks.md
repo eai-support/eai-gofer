@@ -288,7 +288,7 @@ Task generation dispatches agents — keep main context lightweight.
    Validate the completed plan before starting task generation:
 
    ```bash
-   bash .specify/scripts/bash/validate-artifact.sh plan "{FEATURE_DIR}/plan.md"
+   bash .specify/scripts/bash/validate-artifact.sh plan "{FEATURE_DIR}/plan.md" --strict
    ```
 
    Stop if the plan is missing or fails validation. The stage-three loop audit

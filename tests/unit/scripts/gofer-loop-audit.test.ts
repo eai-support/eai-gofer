@@ -132,7 +132,9 @@ describe('gofer-loop-audit.mjs', () => {
       'utf8'
     );
     const prerequisite = guidance.indexOf('check-prerequisites.sh --json');
-    const planValidation = guidance.indexOf('validate-artifact.sh plan "{FEATURE_DIR}/plan.md"');
+    const planValidation = guidance.indexOf(
+      'validate-artifact.sh plan "{FEATURE_DIR}/plan.md" --strict'
+    );
     const loopAudit = guidance.indexOf('gofer-loop-audit.mjs --feature-dir {FEATURE_DIR}');
     expect(prerequisite).toBeGreaterThan(-1);
     expect(prerequisite).toBeLessThan(planValidation);
@@ -142,7 +144,12 @@ describe('gofer-loop-audit.mjs', () => {
     const validatePlan = () =>
       spawnSync(
         'bash',
-        [path.join(REPO_ROOT, '.specify/scripts/bash/validate-artifact.sh'), 'plan', planPath],
+        [
+          path.join(REPO_ROOT, '.specify/scripts/bash/validate-artifact.sh'),
+          'plan',
+          planPath,
+          '--strict',
+        ],
         { encoding: 'utf8' }
       );
     expect(validatePlan().status).toBe(2);
@@ -150,6 +157,14 @@ describe('gofer-loop-audit.mjs', () => {
     expect(validatePlan().status).toBe(1);
     fs.copyFileSync(path.join(REPO_ROOT, '.specify/templates/plan-template.md'), planPath);
     expect(validatePlan().status).toBe(1);
+    fs.writeFileSync(
+      planPath,
+      '# Implementation Plan\n\n## Technical Context\n\nReady context.\n\n## Implementation Phases\n\nPhase one.\n'
+    );
+    const missingFrontmatter = validatePlan();
+    expect(missingFrontmatter.status).toBe(1);
+    expect(missingFrontmatter.stdout).toContain('No YAML frontmatter found');
+    expect(missingFrontmatter.stderr).toBe('');
     fs.copyFileSync(
       path.join(REPO_ROOT, 'tests/regression/golden-tasks/003-minimal-spec/plan.md'),
       planPath
