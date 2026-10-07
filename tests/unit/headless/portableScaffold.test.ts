@@ -111,8 +111,16 @@ describe('release-pinned portable inventories', () => {
     expect(getGoferPortableScaffoldPaths(candidateRelease)).toBe(
       GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS
     );
-    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(221);
-    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(221);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(241);
+    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(241);
+    const tracked = spawnSync('git', ['ls-files', '-z', '--', '.specify'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    expect(tracked.status).toBe(0);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toEqual(
+      tracked.stdout.split('\0').filter(Boolean).sort()
+    );
     expect(Object.isFrozen(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS)).toBe(true);
     const bundle = createGoferExportBundle(candidateRequest());
     for (const file of additions) {

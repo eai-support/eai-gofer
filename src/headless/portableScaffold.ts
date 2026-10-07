@@ -241,7 +241,25 @@ const GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
 export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   [
     ...GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS,
+    ...under('config', ['object-type-routing.json']),
+    ...under('contracts', ['object-type-routing-v1.json']),
+    ...under('references', [
+      'agent-catalog.json',
+      'mvp-capability-validation.md',
+      'platform/eai-auth-access.md',
+      'verified-agent-execution.md',
+    ]),
     ...under('scripts', [
+      'bash/verify-object-type-routing-workspace.sh',
+      'node/eai-app-template-readiness.mjs',
+      'node/gofer-acceptance-check.mjs',
+      'node/gofer-agent-catalog.mjs',
+      'node/gofer-local-settings-cleanup.mjs',
+      'node/gofer-pre-edit-check.mjs',
+      'node/gofer-surface-update.mjs',
+      'node/object-type-routing-phase-bundle.mjs',
+      'node/validate-object-type-identifiers.mjs',
+      'node/validate-object-type-routing-workspace.mjs',
       'node/gofer-host-capability.mjs',
       'node/gofer-live-routing.mjs',
       'node/gofer-local-isolation.mjs',
@@ -276,7 +294,15 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'node/gofer-reviewed-learning.mjs',
     ]),
     ...under('config', ['typesafe-semantic-review.json', 'typesafe-learning-review.json']),
-    ...under('schemas', ['gofer-learning-trace-v1.json']),
+    ...under('schemas', [
+      'gofer-learning-trace-v1.json',
+      'object-type-identifier-audit-v1.schema.json',
+      'object-type-routing-phase-bundle-v1.schema.json',
+    ]),
+    ...under('templates', [
+      'business-scenarios-template.json',
+      'release-capability-ledger-template.md',
+    ]),
   ].sort()
 );
 

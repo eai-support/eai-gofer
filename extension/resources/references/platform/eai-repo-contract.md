@@ -53,6 +53,10 @@ Before app-delivery research, planning, implementation, or validation:
 
 ## Workspace Data Access Rule
 
+Keep PascalCase Object Type model names separate from the exact stored `slug`.
+Use lowercase kebab-case slugs in runtime paths and links; never re-derive or
+rename a historical stored slug.
+
 Workspace apps access EAI data as the signed-in user. Browser code calls the
 local BFF at `/api/eai/...`; the BFF forwards to PublicAPI with the user's
 session token. Do not add app-only `client_credentials` helpers,
