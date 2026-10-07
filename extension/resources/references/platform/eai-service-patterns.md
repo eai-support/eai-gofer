@@ -17,6 +17,9 @@ patterns in `eai-app-template/docs/platform/eai-service-patterns.md`.
 - Use `eai publicapi` only for authorized PublicAPI V4 routes that do not yet
   have a named SDK or CLI command.
 - Do not generate direct downstream database, blob, search, or platform secrets.
+- Keep PascalCase Object Type model names separate from the exact stored `slug`.
+  Use lowercase kebab-case slugs in runtime paths and links; never re-derive or
+  rename a historical stored slug.
 
 ## Service Selection Matrix
 
