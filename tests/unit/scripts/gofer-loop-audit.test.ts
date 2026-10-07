@@ -208,15 +208,19 @@ describe('gofer-loop-audit.mjs', () => {
         receipt: 'outcome.json',
       },
     });
-    for (const script of ['gofer-priority-check.mjs', 'gofer-delivery-check.mjs']) {
-      const { stdout } = await execFileAsync('node', [
-        path.join(REPO_ROOT, '.specify/scripts/node', script),
-        '--feature-dir',
-        featureDir,
-        ...(script === 'gofer-delivery-check.mjs' ? ['--capture'] : []),
-      ]);
-      expect(JSON.parse(stdout).status).toBe('pass');
-    }
+    const continuation = guidance.slice(guidance.indexOf('## Step 8:'));
+    const documentedCommands = continuation.match(/```bash\n([\s\S]*?)\n```/);
+    expect(documentedCommands).not.toBeNull();
+    const runContinuation = () =>
+      spawnSync('bash', ['-c', documentedCommands![1].replaceAll('{FEATURE_DIR}', featureDir)], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      });
+    expect(runContinuation().status).toBe(0);
+    const checkpointPath = path.join(featureDir, 'delivery-checkpoint.json');
+    const checkpoint = fs.readFileSync(checkpointPath, 'utf8');
+    expect(runContinuation().status).toBe(0);
+    expect(fs.readFileSync(checkpointPath, 'utf8')).toBe(checkpoint);
     const reviewedGate = await runAudit(workspaceRoot, featureDir, [
       '--stage',
       '4_tasks',
@@ -225,10 +229,34 @@ describe('gofer-loop-audit.mjs', () => {
     expect(reviewedGate.exitCode).toBe(0);
     expect(reviewedGate.payload.status).toBe('pass');
     fs.appendFileSync(path.join(featureDir, 'plan.md'), 'Changed scope.\n');
+    const changedPlan = runContinuation();
+    expect(changedPlan.status).toBe(1);
+    expect(changedPlan.stdout).toContain('ARTIFACT_DRIFT:plan.md');
+    expect(fs.readFileSync(checkpointPath, 'utf8')).toBe(checkpoint);
     const staleGate = await runAudit(workspaceRoot, featureDir, ['--stage', '4_tasks', '--strict']);
     expect(staleGate.exitCode).toBe(1);
     expect(staleGate.payload.blockingFindings).toContain('Delivery review: ARTIFACT_DRIFT:plan.md');
-    const continuation = guidance.slice(guidance.indexOf('## Step 8:'));
+    fs.writeFileSync(path.join(featureDir, 'plan.md'), 'Build and verify the requested result.\n');
+    fs.writeFileSync(path.join(featureDir, 'tasks.md'), '- [ ] T001 Changed task.\n');
+    const changedTasks = runContinuation();
+    expect(changedTasks.status).toBe(1);
+    expect(changedTasks.stdout).toContain('ARTIFACT_DRIFT:tasks.md');
+    expect(fs.readFileSync(checkpointPath, 'utf8')).toBe(checkpoint);
+    fs.writeFileSync(path.join(featureDir, 'tasks.md'), '- [ ] T001 Show the requested result.\n');
+    const malformedCheckpoint = '{"schemaVersion":';
+    fs.writeFileSync(checkpointPath, malformedCheckpoint);
+    const malformed = runContinuation();
+    expect(malformed.status).toBe(1);
+    expect(malformed.stdout).toContain('MISSING_OR_INVALID_CHECKPOINT');
+    expect(fs.readFileSync(checkpointPath, 'utf8')).toBe(malformedCheckpoint);
+    fs.unlinkSync(checkpointPath);
+    const missingTarget = path.join(featureDir, 'missing-checkpoint.json');
+    fs.symlinkSync(missingTarget, checkpointPath);
+    const danglingLink = runContinuation();
+    expect(danglingLink.status).toBe(1);
+    expect(danglingLink.stdout).toContain('MISSING_OR_INVALID_CHECKPOINT');
+    expect(fs.lstatSync(checkpointPath).isSymbolicLink()).toBe(true);
+    expect(fs.existsSync(missingTarget)).toBe(false);
     expect(continuation.indexOf('gofer-delivery-check.mjs')).toBeLessThan(
       continuation.indexOf('--stage 4_tasks --json --strict')
     );

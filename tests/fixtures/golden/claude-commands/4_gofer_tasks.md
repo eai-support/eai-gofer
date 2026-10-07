@@ -712,17 +712,25 @@ created: [ISO date]
 After required reviews pass and either existing scope approval covers the
 tasks or the outstanding approval is received:
 
-Review the current priority plan and generated task/traceability files, then
-capture their reviewed delivery checkpoint:
+Review the current priority plan and generated task/traceability files. Capture
+a new delivery checkpoint only when none exists. On a rerun, verify the existing
+checkpoint against the current artifacts before the strict stage-four audit:
 
 ```bash
-node .specify/scripts/node/gofer-priority-check.mjs --feature-dir {FEATURE_DIR}
-node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir {FEATURE_DIR} --capture
-node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --json --strict
+set -e
+node .specify/scripts/node/gofer-priority-check.mjs --feature-dir "{FEATURE_DIR}"
+if [ -e "{FEATURE_DIR}/delivery-checkpoint.json" ] || [ -L "{FEATURE_DIR}/delivery-checkpoint.json" ]; then
+  node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir "{FEATURE_DIR}"
+else
+  node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir "{FEATURE_DIR}" --capture
+fi
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir "{FEATURE_DIR}" --stage 4_tasks --json --strict
 ```
 
-Stop if any check fails. Do not overwrite a checkpoint to conceal stale task
-evidence; repair and review the affected artifacts before capturing it.
+Stop if any check fails. A stale checkpoint requires a new review of the
+affected artifacts. Preserve the prior checkpoint and its review evidence in an
+archive before an explicitly reviewed rebaseline. This continuation never
+overwrites an existing checkpoint to conceal stale task evidence.
 
 ```
 ✓ Tasks APPROVED: {FEATURE_DIR}/tasks.md
