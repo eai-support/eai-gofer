@@ -103,8 +103,9 @@ sudo install -o root -g wheel -m 0644 ~/.eai-gofer-trust/verifier-registry.pendi
 ```
 
 A verifier key that your own account registered is **ignored**. Only the
-root-owned registry counts. To add a second key later, run the ceremony again;
-it keeps earlier entries.
+root-owned registry counts. The ceremony is first-key setup only: it refuses to
+create a pending registry when a protected registry exists. Keep that registry
+in place; additional keys need administrator-reviewed rotation.
 
 Delete any old plaintext verifier key. A worker can read it:
 

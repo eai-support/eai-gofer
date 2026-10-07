@@ -25,13 +25,23 @@ async function writeExclusive(filename, value) {
   try { await file.writeFile(value, 'utf8'); await file.sync(); } finally { await file.close(); }
 }
 
-/** `existingEntries` are the entries already in the protected registry, so
- * the pending file replaces it without dropping earlier verifier keys. */
-export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existingEntries = [],
+async function requireUninitializedRegistry(registryPath) {
+  try {
+    await lstat(registryPath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw denied();
+  }
+  throw denied();
+}
+
+/** First-key setup only: an installed registry requires reviewed rotation. */
+export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existingEntries,
   keyId = `heldout-verifier-${randomUUID()}`, registryPath = protectedVerifierRegistryPath() } = {}) {
   if (!path.isAbsolute(trustRoot ?? '') || typeof getPassphrase !== 'function' ||
-      !/^[a-zA-Z0-9._-]{8,80}$/.test(keyId) || !Array.isArray(existingEntries) ||
-      existingEntries.some(entry => entry?.evaluator !== VERIFIER_EVALUATOR || entry.keyId === keyId)) throw denied();
+      !path.isAbsolute(registryPath) || !/^[a-zA-Z0-9._-]{8,80}$/.test(keyId) ||
+      existingEntries !== undefined) throw denied();
+  await requireUninitializedRegistry(registryPath);
   const rootInfo = await lstat(trustRoot);
   if (!rootInfo.isDirectory() || rootInfo.uid !== process.getuid() || (rootInfo.mode & 0o077) !== 0) throw denied();
   const active = path.join(trustRoot, 'active-keys');
@@ -42,6 +52,7 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
   const passphrase = await getPassphrase('New verifier passphrase (12+ characters): ');
   assertStrongPassphrase(passphrase);
   if (passphrase !== await getPassphrase('Repeat the passphrase: ')) throw denied();
+  await requireUninitializedRegistry(registryPath);
 
   const pair = generateKeyPairSync('ed25519');
   const publicKeyPem = pair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
@@ -52,7 +63,7 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
     host: 'codex', evaluator: VERIFIER_EVALUATOR, keyId })}\n`);
   const pendingPath = path.join(trustRoot, 'verifier-registry.pending.json');
   await writeExclusive(pendingPath, `${JSON.stringify({ schemaVersion: 1, evaluators: [
-    ...existingEntries, { keyId, host: 'codex', evaluator: VERIFIER_EVALUATOR, publicKeyPem }] }, null, 2)}\n`);
+    { keyId, host: 'codex', evaluator: VERIFIER_EVALUATOR, publicKeyPem }] }, null, 2)}\n`);
   const directory = path.dirname(registryPath);
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
     `sudo mkdir -p "${directory}"`,

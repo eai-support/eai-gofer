@@ -182,6 +182,22 @@
           ]
         },
         {
+          "id": "gofer-verifier-first-key-ceremony",
+          "description": "First-key verifier setup refuses an installed protected registry before prompting or staging material; activation still requires administrator installation.",
+          "owned_paths": [
+            ".specify/scripts/node/gofer-verifier-key-ceremony.mjs",
+            "docs/verified-autonomous-runtime.md",
+            "extension/resources/node-scripts/gofer-verifier-key-ceremony.mjs",
+            "plugins/eai-gofer/.specify/scripts/node/gofer-verifier-key-ceremony.mjs",
+            "plugins/eai-gofer/plugins/eai-gofer/.specify/scripts/node/gofer-verifier-key-ceremony.mjs",
+            "tests/unit/scripts/gofer-verifier-key-custody.test.ts"
+          ],
+          "required_repo_tests": ["tests/unit/scripts/gofer-verifier-key-custody.test.ts"],
+          "required_ci_checks": ["Code Quality Gates", "Build & Test"],
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
+        },
+        {
           "id": "object-type-routing-audit-tooling",
           "description": "Immutable Object Type raw-route ownership audit, portable schemas, and deterministic Gofer resource generation checks.",
           "owned_paths": [

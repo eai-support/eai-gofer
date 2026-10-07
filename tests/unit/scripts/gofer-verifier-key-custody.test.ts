@@ -334,27 +334,97 @@ describe('key ceremony', () => {
     expect(loaded.keyId).toBe('ceremony-key-1');
   });
 
-  it('keeps earlier verifier keys in the pending registry', async () => {
+  it('preserves an installed verifier registry without prompting or staging another key', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
-    const earlier = {
-      keyId: 'earlier-key-1',
-      host: 'codex',
-      evaluator: VERIFIER,
-      publicKeyPem: 'pem',
-    };
-    const result = await runVerifierKeyCeremony({
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const original = JSON.stringify({ schemaVersion: 1, evaluators: [{ keyId: 'earlier-key-1' }] });
+    await writeFile(registryPath, original);
+    let prompts = 0;
+    await expect(
+      runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: async () => {
+          prompts++;
+          return PASSPHRASE;
+        },
+        keyId: 'ceremony-key-2',
+        registryPath,
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(0);
+    expect(await readFile(registryPath, 'utf8')).toBe(original);
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.json'))
+    ).rejects.toThrow();
+  });
+
+  it('refuses a protected registry installed while the human is entering a passphrase', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const original = '{"schemaVersion":1,"evaluators":[]}';
+    let prompts = 0;
+    await expect(
+      runVerifierKeyCeremony({
+        trustRoot: t.root,
+        registryPath,
+        getPassphrase: async () => {
+          prompts++;
+          if (prompts === 2) await writeFile(registryPath, original);
+          return PASSPHRASE;
+        },
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(2);
+    expect(await readFile(registryPath, 'utf8')).toBe(original);
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.json'))
+    ).rejects.toThrow();
+    await expect(
+      readFile(path.join(t.root, 'active-keys', 'heldout-verifier.private.enc.json'))
+    ).rejects.toThrow();
+  });
+
+  it('rejects a symlinked registry, unreadable path, and caller-supplied registry entries', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const previous = path.join(protectedDirectory, 'previous.json');
+    const linked = path.join(protectedDirectory, 'verifier-registry.json');
+    await writeFile(previous, '{}');
+    await symlink(previous, linked);
+    let prompts = 0;
+    const base = {
       trustRoot: t.root,
-      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
-      keyId: 'ceremony-key-2',
-      existingEntries: [earlier],
-      registryPath: '/nonexistent/verifier-registry.json',
-    });
-    const pending = JSON.parse(await readFile(result.pendingPath, 'utf8'));
-    expect(pending.evaluators.map((entry: { keyId: string }) => entry.keyId)).toEqual([
-      'earlier-key-1',
-      'ceremony-key-2',
-    ]);
+      getPassphrase: async () => {
+        prompts++;
+        return PASSPHRASE;
+      },
+    };
+    await expect(runVerifierKeyCeremony({ ...base, registryPath: linked })).rejects.toThrow(
+      'VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW'
+    );
+    await expect(
+      runVerifierKeyCeremony({ ...base, registryPath: path.join(previous, 'registry.json') })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    await expect(
+      runVerifierKeyCeremony({
+        ...base,
+        registryPath: path.join(protectedDirectory, 'new.json'),
+        existingEntries: [{ keyId: 'caller-key', evaluator: VERIFIER }],
+      })
+    ).rejects.toThrow('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+    expect(prompts).toBe(0);
+    expect(await readFile(previous, 'utf8')).toBe('{}');
+    await expect(readFile(path.join(t.root, 'verifier-registry.pending.json'))).rejects.toThrow();
   });
 
   it('refuses mismatched passphrases, a weak one, an existing identity, and a loose trust folder', async () => {
