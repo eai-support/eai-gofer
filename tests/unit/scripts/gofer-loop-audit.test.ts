@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
@@ -126,7 +126,38 @@ describe('gofer-loop-audit.mjs', () => {
     );
   });
 
-  it('runs the documented task preflight before outputs exist and retains the stage-four gate', async () => {
+  it('validates the completed plan before the documented task loop audit', () => {
+    const guidance = fs.readFileSync(
+      path.join(REPO_ROOT, '.specify/commands/4_gofer_tasks.md'),
+      'utf8'
+    );
+    const prerequisite = guidance.indexOf('check-prerequisites.sh --json');
+    const planValidation = guidance.indexOf('validate-artifact.sh plan "{FEATURE_DIR}/plan.md"');
+    const loopAudit = guidance.indexOf('gofer-loop-audit.mjs --feature-dir {FEATURE_DIR}');
+    expect(prerequisite).toBeGreaterThan(-1);
+    expect(prerequisite).toBeLessThan(planValidation);
+    expect(planValidation).toBeLessThan(loopAudit);
+
+    const planPath = path.join(featureDir, 'plan.md');
+    const validatePlan = () =>
+      spawnSync(
+        'bash',
+        [path.join(REPO_ROOT, '.specify/scripts/bash/validate-artifact.sh'), 'plan', planPath],
+        { encoding: 'utf8' }
+      );
+    expect(validatePlan().status).toBe(2);
+    fs.writeFileSync(planPath, '');
+    expect(validatePlan().status).toBe(1);
+    fs.copyFileSync(path.join(REPO_ROOT, '.specify/templates/plan-template.md'), planPath);
+    expect(validatePlan().status).toBe(1);
+    fs.copyFileSync(
+      path.join(REPO_ROOT, 'tests/regression/golden-tasks/003-minimal-spec/plan.md'),
+      planPath
+    );
+    expect(validatePlan().status).toBe(0);
+  });
+
+  it('runs the documented task loop audit before outputs exist and retains the stage-four gate', async () => {
     const guidance = fs.readFileSync(
       path.join(REPO_ROOT, '.specify/commands/4_gofer_tasks.md'),
       'utf8'

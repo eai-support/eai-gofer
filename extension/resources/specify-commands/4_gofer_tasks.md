@@ -299,7 +299,17 @@ Task generation dispatches agents — keep main context lightweight.
    .specify/scripts/bash/check-prerequisites.sh --json
    ```
 
-   Parse JSON for FEATURE_DIR, AVAILABLE_DOCS
+   Parse JSON for FEATURE_DIR, AVAILABLE_DOCS. Stop if the script rejects the
+   feature specification or the planning file.
+
+   Validate the completed plan before starting task generation:
+
+   ```bash
+   bash .specify/scripts/bash/validate-artifact.sh plan "{FEATURE_DIR}/plan.md"
+   ```
+
+   Stop if the plan is missing or fails validation. The stage-three loop audit
+   below checks loop evidence; it does not validate `spec.md` or `plan.md`.
 
 2. **Scan available documents** (do NOT load full content — agents read
    directly):
