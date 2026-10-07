@@ -335,7 +335,7 @@ describe('key ceremony', () => {
     expect(
       await readFile(path.join(active, 'heldout-verifier.private.enc.json'), 'utf8')
     ).not.toContain('PRIVATE KEY');
-    expect(result.installCommands[1]).toContain('ln');
+    expect(result.installCommands[1]).toContain('link');
     expect(result.installCommands[1]).toContain('mktemp');
     const options = {
       workspaceRoot: t.workspaceRoot,
@@ -380,6 +380,38 @@ describe('key ceremony', () => {
     expect((await stat(registryPath)).nlink).toBe(1);
   });
 
+  it.each(['directory', 'symlink to directory'])(
+    'cannot install inside a late %s at the registry path',
+    async (kind) => {
+      const t = await trust();
+      await chmod(t.root, 0o700);
+      const protectedDirectory = await makeProtectedDirectory();
+      roots.push(protectedDirectory);
+      const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+      const result = await runVerifierKeyCeremony({
+        trustRoot: t.root,
+        getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+        keyId: 'ceremony-key-directory',
+        registryPath,
+      });
+      if (kind === 'directory') {
+        await mkdir(registryPath);
+      } else {
+        const existingDirectory = path.join(protectedDirectory, 'existing-directory');
+        await mkdir(existingDirectory);
+        await symlink(existingDirectory, registryPath);
+      }
+      expect(runFixtureInstall(result.installCommands[0], t.root).status).toBe(0);
+      expect(runFixtureInstall(result.installCommands[1], t.root).status).not.toBe(0);
+      expect(await readdir(registryPath)).toEqual([]);
+      expect(await readdir(protectedDirectory)).toEqual(
+        kind === 'directory'
+          ? ['verifier-registry.json']
+          : ['existing-directory', 'verifier-registry.json']
+      );
+    }
+  );
+
   it('uses system helpers even when the inherited PATH contains hostile commands', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
@@ -395,7 +427,7 @@ describe('key ceremony', () => {
     const fixtureBin = path.join(t.root, 'hostile-bin');
     const marker = path.join(t.root, 'hostile-helper-ran');
     await mkdir(fixtureBin);
-    for (const helper of ['mkdir', 'mktemp', 'install', 'ln', 'rm']) {
+    for (const helper of ['mkdir', 'mktemp', 'install', 'link', 'rm']) {
       await writeFile(
         path.join(fixtureBin, helper),
         `#!/bin/sh\nprintf '%s\\n' '${helper}' >> "$GOFER_FAKE_TOOL_LOG"\nexit 77\n`,
