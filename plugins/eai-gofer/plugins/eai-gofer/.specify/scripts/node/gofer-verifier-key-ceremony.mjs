@@ -18,6 +18,7 @@ import { VERIFIER_EVALUATOR, accountTrustRoot, protectedVerifierRegistryPath } f
 import { promptHidden } from './gofer-tty-prompt.mjs';
 
 const denied = () => new Error('VERIFIER_KEY_CEREMONY_REQUIRES_REVIEW');
+const shellQuote = value => `'${value.replaceAll("'", "'\"'\"'")}'`;
 
 async function writeExclusive(filename, value) {
   const file = await open(filename, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL |
@@ -65,9 +66,17 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
   await writeExclusive(pendingPath, `${JSON.stringify({ schemaVersion: 1, evaluators: [
     { keyId, host: 'codex', evaluator: VERIFIER_EVALUATOR, publicKeyPem }] }, null, 2)}\n`);
   const directory = path.dirname(registryPath);
+  const stageTemplate = path.join(directory, `${path.basename(registryPath)}.${keyId}.XXXXXX`);
+  const installScript = [
+    'set -eu',
+    `stage=$(mktemp ${shellQuote(stageTemplate)})`,
+    `trap 'rm -f -- "$stage"' EXIT`,
+    `install -o root -g wheel -m 0644 ${shellQuote(pendingPath)} "$stage"`,
+    `ln "$stage" ${shellQuote(registryPath)}`,
+  ].join('; ');
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
-    `sudo mkdir -p "${directory}"`,
-    `sudo install -o root -g wheel -m 0644 "${pendingPath}" "${registryPath}"`,
+    `sudo mkdir -p ${shellQuote(directory)}`,
+    `sudo /bin/sh -c ${shellQuote(installScript)}`,
   ]) });
 }
 
