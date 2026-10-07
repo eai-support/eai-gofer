@@ -572,19 +572,75 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     );
     expect(f.adapter.execute).not.toHaveBeenCalled();
   });
-  it('reports an unsettled child only if the deadline reached a running adapter', async () => {
+  it('reports an unsettled child when the deadline reaches a running adapter', async () => {
     const f = await fixture();
-    f.adapter.execute.mockImplementation(() => new Promise(() => {}));
-    const result = await runVerifiedGraph({
-      ...f.options,
-      deadlineMs: Date.now() + 150,
-      adapterDrainMs: 50,
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
     });
-    expect(result.states.T001).toBe('cancelled');
-    expect(result.status).toBe('incomplete');
-    // Under a busy CI runner, the deadline can expire before execute starts.
-    // In that case there is no child call to drain.
-    expect(result.adapterCallsSettled).toBe(f.adapter.execute.mock.calls.length === 0);
+    let drainStarted!: () => void;
+    const draining = new Promise<void>((resolve) => {
+      drainStarted = resolve;
+    });
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    const timeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation((...args) => {
+      if (args[1] === 50) drainStarted();
+      return timeout(...args);
+    });
+    try {
+      f.adapter.execute.mockImplementation(() => {
+        started();
+        return new Promise(() => {});
+      });
+      const run = runVerifiedGraph({
+        ...f.options,
+        deadlineMs: Date.now() + 150,
+        adapterDrainMs: 50,
+      });
+      await entered;
+      expect(f.adapter.execute).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(150);
+      await draining;
+      await vi.advanceTimersByTimeAsync(50);
+      const result = await run;
+      expect(result.states).toEqual({ T001: 'cancelled', T002: 'pending' });
+      expect(result.status).toBe('incomplete');
+      expect(result.adapterCallsSettled).toBe(false);
+      expect(f.adapter.check).not.toHaveBeenCalled();
+      expect(f.adapter.verified).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+  });
+  it('keeps work pending when the deadline expires before an adapter starts', async () => {
+    const f = await fixture();
+    const actualOpen = vi.mocked(filesystem.open).getMockImplementation()!;
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    try {
+      vi.mocked(filesystem.open).mockImplementation(async (...args) => {
+        const file = await actualOpen(...args);
+        if (path.basename(String(args[0])) === 'verified-execution.jsonl') {
+          await vi.advanceTimersByTimeAsync(150);
+        }
+        return file;
+      });
+      const result = await runVerifiedGraph({
+        ...f.options,
+        deadlineMs: Date.now() + 150,
+        adapterDrainMs: 50,
+      });
+      expect(result.states).toEqual({ T001: 'pending', T002: 'pending' });
+      expect(result.status).toBe('incomplete');
+      expect(result.adapterCallsSettled).toBe(true);
+      expect(result.calls).toBe(0);
+      expect(f.adapter.execute).not.toHaveBeenCalled();
+      expect(f.adapter.check).not.toHaveBeenCalled();
+      expect(f.adapter.verified).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('waits for a cancelled trusted adapter call to settle before returning', async () => {
     const f = await fixture();
@@ -637,7 +693,9 @@ describe('Verified execution kernel (local adapters, not native model qualificat
     let active = 0;
     let peak = 0;
     let releaseBoth = () => {};
-    const bothStarted = new Promise<void>((resolve) => { releaseBoth = resolve; });
+    const bothStarted = new Promise<void>((resolve) => {
+      releaseBoth = resolve;
+    });
     const run = promisify(execFile);
     f.adapter.execute.mockImplementation(async () => {
       active++;
