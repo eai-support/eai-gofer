@@ -2,6 +2,11 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [Unreleased]
+
+Add the EAI-managed hosting choice and hand deployment to the canonical EAI CLI
+with exact-operation resume and actionable setup recovery (#3503).
+
 ## [3.13.4] - 2026-09-29
 
 Jev evidence safety and blocker guidance
@@ -16,7 +21,8 @@ Auto-release
 
 ## [3.13.1] - 2026-09-25
 
-Standardize EAI PublicAPI guidance on current interfaces and add regression coverage
+Standardize EAI PublicAPI guidance on current interfaces and add regression
+coverage
 
 ## [3.13.0] - 2026-09-23
 

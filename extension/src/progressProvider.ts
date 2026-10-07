@@ -5,7 +5,10 @@ import { DependencyGraph } from './autonomous/DependencyGraph';
 import type { BranchSpecManager } from './branchSpecManager';
 import { getWorkflowProfile } from './config/workflowProfile';
 import { createDeploymentReadinessEventHandlers } from './services/enterpriseai/events/DeploymentReadinessEvents';
-import { validateDeploymentReadiness } from './services/enterpriseai/internalApi/ValidateDeploymentReadiness';
+import {
+  type DeploymentReceiptValidationMode,
+  validateDeploymentReadiness,
+} from './services/enterpriseai/internalApi/ValidateDeploymentReadiness';
 import { Logger } from './utils/logger';
 
 // Debug output channel for initialization troubleshooting
@@ -15,6 +18,7 @@ const ENTERPRISE_AI_DEPLOYMENT_REQUIRED_FILES: readonly string[] = [
   'eai.runtime.json',
   '.eai/deploy-doctor.json',
 ];
+const EAI_MANAGED_DEPLOYMENT_TASK_MARKER = '[hosting:eai-managed]';
 const PRIMARY_DEPLOYMENT_KEYWORDS: readonly string[] = ['deploy', 'deployment', 'rollout'];
 const DEPLOYMENT_ARTIFACT_KEYWORDS: readonly string[] = [
   'runtime',
@@ -27,6 +31,85 @@ const DEPLOYMENT_ARTIFACT_KEYWORDS: readonly string[] = [
   'helm',
   'k8s',
 ];
+const TASK_BINDING_EVIDENCE_ISSUES = new Set([
+  'DEPLOYMENT_TASK_BINDING_MISSING',
+  'DEPLOYMENT_TASK_BINDING_INVALID',
+  'DEPLOYMENT_TASK_COMMAND_MISMATCH',
+]);
+const RECEIPT_FILE_EVIDENCE_ISSUES = new Set([
+  'DOCTOR_EVIDENCE_UNREADABLE',
+  'DOCTOR_EVIDENCE_FILE_INVALID',
+  'DOCTOR_EVIDENCE_INVALID_JSON',
+  'DOCTOR_EVIDENCE_SCHEMA_INVALID',
+  'DOCTOR_EVIDENCE_FILE_NOT_REQUIRED',
+]);
+const RECEIPT_BINDING_EVIDENCE_ISSUES = new Set([
+  'DOCTOR_EVIDENCE_SOURCE_MODE_MISMATCH',
+  'DOCTOR_EVIDENCE_OPERATION_ID_MISMATCH',
+  'DOCTOR_EVIDENCE_APP_KEY_MISMATCH',
+  'DOCTOR_EVIDENCE_APP_TENANT_MISMATCH',
+  'DOCTOR_EVIDENCE_RUNTIME_TENANT_MISMATCH',
+]);
+const RECEIPT_READINESS_EVIDENCE_ISSUES = new Set([
+  'DOCTOR_EVIDENCE_STATUS_NOT_PASS',
+  'DOCTOR_EVIDENCE_AUTHENTICATED_READINESS_NOT_PASS',
+  'DOCTOR_EVIDENCE_CHECKS_NOT_PASS',
+]);
+
+function hasAnyEvidenceIssue(
+  evidenceIssues: readonly string[],
+  candidates: ReadonlySet<string>
+): boolean {
+  return evidenceIssues.some((issue: string): boolean => candidates.has(issue));
+}
+
+function buildDeploymentReadinessRecovery(
+  missingFiles: readonly string[],
+  evidenceIssues: readonly string[],
+  receiptValidationMode: DeploymentReceiptValidationMode
+): string {
+  const actions: string[] = [];
+
+  if (missingFiles.includes('eai.runtime.json')) {
+    actions.push(
+      'Create or restore eai.runtime.json from the EAI app template, then run eai runtime validate.'
+    );
+  }
+  if (missingFiles.includes('.eai/deploy-doctor.json')) {
+    actions.push(
+      receiptValidationMode === 'operation-bound'
+        ? 'After the exact operation exists, run the resolved eai deploy doctor command from this task to create .eai/deploy-doctor.json.'
+        : 'Run the existing deployment doctor flow and save its evidence at .eai/deploy-doctor.json.'
+    );
+  }
+  if (hasAnyEvidenceIssue(evidenceIssues, TASK_BINDING_EVIDENCE_ISSUES)) {
+    actions.push(
+      'Regenerate or update this [hosting:eai-managed] task after the exact operation exists so its checkbox line retains the selected eai deploy app command and the resolved eai deploy doctor command for the same app and tenants, then run that resolved doctor command.'
+    );
+  }
+  if (hasAnyEvidenceIssue(evidenceIssues, RECEIPT_FILE_EVIDENCE_ISSUES)) {
+    actions.push(
+      'Rerun the exact doctor command to atomically replace .eai/deploy-doctor.json with a valid receipt.'
+    );
+  }
+  if (hasAnyEvidenceIssue(evidenceIssues, RECEIPT_BINDING_EVIDENCE_ISSUES)) {
+    actions.push(
+      "Confirm the task identifiers refer to the intended exact operation, then rerun that task's doctor command."
+    );
+  }
+  if (hasAnyEvidenceIssue(evidenceIssues, RECEIPT_READINESS_EVIDENCE_ISSUES)) {
+    actions.push(
+      'Fix the deployment or authenticated readiness failures reported by the CLI, then rerun the exact doctor command.'
+    );
+  }
+  if (actions.length === 0) {
+    actions.push(
+      'Correct the reported deployment readiness issues, regenerate the evidence, then retry.'
+    );
+  }
+
+  return `Next steps: ${Array.from(new Set(actions)).join(' ')}`;
+}
 
 class SpecItem extends vscode.TreeItem {
   constructor(
@@ -822,12 +905,18 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
     }
 
     const deploymentReadinessEvents = createDeploymentReadinessEventHandlers();
+    const receiptValidationMode: DeploymentReceiptValidationMode = this.isEaiManagedDeploymentTask(
+      task
+    )
+      ? 'operation-bound'
+      : 'presence';
     deploymentReadinessEvents.consume((payload) => {
       this.logger.info('EnterpriseAI deployment readiness validated before completion', {
         specId,
         taskId: task.id,
         readinessPassed: payload.readinessPassed,
         missingFiles: payload.missingFiles,
+        evidenceIssues: payload.evidenceIssues ?? [],
       });
     });
 
@@ -836,6 +925,8 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
         runId: `progress-${specId}`,
         stage: 'implementation',
         deploymentTaskId: task.id,
+        deploymentTaskText: task.description,
+        receiptValidationMode,
         requiredFiles: ENTERPRISE_AI_DEPLOYMENT_REQUIRED_FILES,
         blockCompletionOnFailure: true,
       },
@@ -848,11 +939,25 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
     );
 
     if (!readiness.response.deploymentTaskCompletionAllowed) {
-      const missingFiles = readiness.response.missingFiles.join(', ');
+      const failureDetails: string[] = [];
+      if (readiness.response.missingFiles.length > 0) {
+        failureDetails.push(
+          `Missing required runtime contract or deploy doctor evidence files: ${readiness.response.missingFiles.join(', ')}.`
+        );
+      }
+      if (readiness.response.evidenceIssues.length > 0) {
+        failureDetails.push(
+          `Deployment evidence did not pass: ${readiness.response.evidenceIssues.join(', ')}.`
+        );
+      }
       const message =
         `Cannot mark deployment task "${task.id}" complete. ` +
-        `Missing required runtime contract or deploy doctor evidence files: ${missingFiles}. ` +
-        'Next step: create the EAI runtime contract from the app template, run deploy doctor after deployment, save the result to .eai/deploy-doctor.json, then retry.';
+        `${failureDetails.join(' ')} ` +
+        buildDeploymentReadinessRecovery(
+          readiness.response.missingFiles,
+          readiness.response.evidenceIssues,
+          receiptValidationMode
+        );
       void vscode.window.showWarningMessage(message);
       throw new Error(`IMPL_DEPLOYMENT_VALIDATION_FAILED: ${message}`);
     }
@@ -885,6 +990,12 @@ export class ProgressProvider implements vscode.TreeDataProvider<SpecItem> {
       searchableText.includes('environment target') ||
       searchableText.includes('deployment')
     );
+  }
+
+  private isEaiManagedDeploymentTask(task: Task): boolean {
+    return `${task.id} ${task.description}`
+      .toLowerCase()
+      .includes(EAI_MANAGED_DEPLOYMENT_TASK_MARKER);
   }
 
   private normalizeTaskIdentifier(taskId: string): string {

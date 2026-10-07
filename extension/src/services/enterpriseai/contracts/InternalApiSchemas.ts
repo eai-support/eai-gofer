@@ -268,6 +268,13 @@ export const INTERNAL_API_SCHEMAS: Readonly<
       requiredFiles: { type: 'string[]' },
       blockCompletionOnFailure: { type: 'boolean' },
     },
+    optional: {
+      deploymentTaskText: { type: 'string' },
+      receiptValidationMode: {
+        type: 'string',
+        enumValues: ['presence', 'operation-bound'],
+      },
+    },
   },
 } as const;
 

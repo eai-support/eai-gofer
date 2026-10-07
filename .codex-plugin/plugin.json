@@ -27,10 +27,7 @@
     "longDescription": "Run Gofer from one public entrypoint: eai. Gofer routes internally through the full research, specify, plan, tasks, implement, and validate pipeline.",
     "developerName": "EAI Tools",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/eai-support/eai-gofer",
     "defaultPrompt": [
       "Set up my first EAI Platform app with Gofer",

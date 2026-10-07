@@ -93,6 +93,7 @@ function createEventPayloadFixtures(): Record<EventContractId, Record<string, un
       deploymentTaskId: 'task_deploy_01',
       readinessPassed: false,
       missingFiles: ['eai.runtime.json', '.eai/deploy-doctor.json'],
+      evidenceIssues: ['DEPLOYMENT_TASK_BINDING_MISSING'],
       validatedAt: '2026-04-09T00:25:00Z',
     },
   };
@@ -126,5 +127,15 @@ suite('enterpriseai EVT payload compatibility (extension integration)', () => {
 
     assert.strictEqual(result.compatible, false);
     assert.ok(result.errors.some((error) => error.includes('Missing required field: eventId')));
+  });
+
+  test('keeps EVT-012 v1 compatible when additive evidence diagnostics are absent', () => {
+    const fixture = createEventPayloadFixtures()['EVT-012'];
+    const legacyPayload: Record<string, unknown> = { ...fixture };
+    delete legacyPayload.evidenceIssues;
+    const result = validateProducerConsumerEventPayloads('EVT-012', legacyPayload, legacyPayload);
+
+    assert.strictEqual(result.compatible, true);
+    assert.deepStrictEqual(result.errors, []);
   });
 });

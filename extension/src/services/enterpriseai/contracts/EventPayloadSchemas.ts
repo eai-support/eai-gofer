@@ -233,6 +233,9 @@ export const EVENT_PAYLOAD_SCHEMAS: Readonly<
       missingFiles: { type: 'string[]' },
       validatedAt: { type: 'string' },
     },
+    optional: {
+      evidenceIssues: { type: 'string[]' },
+    },
   },
 } as const;
 
