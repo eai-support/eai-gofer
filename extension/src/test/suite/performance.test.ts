@@ -704,14 +704,9 @@ status: "draft"
         'Individual reads should return every fixture spec exactly once'
       );
       const comparable = (spec: (typeof results)[number]) => ({
-        id: spec.id,
-        title: spec.title,
-        status: spec.status,
-        tasks: spec.tasks.map((task) => ({
-          id: task.id,
-          status: task.status,
-          dependencies: task.dependencies,
-        })),
+        ...spec,
+        created: null,
+        updated: null,
       });
       assert.deepStrictEqual(
         results.map(comparable).sort((a, b) => a.id.localeCompare(b.id)),
