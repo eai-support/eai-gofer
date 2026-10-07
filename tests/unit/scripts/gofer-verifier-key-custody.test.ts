@@ -380,6 +380,49 @@ describe('key ceremony', () => {
     expect((await stat(registryPath)).nlink).toBe(1);
   });
 
+  it('uses system helpers even when the inherited PATH contains hostile commands', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(protectedDirectory, 'verifier-registry.json');
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-path',
+      registryPath,
+    });
+    const fixtureBin = path.join(t.root, 'hostile-bin');
+    const marker = path.join(t.root, 'hostile-helper-ran');
+    await mkdir(fixtureBin);
+    for (const helper of ['mkdir', 'mktemp', 'install', 'ln', 'rm']) {
+      await writeFile(
+        path.join(fixtureBin, helper),
+        `#!/bin/sh\nprintf '%s\\n' '${helper}' >> "$GOFER_FAKE_TOOL_LOG"\nexit 77\n`,
+        { mode: 0o755 }
+      );
+    }
+    const env = {
+      ...process.env,
+      PATH: `${fixtureBin}:${process.env.PATH}`,
+      GOFER_FAKE_TOOL_LOG: marker,
+    };
+    const run = (command: string) =>
+      spawnSync(
+        '/bin/sh',
+        ['-c', command.replace(/^sudo /, '').replace('install -o root ', 'install ')],
+        { cwd: t.root, env, encoding: 'utf8' }
+      );
+    expect(result.installCommands[0]).toContain('sudo /bin/mkdir');
+    expect(result.installCommands[1]).toContain('PATH=/usr/bin:/bin; export PATH');
+    for (const command of result.installCommands) {
+      expect(run(command).status).toBe(0);
+    }
+    await expect(stat(marker)).rejects.toThrow();
+    expect((await stat(registryPath)).nlink).toBe(1);
+    expect(await readdir(protectedDirectory)).toEqual(['verifier-registry.json']);
+  });
+
   it('does not trust an installed registry when staging cleanup fails', async () => {
     const t = await trust();
     await chmod(t.root, 0o700);
@@ -392,11 +435,9 @@ describe('key ceremony', () => {
       keyId: 'ceremony-key-4',
       registryPath,
     });
-    const fixtureBin = path.join(t.root, 'fixture-bin');
-    await mkdir(fixtureBin);
-    await writeFile(path.join(fixtureBin, 'rm'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
-    const env = { ...process.env, PATH: `${fixtureBin}:${process.env.PATH}` };
-    runFixtureInstall(result.installCommands[1], t.root, env);
+    const failedCleanup = result.installCommands[1].replace('rm -f -- "$stage"', '/bin/false');
+    expect(failedCleanup).not.toBe(result.installCommands[1]);
+    expect(runFixtureInstall(failedCleanup, t.root).status).not.toBe(0);
     expect((await stat(registryPath)).nlink).toBe(2);
     expect((await readdir(protectedDirectory)).length).toBe(2);
     await expect(
@@ -426,31 +467,19 @@ describe('key ceremony', () => {
       keyId: 'ceremony-key-linux',
       registryPath,
     });
-    const fixtureBin = path.join(t.root, 'fixture-bin');
-    await mkdir(fixtureBin);
-    await writeFile(
-      path.join(fixtureBin, 'install'),
-      [
-        '#!/bin/sh',
-        'for argument in "$@"; do',
-        '  if [ "$argument" = "-g" ]; then exit 42; fi',
-        'done',
-        'while [ "$#" -gt 2 ]; do shift; done',
-        '/bin/cp "$1" "$2"',
-      ].join('\n'),
-      { mode: 0o755 }
-    );
-    const env = { ...process.env, PATH: `${fixtureBin}:${process.env.PATH}` };
     const run = (command: string) =>
-      spawnSync('/bin/sh', ['-c', command.replace(/^sudo /, '')], {
-        cwd: t.root,
-        env,
-        encoding: 'utf8',
-      });
+      spawnSync(
+        '/bin/sh',
+        ['-c', command.replace(/^sudo /, '').replace('install -o root ', 'install ')],
+        {
+          cwd: t.root,
+          encoding: 'utf8',
+        }
+      );
     expect(run(result.installCommands[0]).status).toBe(0);
     const withWheel = result.installCommands[1].replace(
       'install -o root -m 0644',
-      'install -o root -g wheel -m 0644'
+      'install -o root -g eai-gofer-nonexistent-group -m 0644'
     );
     expect(withWheel).not.toBe(result.installCommands[1]);
     expect(run(withWheel).status).not.toBe(0);

@@ -69,13 +69,14 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
   const stageTemplate = path.join(directory, `${path.basename(registryPath)}.${keyId}.XXXXXX`);
   const installScript = [
     'set -eu',
+    'PATH=/usr/bin:/bin; export PATH',
     `stage=$(mktemp ${shellQuote(stageTemplate)})`,
     `trap 'rm -f -- "$stage"' EXIT`,
     `install -o root -m 0644 ${shellQuote(pendingPath)} "$stage"`,
     `ln "$stage" ${shellQuote(registryPath)}`,
   ].join('; ');
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
-    `sudo mkdir -p ${shellQuote(directory)}`,
+    `sudo /bin/mkdir -p ${shellQuote(directory)}`,
     `sudo /bin/sh -c ${shellQuote(installScript)}`,
   ]) });
 }
