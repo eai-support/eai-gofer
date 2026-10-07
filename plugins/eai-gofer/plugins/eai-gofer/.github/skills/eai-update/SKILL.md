@@ -5,7 +5,7 @@ description: "Install or update EAI Gofer for this AI coding app."
 
 # Eai Update
 
-Version: 3.13.4
+Version: 3.14.0
 Host: VS Code and GitHub Copilot
 
 ## Update EAI Gofer
