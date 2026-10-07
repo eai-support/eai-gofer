@@ -114,7 +114,7 @@ rm -f ~/.eai-gofer-trust/staged-keys/heldout-verifier.private.pem
 Check the registry is trusted the way production checks it:
 
 ```bash
-ls -l "/Library/Application Support/EAI Gofer/verifier-registry.json"   # root wheel, -rw-r--r--
+ls -l "/Library/Application Support/EAI Gofer/verifier-registry.json"   # root-owned, -rw-r--r--
 ```
 
 ### 4. Pin the held-out corpus

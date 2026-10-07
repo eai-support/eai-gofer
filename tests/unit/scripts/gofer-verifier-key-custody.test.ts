@@ -55,9 +55,7 @@ async function trust() {
   return { root, workspaceRoot };
 }
 function runFixtureInstall(command: string, cwd: string, env = process.env) {
-  const shellCommand = command
-    .replace(/^sudo /, '')
-    .replace('install -o root -g wheel -m 0644 ', 'cp ');
+  const shellCommand = command.replace(/^sudo /, '').replace('install -o root -m 0644 ', 'cp ');
   return spawnSync('/bin/sh', ['-c', shellCommand], { cwd, env, encoding: 'utf8' });
 }
 const receiptFor = (keyId: string) => ({
@@ -409,6 +407,64 @@ describe('key ceremony', () => {
         protectedRegistry: { path: registryPath, ownerUid: uid },
       })
     ).rejects.toThrow('TRUSTED_EVALUATOR_REQUIRED');
+  });
+
+  it('installs a Linux-shaped registry without requiring the wheel group', async () => {
+    const t = await trust();
+    await chmod(t.root, 0o700);
+    const protectedDirectory = await makeProtectedDirectory();
+    roots.push(protectedDirectory);
+    const registryPath = path.join(
+      protectedDirectory,
+      'etc',
+      'eai-gofer',
+      'verifier-registry.json'
+    );
+    const result = await runVerifierKeyCeremony({
+      trustRoot: t.root,
+      getPassphrase: answers(PASSPHRASE, PASSPHRASE),
+      keyId: 'ceremony-key-linux',
+      registryPath,
+    });
+    const fixtureBin = path.join(t.root, 'fixture-bin');
+    await mkdir(fixtureBin);
+    await writeFile(
+      path.join(fixtureBin, 'install'),
+      [
+        '#!/bin/sh',
+        'for argument in "$@"; do',
+        '  if [ "$argument" = "-g" ]; then exit 42; fi',
+        'done',
+        'while [ "$#" -gt 2 ]; do shift; done',
+        '/bin/cp "$1" "$2"',
+      ].join('\n'),
+      { mode: 0o755 }
+    );
+    const env = { ...process.env, PATH: `${fixtureBin}:${process.env.PATH}` };
+    const run = (command: string) =>
+      spawnSync('/bin/sh', ['-c', command.replace(/^sudo /, '')], {
+        cwd: t.root,
+        env,
+        encoding: 'utf8',
+      });
+    expect(run(result.installCommands[0]).status).toBe(0);
+    const withWheel = result.installCommands[1].replace(
+      'install -o root -m 0644',
+      'install -o root -g wheel -m 0644'
+    );
+    expect(withWheel).not.toBe(result.installCommands[1]);
+    expect(run(withWheel).status).not.toBe(0);
+    await expect(stat(registryPath)).rejects.toThrow();
+    expect(await readdir(path.dirname(registryPath))).toEqual([]);
+    expect(run(result.installCommands[1]).status).toBe(0);
+    expect((await stat(registryPath)).nlink).toBe(1);
+    const loaded = await loadActiveBenchmarkVerifierKey({
+      workspaceRoot: t.workspaceRoot,
+      trustRoot: t.root,
+      getPassphrase: async () => PASSPHRASE,
+      protectedRegistry: { path: registryPath, ownerUid: uid },
+    });
+    expect(loaded.keyId).toBe('ceremony-key-linux');
   });
 
   it('preserves an installed verifier registry without prompting or staging another key', async () => {

@@ -71,7 +71,7 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
     'set -eu',
     `stage=$(mktemp ${shellQuote(stageTemplate)})`,
     `trap 'rm -f -- "$stage"' EXIT`,
-    `install -o root -g wheel -m 0644 ${shellQuote(pendingPath)} "$stage"`,
+    `install -o root -m 0644 ${shellQuote(pendingPath)} "$stage"`,
     `ln "$stage" ${shellQuote(registryPath)}`,
   ].join('; ');
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
