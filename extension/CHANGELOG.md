@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.14.0] - 2026-10-07
+
+Ship managed deployment source and local handoff contracts
+
 ## [Unreleased]
 
 Add the EAI-managed hosting choice and hand deployment to the canonical EAI CLI
