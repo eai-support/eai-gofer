@@ -1,12 +1,12 @@
 {
   "latest_version": "3.14.2",
   "repository": "eai-support/eai-gofer",
-  "last_updated": "2026-10-07T20:01:46.138Z",
+  "last_updated": "2026-10-07T20:51:33.697Z",
   "releases": [
     {
       "version": "3.14.2",
       "tag_name": "v3.14.2",
-      "published_at": "2026-10-07T20:01:46.138Z",
+      "published_at": "2026-10-07T20:51:33.696Z",
       "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.14.2.vsix",
       "notes": "Preserve the first verifier key and install its trusted registry atomically",
       "prerelease": false,
