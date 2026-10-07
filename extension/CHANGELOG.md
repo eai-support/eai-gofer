@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.14.3] - 2026-10-08
+
+Validate completed planning artifacts and preserve reviewed Gofer delivery checkpoints
+
 ## [3.14.2] - 2026-10-08
 
 Preserve the first verifier key and install its trusted registry atomically
