@@ -74,10 +74,11 @@ export async function runVerifierKeyCeremony({ trustRoot, getPassphrase, existin
     'PATH=/usr/bin:/bin; export PATH',
     `stage=$(mktemp ${shellQuote(stageTemplate)})`,
     `trap 'rm -f -- "$stage"' EXIT`,
-    `install -o root -m 0644 ${shellQuote(pendingPath)} "$stage"`,
+    `install -o root -m 0600 ${shellQuote(pendingPath)} "$stage"`,
     // SECURITY: Check the root-owned copy against ceremony bytes, not the mutable pending file.
     'if command -v sha256sum >/dev/null 2>&1; then staged_hash=$(sha256sum < "$stage"); elif command -v shasum >/dev/null 2>&1; then staged_hash=$(shasum -a 256 < "$stage"); else exit 1; fi',
     `[ "\${staged_hash%% *}" = ${shellQuote(pendingSha256)} ]`,
+    'chmod 0644 "$stage"',
     `link "$stage" ${shellQuote(registryPath)}`,
   ].join('; ');
   return Object.freeze({ keyId, publicKeyPem, pendingPath, installCommands: Object.freeze([
