@@ -305,8 +305,11 @@ Task generation dispatches agents — keep main context lightweight.
    directly):
    - Note feature name from FEATURE_DIR
    - Note which optional docs exist: data-model.md, contracts/, quickstart.md
-   - Note whether `loop-contract.json` exists. If missing, initialize it with
-     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --init --json`
+   - Note whether `loop-contract.json` exists. If missing, initialize it while
+     auditing the completed planning stage with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 3_plan --init --json --strict`.
+     Stop on a failed audit. Task-generation outputs and their reviewed delivery
+     checkpoint are checked after generation, before implementation.
    - Note the tasks template path: `.specify/templates/tasks-template.md`
 
 ---
@@ -715,6 +718,18 @@ created: [ISO date]
 
 After required reviews pass and either existing scope approval covers the
 tasks or the outstanding approval is received:
+
+Review the current priority plan and generated task/traceability files, then
+capture their reviewed delivery checkpoint:
+
+```bash
+node .specify/scripts/node/gofer-priority-check.mjs --feature-dir {FEATURE_DIR}
+node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir {FEATURE_DIR} --capture
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --json --strict
+```
+
+Stop if any check fails. Do not overwrite a checkpoint to conceal stale task
+evidence; repair and review the affected artifacts before capturing it.
 
 ```
 ✓ Tasks APPROVED: {FEATURE_DIR}/tasks.md

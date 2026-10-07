@@ -126,6 +126,86 @@ describe('gofer-loop-audit.mjs', () => {
     );
   });
 
+  it('runs the documented task preflight before outputs exist and retains the stage-four gate', async () => {
+    const guidance = fs.readFileSync(
+      path.join(REPO_ROOT, '.specify/commands/4_gofer_tasks.md'),
+      'utf8'
+    );
+    const command = guidance.match(
+      /`node \.specify\/scripts\/node\/gofer-loop-audit\.mjs --feature-dir \{FEATURE_DIR\} ([^`]+)`/
+    );
+    expect(command).not.toBeNull();
+    const preflight = await runAudit(workspaceRoot, featureDir, command![1].split(' '));
+
+    expect(preflight.exitCode).toBe(0);
+    expect(preflight.payload.status).toBe('pass');
+    expect(preflight.payload.contractCreated).toBe(true);
+    const initialized = JSON.parse(
+      fs.readFileSync(path.join(featureDir, 'loop-contract.json'), 'utf8')
+    );
+    expect(initialized.requireDeliveryCheckpoint).toBe(true);
+    expect(initialized.requirePriorityPlan).toBe(true);
+    expect(fs.existsSync(path.join(featureDir, 'tasks.md'))).toBe(false);
+    expect(fs.existsSync(path.join(featureDir, 'delivery-checkpoint.json'))).toBe(false);
+
+    const gate = await runAudit(workspaceRoot, featureDir, ['--stage', '4_tasks', '--strict']);
+    expect(gate.exitCode).toBe(1);
+    expect(gate.payload.blockingFindings).toContain(
+      'Delivery review: UNREADABLE_ARTIFACT:tasks.md'
+    );
+    expect(gate.payload.blockingFindings).toContain(
+      'Delivery review: MISSING_OR_INVALID_CHECKPOINT'
+    );
+
+    fs.writeFileSync(path.join(featureDir, 'spec.md'), 'FR-001: Show the requested result.\n');
+    fs.writeFileSync(path.join(featureDir, 'plan.md'), 'Build and verify the requested result.\n');
+    fs.writeFileSync(path.join(featureDir, 'tasks.md'), '- [ ] T001 Show the requested result.\n');
+    fs.writeFileSync(path.join(featureDir, 'traceability.md'), '| T001 | FR-001 | pending |\n');
+    fs.writeFileSync(path.join(featureDir, 'decisions.md'), 'D001: Show the requested result.\n');
+    writeJson(path.join(featureDir, 'priority-plan.json'), {
+      schemaVersion: 1,
+      revision: 'one',
+      objective: 'Show the requested result.',
+      lastInstruction: { id: 'D001', text: 'Show the requested result.' },
+      criticalPath: ['T001'],
+      tasks: { T001: { dependsOn: [], allowedEditScope: [] } },
+      outcome: {
+        id: 'result',
+        statement: 'Result checked.',
+        requirements: ['FR-001'],
+        target: { environment: 'local', revision: 'fixture' },
+        receipt: 'outcome.json',
+      },
+    });
+    for (const script of ['gofer-priority-check.mjs', 'gofer-delivery-check.mjs']) {
+      const { stdout } = await execFileAsync('node', [
+        path.join(REPO_ROOT, '.specify/scripts/node', script),
+        '--feature-dir',
+        featureDir,
+        ...(script === 'gofer-delivery-check.mjs' ? ['--capture'] : []),
+      ]);
+      expect(JSON.parse(stdout).status).toBe('pass');
+    }
+    const reviewedGate = await runAudit(workspaceRoot, featureDir, [
+      '--stage',
+      '4_tasks',
+      '--strict',
+    ]);
+    expect(reviewedGate.exitCode).toBe(0);
+    expect(reviewedGate.payload.status).toBe('pass');
+    fs.appendFileSync(path.join(featureDir, 'plan.md'), 'Changed scope.\n');
+    const staleGate = await runAudit(workspaceRoot, featureDir, ['--stage', '4_tasks', '--strict']);
+    expect(staleGate.exitCode).toBe(1);
+    expect(staleGate.payload.blockingFindings).toContain('Delivery review: ARTIFACT_DRIFT:plan.md');
+    const continuation = guidance.slice(guidance.indexOf('## Step 8:'));
+    expect(continuation.indexOf('gofer-delivery-check.mjs')).toBeLessThan(
+      continuation.indexOf('--stage 4_tasks --json --strict')
+    );
+    expect(continuation.indexOf('--stage 4_tasks --json --strict')).toBeLessThan(
+      continuation.indexOf('5_gofer_implement.md')
+    );
+  });
+
   it('requires ledger evidence for implementation and validation stages', async () => {
     writeJson(path.join(featureDir, 'loop-contract.json'), contract());
 
