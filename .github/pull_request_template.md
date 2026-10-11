@@ -1,3 +1,10 @@
+<!--
+Title: Enable [outcome] for [user or system] by [change made]
+Say what changes, who or what benefits, and the outcome it enables.
+Keep the title concise and in business language. A prefix such as CURATE: may identify a programme, but it must not replace the outcome.
+Example issue title: Prevent broken EAI app data links caused by inconsistent Object Type slugs.
+-->
+
 # Pull Request
 
 ## Summary
