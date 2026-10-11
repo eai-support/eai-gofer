@@ -9,6 +9,9 @@ easy to understand, and easy to adapt across different AI coding hosts.
   for questions, ideas, and design conversations.
 - Use [GitHub Issues](https://github.com/eai-support/eai-gofer/issues) for bugs,
   broken docs, regressions, and scoped feature requests.
+- Name an issue for the outcome needed:
+  `Prevent [risk] for [user or system] by [needed capability]`.
+  Example: Prevent broken EAI app data links caused by inconsistent Object Type slugs.
 - For security issues, follow [SECURITY.md](./SECURITY.md) instead of opening a
   public issue.
 
@@ -50,6 +53,10 @@ npm run gofer:package-plugin -- --sync-repo
 
 ## Pull Requests
 
+- Name the pull request for the change and the outcome it enables:
+  `Enable [outcome] for [user or system] by [change made]`.
+- Keep the title concise and in business language. Use a prefix such as `CURATE:`
+  only when it helps identify a programme. The prefix should not replace the outcome.
 - Link the issue or discussion when possible.
 - Explain the user-facing impact.
 - Include verification steps and results.

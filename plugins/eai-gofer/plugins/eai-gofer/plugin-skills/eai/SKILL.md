@@ -85,6 +85,22 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 8. If the runner is missing in an EAI app template repo, refresh the template before preview work continues.
 9. Check the exact preview page and the current implemented user journey after each change. A running process, open browser, screenshot alone, error page or dry run is not proof that it works. Say ready to view only after those checks pass. Otherwise explain what is unchecked or failing; do not claim readiness. Record fresh browser and test evidence. Local MVP checks cover only implemented behaviour; do not add future auth or deployment gates. Keep showing clearly labelled drafts without adding approval stops.
 
+## Issue and pull request titles
+
+Say what changes, who or what benefits, and the outcome or risk it addresses.
+
+Keep titles concise and in business language. Use a prefix such as `CURATE:` only when it helps identify a programme. The prefix should not replace the outcome.
+
+An issue describes the outcome needed:
+
+`Prevent [risk] for [user or system] by [needed capability]`
+
+Example from Issues2025 #3375: Prevent broken EAI app data links caused by inconsistent Object Type slugs.
+
+A pull request describes the change delivered and the outcome it enables:
+
+`Enable [outcome] for [user or system] by [change made]`
+
 ## Controlled English Contract
 
 Use ASD-STE100 Simplified Technical English as the target writing standard for all Gofer-authored chat, documents, commands, summaries, PR notes, error guidance, and validation artifacts. ASD-STE100 is copyright and a trademark of ASD; do not bundle the protected ASD dictionary and do not claim ASD certification.
