@@ -245,6 +245,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
     ...under('contracts', ['object-type-routing-v1.json']),
     ...under('references', [
       'agent-catalog.json',
+      'issue-and-pr-titles.md',
       'mvp-capability-validation.md',
       'platform/eai-auth-access.md',
       'verified-agent-execution.md',

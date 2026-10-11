@@ -111,8 +111,8 @@ describe('release-pinned portable inventories', () => {
     expect(getGoferPortableScaffoldPaths(candidateRelease)).toBe(
       GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS
     );
-    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(241);
-    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(241);
+    expect(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).toHaveLength(242);
+    expect(new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS).size).toBe(242);
     const tracked = spawnSync('git', ['ls-files', '-z', '--', '.specify'], {
       cwd: root,
       encoding: 'utf8',
