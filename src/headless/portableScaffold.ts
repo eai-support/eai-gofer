@@ -248,6 +248,7 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'issue-and-pr-titles.md',
       'mvp-capability-validation.md',
       'platform/eai-auth-access.md',
+      'platform/eai-support.md',
       'verified-agent-execution.md',
     ]),
     ...under('scripts', [

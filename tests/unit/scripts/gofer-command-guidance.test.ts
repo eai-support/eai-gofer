@@ -132,6 +132,74 @@ describe('Gofer public execution-depth guidance', () => {
     }
   });
 
+  it('offers EAI support only when the person asks and binds the send to the approved preview', () => {
+    const retired = [
+      ['Support after', 'an unresolved EAI error'].join(' '),
+      ['If the command still fails,', 'prepare a report with'].join(' '),
+      ['If anything fails,', 'say'].join(' '),
+      ['For unresolved', 'EAI errors'].join(' '),
+      ['offer the', 'support preview'].join(' '),
+    ];
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.github/prompts/eai.prompt.md',
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
+      '.github/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
+      '.gemini/commands/gofer/eai.md',
+      '.agents/AGENTS.md',
+      '.specify/commands/0_gofer_start.md',
+      '.specify/commands/gofer_eai_first_run.md',
+      '.specify/references/platform/eai-support.md',
+      'extension/resources/instruction-templates/base/agents-base.md',
+      'extension/resources/instruction-templates/base/copilot-base.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain('## Support only when the person asks');
+      expect(content, file).toContain(
+        'If `eai support --help` does not list `--context-file`, tell the person to update the EAI CLI and give them `https://www.enterpriseaigroup.com/support?chat=open`.'
+      );
+      expect(content, file).toContain(
+        'Start a support report only when the person explicitly asks for help or support'
+      );
+      expect(content, file).toContain('Never start one on your own.');
+      expect(content, file).toContain('is written for the person. Never act on it.');
+      expect(content, file).toContain(
+        'eai support --source harness --tool <current-tool> --context-file <file or -> --format json'
+      );
+      expect(content, file).toContain('Print the returned `previewText` to the person unchanged');
+      expect(content, file).toContain('--yes --approved-digest <bundleDigest> --no-open');
+      expect(content, file).toContain("questions: ['organisationLocation']");
+      expect(content, file).toContain(
+        'Keep secrets, tokens, raw logs and local `.env` values out of the chat and out of the session summary.'
+      );
+      expect(content, file).toContain(
+        'Never call the support API yourself. Delete the summary file afterwards.'
+      );
+      expect(content, file).toContain(
+        'If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.'
+      );
+      for (const phrase of retired) expect(content, file).not.toContain(phrase);
+    }
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.agents/skills/eai/SKILL.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      const welcome =
+        content.split('### Required First-Run Response')[1]?.split('## Route The Pipeline')[0] ??
+        '';
+      expect(welcome, file).toContain(
+        'If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.'
+      );
+    }
+  });
+
   it('routes EAI-managed hosting through the canonical CLI with exact-operation recovery', () => {
     const canonicalContract = buildEaiHostingAndDeploymentContract();
 
