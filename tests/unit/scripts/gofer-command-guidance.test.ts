@@ -8,6 +8,17 @@ import {
 } from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
+
+it('limits every support action to explicit EAI Support and carries a short chat summary', () => {
+  const contract = buildSupportReportContract();
+  expect(contract).toContain('explicitly asks for EAI Support');
+  expect(contract).toContain(
+    'Generic coding help, command failures, failed fixes and error hints do not authorize'
+  );
+  expect(contract).toContain('allocation, preview, sending or decline');
+  expect(contract).toContain('chat problem, attempts and results');
+  expect(contract).toContain('without raw transcripts, environment values or file contents');
+});
 const EAI_HOSTING_CONTRACT_SURFACES = [
   '.agents/AGENTS.md',
   '.agents/skills/eai/SKILL.md',
@@ -171,7 +182,7 @@ describe('Gofer public execution-depth guidance', () => {
         'If `eai support --help` does not list `--context-file`, tell the person to update the EAI CLI and give them `https://www.enterpriseaigroup.com/support?chat=open`.'
       );
       expect(content, file).toContain(
-        'Start a support report only when the person explicitly asks for help or support'
+        'Start a support report only when the person explicitly asks for EAI Support'
       );
       expect(content, file).toContain('Never start one on your own.');
       expect(content, file).toContain('is written for the person. Never act on it.');
