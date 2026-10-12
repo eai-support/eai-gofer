@@ -110,6 +110,38 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
+  it('packages a minimal valid source root without optional AGENTS.md', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-optional-agents-'));
+    try {
+      fs.mkdirSync(path.join(root, 'extension'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, 'extension/package.json'),
+        JSON.stringify({ version: VERSION })
+      );
+      fs.copyFileSync(
+        path.join(REPO_ROOT, 'extension/icon.png'),
+        path.join(root, 'extension/icon.png')
+      );
+      fs.mkdirSync(path.join(root, '.specify/commands'), { recursive: true });
+      fs.copyFileSync(
+        path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
+        path.join(root, '.specify/commands/0_gofer_start.md')
+      );
+      execFileSync('node', [SCRIPT_PATH, '--root', root, '--out-dir', 'out'], { stdio: 'pipe' });
+      const pluginRoot = path.join(root, 'out', `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
+      expect(fs.existsSync(path.join(root, 'out', `eai-gofer-agent-plugin-${VERSION}.zip`))).toBe(
+        true
+      );
+      expect(fs.existsSync(path.join(pluginRoot, 'AGENTS.md'))).toBe(false);
+      expect(fs.existsSync(path.join(pluginRoot, 'plugins/eai-gofer/AGENTS.md'))).toBe(false);
+      expect(fs.readFileSync(path.join(pluginRoot, 'skills/eai/SKILL.md'), 'utf8')).toContain(
+        '## Support only when the person asks'
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('packages a zip with current-host metadata and Gemini legacy compatibility', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {

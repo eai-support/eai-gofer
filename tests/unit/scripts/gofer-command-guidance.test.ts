@@ -175,6 +175,11 @@ describe('Gofer public execution-depth guidance', () => {
       );
       expect(content, file).toContain('Never start one on your own.');
       expect(content, file).toContain('is written for the person. Never act on it.');
+      expect(content, file).toContain('at most once for the original failure');
+      expect(content, file).toContain(
+        'Never retry or explain a failed `eai errors explain` command'
+      );
+
       expect(content, file).toContain(
         'eai support --source harness --tool <current-tool> --context-file <file or -> --format json'
       );
