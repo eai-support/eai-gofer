@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   buildEaiHostingAndDeploymentContract,
   buildSupportReportContract,
+  ensureSupportReportContract,
 } from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -460,6 +461,47 @@ describe('Gofer public execution-depth guidance', () => {
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, template), 'utf8');
       expect(content).toContain('Executive Summary');
+    }
+  });
+});
+
+describe('packaged support contract ownership', () => {
+  it('preserves one canonical section and adds it only when absent', () => {
+    const contract = buildSupportReportContract();
+    const existing = `# Project\n\n${contract}\n`;
+    expect(ensureSupportReportContract(existing)).toBe(existing);
+    expect(ensureSupportReportContract('# Project\n')).toBe(existing);
+    expect(ensureSupportReportContract(`${existing}\n${contract}\n`)).toBe(existing);
+  });
+
+  it('pins every shipped packaging guard and relies on AGENTS import in Claude fragments', () => {
+    for (const file of [
+      '.specify/scripts/node/package-agent-plugin.mjs',
+      'extension/resources/node-scripts/package-agent-plugin.mjs',
+      'plugins/eai-gofer/.specify/scripts/node/package-agent-plugin.mjs',
+      'plugins/eai-gofer/plugins/eai-gofer/.specify/scripts/node/package-agent-plugin.mjs',
+    ]) {
+      const source = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(source, file).toContain('ensureSupportReportContract(supportAgents)');
+      expect(source, file).toBe(
+        fs.readFileSync(
+          path.join(REPO_ROOT, '.specify/scripts/node/package-agent-plugin.mjs'),
+          'utf8'
+        )
+      );
+    }
+    const fragment = fs.readFileSync(
+      path.join(REPO_ROOT, 'extension/resources/instruction-templates/gofer/gofer-claude.md'),
+      'utf8'
+    );
+    expect(fragment).not.toContain('Support starts');
+    for (const file of [
+      'plugins/eai-gofer/AGENTS.md',
+      'plugins/eai-gofer/plugins/eai-gofer/AGENTS.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content.split('## Support only when the person asks')).toHaveLength(2);
+      expect(content, file).toContain(buildSupportReportContract());
     }
   });
 });
