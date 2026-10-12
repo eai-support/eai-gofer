@@ -123,6 +123,8 @@ describe('Gofer workspace bootstrap scripts', () => {
       }
       const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
       expect(claude).toContain('See @AGENTS.md');
+      expect(claude).toContain('Support starts only when the person explicitly requests support.');
+      expect(claude).not.toContain('Support starts only when the person asks "get help"');
       expect(claude).toContain('Follow the full support contract in AGENTS.md.');
       expect(claude).not.toContain(contract);
       expect(claude.split('\n').length).toBeLessThanOrEqual(65);
