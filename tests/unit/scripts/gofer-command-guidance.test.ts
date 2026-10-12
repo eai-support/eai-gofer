@@ -510,3 +510,58 @@ describe('packaged support contract ownership', () => {
     }
   });
 });
+
+describe('support producer recovery boundaries', () => {
+  it.each([false, true])(
+    'removes historical support sections even with a current section: %s',
+    (hasCurrent) => {
+      const contract = buildSupportReportContract();
+      const legacy = '## Support after an unresolved EAI error\nOffer support automatically.\n';
+      const content = `# Project\n\n## Custom before\nKeep before.\n\n${legacy}\n## Custom after\nKeep after.\n\n${hasCurrent ? contract : ''}\n`;
+      const repaired = ensureSupportReportContract(content);
+      expect(repaired).not.toContain('Support after an unresolved EAI error');
+      expect(repaired).not.toContain('Offer support automatically.');
+      expect(repaired).toContain('## Custom before\nKeep before.');
+      expect(repaired).toContain('## Custom after\nKeep after.');
+      expect(repaired.split('## Support only when the person asks')).toHaveLength(2);
+      expect(repaired).toContain(contract);
+      expect(ensureSupportReportContract(repaired)).toBe(repaired);
+    }
+  );
+
+  it('removes an empty historical heading after the current contract', () => {
+    const contract = buildSupportReportContract();
+    const repaired = ensureSupportReportContract(
+      `${contract}\n\n## Support after an unresolved EAI error`
+    );
+    expect(repaired).not.toContain('Support after an unresolved EAI error');
+    expect(repaired.split('## Support only when the person asks')).toHaveLength(2);
+    expect(repaired).toContain(contract);
+  });
+
+  it('removes generic unconditional recovery instructions from all shipped producers', () => {
+    for (const prefix of [
+      '.specify/scripts/node/',
+      'extension/resources/node-scripts/',
+      'plugins/eai-gofer/.specify/scripts/node/',
+      'plugins/eai-gofer/plugins/eai-gofer/.specify/scripts/node/',
+    ]) {
+      for (const producer of [
+        'generate-commands.mjs',
+        'package-agent-plugin.mjs',
+        'workspace-bootstrap-lib.mjs',
+      ]) {
+        expect(
+          fs.readFileSync(path.join(REPO_ROOT, prefix, producer), 'utf8'),
+          `${prefix}${producer}`
+        ).toBe(fs.readFileSync(path.join(REPO_ROOT, '.specify/scripts/node', producer), 'utf8'));
+      }
+      const packager = fs.readFileSync(
+        path.join(REPO_ROOT, prefix, 'package-agent-plugin.mjs'),
+        'utf8'
+      );
+      expect(packager, prefix).not.toMatch(/After any .*eai.* error, run/);
+      expect(packager, prefix).not.toContain('after errors when the CLI advertises it');
+    }
+  });
+});

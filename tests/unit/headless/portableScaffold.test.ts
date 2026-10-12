@@ -326,3 +326,42 @@ describe('release-pinned portable inventories', () => {
     }
   });
 });
+
+it('portable bootstrap emits canonical support instructions without repository imports', () => {
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-portable-support-source-'));
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-portable-support-workspace-'));
+  temporaryDirectories.push(source, workspace);
+  const bundle = createGoferExportBundle(candidateRequest());
+  for (const file of bundle.files) {
+    const target = path.join(source, file.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, Buffer.from(file.content, file.encoding));
+  }
+  fs.mkdirSync(path.join(workspace, '.git'));
+  fs.writeFileSync(path.join(workspace, 'package.json'), '{"name":"portable-support-fixture"}');
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(source, '.specify/scripts/node/gofer-workspace-bootstrap.mjs'),
+      '--workspace',
+      workspace,
+      '--host',
+      'copilot',
+      '--include-mirrors',
+    ],
+    { cwd: workspace, encoding: 'utf8', timeout: 30000, env: { ...process.env, NODE_PATH: '' } }
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.stderr).toBe('');
+  expect(result.status).toBe(0);
+  for (const file of ['AGENTS.md', '.github/copilot-instructions.md']) {
+    const content = fs.readFileSync(path.join(workspace, file), 'utf8');
+    expect(content, file).toContain('Never retry or explain a failed `eai errors explain` command');
+    expect(content.split('## Support only when the person asks')).toHaveLength(2);
+    expect(content).toContain('eai support --decline --context-file <file or -> --format json');
+  }
+  const claude = fs.readFileSync(path.join(workspace, 'CLAUDE.md'), 'utf8');
+  expect(claude).toContain('Follow the full support contract in AGENTS.md.');
+  expect(claude).not.toContain('## Support only when the person asks');
+  expect(claude.split('\n').length).toBeLessThanOrEqual(65);
+});
