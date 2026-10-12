@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
+import {
+  buildEaiHostingAndDeploymentContract,
+  buildSupportReportContract,
+} from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const EAI_HOSTING_CONTRACT_SURFACES = [
@@ -139,6 +142,7 @@ describe('Gofer public execution-depth guidance', () => {
       ['If anything fails,', 'say'].join(' '),
       ['For unresolved', 'EAI errors'].join(' '),
       ['offer the', 'support preview'].join(' '),
+      ['If the failure remains', 'unresolved'].join(' '),
     ];
     for (const file of [
       '.claude/commands/eai.md',
@@ -153,13 +157,15 @@ describe('Gofer public execution-depth guidance', () => {
       '.specify/commands/0_gofer_start.md',
       '.specify/commands/gofer_eai_first_run.md',
       '.specify/references/platform/eai-support.md',
+      'tests/fixtures/golden/claude-commands/0_gofer_start.md',
+      'plugins/eai-gofer/AGENTS.md',
       'extension/resources/instruction-templates/base/agents-base.md',
       'extension/resources/instruction-templates/base/copilot-base.md',
       'plugins/eai-gofer/skills/eai/SKILL.md',
       'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-      expect(content, file).toContain('## Support only when the person asks');
+      expect(content, file).toContain(buildSupportReportContract());
       expect(content, file).toContain(
         'If `eai support --help` does not list `--context-file`, tell the person to update the EAI CLI and give them `https://www.enterpriseaigroup.com/support?chat=open`.'
       );
@@ -178,7 +184,7 @@ describe('Gofer public execution-depth guidance', () => {
         'Keep secrets, tokens, raw logs and local `.env` values out of the chat and out of the session summary.'
       );
       expect(content, file).toContain(
-        'Never call the support API yourself. Delete the summary file afterwards.'
+        'Never call the support API yourself. Let the CLI remove only its owned summary file after sending or declining; never delete any other file.'
       );
       expect(content, file).toContain(
         'If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.'

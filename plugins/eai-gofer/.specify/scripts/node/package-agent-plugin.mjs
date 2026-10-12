@@ -1327,6 +1327,9 @@ async function writePluginFolder(pluginRoot, root, version, stages) {
   for (const relativePath of copiedResources) {
     await copyIfExists(root, relativePath, pluginRoot);
   }
+  const supportAgentsPath = path.join(pluginRoot, 'AGENTS.md');
+  const supportAgents = await fs.readFile(supportAgentsPath, 'utf8');
+  await fs.writeFile(supportAgentsPath, `${supportAgents.trimEnd()}\n\n${buildSupportReportContract()}\n`, 'utf8');
   await writeJson(path.join(pluginRoot, '.gemini', 'extension.json'), geminiManifest);
   await copyIfExistsAs(root, '.claude/commands', 'commands', pluginRoot);
   await copyIfExistsAs(root, '.claude/agents', 'agents', pluginRoot);
