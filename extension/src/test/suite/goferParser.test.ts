@@ -17,7 +17,7 @@ suite('GoferParser Test Suite', function () {
 
   teardown(async () => {
     // Clean up temporary directory
-    await fs.rmdir(tempDir, { recursive: true }).catch(() => {});
+    await fs.rm(tempDir, { recursive: true, force: true });
   });
 
   suite('YAML Frontmatter Parsing', () => {
@@ -282,7 +282,7 @@ created: "2025-10-22"
       const specs = await emptyParser.loadAllSpecs();
       assert.strictEqual(specs.length, 0);
 
-      await fs.rmdir(emptyTempDir, { recursive: true }).catch(() => {});
+      await fs.rm(emptyTempDir, { recursive: true, force: true });
     });
   });
 
