@@ -1107,6 +1107,55 @@ describe('TypeSafe semantic governance', () => {
     );
   });
 
+  it('preserves a Jev conflict when cross-artifact requirement context is incomplete', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const requirement = `### FR-001: Large requirement\n${'Exact acceptance detail remains available to Jev.\n'.repeat(900)}`;
+    await writeFile(
+      path.join(featureDir, 'spec.md'),
+      `${requirement}## Supporting evidence\n${'supporting evidence\n'.repeat(1_000)}`
+    );
+    await writeFile(path.join(featureDir, 'tasks.md'), '# Tasks\nImplement FR-001.\n');
+    const conflictAnswers = alignedAnswers(0.99);
+    conflictAnswers.goal_alignment = {
+      type: 'choice',
+      choice: 'conflict',
+      confidence: 0.99,
+      probabilities: { aligned: 0.005, partial: 0.005, conflict: 0.99 },
+    };
+    conflictAnswers.required_action = {
+      type: 'choice',
+      choice: 'ask_user',
+      confidence: 0.99,
+      probabilities: { continue: 0.005, reconcile: 0.005, ask_user: 0.99 },
+    };
+    const fetchImpl = vi.fn(async (_url: RequestInfo | URL, request: RequestInit = {}) => {
+      const body = JSON.parse(request.body as string);
+      const answers = body.state.review.requirementContextComplete
+        ? alignedAnswers(0.99)
+        : conflictAnswers;
+      return new Response(JSON.stringify(validResponsePayload(answers)), { status: 200 });
+    });
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result.status).toBe('conflict');
+    expect(result.multiPass).toMatchObject({ complete: false, requirementContextComplete: false });
+    expect(result.multiPass.requirementContextIssues).toContain(
+      'requirement_context_exceeds_packet_budget:FR-001'
+    );
+    expect(
+      result.multiPass.packets.some((packet: { status: string }) => packet.status === 'conflict')
+    ).toBe(true);
+  });
+
   it('does not report aligned when any packet is below the confidence threshold', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);

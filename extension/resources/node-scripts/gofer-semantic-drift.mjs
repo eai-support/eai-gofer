@@ -1157,7 +1157,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       timeoutMs: Math.min(REQUEST_TIMEOUT_MS, remainingMs),
       timeoutReason: deadlineLimited ? 'review_deadline_exceeded' : 'timeout',
     });
-    const packetEvaluation = !request.contextComplete && evaluation.status !== 'unavailable'
+    const packetEvaluation = !request.contextComplete && evaluation.status === 'aligned'
       ? { ...evaluation, status: 'reconcile', reason: 'requirement_context_incomplete' }
       : evaluation;
     packetResults.push({
@@ -1223,8 +1223,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     finalStatus = 'unavailable';
     finalReason = 'source_range_coverage_invalid';
   } else if (!requirementContextComplete) {
-    finalStatus = 'reconcile';
-    finalReason = 'requirement_context_incomplete';
+    if (finalStatus === 'aligned') finalStatus = 'reconcile';
+    if (finalStatus === 'reconcile') finalReason = 'requirement_context_incomplete';
   }
   const updatedCoverage = Object.fromEntries(artifacts.map(([name]) => {
     const plannedRangeCount = plan.requests.flatMap((request) => request.sourceRanges).filter((range) => range.artifact === name).length;
