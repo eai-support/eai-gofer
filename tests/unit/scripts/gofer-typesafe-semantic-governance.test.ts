@@ -58,27 +58,51 @@ function alignedAnswers(confidence = 0.95) {
   const alignmentProbabilities = { aligned: confidence, partial: 1 - confidence, conflict: 0 };
   const actionProbabilities = { continue: confidence, reconcile: 1 - confidence, ask_user: 0 };
   return {
-    goal_alignment: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
-    specification_currency: {
+    goal_alignment: {
+      type: 'choice',
       choice: 'aligned',
       confidence,
       probabilities: alignmentProbabilities,
     },
-    test_coverage: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
-    blast_radius: { choice: 'aligned', confidence, probabilities: alignmentProbabilities },
-    required_action: { choice: 'continue', confidence, probabilities: actionProbabilities },
+    specification_currency: {
+      type: 'choice',
+      choice: 'aligned',
+      confidence,
+      probabilities: alignmentProbabilities,
+    },
+    test_coverage: {
+      type: 'choice',
+      choice: 'aligned',
+      confidence,
+      probabilities: alignmentProbabilities,
+    },
+    blast_radius: {
+      type: 'choice',
+      choice: 'aligned',
+      confidence,
+      probabilities: alignmentProbabilities,
+    },
+    required_action: {
+      type: 'choice',
+      choice: 'continue',
+      confidence,
+      probabilities: actionProbabilities,
+    },
+  };
+}
+
+function validResponsePayload(answers: Record<string, unknown>) {
+  return {
+    model: 'jev-1.13.0',
+    answers,
+    usage: { input_tokens: 100, output_tokens: 12 },
   };
 }
 
 function alignedResponse(confidence = 0.95) {
-  return new Response(
-    JSON.stringify({
-      model: 'jev-1.13.0',
-      answers: alignedAnswers(confidence),
-      usage: { input_tokens: 100, output_tokens: 12 },
-    }),
-    { status: 200 }
-  );
+  return new Response(JSON.stringify(validResponsePayload(alignedAnswers(confidence))), {
+    status: 200,
+  });
 }
 
 afterEach(async () => {
@@ -225,12 +249,7 @@ describe('TypeSafe semantic governance', () => {
     const keychain = { read: vi.fn(async () => 'shared-secret-value') };
     const fetchImpl = vi.fn(
       async () =>
-        new Response(
-          JSON.stringify({
-            answers: alignedAnswers(0.96),
-          }),
-          { status: 200 }
-        )
+        new Response(JSON.stringify(validResponsePayload(alignedAnswers(0.96))), { status: 200 })
     );
 
     const result = await semantic.runSemanticReview({
@@ -267,12 +286,19 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     for (const field of ['specification_currency', 'test_coverage', 'blast_radius']) {
       const answers = alignedAnswers(0.99);
-      answers[field as keyof typeof answers] = { choice: 'partial', confidence: 0.99 };
+      answers[field as keyof typeof answers] = {
+        type: 'choice',
+        choice: 'partial',
+        confidence: 0.99,
+        probabilities: { aligned: 0.005, partial: 0.99, conflict: 0.005 },
+      };
       const result = await semantic.runSemanticReview({
         workspace,
         featureDir,
         event: 'before_validation',
-        fetchImpl: vi.fn(async () => new Response(JSON.stringify({ answers }), { status: 200 })),
+        fetchImpl: vi.fn(
+          async () => new Response(JSON.stringify(validResponsePayload(answers)), { status: 200 })
+        ),
       });
       expect(result.status).toBe('reconcile');
     }
@@ -334,12 +360,17 @@ describe('TypeSafe semantic governance', () => {
     const fetchImpl = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({
-            answers: {
+          JSON.stringify(
+            validResponsePayload({
               ...alignedAnswers(0.97),
-              chat_readiness: { choice: 'ready', confidence: 0.96 },
-            },
-          }),
+              chat_readiness: {
+                type: 'choice',
+                choice: 'ready',
+                confidence: 0.96,
+                probabilities: { ready: 0.96, reconcile: 0.04, ask_user: 0 },
+              },
+            })
+          ),
           { status: 200 }
         )
     );
@@ -397,12 +428,17 @@ describe('TypeSafe semantic governance', () => {
       fetchImpl: vi.fn(
         async () =>
           new Response(
-            JSON.stringify({
-              answers: {
+            JSON.stringify(
+              validResponsePayload({
                 ...alignedAnswers(0.99),
-                chat_readiness: { choice: 'reconcile', confidence: 0.99 },
-              },
-            }),
+                chat_readiness: {
+                  type: 'choice',
+                  choice: 'reconcile',
+                  confidence: 0.99,
+                  probabilities: { ready: 0.005, reconcile: 0.99, ask_user: 0.005 },
+                },
+              })
+            ),
             { status: 200 }
           )
       ),
@@ -419,12 +455,17 @@ describe('TypeSafe semantic governance', () => {
       fetchImpl: vi.fn(
         async () =>
           new Response(
-            JSON.stringify({
-              answers: {
+            JSON.stringify(
+              validResponsePayload({
                 ...alignedAnswers(0.99),
-                chat_readiness: { choice: 'ready', confidence: 0.44 },
-              },
-            }),
+                chat_readiness: {
+                  type: 'choice',
+                  choice: 'ready',
+                  confidence: 0.44,
+                  probabilities: { ready: 0.44, reconcile: 0.43, ask_user: 0.13 },
+                },
+              })
+            ),
             { status: 200 }
           )
       ),
@@ -458,13 +499,23 @@ describe('TypeSafe semantic governance', () => {
     const fetchImpl = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({
-            answers: {
+          JSON.stringify(
+            validResponsePayload({
               ...alignedAnswers(0.99),
-              goal_alignment: { choice: 'conflict', confidence: 0.99 },
-              required_action: { choice: 'ask_user', confidence: 0.99 },
-            },
-          }),
+              goal_alignment: {
+                type: 'choice',
+                choice: 'conflict',
+                confidence: 0.99,
+                probabilities: { aligned: 0.005, partial: 0.005, conflict: 0.99 },
+              },
+              required_action: {
+                type: 'choice',
+                choice: 'ask_user',
+                confidence: 0.99,
+                probabilities: { continue: 0.005, reconcile: 0.005, ask_user: 0.99 },
+              },
+            })
+          ),
           { status: 200 }
         )
     );
@@ -508,7 +559,8 @@ describe('TypeSafe semantic governance', () => {
       featureDir,
       event: 'before_validation',
       fetchImpl: vi.fn(
-        async () => new Response(JSON.stringify({ answers: alignedAnswers() }), { status: 200 })
+        async () =>
+          new Response(JSON.stringify(validResponsePayload(alignedAnswers())), { status: 200 })
       ),
     });
 
@@ -565,7 +617,7 @@ describe('TypeSafe semantic governance', () => {
     ).resolves.toMatchObject({ status: 'unavailable', reason: 'timeout' });
   });
 
-  it('fails toward reconcile, not a silent aligned pass, on an unrecognized provider answer', async () => {
+  it('fails closed on an unrecognized provider answer', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
@@ -573,12 +625,17 @@ describe('TypeSafe semantic governance', () => {
     const fetchImpl = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({
-            answers: {
+          JSON.stringify(
+            validResponsePayload({
               ...alignedAnswers(0.99),
-              goal_alignment: { choice: 'unclear', confidence: 0.99 },
-            },
-          }),
+              goal_alignment: {
+                type: 'choice',
+                choice: 'unclear',
+                confidence: 0.99,
+                probabilities: { aligned: 0.99, partial: 0.01, conflict: 0 },
+              },
+            })
+          ),
           { status: 200 }
         )
     );
@@ -588,7 +645,7 @@ describe('TypeSafe semantic governance', () => {
       event: 'before_validation',
       fetchImpl,
     });
-    expect(result.status).toBe('reconcile');
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_schema' });
   });
 
   it('reports unavailable on a response body that is not valid JSON', async () => {
@@ -613,12 +670,7 @@ describe('TypeSafe semantic governance', () => {
     await credentials.connect({ workspace, key: 'secret-value' });
     const fetchImpl = vi.fn(
       async () =>
-        new Response(
-          JSON.stringify({
-            answers: alignedAnswers(),
-          }),
-          { status: 200 }
-        )
+        new Response(JSON.stringify(validResponsePayload(alignedAnswers())), { status: 200 })
     );
     const result = await semantic.runSemanticReview({
       workspace,
@@ -627,6 +679,57 @@ describe('TypeSafe semantic governance', () => {
       fetchImpl,
     });
     expect(result.status).toBe('aligned');
+  });
+
+  it('rejects incomplete TypeSafe response fields instead of treating them as an aligned review', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    type MutablePayload = {
+      model?: string;
+      answers: Record<string, Record<string, unknown>>;
+      usage?: Record<string, number>;
+    };
+    const invalidCases: Array<{ issue: string; mutate: (payload: MutablePayload) => void }> = [
+      {
+        issue: 'model_missing_or_invalid',
+        mutate: (payload) => {
+          delete payload.model;
+        },
+      },
+      {
+        issue: 'usage_missing_or_invalid',
+        mutate: (payload) => {
+          delete payload.usage;
+        },
+      },
+      {
+        issue: 'answer_goal_alignment_type_invalid',
+        mutate: (payload) => {
+          delete payload.answers.goal_alignment.type;
+        },
+      },
+      {
+        issue: 'answer_goal_alignment_probabilities_invalid',
+        mutate: (payload) => {
+          payload.answers.goal_alignment.probabilities = { aligned: 0.99, partial: 0.01 };
+        },
+      },
+    ];
+
+    for (const invalidCase of invalidCases) {
+      const payload = structuredClone(validResponsePayload(alignedAnswers())) as MutablePayload;
+      invalidCase.mutate(payload);
+      const result = await semantic.runSemanticReview({
+        workspace,
+        featureDir,
+        event: 'before_validation',
+        fetchImpl: vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 })),
+      });
+      expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_schema' });
+      expect(result.responseValidation).toContain(invalidCase.issue);
+    }
   });
 
   it('rejects a feature directory that escapes the workspace', async () => {
@@ -938,6 +1041,93 @@ describe('TypeSafe semantic governance', () => {
     expect(JSON.stringify(result)).not.toContain('secret-value');
   });
 
+  it('does not report a completed conflict when a later packet is unavailable', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(120 * 1024));
+    const conflictAnswers = alignedAnswers(0.99);
+    conflictAnswers.goal_alignment = {
+      type: 'choice',
+      choice: 'conflict',
+      confidence: 0.99,
+      probabilities: { aligned: 0.005, partial: 0.005, conflict: 0.99 },
+    };
+    conflictAnswers.required_action = {
+      type: 'choice',
+      choice: 'ask_user',
+      confidence: 0.99,
+      probabilities: { continue: 0.005, reconcile: 0.005, ask_user: 0.99 },
+    };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(validResponsePayload(conflictAnswers)), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: [{ loc: ['state'], type: 'too_large' }] }), {
+          status: 400,
+        })
+      );
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'provider_http_error' });
+    expect(result.multiPass.packets[0].status).toBe('conflict');
+    expect(result.multiPass.packets[1].status).toBe('unavailable');
+    expect(result.multiPass.complete).toBe(false);
+  });
+
+  it('stops at the total review deadline and retains the unattempted packet details', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(120 * 1024));
+    const clockValues = [0, 0, 1, 120_001, 120_001];
+    let clockIndex = 0;
+    const now = () => clockValues[Math.min(clockIndex++, clockValues.length - 1)];
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+      now,
+    });
+
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'review_deadline_exceeded' });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(result.multiPass.limits.maxDurationMs).toBe(120_000);
+    expect(result.multiPass.packets.length).toBeGreaterThan(1);
+    expect(result.multiPass.packets[0].status).toBe('aligned');
+    expect(
+      result.multiPass.packets
+        .slice(1)
+        .every(
+          (packet: {
+            status: string;
+            reason: string;
+            sourceRanges: unknown[];
+            requestBytes: number;
+            requestAttempted: boolean;
+          }) =>
+            packet.status === 'pending' &&
+            packet.reason === 'not_attempted_after_review_deadline' &&
+            packet.sourceRanges.length > 0 &&
+            packet.requestBytes > 0 &&
+            !packet.requestAttempted
+        )
+    ).toBe(true);
+  });
+
   it('rejects a credential path routed through a symlinked directory', async () => {
     const { workspace } = await fixture();
     const credentials = await import(credentialsUrl.href);
@@ -1033,7 +1223,7 @@ describe('TypeSafe semantic governance', () => {
     expect(result).toEqual({ apiKey: 'environment-value', source: 'environment' });
   });
 
-  it('treats an invalid confidence as zero instead of dropping it', async () => {
+  it('rejects an invalid confidence as a malformed provider response', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
@@ -1044,10 +1234,15 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
+            ...validResponsePayload({
               ...alignedAnswers(0.99),
-              goal_alignment: { choice: 'aligned', confidence: 'not-a-number' },
-            },
+              goal_alignment: {
+                type: 'choice',
+                choice: 'aligned',
+                confidence: 'not-a-number',
+                probabilities: { aligned: 0.99, partial: 0.01, conflict: 0 },
+              },
+            }),
           }),
           { status: 200 }
         )
@@ -1058,8 +1253,8 @@ describe('TypeSafe semantic governance', () => {
       event: 'before_validation',
       fetchImpl,
     });
-    expect(result.confidence).toBe(0);
-    expect(result.status).toBe('reconcile');
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_schema' });
+    expect(result.responseValidation).toContain('answer_goal_alignment_confidence_invalid');
   });
 
   it('maps each status to the exit code a CI caller must not read as a pass', async () => {
@@ -1111,7 +1306,7 @@ describe('TypeSafe semantic governance', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('treats an out-of-range confidence as zero, not a satisfied minimum', async () => {
+  it('rejects an out-of-range confidence as a malformed provider response', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
@@ -1120,10 +1315,15 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            answers: {
+            ...validResponsePayload({
               ...alignedAnswers(0.99),
-              goal_alignment: { choice: 'aligned', confidence: 2 },
-            },
+              goal_alignment: {
+                type: 'choice',
+                choice: 'aligned',
+                confidence: 2,
+                probabilities: { aligned: 0.99, partial: 0.01, conflict: 0 },
+              },
+            }),
           }),
           { status: 200 }
         )
@@ -1134,8 +1334,8 @@ describe('TypeSafe semantic governance', () => {
       event: 'before_validation',
       fetchImpl,
     });
-    expect(result.confidence).toBe(0);
-    expect(result.status).toBe('reconcile');
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'invalid_response_schema' });
+    expect(result.responseValidation).toContain('answer_goal_alignment_confidence_invalid');
   });
 
   it('rejects an artifact larger than the maximum readable size', async () => {
@@ -1159,12 +1359,7 @@ describe('TypeSafe semantic governance', () => {
     await unlink(path.join(featureDir, 'blast-radius-report.md'));
     const fetchImpl = vi.fn(
       async () =>
-        new Response(
-          JSON.stringify({
-            answers: alignedAnswers(),
-          }),
-          { status: 200 }
-        )
+        new Response(JSON.stringify(validResponsePayload(alignedAnswers())), { status: 200 })
     );
     const result = await semantic.runSemanticReview({
       workspace,
@@ -1200,6 +1395,7 @@ describe('TypeSafe semantic governance', () => {
     await writeFile(path.join(featureDir, 'spec.md'), completeSpec, 'utf8');
     const answers = alignedAnswers(0.96);
     answers.goal_alignment = {
+      type: 'choice',
       choice: 'aligned',
       confidence: 0.72,
       probabilities: { aligned: 0.72, partial: 0.23, conflict: 0.05 },
@@ -1208,9 +1404,8 @@ describe('TypeSafe semantic governance', () => {
       async () =>
         new Response(
           JSON.stringify({
-            model: 'jev-1.13.0',
+            ...validResponsePayload(answers),
             usage: { input_tokens: 3210, output_tokens: 44 },
-            answers,
           }),
           { status: 200 }
         )

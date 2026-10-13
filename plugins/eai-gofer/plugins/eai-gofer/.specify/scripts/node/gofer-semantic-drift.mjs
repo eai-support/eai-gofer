@@ -13,6 +13,8 @@ const TYPE_SAFE_STATE_QUESTION_LIMIT = 32 * 1024;
 const TYPE_SAFE_SAFETY_RESERVE_BYTES = 4 * 1024;
 const MAX_REVIEW_SOURCE_BYTES = 768 * 1024;
 const MAX_REVIEW_PACKETS = 64;
+const MAX_REVIEW_DURATION_MS = 120_000;
+const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REVIEW_PACKET_CONTENT_BYTES = 4 * 1024;
 const MAX_REFERENCE_INDEX_BYTES = 6 * 1024;
 const MAX_GOAL_CONTEXT_BYTES = 4 * 1024;
@@ -303,10 +305,10 @@ function providerDiagnostics(response, bodyText, bodyTruncated) {
 
 function normalizeProbabilities(answer, questionId) {
   if (!answer?.probabilities || typeof answer.probabilities !== 'object' || Array.isArray(answer.probabilities)) return null;
-  const allowed = new Set(QUESTION_CHOICES[questionId] || []);
-  const entries = Object.entries(answer.probabilities).filter(([choice, probability]) =>
-    allowed.has(choice) && typeof probability === 'number' && Number.isFinite(probability) && probability >= 0 && probability <= 1
-  );
+  const allowed = QUESTION_CHOICES[questionId] || [];
+  const entries = Object.entries(answer.probabilities);
+  if (entries.length !== allowed.length || allowed.some((choice) => !Object.hasOwn(answer.probabilities, choice))) return null;
+  if (entries.some(([, probability]) => typeof probability !== 'number' || !Number.isFinite(probability) || probability < 0 || probability > 1)) return null;
   const total = entries.reduce((sum, [, probability]) => sum + probability, 0);
   return entries.length && Math.abs(total - 1) <= 0.02 ? Object.fromEntries(entries) : null;
 }
@@ -612,7 +614,65 @@ function buildMultiPassPlan(sources, questions) {
   };
 }
 
+function responseAnswerIds(event) {
+  return ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
+    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
+}
+
+function validateTypeSafeResponse(payload, event) {
+  const issues = [];
+  if (!safeToken(payload?.model, 80)) issues.push('model_missing_or_invalid');
+  const usage = payload?.usage;
+  if (!usage || typeof usage !== 'object' || Array.isArray(usage) ||
+      !Number.isSafeInteger(usage.input_tokens) || usage.input_tokens < 0 ||
+      !Number.isSafeInteger(usage.output_tokens) || usage.output_tokens < 0) {
+    issues.push('usage_missing_or_invalid');
+  }
+  const answers = payload?.answers;
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    issues.push('answers_missing_or_invalid');
+    return issues;
+  }
+  for (const id of responseAnswerIds(event)) {
+    const answer = answers[id];
+    if (!answer || typeof answer !== 'object' || Array.isArray(answer)) {
+      issues.push(`answer_${id}_missing_or_invalid`);
+      continue;
+    }
+    if (answer.type !== 'choice') issues.push(`answer_${id}_type_invalid`);
+    if (typeof answer.choice !== 'string' || !QUESTION_CHOICES[id]?.includes(answer.choice)) {
+      issues.push(`answer_${id}_choice_invalid`);
+    }
+    if (typeof answer.confidence !== 'number' || !Number.isFinite(answer.confidence) || answer.confidence < 0 || answer.confidence > 1) {
+      issues.push(`answer_${id}_confidence_invalid`);
+    }
+    const probabilities = normalizeProbabilities(answer, id);
+    if (!probabilities) {
+      issues.push(`answer_${id}_probabilities_invalid`);
+    } else if (QUESTION_CHOICES[id]?.includes(answer.choice)) {
+      const highestProbability = Math.max(...Object.values(probabilities));
+      if (probabilities[answer.choice] < highestProbability - 0.02) issues.push(`answer_${id}_choice_not_highest_probability`);
+    }
+  }
+  return issues;
+}
+
 function interpretTypeSafeResponse(payload, event, minimumConfidence) {
+  const responseValidation = validateTypeSafeResponse(payload, event);
+  const providerModel = safeToken(payload?.model, 80);
+  const usage = payload?.usage && Number.isSafeInteger(payload.usage.input_tokens) && payload.usage.input_tokens >= 0 &&
+    Number.isSafeInteger(payload.usage.output_tokens) && payload.usage.output_tokens >= 0
+    ? { inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens }
+    : null;
+  if (responseValidation.length) {
+    return {
+      status: 'unavailable',
+      reason: 'invalid_response_schema',
+      model: providerModel,
+      usage,
+      responseValidation: responseValidation.slice(0, 16),
+    };
+  }
   const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
   const alignmentAnswer = answers.goal_alignment || {};
   const specificationAnswer = answers.specification_currency || {};
@@ -639,16 +699,10 @@ function interpretTypeSafeResponse(payload, event, minimumConfidence) {
   const status = evidenceAlignments.includes('conflict') || action === 'ask_user' || chatReadiness === 'ask_user' ? 'conflict'
     : !recognized || confidence < minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' || chatReadiness === 'reconcile' ? 'reconcile'
     : 'aligned';
-  const answerIds = ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
-    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
+  const answerIds = responseAnswerIds(event);
   const answerRecords = Object.fromEntries(answerIds.map((id) => [id, answerRecord(answers[id] || {}, id)]));
   const weakestIndex = confidences.indexOf(confidence);
   const weakestQuestionId = answerIds[weakestIndex] || null;
-  const providerModel = safeToken(payload.model, 80);
-  const usage = payload.usage && Number.isSafeInteger(payload.usage.input_tokens) && payload.usage.input_tokens >= 0 &&
-    Number.isSafeInteger(payload.usage.output_tokens) && payload.usage.output_tokens >= 0
-    ? { inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens }
-    : null;
   return {
     status,
     reason: status === 'reconcile' ? (confidence < minimumConfidence ? 'confidence_below_minimum_or_evidence_needs_reconciliation' : 'evidence_needs_reconciliation') : null,
@@ -670,12 +724,13 @@ function interpretTypeSafeResponse(payload, event, minimumConfidence) {
   };
 }
 
-async function requestTypeSafeEvaluation({ state, body, questions, event, minimumConfidence, fetchImpl, apiKey }) {
+async function requestTypeSafeEvaluation({ state, body, questions, event, minimumConfidence, fetchImpl, apiKey,
+  timeoutMs = REQUEST_TIMEOUT_MS, timeoutReason = 'timeout' }) {
   let response;
   try {
     response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
       method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(timeoutMs),
       body: body || JSON.stringify({ model: REQUESTED_MODEL, state, questions }),
     });
   } catch (error) {
@@ -683,7 +738,7 @@ async function requestTypeSafeEvaluation({ state, body, questions, event, minimu
       requestAttempted: true,
       requestSent: null,
       status: 'unavailable',
-      reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error',
+      reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? timeoutReason : 'network_error',
     };
   }
   if (!response.ok) {
@@ -803,7 +858,7 @@ const KNOWN_ALIGNMENTS = new Set(['aligned', 'partial', 'conflict']);
 const KNOWN_ACTIONS = new Set(['continue', 'reconcile', 'ask_user']);
 const KNOWN_CHAT_READINESS = new Set(['ready', 'reconcile', 'ask_user']);
 
-export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env, keychain, chatContext, onDemand = false } = {}) {
+export async function runSemanticReview({ workspace = process.cwd(), featureDir, event, fetchImpl = globalThis.fetch, env = process.env, keychain, chatContext, onDemand = false, now = Date.now } = {}) {
   assertSafeEventName(event);
   const resolvedWorkspace = await assertSafeWorkspaceRoot(workspace);
   featureDir = await confined(resolvedWorkspace, featureDir);
@@ -958,7 +1013,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
         sourceBytes: plan.totalBytes ?? sources.reduce((sum, source) => sum + source.byteLength, 0),
         coveredBytes: 0,
         aggregateRequestBytes: 0,
-        limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+        limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES, maxDurationMs: MAX_REVIEW_DURATION_MS },
         packets: [],
       },
     });
@@ -974,6 +1029,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     requestSent: false,
   }));
   const { apiKey } = await resolveApiKey({ workspace, env, keychain });
+  const reviewStartedAt = now();
+  const reviewDeadlineAt = reviewStartedAt + MAX_REVIEW_DURATION_MS;
   const pendingReceipt = {
     ...baseReceipt,
     reason: 'review_in_progress',
@@ -987,14 +1044,21 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       snapshotSha256: plan.snapshotSha256,
       referenceCount: plan.referenceCount,
       crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
-      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES, maxDurationMs: MAX_REVIEW_DURATION_MS },
       packets: plannedPackets,
     },
   };
   await saveReceipt(featureDir, event, pendingReceipt);
 
   const packetResults = [];
+  let stopReason = null;
   for (const request of plan.requests) {
+    const remainingMs = reviewDeadlineAt - now();
+    if (remainingMs <= 0) {
+      stopReason = 'review_deadline_exceeded';
+      break;
+    }
+    const deadlineLimited = remainingMs <= REQUEST_TIMEOUT_MS;
     const evaluation = await requestTypeSafeEvaluation({
       state: request.state,
       body: request.body,
@@ -1003,6 +1067,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       minimumConfidence: policy.minimumConfidence,
       fetchImpl,
       apiKey,
+      timeoutMs: Math.min(REQUEST_TIMEOUT_MS, remainingMs),
+      timeoutReason: deadlineLimited ? 'review_deadline_exceeded' : 'timeout',
     });
     packetResults.push({
       id: request.id,
@@ -1012,7 +1078,19 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       inputBudget: request.inputBudget,
       ...evaluation,
     });
-    if (evaluation.status === 'unavailable') break;
+    if (evaluation.status === 'unavailable') {
+      stopReason = evaluation.reason || 'packet_review_failed';
+      break;
+    }
+    if (now() >= reviewDeadlineAt) {
+      packetResults[packetResults.length - 1] = {
+        ...packetResults.at(-1),
+        status: 'unavailable',
+        reason: 'review_deadline_exceeded',
+      };
+      stopReason = 'review_deadline_exceeded';
+      break;
+    }
   }
 
   const snapshotStillCurrent = await Promise.all(artifacts.map(async ([name, original]) => {
@@ -1021,6 +1099,9 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       return current.present && current.sha256 === original.sha256 && current.bytes === original.bytes;
     } catch { return false; }
   })).then((matches) => matches.every(Boolean));
+  const reviewDurationMs = Math.max(0, now() - reviewStartedAt);
+  const reviewDeadlineExceeded = reviewDurationMs >= MAX_REVIEW_DURATION_MS;
+  if (reviewDeadlineExceeded) stopReason = 'review_deadline_exceeded';
   const allResponsesValid = packetResults.length === plan.requests.length &&
     packetResults.every((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status));
   const reviewedSegments = new Set(packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
@@ -1038,9 +1119,12 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   if (!snapshotStillCurrent) {
     finalStatus = 'unavailable';
     finalReason = 'source_changed_during_review';
+  } else if (reviewDeadlineExceeded) {
+    finalStatus = 'unavailable';
+    finalReason = 'review_deadline_exceeded';
   } else if (!allResponsesValid) {
-    finalStatus = aggregate.status === 'conflict' ? 'conflict' : 'unavailable';
-    finalReason = packetResults.at(-1)?.reason || 'packet_review_incomplete';
+    finalStatus = 'unavailable';
+    finalReason = stopReason || packetResults.at(-1)?.reason || 'packet_review_incomplete';
   } else if (!coverageComplete) {
     finalStatus = 'unavailable';
     finalReason = 'source_range_coverage_invalid';
@@ -1091,12 +1175,15 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       referenceCount: plan.referenceCount,
       coverageComplete,
       crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
-      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+      durationMs: reviewDurationMs,
+      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES, maxDurationMs: MAX_REVIEW_DURATION_MS },
       packets: plannedPackets.map((planned) => {
         const packet = packetResults.find((result) => result.id === planned.id);
         if (!packet) return {
           ...planned,
-          reason: 'not_attempted_after_prior_packet_failure',
+          reason: stopReason === 'review_deadline_exceeded'
+            ? 'not_attempted_after_review_deadline'
+            : 'not_attempted_after_prior_packet_failure',
           model: null,
           usage: null,
           confidence: null,
@@ -1115,6 +1202,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
           confidence: packet.confidence ?? null,
           confidenceGate: packet.confidenceGate || null,
           answers: packet.answers || {},
+          responseValidation: packet.responseValidation || null,
           providerError: packet.providerError || null,
         };
       }),
