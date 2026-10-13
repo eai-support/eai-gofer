@@ -1156,6 +1156,62 @@ describe('TypeSafe semantic governance', () => {
     ).toBe(true);
   });
 
+  it('links requirement IDs that cross a source segment boundary in a task artifact', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const requirement = '### FR-001: Small requirement\nThe complete requirement definition.\n';
+    await writeFile(
+      path.join(featureDir, 'spec.md'),
+      `## Requirements\n${requirement}## Supporting evidence\n${'supporting evidence\n'.repeat(2_500)}`
+    );
+    await writeFile(path.join(featureDir, 'tasks.md'), `# Tasks\n${'x'.repeat(4_092)} FR-001\n`);
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result.status).toBe('aligned');
+    const taskStates = fetchImpl.mock.calls
+      .map(([, request]) => JSON.parse(request.body as string).state)
+      .filter((state: { segments: Array<{ artifact: string }> }) =>
+        state.segments.some((segment) => segment.artifact === 'tasks.md')
+      );
+    expect(taskStates.length).toBeGreaterThan(0);
+    expect(
+      taskStates.every(
+        (state: {
+          review: { requirementContextComplete: boolean };
+          requirement_context: Array<{ id: string; content: string; definitionComplete: boolean }>;
+        }) =>
+          state.review.requirementContextComplete &&
+          state.requirement_context.some(
+            (entry) =>
+              entry.id === 'FR-001' && entry.content === requirement && entry.definitionComplete
+          )
+      )
+    ).toBe(true);
+    const taskSegments = taskStates
+      .flatMap(
+        (state: { segments: Array<{ artifact: string; startByte: number; content: string }> }) =>
+          state.segments.filter((segment) => segment.artifact === 'tasks.md')
+      )
+      .sort((left, right) => left.startByte - right.startByte);
+    expect(
+      taskSegments.some(
+        (segment, index) =>
+          segment.content.endsWith(' FR-') && taskSegments[index + 1]?.content.startsWith('001\n')
+      )
+    ).toBe(true);
+    const taskContent = taskSegments.map((segment) => segment.content).join('');
+    expect(taskContent).toContain(' FR-001\n');
+  });
+
   it('does not report aligned when any packet is below the confidence threshold', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);

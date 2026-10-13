@@ -390,6 +390,27 @@ function buildReferenceIndex(sources) {
     .map(([id, artifacts]) => ({ id, artifacts: [...artifacts].sort() }));
 }
 
+function buildRequirementReferences(sources) {
+  const references = [];
+  const pattern = /\b(?:FR|NFR|SC)-\d+\b/g;
+  for (const source of sources) {
+    let previousCharacterOffset = 0;
+    let previousByteOffset = 0;
+    for (const match of source.content.matchAll(pattern)) {
+      if (typeof match.index !== 'number') continue;
+      const startByte = previousByteOffset + Buffer.byteLength(
+        source.content.slice(previousCharacterOffset, match.index),
+        'utf8',
+      );
+      const endByte = startByte + Buffer.byteLength(match[0], 'utf8');
+      references.push({ id: match[0], artifact: source.artifact, startByte, endByte });
+      previousCharacterOffset = match.index + match[0].length;
+      previousByteOffset = endByte;
+    }
+  }
+  return references;
+}
+
 function matchRequirementDefinition(line) {
   const boldRequirement = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d+)(?:\s+\([^)]*\))?\*\*\s*(?::|[-—–])/);
   if (boldRequirement) return { id: boldRequirement[1], headingLevel: null };
@@ -489,15 +510,19 @@ function requirementContextFragment(id, requirement, startByte, endByte) {
   };
 }
 
-function packetState({ manifest, referenceIndex, anchors, segments, packetIndex, packetCount, snapshotSha256 }) {
+function packetState({ manifest, referenceIndex, requirementReferences, anchors, segments, packetIndex, packetCount, snapshotSha256 }) {
   const referencedIds = new Set();
-  const referencePattern = /\b(?:FR|NFR|SC)-\d+\b/g;
   for (const segment of segments) {
-    for (const match of segment.content.matchAll(referencePattern)) referencedIds.add(match[0]);
     if (segment.artifact === 'spec.md') {
       for (const [id, requirement] of anchors.requirements) {
         if (segment.startByte < requirement.endByte && requirement.startByte < segment.endByte) referencedIds.add(id);
       }
+    }
+  }
+  for (const reference of requirementReferences) {
+    if (segments.some((segment) => segment.artifact === reference.artifact &&
+        segment.startByte < reference.endByte && reference.startByte < segment.endByte)) {
+      referencedIds.add(reference.id);
     }
   }
   const requirementContext = [];
@@ -517,13 +542,9 @@ function packetState({ manifest, referenceIndex, anchors, segments, packetIndex,
       const endByte = Math.min(segment.endByte, requirement.endByte);
       requirementContext.push(requirementContextFragment(id, requirement, startByte, endByte));
     }
-    const hasReferenceOutsideDefinition = segments.some((segment) =>
-      [...segment.content.matchAll(referencePattern)].some((match) => {
-        if (match[0] !== id) return false;
-        const matchStartByte = segment.startByte + Buffer.byteLength(segment.content.slice(0, match.index), 'utf8');
-        const matchEndByte = matchStartByte + Buffer.byteLength(match[0], 'utf8');
-        return segment.artifact !== 'spec.md' || matchStartByte < requirement.startByte || matchEndByte > requirement.endByte;
-      }));
+    const hasReferenceOutsideDefinition = requirementReferences.some((reference) =>
+      reference.id === id && (reference.artifact !== 'spec.md' ||
+        reference.startByte < requirement.startByte || reference.endByte > requirement.endByte));
     if (hasReferenceOutsideDefinition) {
       const specRanges = specSegments.map((segment) => ({
         startByte: Math.max(segment.startByte, requirement.startByte),
@@ -635,6 +656,7 @@ function buildMultiPassPlan(sources, questions) {
   if (!anchors.ok) return { ok: false, reason: anchors.reason, totalBytes: sourcePlan.totalBytes };
   const manifest = buildSourceManifest(sources);
   const referenceIndex = buildReferenceIndex(sources);
+  const requirementReferences = buildRequirementReferences(sources);
   if (Buffer.byteLength(JSON.stringify(referenceIndex), 'utf8') > MAX_REFERENCE_INDEX_BYTES) {
     return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
   }
@@ -642,7 +664,7 @@ function buildMultiPassPlan(sources, questions) {
   const packets = [];
   let pending = [];
   const withinPacketBudget = (candidate, packetIndex) => measureTypeSafeInputBudget(
-    packetState({ manifest, referenceIndex, anchors, segments: candidate, packetIndex, packetCount: MAX_REVIEW_PACKETS, snapshotSha256 }),
+    packetState({ manifest, referenceIndex, requirementReferences, anchors, segments: candidate, packetIndex, packetCount: MAX_REVIEW_PACKETS, snapshotSha256 }),
     questions,
   ).withinLimits;
   for (const segment of sourcePlan.segments) {
@@ -665,7 +687,7 @@ function buildMultiPassPlan(sources, questions) {
     return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
   }
   const requests = packets.map((segments, index) => {
-    const state = packetState({ manifest, referenceIndex, anchors, segments, packetIndex: index + 1, packetCount: packets.length, snapshotSha256 });
+    const state = packetState({ manifest, referenceIndex, requirementReferences, anchors, segments, packetIndex: index + 1, packetCount: packets.length, snapshotSha256 });
     const body = JSON.stringify({ model: REQUESTED_MODEL, state, questions });
     const inputBudget = measureTypeSafeInputBudget(state, questions);
     return {
