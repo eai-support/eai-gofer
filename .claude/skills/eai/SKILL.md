@@ -5,7 +5,7 @@ description: "Start or continue the EAI delivery pipeline."
 
 # Eai
 
-Version: 3.14.3
+Version: 3.14.4
 Host: Claude Code
 
 # Eai
