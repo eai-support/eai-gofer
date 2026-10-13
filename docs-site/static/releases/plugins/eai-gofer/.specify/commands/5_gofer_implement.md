@@ -435,6 +435,18 @@ Extract from tasks.md:
 
 ---
 
+## Pull request titles
+
+Read `.specify/references/issue-and-pr-titles.md` before you open a pull request.
+
+A pull request describes the change delivered and the outcome it enables:
+
+`Enable [outcome] for [user or system] by [change made]`
+
+Keep the title concise and in business language. Use a prefix such as `CURATE:` only when it helps identify a programme. The prefix should not replace the outcome.
+
+---
+
 ## Step 7: Execute Implementation
 
 ### Loop Contract Preflight
@@ -1026,8 +1038,10 @@ separation from `tasks.md`:
 - Carry forward the last completed gate, blocked gate, and next recovery
   command from `eai-preflight.md` whenever provisioning, object-type publish,
   schema/storage health, workflow readiness, or preview readiness changes.
-- After any failed `eai` command, run `eai errors explain <code-or-reason>
-  --format json` when advertised before proposing a fix. If the command is not
+- For an original failed `eai` command other than `eai errors explain`, run
+  `eai errors explain <code-or-reason> --format json` at most once when
+  advertised before proposing a fix. Never retry or explain a failed
+  `eai errors explain` command. If the command is not
   advertised, match `.specify/references/platform/eai-error-catalog.yaml`. Run
   read-only diagnostics before mutating fixes, ask for approval before workspace
   membership or admin changes, and stop at the guidance retry/escalation
@@ -1089,8 +1103,10 @@ separation from `tasks.md`:
 - If platform user lookup or membership prerequisite calls fail with
   `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context
   required for app tokens", treat it as a workspace-scoped route/context issue
-  before treating it as a workspace-member data issue. Run `eai errors explain
-  app_token_tenant_context_required --format json` when advertised, confirm
+  before treating it as a workspace-member data issue. Reuse the original-failure
+  guidance for `app_token_tenant_context_required`; only if it has not been queried,
+  run `eai errors explain app_token_tenant_context_required --format json` at most
+  once when advertised, confirm
   `eai whoami` and `eai workspace list --format json`, and retry through
   `/v4/platform/tenants/<tenant-id>/users/by-email?email=<email>`,
   `/v4/platform/tenants/<tenant-id>/users/<oid>/memberships`,

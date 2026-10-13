@@ -1,6 +1,6 @@
 # Gofer Agent Plugin
 
-Version: 3.14.3
+Version: 3.14.4
 
 This package is the portable Claude, Codex, Copilot, Google Antigravity, Grok, and VS Code workflow layer for Gofer. Gemini files remain only for legacy compatibility. It is released beside the VS Code extension, but it does not replace the VSIX UI, status views, updater, or language-server features.
 
@@ -22,8 +22,8 @@ That host publishes:
 
 - Latest VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix`
 - Latest agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip`
-- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.14.3.vsix`
-- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.3.zip`
+- This release VS Code extension: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.14.4.vsix`
+- This release agent bundle zip: `https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.4.zip`
 - Claude marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json`
 - Codex manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json`
 - Copilot marketplace manifest: `https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json`
@@ -35,7 +35,7 @@ Start with `/eai`, `#eai`, or `$eai` depending on the host. Gofer first classifi
 
 Gofer does not invent EAI CLI commands. It verifies command paths and flags with `eai --describe` and command-specific `--help` before suggesting or running them. If the installed CLI does not list a command, Gofer does not run it.
 
-For EAI errors, Gofer expects agents to run live EAI guidance first, use `.specify/references/platform/eai-error-catalog.yaml` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval. The platform role ID `tenant-admin` grants workspace admin access. For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
+For original EAI command failures, query advertised guidance at most once and never retry or explain a failed `eai errors explain` command. Use `.specify/references/platform/eai-error-catalog.yaml` as fallback, run read-only diagnostics before mutating fixes, and stop at the retry/escalation condition. For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval. The platform role ID `tenant-admin` grants workspace admin access. For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, reuse the original-failure guidance for `app_token_tenant_context_required`; only if it has not been queried, run `eai errors explain app_token_tenant_context_required --format json` at most once when advertised, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 
 If `/eai` is unknown in a new repo, install or update this plugin first, then refresh/restart the host command picker.
 
