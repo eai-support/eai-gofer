@@ -387,10 +387,23 @@ function buildReferenceIndex(sources) {
     .map(([id, artifacts]) => ({ id, artifacts: [...artifacts].sort() }));
 }
 
+function matchRequirementDefinition(line) {
+  const boldRequirement = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d{3,})(?:\s+\([^)]*\))?\*\*\s*(?::|[-—–])/);
+  if (boldRequirement) return { id: boldRequirement[1], headingLevel: null };
+
+  const headingRequirement = line.match(/^\s*(#{1,6})\s+(?:\*\*)?((?:FR|NFR|SC)-\d{3,})(?:\s+\([^)]*\))?(?:\*\*)?\s*(?::|[-—–])/);
+  if (headingRequirement) return { id: headingRequirement[2], headingLevel: headingRequirement[1].length };
+
+  const plainRequirement = line.match(/^\s*((?:FR|NFR|SC)-\d{3,})\s*(?::|[-—–])/);
+  if (plainRequirement) return { id: plainRequirement[1], headingLevel: null };
+
+  return null;
+}
+
 function extractReviewAnchors(sources) {
   const goalSource = sources.find((source) => source.artifact === 'goal-ledger.json');
   let ledger;
-  try { ledger = JSON.parse(goalSource?.content || 'null'); } catch { ledger = null; }
+  try { ledger = JSON.parse((goalSource?.content || 'null').replace(/^\uFEFF/, '')); } catch { ledger = null; }
   const goals = Array.isArray(ledger?.goals)
     ? ledger.goals.filter((item) => typeof item?.goal === 'string' && item.goal.trim()).map((item) => ({ id: item.id || null, goal: item.goal }))
     : typeof ledger?.goal === 'string' && ledger.goal.trim() ? [{ id: ledger.id || null, goal: ledger.goal }] : [];
@@ -403,6 +416,7 @@ function extractReviewAnchors(sources) {
   let currentLines = [];
   let currentStartByte = 0;
   let currentEndByte = 0;
+  let currentHeadingLevel = null;
   let byteOffset = 0;
   const saveCurrent = () => {
     if (currentId && currentLines.length) requirements.set(currentId, {
@@ -412,21 +426,25 @@ function extractReviewAnchors(sources) {
     });
     currentId = null;
     currentLines = [];
+    currentHeadingLevel = null;
   };
   for (const line of lines) {
     const lineStartByte = byteOffset;
     const lineEndByte = lineStartByte + Buffer.byteLength(line, 'utf8');
-    const match = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d{3,})\*\*\s*:/);
-    if (match) {
+    const normalizedLine = line.replace(/^\uFEFF/, '');
+    const requirement = matchRequirementDefinition(normalizedLine);
+    if (requirement) {
       saveCurrent();
-      currentId = match[1];
+      currentId = requirement.id;
       currentLines = [line];
       currentStartByte = lineStartByte;
       currentEndByte = lineEndByte;
+      currentHeadingLevel = requirement.headingLevel;
       byteOffset = lineEndByte;
       continue;
     }
-    if (currentId && (/^\s*#{1,6}\s/.test(line) || /^\s*[-*]\s+/.test(line))) saveCurrent();
+    const headingLevel = normalizedLine.match(/^\s*(#{1,6})\s+/)?.[1].length || null;
+    if (currentId && headingLevel && (!currentHeadingLevel || headingLevel <= currentHeadingLevel)) saveCurrent();
     if (currentId) {
       currentLines.push(line);
       currentEndByte = lineEndByte;
@@ -952,6 +970,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     requestBytes: request.requestBytes,
     inputBudget: request.inputBudget,
     status: 'pending',
+    requestAttempted: false,
+    requestSent: false,
   }));
   const { apiKey } = await resolveApiKey({ workspace, env, keychain });
   const pendingReceipt = {
@@ -1072,22 +1092,32 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       coverageComplete,
       crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
       limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
-      packets: packetResults.map((packet) => ({
-        id: packet.id,
-        sourceRanges: packet.sourceRanges,
-        requestBytes: packet.requestBytes,
-        inputBudget: packet.inputBudget,
-        status: packet.status,
-        reason: packet.reason || null,
-        requestAttempted: packet.requestAttempted,
-        requestSent: packet.requestSent,
-        model: packet.model || null,
-        usage: packet.usage || null,
-        confidence: packet.confidence ?? null,
-        confidenceGate: packet.confidenceGate || null,
-        answers: packet.answers || {},
-        providerError: packet.providerError || null,
-      })),
+      packets: plannedPackets.map((planned) => {
+        const packet = packetResults.find((result) => result.id === planned.id);
+        if (!packet) return {
+          ...planned,
+          reason: 'not_attempted_after_prior_packet_failure',
+          model: null,
+          usage: null,
+          confidence: null,
+          confidenceGate: null,
+          answers: {},
+          providerError: null,
+        };
+        return {
+          ...planned,
+          status: packet.status,
+          reason: packet.reason || null,
+          requestAttempted: packet.requestAttempted,
+          requestSent: packet.requestSent,
+          model: packet.model || null,
+          usage: packet.usage || null,
+          confidence: packet.confidence ?? null,
+          confidenceGate: packet.confidenceGate || null,
+          answers: packet.answers || {},
+          providerError: packet.providerError || null,
+        };
+      }),
     },
   });
 }

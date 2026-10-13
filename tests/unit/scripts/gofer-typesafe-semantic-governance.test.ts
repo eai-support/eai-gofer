@@ -662,6 +662,7 @@ describe('TypeSafe semantic governance', () => {
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'goal-ledger.json'), '\uFEFF{"goal":"deliver"}');
     const requirementText = '- **FR-001**: The operation must preserve all approved evidence.\n';
     const oversized = `\uFEFF\n${requirementText}## Supporting evidence\n${'spec heading\nlinked evidence\n'.repeat(2_000)}${'漢🙂é'.repeat(8_000)}TAIL_DRIFT_MARKER`;
     await writeFile(path.join(featureDir, 'spec.md'), oversized);
@@ -748,13 +749,23 @@ describe('TypeSafe semantic governance', () => {
     expect(JSON.stringify(receipt)).not.toContain(oversized);
   });
 
-  it('keeps the exact requirement context with packets that contain continuation text', async () => {
+  it('keeps complete context for supported requirement formats and nested continuation bullets', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const longRequirement = `- **FR-001**: ${'REQUIREMENT_CONTEXT_'.repeat(700)}\n`;
-    const spec = `${longRequirement}## Supporting evidence\n${'supporting evidence after the requirement\n'.repeat(1_500)}`;
+    const continuation = (id: string, count = 3) =>
+      `Description for ${id}.\n- acceptance detail for ${id}\n  - nested acceptance detail for ${id}\n${Array.from({ length: count }, (_, index) => `    - continuation ${index} for ${id}`).join('\n')}\n`;
+    const requirements = [
+      { id: 'FR-001', content: `### FR-001: Basic Operation\n${continuation('FR-001', 350)}` },
+      {
+        id: 'FR-002',
+        content: `**FR-002 (P1)**: Prioritized operation\n${continuation('FR-002')}`,
+      },
+      { id: 'FR-003', content: `FR-003 — Plain operation\n${continuation('FR-003')}` },
+      { id: 'FR-004', content: `- **FR-004**: Listed operation\n${continuation('FR-004')}` },
+    ];
+    const spec = `${requirements.map(({ content }) => content).join('')}## Supporting evidence\n${'supporting evidence after the requirement\n'.repeat(1_500)}`;
     await writeFile(path.join(featureDir, 'spec.md'), spec);
     const fetchImpl = vi.fn(async () => alignedResponse());
 
@@ -770,20 +781,23 @@ describe('TypeSafe semantic governance', () => {
     const requestStates = fetchImpl.mock.calls.map(
       ([, request]) => JSON.parse(request.body as string).state
     );
-    const requirementBytes = Buffer.byteLength(longRequirement);
-    const relevantPackets = requestStates.filter(
-      (state: { segments: Array<{ artifact: string; startByte: number; endByte: number }> }) =>
-        state.segments.some(
-          (segment) =>
-            segment.artifact === 'spec.md' &&
-            segment.startByte < requirementBytes &&
-            segment.endByte > 0
-        )
-    );
-
-    expect(relevantPackets.length).toBeGreaterThan(1);
-    for (const state of relevantPackets) {
-      expect(state.requirement_context).toContainEqual({ id: 'FR-001', content: longRequirement });
+    let requirementStartByte = 0;
+    for (const requirement of requirements) {
+      const requirementEndByte = requirementStartByte + Buffer.byteLength(requirement.content);
+      const relevantPackets = requestStates.filter(
+        (state: { segments: Array<{ artifact: string; startByte: number; endByte: number }> }) =>
+          state.segments.some(
+            (segment) =>
+              segment.artifact === 'spec.md' &&
+              segment.startByte < requirementEndByte &&
+              requirementStartByte < segment.endByte
+          )
+      );
+      expect(relevantPackets.length).toBeGreaterThan(requirement.id === 'FR-001' ? 1 : 0);
+      for (const state of relevantPackets) {
+        expect(state.requirement_context).toContainEqual(requirement);
+      }
+      requirementStartByte = requirementEndByte;
     }
   });
 
@@ -859,12 +873,12 @@ describe('TypeSafe semantic governance', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('stops on a packet provider error and retains only safe per-packet diagnostics and usage', async () => {
+  it('stops on a packet provider error and retains safe diagnostics plus all planned packet boundaries', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(40 * 1024));
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(120 * 1024));
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(alignedResponse())
@@ -890,6 +904,31 @@ describe('TypeSafe semantic governance', () => {
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(result.multiPass.complete).toBe(false);
+    expect(result.multiPass.packets).toHaveLength(result.multiPass.packetCount);
+    expect(result.multiPass.packetCount).toBeGreaterThan(2);
+    expect(
+      result.multiPass.packets.slice(0, 2).map((packet: { status: string }) => packet.status)
+    ).toEqual(['aligned', 'unavailable']);
+    const pendingPackets = result.multiPass.packets.slice(2);
+    expect(pendingPackets.length).toBeGreaterThan(0);
+    expect(
+      pendingPackets.every(
+        (packet: {
+          status: string;
+          reason: string;
+          sourceRanges: unknown[];
+          requestAttempted: boolean;
+          requestSent: boolean;
+          answers: Record<string, unknown>;
+        }) =>
+          packet.status === 'pending' &&
+          packet.reason === 'not_attempted_after_prior_packet_failure' &&
+          packet.sourceRanges.length > 0 &&
+          packet.requestAttempted === false &&
+          packet.requestSent === false &&
+          Object.keys(packet.answers).length === 0
+      )
+    ).toBe(true);
     expect(result.providerError).toMatchObject({
       httpStatus: 400,
       requestId: 'req-123',
