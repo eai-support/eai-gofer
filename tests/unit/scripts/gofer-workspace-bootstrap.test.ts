@@ -347,6 +347,15 @@ Keep this instruction.
     expect(agents).toContain('sign out and sign back in');
     expect(agents).toContain('app_token_tenant_context_required');
     expect(agents).toContain('/v4/platform/tenants/<tenant-id>/...');
+    for (const content of [
+      agents,
+      fs.readFileSync(path.join(workspaceRoot, '.github/copilot-instructions.md'), 'utf8'),
+    ]) {
+      expect(content).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(content).toContain('only if it has not been queried');
+    }
     expect(claude).toContain('See @AGENTS.md');
     expect(claude).not.toContain('## EAI Repo Contract');
     expect(claude).toContain('Follow the full support contract in AGENTS.md.');

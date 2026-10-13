@@ -160,6 +160,43 @@ describe('Gofer agent plugin package', () => {
     }
   );
 
+  it.each(['symlink', 'directory'])(
+    'rejects copied AGENTS as a %s before normalization',
+    (kind) => {
+      const outer = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-agents-boundary-'));
+      const root = path.join(outer, 'source');
+      const outside = path.join(outer, 'outside.md');
+      const original = '# Unrelated file\nKeep this byte-for-byte.\n';
+      try {
+        fs.mkdirSync(path.join(root, 'extension'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, 'extension/package.json'),
+          JSON.stringify({ version: VERSION })
+        );
+        fs.copyFileSync(
+          path.join(REPO_ROOT, 'extension/icon.png'),
+          path.join(root, 'extension/icon.png')
+        );
+        fs.mkdirSync(path.join(root, '.specify/commands'), { recursive: true });
+        fs.copyFileSync(
+          path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
+          path.join(root, '.specify/commands/0_gofer_start.md')
+        );
+        fs.writeFileSync(outside, original);
+        if (kind === 'symlink') fs.symlinkSync(outside, path.join(root, 'AGENTS.md'));
+        else fs.mkdirSync(path.join(root, 'AGENTS.md'));
+        expect(() =>
+          execFileSync(process.execPath, [SCRIPT_PATH, '--root', root, '--out-dir', 'out'], {
+            stdio: 'pipe',
+          })
+        ).toThrow(/AGENTS\.md must be a regular file/);
+        expect(fs.readFileSync(outside, 'utf8')).toBe(original);
+      } finally {
+        fs.rmSync(outer, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('packages a zip with current-host metadata and Gemini legacy compatibility', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
@@ -173,6 +210,10 @@ describe('Gofer agent plugin package', () => {
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
       expect(readme).toContain('Copilot, Grok,\nand VS Code');
       expect(readme).toContain('`--company-tenant` compatibility alias');
+      expect(readme).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(readme).toContain('only if it has not been queried');
       expect(readme).toContain('No static provider default qualifies a model');
       expect(readme).not.toContain('Copilot\ndefaults to `Auto`');
       for (const manifest of [
@@ -360,6 +401,10 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
       expect(readme).toContain('Claude Code app');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
+      expect(umbrellaSkill).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(umbrellaSkill).toContain('only if it has not been queried');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
       expect(umbrellaSkill).toContain(
         'Do not invent, guess, or complete EAI CLI commands from memory'

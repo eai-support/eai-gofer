@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-10-12T03:25:37.612Z
+Generated: 2026-10-13T00:46:20.835Z
 
 ## Public Entrypoints
 
@@ -136,7 +136,7 @@ In the welcome reply, say: If you need help at any point, say "get help". I will
 - Follow the recovery rule in Support only when the person asks above; do not query guidance twice for the same original failure.
 - If `eai errors explain` is unavailable, match `.specify/references/platform/eai-error-catalog.yaml`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
 - For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
-- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
+- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, reuse the original-failure guidance for `app_token_tenant_context_required`; only if it has not been queried, run `eai errors explain app_token_tenant_context_required --format json` at most once when advertised, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
 
 ## Commands
