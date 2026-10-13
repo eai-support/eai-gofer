@@ -1015,6 +1015,57 @@ describe('TypeSafe semantic governance', () => {
     expect(result.multiPass.packets).toEqual([]);
   });
 
+  it('indexes and links short numeric requirement, task, and story IDs', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(
+      path.join(featureDir, 'goal-ledger.json'),
+      '{"goals":[{"id":"US1","goal":"deliver"}]}'
+    );
+    const requirement = '### FR-1: Compact requirement\nThe first requirement.\n';
+    await writeFile(
+      path.join(featureDir, 'spec.md'),
+      `${requirement}## Supporting evidence\n${'supporting evidence\n'.repeat(1_500)}`
+    );
+    await writeFile(path.join(featureDir, 'tasks.md'), '# Tasks\nT1 implements FR-1 for US1.\n');
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result.status).toBe('aligned');
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(1);
+    for (const [, request] of fetchImpl.mock.calls) {
+      const state = JSON.parse(request.body as string).state;
+      expect(state.reference_index).toEqual(
+        expect.arrayContaining([
+          { id: 'FR-1', artifacts: expect.arrayContaining(['spec.md', 'tasks.md']) },
+          { id: 'T1', artifacts: ['tasks.md'] },
+          { id: 'US1', artifacts: expect.arrayContaining(['goal-ledger.json', 'tasks.md']) },
+        ])
+      );
+      expect(state.approved_goal_context).toContainEqual({ id: 'US1', goal: 'deliver' });
+    }
+    const taskState = fetchImpl.mock.calls
+      .map(([, request]) => JSON.parse(request.body as string).state)
+      .find((state: { segments: Array<{ artifact: string }> }) =>
+        state.segments.some((segment) => segment.artifact === 'tasks.md')
+      );
+    expect(taskState.requirement_context).toContainEqual(
+      expect.objectContaining({
+        id: 'FR-1',
+        content: requirement,
+        definitionComplete: true,
+      })
+    );
+  });
+
   it('does not align a cross-artifact reference when a large requirement cannot fit in one packet', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);

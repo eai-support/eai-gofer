@@ -378,7 +378,7 @@ function buildSourceManifest(sources) {
 
 function buildReferenceIndex(sources) {
   const references = new Map();
-  const pattern = /\b(?:FR|NFR|SC)-\d{3,}\b|\b(?:US|T|D)\d{3,}\b/g;
+  const pattern = /\b(?:FR|NFR|SC)-\d+\b|\b(?:US|T|D)\d+\b/g;
   for (const source of sources) {
     for (const match of source.content.matchAll(pattern)) {
       const id = match[0];
@@ -391,13 +391,13 @@ function buildReferenceIndex(sources) {
 }
 
 function matchRequirementDefinition(line) {
-  const boldRequirement = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d{3,})(?:\s+\([^)]*\))?\*\*\s*(?::|[-—–])/);
+  const boldRequirement = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d+)(?:\s+\([^)]*\))?\*\*\s*(?::|[-—–])/);
   if (boldRequirement) return { id: boldRequirement[1], headingLevel: null };
 
-  const headingRequirement = line.match(/^\s*(#{1,6})\s+(?:\*\*)?((?:FR|NFR|SC)-\d{3,})(?:\s+\([^)]*\))?(?:\*\*)?\s*(?::|[-—–])/);
+  const headingRequirement = line.match(/^\s*(#{1,6})\s+(?:\*\*)?((?:FR|NFR|SC)-\d+)(?:\s+\([^)]*\))?(?:\*\*)?\s*(?::|[-—–])/);
   if (headingRequirement) return { id: headingRequirement[2], headingLevel: headingRequirement[1].length };
 
-  const plainRequirement = line.match(/^\s*((?:FR|NFR|SC)-\d{3,})\s*(?::|[-—–])/);
+  const plainRequirement = line.match(/^\s*((?:FR|NFR|SC)-\d+)\s*(?::|[-—–])/);
   if (plainRequirement) return { id: plainRequirement[1], headingLevel: null };
 
   return null;
@@ -491,7 +491,7 @@ function requirementContextFragment(id, requirement, startByte, endByte) {
 
 function packetState({ manifest, referenceIndex, anchors, segments, packetIndex, packetCount, snapshotSha256 }) {
   const referencedIds = new Set();
-  const referencePattern = /\b(?:FR|NFR|SC)-\d{3,}\b/g;
+  const referencePattern = /\b(?:FR|NFR|SC)-\d+\b/g;
   for (const segment of segments) {
     for (const match of segment.content.matchAll(referencePattern)) referencedIds.add(match[0]);
     if (segment.artifact === 'spec.md') {
