@@ -2,12 +2,13 @@
  * Verifies the Gofer Claude/Codex/Copilot plugin package.
  */
 import { describe, it, expect } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildSupportReportContract,
   buildContinuationContractSection,
   buildEaiHostingAndDeploymentContract,
 } from '../../../.specify/scripts/node/generate-commands.mjs';
@@ -110,6 +111,173 @@ function findWindowsUnsafePaths(paths: string[]): string[] {
 }
 
 describe('Gofer agent plugin package', () => {
+  it.each([false, true])(
+    'packages a minimal valid source root with optional historical AGENTS=$hasAgents',
+    (hasAgents) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-optional-agents-'));
+      try {
+        fs.mkdirSync(path.join(root, 'extension'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, 'extension/package.json'),
+          JSON.stringify({ version: VERSION })
+        );
+        fs.copyFileSync(
+          path.join(REPO_ROOT, 'extension/icon.png'),
+          path.join(root, 'extension/icon.png')
+        );
+        fs.mkdirSync(path.join(root, '.specify/commands'), { recursive: true });
+        fs.copyFileSync(
+          path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
+          path.join(root, '.specify/commands/0_gofer_start.md')
+        );
+        if (hasAgents)
+          fs.writeFileSync(
+            path.join(root, 'AGENTS.md'),
+            `# Custom project\n\n## Support after an unresolved EAI error\nOld automatic offer.\n\n## Preserve custom\nKeep this.\n\n${buildSupportReportContract()}\n`
+          );
+        execFileSync('node', [SCRIPT_PATH, '--root', root, '--out-dir', 'out'], { stdio: 'pipe' });
+        const pluginRoot = path.join(root, 'out', `eai-gofer-agent-plugin-${VERSION}`, 'eai-gofer');
+        expect(fs.existsSync(path.join(root, 'out', `eai-gofer-agent-plugin-${VERSION}.zip`))).toBe(
+          true
+        );
+        for (const relative of ['AGENTS.md', 'plugins/eai-gofer/AGENTS.md']) {
+          const file = path.join(pluginRoot, relative);
+          expect(fs.existsSync(file)).toBe(hasAgents);
+          if (hasAgents) {
+            const content = fs.readFileSync(file, 'utf8');
+            expect(content).toContain('## Preserve custom\nKeep this.');
+            expect(content).not.toContain('Support after an unresolved EAI error');
+            expect(content).toContain(buildSupportReportContract());
+            expect(content.split('## Support only when the person asks')).toHaveLength(2);
+          }
+        }
+        expect(fs.readFileSync(path.join(pluginRoot, 'skills/eai/SKILL.md'), 'utf8')).toContain(
+          '## Support only when the person asks'
+        );
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each(['symlink', 'directory'])(
+    'rejects copied AGENTS as a %s before normalization',
+    (kind) => {
+      const outer = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-agents-boundary-'));
+      const root = path.join(outer, 'source');
+      const outside = path.join(outer, 'outside.md');
+      const original = '# Unrelated file\nKeep this byte-for-byte.\n';
+      try {
+        fs.mkdirSync(path.join(root, 'extension'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, 'extension/package.json'),
+          JSON.stringify({ version: VERSION })
+        );
+        fs.copyFileSync(
+          path.join(REPO_ROOT, 'extension/icon.png'),
+          path.join(root, 'extension/icon.png')
+        );
+        fs.mkdirSync(path.join(root, '.specify/commands'), { recursive: true });
+        fs.copyFileSync(
+          path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
+          path.join(root, '.specify/commands/0_gofer_start.md')
+        );
+        fs.writeFileSync(outside, original);
+        if (kind === 'symlink') fs.symlinkSync(outside, path.join(root, 'AGENTS.md'));
+        else fs.mkdirSync(path.join(root, 'AGENTS.md'));
+        expect(() =>
+          execFileSync(process.execPath, [SCRIPT_PATH, '--root', root, '--out-dir', 'out'], {
+            stdio: 'pipe',
+          })
+        ).toThrow(/AGENTS\.md must be a regular file/);
+        expect(fs.readFileSync(outside, 'utf8')).toBe(original);
+      } finally {
+        fs.rmSync(outer, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([
+    'open-error',
+    'open-enoent-present',
+    'open-enoent-absent',
+    'read-error',
+    'write-error',
+    'close-error',
+    'short-write',
+    'zero-write',
+    'empty-input',
+  ])('closes packaged AGENTS handles and preserves complete bytes for %s', (mode) => {
+    const outer = fs.mkdtempSync(path.join(os.tmpdir(), 'gofer-agents-handle-'));
+    const root = path.join(outer, 'source'),
+      trace = path.join(outer, 'trace.log');
+    const original = mode === 'empty-input' ? '' : '# Local instructions\nUnicode: café λ.\n';
+    try {
+      fs.mkdirSync(path.join(root, 'extension'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, 'extension/package.json'),
+        JSON.stringify({ version: VERSION })
+      );
+      fs.copyFileSync(
+        path.join(REPO_ROOT, 'extension/icon.png'),
+        path.join(root, 'extension/icon.png')
+      );
+      fs.mkdirSync(path.join(root, '.specify/commands'), { recursive: true });
+      fs.copyFileSync(
+        path.join(REPO_ROOT, '.specify/commands/0_gofer_start.md'),
+        path.join(root, '.specify/commands/0_gofer_start.md')
+      );
+      if (mode !== 'open-enoent-absent') fs.writeFileSync(path.join(root, 'AGENTS.md'), original);
+      const preload = path.join(outer, 'observe.mjs');
+      fs.writeFileSync(
+        preload,
+        "import { promises as fs } from 'node:fs';\nimport path from 'node:path';\nconst mode = MODE, trace = TRACE;\nconst record = event => fs.appendFile(trace, event + '\\n');\nconst originalOpen = fs.open.bind(fs);\nfs.open = async (file, ...args) => {\n  const tracked = path.basename(String(file)) === 'AGENTS.md' && String(file).split(path.sep).includes('out');\n  if (tracked && mode === 'open-error') throw new Error('controlled AGENTS open failure');\n  if (tracked && mode.startsWith('open-enoent-')) throw Object.assign(new Error('controlled AGENTS ENOENT'), { code: 'ENOENT' });\n  const handle = await originalOpen(file, ...args);\n  if (!tracked) return handle;\n  await record('opened');\n  const originalClose = handle.close.bind(handle);\n  handle.close = async () => { try { const value = await originalClose(); if (mode === 'close-error') throw new Error('controlled AGENTS close failure'); return value; } finally { await record('closed'); } };\n  const originalRead = handle.readFile.bind(handle);\n  handle.readFile = async (...readArgs) => { if (mode === 'read-error') throw new Error('controlled AGENTS read failure'); return originalRead(...readArgs); };\n  const originalWrite = handle.write.bind(handle);\n  handle.write = async (buffer, offset, length, position) => {\n    if (mode === 'write-error') throw new Error('controlled AGENTS write failure');\n    if (mode === 'zero-write') return { bytesWritten: 0, buffer };\n    return originalWrite(buffer, offset, mode === 'short-write' ? Math.min(length, 17) : length, position);\n  };\n  return handle;\n};\nconst originalReadFile = fs.readFile.bind(fs), originalWriteFile = fs.writeFile.bind(fs);\nfs.readFile = async (file, ...args) => { if (mode === 'read-error' && path.basename(String(file)) === 'AGENTS.md' && String(file).split(path.sep).includes('out')) throw new Error('controlled AGENTS read failure'); return originalReadFile(file, ...args); };\nfs.writeFile = async (file, ...args) => { if (mode === 'write-error' && path.basename(String(file)) === 'AGENTS.md' && String(file).split(path.sep).includes('out')) throw new Error('controlled AGENTS write failure'); return originalWriteFile(file, ...args); };\n"
+          .replace('MODE', JSON.stringify(mode))
+          .replace('TRACE', JSON.stringify(trace))
+      );
+      const result = spawnSync(
+        process.execPath,
+        ['--import', preload, SCRIPT_PATH, '--root', root, '--out-dir', 'out'],
+        { encoding: 'utf8' }
+      );
+      const events = fs.existsSync(trace) ? fs.readFileSync(trace, 'utf8').trim().split('\n') : [];
+      if (mode === 'open-enoent-absent') {
+        expect(result.status, result.stderr).toBe(0);
+        expect(events).toEqual([]);
+      } else if (mode === 'open-enoent-present') {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain('controlled AGENTS ENOENT');
+        expect(events).toEqual([]);
+      } else if (mode === 'open-error') {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain('controlled AGENTS open failure');
+        expect(events).toEqual([]);
+      } else {
+        expect(events).toEqual(['opened', 'closed']);
+        if (mode === 'short-write' || mode === 'empty-input') {
+          expect(result.status, result.stderr).toBe(0);
+          execFileSync(process.execPath, [SCRIPT_PATH, '--root', root, '--out-dir', 'control'], {
+            stdio: 'pipe',
+          });
+          const entry = `eai-gofer-agent-plugin-${VERSION}/eai-gofer/AGENTS.md`;
+          const actual = fs.readFileSync(path.join(root, 'out', entry));
+          expect(actual).toEqual(fs.readFileSync(path.join(root, 'control', entry)));
+          expect(actual.toString()).toContain(original.trim());
+          expect(actual.includes(0)).toBe(false);
+        } else {
+          expect(result.status).not.toBe(0);
+          expect(result.stderr).toContain(
+            mode === 'zero-write'
+              ? 'AGENTS.md normalization write made no progress.'
+              : `controlled AGENTS ${mode.split('-')[0]} failure`
+          );
+        }
+      }
+    } finally {
+      fs.rmSync(outer, { recursive: true, force: true });
+    }
+  });
+
   it('packages a zip with current-host metadata and Gemini legacy compatibility', (): void => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eai-gofer-plugin-'));
     try {
@@ -123,6 +291,10 @@ describe('Gofer agent plugin package', () => {
       const readme = fs.readFileSync(path.join(pluginRoot, 'README.md'), 'utf8');
       expect(readme).toContain('Copilot, Grok,\nand VS Code');
       expect(readme).toContain('`--company-tenant` compatibility alias');
+      expect(readme).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(readme).toContain('only if it has not been queried');
       expect(readme).toContain('No static provider default qualifies a model');
       expect(readme).not.toContain('Copilot\ndefaults to `Auto`');
       for (const manifest of [
@@ -310,6 +482,10 @@ describe('Gofer agent plugin package', () => {
       expect(readme).toContain('GitHub Copilot app / VS Code agent mode');
       expect(readme).toContain('Claude Code app');
       expect(umbrellaSkill).toContain('eai agent guide --format json');
+      expect(umbrellaSkill).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(umbrellaSkill).toContain('only if it has not been queried');
       expect(umbrellaSkill).toContain('eai errors explain <code-or-reason> --format json');
       expect(umbrellaSkill).toContain(
         'Do not invent, guess, or complete EAI CLI commands from memory'

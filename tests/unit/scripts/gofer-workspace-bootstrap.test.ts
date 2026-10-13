@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { buildSupportReportContract } from '../../../.specify/scripts/node/generate-commands.mjs';
 import {
   HOST_POLICIES,
   WORKSPACE_HOSTS,
@@ -99,6 +100,36 @@ describe('Gofer workspace bootstrap scripts', () => {
   afterEach(() => {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   });
+
+  it.each(WORKSPACE_HOSTS.flatMap((host) => [false, true].map((eai) => ({ host, eai }))))(
+    'fresh $host bootstrap owns one support contract (EAI=$eai)',
+    ({ host, eai }) => {
+      if (eai)
+        fs.writeFileSync(path.join(workspaceRoot, 'eai.runtime.json'), '{"schemaVersion":1}\n');
+      const bootstrap = runJson(BOOTSTRAP_SCRIPT, [
+        '--workspace',
+        workspaceRoot,
+        '--host',
+        host,
+        '--include-mirrors',
+      ]);
+      expect(bootstrap.exitCode).toBe(0);
+      const contract = buildSupportReportContract();
+      for (const file of ['AGENTS.md', '.github/copilot-instructions.md']) {
+        const content = fs.readFileSync(path.join(workspaceRoot, file), 'utf8');
+        expect(content, file).toContain(contract);
+        expect(content.split('## Support only when the person asks'), file).toHaveLength(2);
+        expect(content, file).not.toMatch(/After any .*eai.* command error/);
+      }
+      const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
+      expect(claude).toContain('See @AGENTS.md');
+      expect(claude).toContain('Support starts only when the person explicitly requests support.');
+      expect(claude).not.toContain('Support starts only when the person asks "get help"');
+      expect(claude).toContain('Follow the full support contract in AGENTS.md.');
+      expect(claude).not.toContain(contract);
+      expect(claude.split('\n').length).toBeLessThanOrEqual(65);
+    }
+  );
 
   it('uses exactly six current semantic hosts and maps legacy Gemini to Antigravity', () => {
     expect(WORKSPACE_HOSTS).toEqual([
@@ -316,10 +347,18 @@ Keep this instruction.
     expect(agents).toContain('sign out and sign back in');
     expect(agents).toContain('app_token_tenant_context_required');
     expect(agents).toContain('/v4/platform/tenants/<tenant-id>/...');
-    expect(claude).toContain('## EAI Repo Contract');
-    expect(claude).toContain('eai agent guide --format json');
-    expect(claude).toContain('eai template check --format json');
-    expect(claude).toContain('Do not invent, guess, or complete EAI CLI commands from memory');
+    for (const content of [
+      agents,
+      fs.readFileSync(path.join(workspaceRoot, '.github/copilot-instructions.md'), 'utf8'),
+    ]) {
+      expect(content).toContain(
+        'reuse the original-failure guidance for `app_token_tenant_context_required`'
+      );
+      expect(content).toContain('only if it has not been queried');
+    }
+    expect(claude).toContain('See @AGENTS.md');
+    expect(claude).not.toContain('## EAI Repo Contract');
+    expect(claude).toContain('Follow the full support contract in AGENTS.md.');
   });
 
   it('does not classify a repo as EAI-initialized when only manifest.yml exists', () => {
@@ -345,7 +384,8 @@ Keep this instruction.
     const claude = fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8');
 
     expect(agents).toContain('## EAI Repo Contract');
-    expect(claude).toContain('## EAI Repo Contract');
+    expect(claude).toContain('See @AGENTS.md');
+    expect(claude).not.toContain('## EAI Repo Contract');
   });
 
   it('archives legacy command entrypoints instead of deleting user content', () => {

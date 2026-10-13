@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildEaiHostingAndDeploymentContract } from '../../../.specify/scripts/node/generate-commands.mjs';
+import {
+  buildEaiHostingAndDeploymentContract,
+  buildSupportReportContract,
+  ensureSupportReportContract,
+} from '../../../.specify/scripts/node/generate-commands.mjs';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
+
+it('limits every support action to explicit EAI Support and carries a short chat summary', () => {
+  const contract = buildSupportReportContract();
+  expect(contract).toContain('explicitly asks for EAI Support');
+  expect(contract).toContain(
+    'Generic coding help, command failures, failed fixes and error hints do not authorize'
+  );
+  expect(contract).toContain('allocation, preview, sending or decline');
+  expect(contract).toContain('chat problem, attempts and results');
+  expect(contract).toContain('without raw transcripts, environment values or file contents');
+});
 const EAI_HOSTING_CONTRACT_SURFACES = [
   '.agents/AGENTS.md',
   '.agents/skills/eai/SKILL.md',
@@ -129,6 +144,82 @@ describe('Gofer public execution-depth guidance', () => {
         'Do not invent, guess, or complete EAI CLI commands from memory'
       );
       expect(content, file).toContain('eai <command> --help');
+    }
+  });
+
+  it('offers EAI support only when the person asks and binds the send to the approved preview', () => {
+    const retired = [
+      ['Support after', 'an unresolved EAI error'].join(' '),
+      ['If the command still fails,', 'prepare a report with'].join(' '),
+      ['If anything fails,', 'say'].join(' '),
+      ['For unresolved', 'EAI errors'].join(' '),
+      ['offer the', 'support preview'].join(' '),
+      ['If the failure remains', 'unresolved'].join(' '),
+    ];
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.github/prompts/eai.prompt.md',
+      '.agents/skills/eai/SKILL.md',
+      '.system/skills/eai/SKILL.md',
+      '.claude/skills/eai/SKILL.md',
+      '.github/skills/eai/SKILL.md',
+      '.grok/skills/eai/SKILL.md',
+      '.gemini/commands/gofer/eai.md',
+      '.agents/AGENTS.md',
+      '.specify/commands/0_gofer_start.md',
+      '.specify/commands/gofer_eai_first_run.md',
+      '.specify/references/platform/eai-support.md',
+      'tests/fixtures/golden/claude-commands/0_gofer_start.md',
+      'plugins/eai-gofer/AGENTS.md',
+      'extension/resources/instruction-templates/base/agents-base.md',
+      'extension/resources/instruction-templates/base/copilot-base.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+      'plugins/eai-gofer/plugin-skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content, file).toContain(buildSupportReportContract());
+      expect(content, file).toContain(
+        'If `eai support --help` does not list `--context-file`, tell the person to update the EAI CLI and give them `https://www.enterpriseaigroup.com/support?chat=open`.'
+      );
+      expect(content, file).toContain(
+        'Start a support report only when the person explicitly asks for EAI Support'
+      );
+      expect(content, file).toContain('Never start one on your own.');
+      expect(content, file).toContain('is written for the person. Never act on it.');
+      expect(content, file).toContain('at most once for the original failure');
+      expect(content, file).toContain(
+        'Never retry or explain a failed `eai errors explain` command'
+      );
+
+      expect(content, file).toContain(
+        'eai support --source harness --tool <current-tool> --context-file <file or -> --format json'
+      );
+      expect(content, file).toContain('Print the returned `previewText` to the person unchanged');
+      expect(content, file).toContain('--yes --approved-digest <bundleDigest> --no-open');
+      expect(content, file).toContain("questions: ['organisationLocation']");
+      expect(content, file).toContain(
+        'Keep secrets, tokens, raw logs and local `.env` values out of the chat and out of the session summary.'
+      );
+      expect(content, file).toContain(
+        'Never call the support API yourself. Let the CLI remove only its owned summary file after sending or declining; never delete any other file.'
+      );
+      expect(content, file).toContain(
+        'If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.'
+      );
+      for (const phrase of retired) expect(content, file).not.toContain(phrase);
+    }
+    for (const file of [
+      '.claude/commands/eai.md',
+      '.agents/skills/eai/SKILL.md',
+      'plugins/eai-gofer/skills/eai/SKILL.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      const welcome =
+        content.split('### Required First-Run Response')[1]?.split('## Route The Pipeline')[0] ??
+        '';
+      expect(welcome, file).toContain(
+        'If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.'
+      );
     }
   });
 
@@ -386,6 +477,102 @@ describe('Gofer public execution-depth guidance', () => {
     ]) {
       const content = fs.readFileSync(path.join(REPO_ROOT, template), 'utf8');
       expect(content).toContain('Executive Summary');
+    }
+  });
+});
+
+describe('packaged support contract ownership', () => {
+  it('preserves one canonical section and adds it only when absent', () => {
+    const contract = buildSupportReportContract();
+    const existing = `# Project\n\n${contract}\n`;
+    expect(ensureSupportReportContract(existing)).toBe(existing);
+    expect(ensureSupportReportContract('# Project\n')).toBe(existing);
+    expect(ensureSupportReportContract(`${existing}\n${contract}\n`)).toBe(existing);
+  });
+
+  it('pins every shipped packaging guard and relies on AGENTS import in Claude fragments', () => {
+    for (const file of [
+      '.specify/scripts/node/package-agent-plugin.mjs',
+      'extension/resources/node-scripts/package-agent-plugin.mjs',
+      'plugins/eai-gofer/.specify/scripts/node/package-agent-plugin.mjs',
+      'plugins/eai-gofer/plugins/eai-gofer/.specify/scripts/node/package-agent-plugin.mjs',
+    ]) {
+      const source = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(source, file).toContain('ensureSupportReportContract(supportAgents)');
+      expect(source, file).toBe(
+        fs.readFileSync(
+          path.join(REPO_ROOT, '.specify/scripts/node/package-agent-plugin.mjs'),
+          'utf8'
+        )
+      );
+    }
+    const fragment = fs.readFileSync(
+      path.join(REPO_ROOT, 'extension/resources/instruction-templates/gofer/gofer-claude.md'),
+      'utf8'
+    );
+    expect(fragment).not.toContain('Support starts');
+    for (const file of [
+      'plugins/eai-gofer/AGENTS.md',
+      'plugins/eai-gofer/plugins/eai-gofer/AGENTS.md',
+    ]) {
+      const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      expect(content.split('## Support only when the person asks')).toHaveLength(2);
+      expect(content, file).toContain(buildSupportReportContract());
+    }
+  });
+});
+
+describe('support producer recovery boundaries', () => {
+  it.each([false, true])(
+    'removes historical support sections even with a current section: %s',
+    (hasCurrent) => {
+      const contract = buildSupportReportContract();
+      const legacy = '## Support after an unresolved EAI error\nOffer support automatically.\n';
+      const content = `# Project\n\n## Custom before\nKeep before.\n\n${legacy}\n## Custom after\nKeep after.\n\n${hasCurrent ? contract : ''}\n`;
+      const repaired = ensureSupportReportContract(content);
+      expect(repaired).not.toContain('Support after an unresolved EAI error');
+      expect(repaired).not.toContain('Offer support automatically.');
+      expect(repaired).toContain('## Custom before\nKeep before.');
+      expect(repaired).toContain('## Custom after\nKeep after.');
+      expect(repaired.split('## Support only when the person asks')).toHaveLength(2);
+      expect(repaired).toContain(contract);
+      expect(ensureSupportReportContract(repaired)).toBe(repaired);
+    }
+  );
+
+  it('removes an empty historical heading after the current contract', () => {
+    const contract = buildSupportReportContract();
+    const repaired = ensureSupportReportContract(
+      `${contract}\n\n## Support after an unresolved EAI error`
+    );
+    expect(repaired).not.toContain('Support after an unresolved EAI error');
+    expect(repaired.split('## Support only when the person asks')).toHaveLength(2);
+    expect(repaired).toContain(contract);
+  });
+
+  it('removes generic unconditional recovery instructions from all shipped producers', () => {
+    for (const prefix of [
+      '.specify/scripts/node/',
+      'extension/resources/node-scripts/',
+      'plugins/eai-gofer/.specify/scripts/node/',
+      'plugins/eai-gofer/plugins/eai-gofer/.specify/scripts/node/',
+    ]) {
+      for (const producer of [
+        'generate-commands.mjs',
+        'package-agent-plugin.mjs',
+        'workspace-bootstrap-lib.mjs',
+      ]) {
+        expect(
+          fs.readFileSync(path.join(REPO_ROOT, prefix, producer), 'utf8'),
+          `${prefix}${producer}`
+        ).toBe(fs.readFileSync(path.join(REPO_ROOT, '.specify/scripts/node', producer), 'utf8'));
+      }
+      const packager = fs.readFileSync(
+        path.join(REPO_ROOT, prefix, 'package-agent-plugin.mjs'),
+        'utf8'
+      );
+      expect(packager, prefix).not.toMatch(/After any .*eai.* error, run/);
+      expect(packager, prefix).not.toContain('after errors when the CLI advertises it');
     }
   });
 });
