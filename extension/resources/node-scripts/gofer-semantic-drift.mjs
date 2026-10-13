@@ -16,6 +16,7 @@ const MAX_REVIEW_PACKETS = 64;
 const MAX_REVIEW_DURATION_MS = 120_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REVIEW_PACKET_CONTENT_BYTES = 4 * 1024;
+const MAX_INLINE_REQUIREMENT_CONTEXT_BYTES = 4 * 1024;
 const MAX_REFERENCE_INDEX_BYTES = 6 * 1024;
 const MAX_GOAL_CONTEXT_BYTES = 4 * 1024;
 const MAX_AGGREGATE_REQUEST_BYTES = 2 * 1024 * 1024;
@@ -414,18 +415,23 @@ function extractReviewAnchors(sources) {
   const specification = sources.find((source) => source.artifact === 'spec.md')?.content || '';
   const lines = specification.match(/[^\n]*(?:\n|$)/g)?.filter(Boolean) || [];
   const requirements = new Map();
+  let duplicateRequirementId = null;
   let currentId = null;
   let currentLines = [];
   let currentStartByte = 0;
   let currentEndByte = 0;
   let currentHeadingLevel = null;
+  let sectionHeadingLevel = null;
   let byteOffset = 0;
   const saveCurrent = () => {
-    if (currentId && currentLines.length) requirements.set(currentId, {
-      content: currentLines.join(''),
-      startByte: currentStartByte,
-      endByte: currentEndByte,
-    });
+    if (currentId && currentLines.length) {
+      if (requirements.has(currentId)) duplicateRequirementId ||= currentId;
+      else requirements.set(currentId, {
+        content: currentLines.join(''),
+        startByte: currentStartByte,
+        endByte: currentEndByte,
+      });
+    }
     currentId = null;
     currentLines = [];
     currentHeadingLevel = null;
@@ -437,16 +443,27 @@ function extractReviewAnchors(sources) {
     const requirement = matchRequirementDefinition(normalizedLine);
     if (requirement) {
       saveCurrent();
+      if (requirements.has(requirement.id)) duplicateRequirementId ||= requirement.id;
       currentId = requirement.id;
       currentLines = [line];
       currentStartByte = lineStartByte;
       currentEndByte = lineEndByte;
-      currentHeadingLevel = requirement.headingLevel;
+      currentHeadingLevel = requirement.headingLevel ?? sectionHeadingLevel;
+      if (requirement.headingLevel) sectionHeadingLevel = requirement.headingLevel;
       byteOffset = lineEndByte;
       continue;
     }
     const headingLevel = normalizedLine.match(/^\s*(#{1,6})\s+/)?.[1].length || null;
-    if (currentId && headingLevel && (!currentHeadingLevel || headingLevel <= currentHeadingLevel)) saveCurrent();
+    if (headingLevel) {
+      if (currentId && (currentHeadingLevel === null || headingLevel <= currentHeadingLevel)) saveCurrent();
+      if (currentId) {
+        currentLines.push(line);
+        currentEndByte = lineEndByte;
+        byteOffset = lineEndByte;
+        continue;
+      }
+      sectionHeadingLevel = headingLevel;
+    }
     if (currentId) {
       currentLines.push(line);
       currentEndByte = lineEndByte;
@@ -454,7 +471,22 @@ function extractReviewAnchors(sources) {
     byteOffset = lineEndByte;
   }
   saveCurrent();
-  return { goals, requirements };
+  if (duplicateRequirementId) return { ok: false, reason: 'duplicate_requirement_id' };
+  return { ok: true, goals, requirements };
+}
+
+function requirementContextFragment(id, requirement, startByte, endByte) {
+  const contentBytes = Buffer.from(requirement.content, 'utf8');
+  const relativeStart = startByte - requirement.startByte;
+  const relativeEnd = endByte - requirement.startByte;
+  return {
+    id,
+    sourceRange: { artifact: 'spec.md', startByte, endByte },
+    definitionRange: { artifact: 'spec.md', startByte: requirement.startByte, endByte: requirement.endByte },
+    content: contentBytes.subarray(relativeStart, relativeEnd).toString('utf8'),
+    contextMode: 'exact_source_range',
+    definitionComplete: startByte === requirement.startByte && endByte === requirement.endByte,
+  };
 }
 
 function packetState({ manifest, referenceIndex, anchors, segments, packetIndex, packetCount, snapshotSha256 }) {
@@ -468,10 +500,57 @@ function packetState({ manifest, referenceIndex, anchors, segments, packetIndex,
       }
     }
   }
-  const requirementContext = [...referencedIds].sort().flatMap((id) => {
+  const requirementContext = [];
+  const requirementContextIssues = [];
+  for (const id of [...referencedIds].sort()) {
     const requirement = anchors.requirements.get(id);
-    return requirement ? [{ id, content: requirement.content }] : [];
-  });
+    if (!requirement) {
+      requirementContext.push({ id, sourceRange: null, definitionRange: null, content: null, contextMode: 'definition_missing', definitionComplete: false });
+      requirementContextIssues.push(`requirement_definition_missing:${id}`);
+      continue;
+    }
+    const definitionRange = { artifact: 'spec.md', startByte: requirement.startByte, endByte: requirement.endByte };
+    const specSegments = segments.filter((segment) => segment.artifact === 'spec.md' &&
+      segment.startByte < requirement.endByte && requirement.startByte < segment.endByte);
+    for (const segment of specSegments) {
+      const startByte = Math.max(segment.startByte, requirement.startByte);
+      const endByte = Math.min(segment.endByte, requirement.endByte);
+      requirementContext.push(requirementContextFragment(id, requirement, startByte, endByte));
+    }
+    const hasReferenceOutsideDefinition = segments.some((segment) =>
+      [...segment.content.matchAll(referencePattern)].some((match) => {
+        if (match[0] !== id) return false;
+        const matchStartByte = segment.startByte + Buffer.byteLength(segment.content.slice(0, match.index), 'utf8');
+        const matchEndByte = matchStartByte + Buffer.byteLength(match[0], 'utf8');
+        return segment.artifact !== 'spec.md' || matchStartByte < requirement.startByte || matchEndByte > requirement.endByte;
+      }));
+    if (hasReferenceOutsideDefinition) {
+      const specRanges = specSegments.map((segment) => ({
+        startByte: Math.max(segment.startByte, requirement.startByte),
+        endByte: Math.min(segment.endByte, requirement.endByte),
+      })).sort((left, right) => left.startByte - right.startByte);
+      let coveredUntil = requirement.startByte;
+      for (const range of specRanges) {
+        if (range.startByte > coveredUntil) break;
+        coveredUntil = Math.max(coveredUntil, range.endByte);
+      }
+      const completeInPacket = coveredUntil === requirement.endByte;
+      if (!completeInPacket && Buffer.byteLength(requirement.content, 'utf8') <= MAX_INLINE_REQUIREMENT_CONTEXT_BYTES) {
+        requirementContext.push(requirementContextFragment(id, requirement, requirement.startByte, requirement.endByte));
+      } else if (!completeInPacket) {
+        requirementContext.push({
+          id,
+          sourceRange: null,
+          definitionRange,
+          content: null,
+          contextMode: 'linked_definition_range',
+          definitionComplete: false,
+        });
+        requirementContextIssues.push(`requirement_context_exceeds_packet_budget:${id}`);
+      }
+    }
+  }
+  const requirementContextComplete = requirementContextIssues.length === 0;
   return {
     review: {
       mode: 'bounded_multi_pass',
@@ -479,8 +558,10 @@ function packetState({ manifest, referenceIndex, anchors, segments, packetIndex,
       packetIndex,
       packetCount,
       sourceSnapshotSha256: snapshotSha256,
-      instruction: 'This request contains only the exact source ranges listed below, the exact approved goal statements, and exact specification requirements referenced by this packet. Other ranges are reviewed in separate requests. Do not assume unseen content is aligned; use partial or reconcile when this packet and the structural index do not provide enough evidence.',
+      instruction: 'This request contains only the exact source ranges listed below, the exact approved goal statements, and requirement context linked to exact source byte ranges. Other ranges are reviewed in separate requests. Do not assume unseen content is aligned; use partial or reconcile when this packet and the structural index do not provide enough evidence.',
       continuity: 'separate_stateless_evaluation',
+      requirementContextComplete,
+      requirementContextIssues,
     },
     approved_goal_context: anchors.goals,
     requirement_context: requirementContext,
@@ -551,6 +632,7 @@ function buildMultiPassPlan(sources, questions) {
   if (!sourcePlan.ok) return sourcePlan;
   const anchors = extractReviewAnchors(sources);
   if (!anchors) return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+  if (!anchors.ok) return { ok: false, reason: anchors.reason, totalBytes: sourcePlan.totalBytes };
   const manifest = buildSourceManifest(sources);
   const referenceIndex = buildReferenceIndex(sources);
   if (Buffer.byteLength(JSON.stringify(referenceIndex), 'utf8') > MAX_REFERENCE_INDEX_BYTES) {
@@ -593,6 +675,8 @@ function buildMultiPassPlan(sources, questions) {
       body,
       inputBudget,
       requestBytes: Buffer.byteLength(body, 'utf8'),
+      contextComplete: state.review.requirementContextComplete,
+      contextIssues: state.review.requirementContextIssues,
       sourceRanges: segments.map(({ artifact, startByte, endByte, sha256 }) => ({ artifact, startByte, endByte, sha256 })),
     };
   });
@@ -1025,6 +1109,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     sourceRanges: request.sourceRanges,
     requestBytes: request.requestBytes,
     inputBudget: request.inputBudget,
+    contextComplete: request.contextComplete,
+    contextIssues: request.contextIssues,
     status: 'pending',
     requestAttempted: false,
     requestSent: false,
@@ -1071,16 +1157,21 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       timeoutMs: Math.min(REQUEST_TIMEOUT_MS, remainingMs),
       timeoutReason: deadlineLimited ? 'review_deadline_exceeded' : 'timeout',
     });
+    const packetEvaluation = !request.contextComplete && evaluation.status !== 'unavailable'
+      ? { ...evaluation, status: 'reconcile', reason: 'requirement_context_incomplete' }
+      : evaluation;
     packetResults.push({
       id: request.id,
       index: request.index,
       sourceRanges: request.sourceRanges,
       requestBytes: request.requestBytes,
       inputBudget: request.inputBudget,
-      ...evaluation,
+      contextComplete: request.contextComplete,
+      contextIssues: request.contextIssues,
+      ...packetEvaluation,
     });
-    if (evaluation.status === 'unavailable') {
-      stopReason = evaluation.reason || 'packet_review_failed';
+    if (packetEvaluation.status === 'unavailable') {
+      stopReason = packetEvaluation.reason || 'packet_review_failed';
       break;
     }
     if (now() >= reviewDeadlineAt) {
@@ -1105,6 +1196,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   if (reviewDeadlineExceeded) stopReason = 'review_deadline_exceeded';
   const allResponsesValid = packetResults.length === plan.requests.length &&
     packetResults.every((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status));
+  const requirementContextComplete = packetResults.length === plan.requests.length &&
+    packetResults.every((packet) => packet.contextComplete);
   const reviewedSegments = new Set(packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
     .flatMap((packet) => packet.sourceRanges.map((range) => `${range.artifact}:${range.startByte}:${range.endByte}`)));
   const totalReviewedBytes = packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
@@ -1129,6 +1222,9 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   } else if (!coverageComplete) {
     finalStatus = 'unavailable';
     finalReason = 'source_range_coverage_invalid';
+  } else if (!requirementContextComplete) {
+    finalStatus = 'reconcile';
+    finalReason = 'requirement_context_incomplete';
   }
   const updatedCoverage = Object.fromEntries(artifacts.map(([name]) => {
     const plannedRangeCount = plan.requests.flatMap((request) => request.sourceRanges).filter((range) => range.artifact === name).length;
@@ -1165,7 +1261,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     confidenceGate: { ...aggregate.confidenceGate, minimum: policy.minimumConfidence },
     providerError: failedPacket?.providerError || null,
     multiPass: {
-      complete: finalStatus !== 'unavailable' && coverageComplete,
+      complete: finalStatus !== 'unavailable' && coverageComplete && requirementContextComplete,
       packetCount: plan.requests.length,
       completedPacketCount: packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status)).length,
       sourceBytes: plan.totalSourceBytes,
@@ -1175,6 +1271,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       snapshotSha256: plan.snapshotSha256,
       referenceCount: plan.referenceCount,
       coverageComplete,
+      requirementContextComplete,
+      requirementContextIssues: [...new Set(packetResults.flatMap((packet) => packet.contextIssues || []))],
       crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
       durationMs: reviewDurationMs,
       limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES, maxDurationMs: MAX_REVIEW_DURATION_MS },

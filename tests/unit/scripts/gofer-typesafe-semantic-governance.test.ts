@@ -865,7 +865,10 @@ describe('TypeSafe semantic governance', () => {
         id: 'FR-002',
         content: `**FR-002 (P1)**: Prioritized operation\n${continuation('FR-002')}`,
       },
-      { id: 'FR-003', content: `FR-003 — Plain operation\n${continuation('FR-003')}` },
+      {
+        id: 'FR-003',
+        content: `FR-003 — Plain operation\n${continuation('FR-003')}#### Acceptance subsection\n- nested heading criterion for FR-003\n`,
+      },
       { id: 'FR-004', content: `- **FR-004**: Listed operation\n${continuation('FR-004')}` },
     ];
     const spec = `${requirements.map(({ content }) => content).join('')}## Supporting evidence\n${'supporting evidence after the requirement\n'.repeat(1_500)}`;
@@ -897,11 +900,160 @@ describe('TypeSafe semantic governance', () => {
           )
       );
       expect(relevantPackets.length).toBeGreaterThan(requirement.id === 'FR-001' ? 1 : 0);
+      const contextFragments = requestStates
+        .flatMap(
+          (state: { requirement_context: Array<Record<string, unknown>> }) =>
+            state.requirement_context
+        )
+        .filter(
+          (entry: { id: string }) =>
+            entry.id === requirement.id && typeof entry.content === 'string'
+        )
+        .sort(
+          (
+            left: { sourceRange: { startByte: number } },
+            right: { sourceRange: { startByte: number } }
+          ) => left.sourceRange.startByte - right.sourceRange.startByte
+        );
+      expect(contextFragments.length).toBeGreaterThan(0);
+      expect(contextFragments.map((entry: { content: string }) => entry.content).join('')).toBe(
+        requirement.content
+      );
       for (const state of relevantPackets) {
-        expect(state.requirement_context).toContainEqual(requirement);
+        expect(
+          state.requirement_context.some((entry: { id: string }) => entry.id === requirement.id)
+        ).toBe(true);
       }
       requirementStartByte = requirementEndByte;
     }
+  });
+
+  it('splits oversized requirement context into exact linked ranges within packet budgets', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const requirement = `### FR-001: Large requirement\n${'Exact acceptance detail remains available to Jev.\n'.repeat(900)}`;
+    await writeFile(
+      path.join(featureDir, 'spec.md'),
+      `${requirement}## Supporting evidence\n${'supporting evidence\n'.repeat(1_000)}`
+    );
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result.status).toBe('aligned');
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(1);
+    const states = fetchImpl.mock.calls.map(([, request]) => {
+      const body = JSON.parse(request.body as string);
+      expect(semantic.measureTypeSafeInputBudget(body.state, body.questions).withinLimits).toBe(
+        true
+      );
+      expect(body.state.review.requirementContextComplete).toBe(true);
+      return body.state;
+    });
+    const fragments = states
+      .flatMap(
+        (state: { requirement_context: Array<Record<string, unknown>> }) =>
+          state.requirement_context
+      )
+      .filter((entry: { id: string }) => entry.id === 'FR-001')
+      .sort(
+        (
+          left: { sourceRange: { startByte: number } },
+          right: { sourceRange: { startByte: number } }
+        ) => left.sourceRange.startByte - right.sourceRange.startByte
+      );
+    expect(fragments.length).toBeGreaterThan(1);
+    expect(fragments.map((entry: { content: string }) => entry.content).join('')).toBe(requirement);
+    let expectedStartByte = Buffer.byteLength('');
+    for (const fragment of fragments) {
+      expect(fragment.contextMode).toBe('exact_source_range');
+      expect(fragment.definitionRange).toEqual({
+        artifact: 'spec.md',
+        startByte: Buffer.byteLength(''),
+        endByte: Buffer.byteLength(requirement),
+      });
+      expect(fragment.sourceRange.startByte).toBe(expectedStartByte);
+      expect(fragment.sourceRange.endByte - fragment.sourceRange.startByte).toBe(
+        Buffer.byteLength(fragment.content)
+      );
+      expect(Buffer.byteLength(fragment.content)).toBeLessThanOrEqual(4 * 1024);
+      expectedStartByte = fragment.sourceRange.endByte;
+    }
+    expect(expectedStartByte).toBe(Buffer.byteLength(requirement));
+  });
+
+  it('rejects duplicate requirement IDs before sending packets', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const spec = `## Requirements\n**FR-001**: First definition\n${'supporting detail\n'.repeat(2_500)}**FR-001**: Duplicate definition\n`;
+    await writeFile(path.join(featureDir, 'spec.md'), spec);
+    const fetchImpl = vi.fn();
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      reason: 'duplicate_requirement_id',
+      requestAttempted: false,
+      requestSent: false,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.multiPass.packets).toEqual([]);
+  });
+
+  it('does not align a cross-artifact reference when a large requirement cannot fit in one packet', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const requirement = `### FR-001: Large requirement\n${'Exact acceptance detail remains available to Jev.\n'.repeat(900)}`;
+    await writeFile(
+      path.join(featureDir, 'spec.md'),
+      `${requirement}## Supporting evidence\n${'supporting evidence\n'.repeat(1_000)}`
+    );
+    await writeFile(path.join(featureDir, 'tasks.md'), '# Tasks\nImplement FR-001.\n');
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({ status: 'reconcile', reason: 'requirement_context_incomplete' });
+    expect(result.multiPass).toMatchObject({ complete: false, requirementContextComplete: false });
+    const taskRequest = fetchImpl.mock.calls
+      .map(([, request]) => JSON.parse(request.body as string).state)
+      .find((state: { segments: Array<{ artifact: string }> }) =>
+        state.segments.some((segment) => segment.artifact === 'tasks.md')
+      );
+    expect(taskRequest.review.requirementContextComplete).toBe(false);
+    expect(taskRequest.review.requirementContextIssues).toContain(
+      'requirement_context_exceeds_packet_budget:FR-001'
+    );
+    expect(taskRequest.requirement_context).toContainEqual(
+      expect.objectContaining({
+        id: 'FR-001',
+        contextMode: 'linked_definition_range',
+        content: null,
+        definitionRange: expect.objectContaining({ artifact: 'spec.md' }),
+      })
+    );
   });
 
   it('does not report aligned when any packet is below the confidence threshold', async () => {
