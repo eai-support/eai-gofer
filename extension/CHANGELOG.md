@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.14.4] - 2026-10-14
+
+Offer EAI support only when requested and guide outcome-based issue and pull request titles
+
 ## [3.14.3] - 2026-10-08
 
 Validate completed planning artifacts and preserve reviewed Gofer delivery checkpoints
