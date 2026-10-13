@@ -925,6 +925,7 @@ describe('TypeSafe semantic governance', () => {
     expect(result.confidence).toBe(0.72);
     expect(result.confidenceGate.belowMinimum).toBe(true);
     expect(result.multiPass.complete).toBe(true);
+    expect(result.usageComplete).toBe(true);
   });
 
   it('fails closed when a source artifact changes during a multi-pass review', async () => {
@@ -1104,6 +1105,10 @@ describe('TypeSafe semantic governance', () => {
     });
 
     expect(result).toMatchObject({ status: 'unavailable', reason: 'review_deadline_exceeded' });
+    expect(result).toMatchObject({
+      usage: { inputTokens: 100, outputTokens: 12 },
+      usageComplete: false,
+    });
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(result.multiPass.limits.maxDurationMs).toBe(120_000);
     expect(result.multiPass.packets.length).toBeGreaterThan(1);

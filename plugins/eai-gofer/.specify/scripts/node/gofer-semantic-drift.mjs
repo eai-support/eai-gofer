@@ -762,7 +762,7 @@ async function requestTypeSafeEvaluation({ state, body, questions, event, minimu
   return { requestAttempted: true, requestSent: true, ...interpretTypeSafeResponse(payload, event, minimumConfidence) };
 }
 
-function aggregatePacketResults(packetResults, minimumConfidence, event) {
+function aggregatePacketResults(packetResults, minimumConfidence, event, plannedPacketCount = packetResults.length) {
   const conflict = packetResults.some((packet) => packet.status === 'conflict');
   const incomplete = packetResults.some((packet) => packet.status === 'unavailable');
   const reconcile = packetResults.some((packet) => packet.status === 'reconcile');
@@ -792,7 +792,8 @@ function aggregatePacketResults(packetResults, minimumConfidence, event) {
   }))).sort((left, right) => (left.confidence ?? 0) - (right.confidence ?? 0))[0];
   const models = [...new Set(packetResults.map((packet) => packet.model).filter(Boolean))];
   const knownUsage = packetResults.map((packet) => packet.usage).filter(Boolean);
-  const usageComplete = knownUsage.length === packetResults.length && packetResults.length > 0;
+  const usageComplete = packetResults.length === plannedPacketCount &&
+    knownUsage.length === plannedPacketCount && plannedPacketCount > 0;
   const usage = knownUsage.length ? {
     inputTokens: knownUsage.reduce((sum, value) => sum + value.inputTokens, 0),
     outputTokens: knownUsage.reduce((sum, value) => sum + value.outputTokens, 0),
@@ -1110,7 +1111,7 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     .flatMap((packet) => packet.sourceRanges).reduce((sum, range) => sum + (range.endByte - range.startByte), 0);
   const totalSentBytes = packetResults.filter((packet) => packet.requestSent === true)
     .flatMap((packet) => packet.sourceRanges).reduce((sum, range) => sum + (range.endByte - range.startByte), 0);
-  const aggregate = aggregatePacketResults(packetResults, policy.minimumConfidence, event);
+  const aggregate = aggregatePacketResults(packetResults, policy.minimumConfidence, event, plan.requests.length);
   const coverageComplete = allResponsesValid && snapshotStillCurrent && reviewedSegments.size === plan.segmentCount;
   let finalStatus = aggregate.status;
   let finalReason = aggregate.status === 'reconcile'
