@@ -70,6 +70,17 @@ function alignedAnswers(confidence = 0.95) {
   };
 }
 
+function alignedResponse(confidence = 0.95) {
+  return new Response(
+    JSON.stringify({
+      model: 'jev-1.13.0',
+      answers: alignedAnswers(confidence),
+      usage: { input_tokens: 100, output_tokens: 12 },
+    }),
+    { status: 200 }
+  );
+}
+
 afterEach(async () => {
   if (previousSharedCredentialSetting === undefined)
     delete process.env.GOFER_DISABLE_SHARED_CREDENTIALS;
@@ -475,7 +486,7 @@ describe('TypeSafe semantic governance', () => {
     expect(JSON.stringify(receipt)).not.toContain('secret-value');
   });
 
-  it('preserves an existing version-2 receipt before writing the version-3 receipt', async () => {
+  it('preserves an existing version-2 receipt before writing the version-4 receipt', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
@@ -507,7 +518,20 @@ describe('TypeSafe semantic governance', () => {
     expect(
       JSON.parse(await readFile(path.join(receiptDir, 'before_validation.json'), 'utf8'))
         .schemaVersion
-    ).toBe(3);
+    ).toBe(4);
+
+    const previousV3 =
+      JSON.stringify({ schemaVersion: 3, status: 'reconcile', confidence: 0.72 }) + '\n';
+    await writeFile(path.join(receiptDir, 'before_validation.json'), previousV3);
+    await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl: vi.fn(async () => alignedResponse()),
+    });
+    expect(await readFile(path.join(receiptDir, 'before_validation.v3.json'), 'utf8')).toBe(
+      previousV3
+    );
   });
 
   it('reports unavailable, not an uncaught exception, on a network failure or timeout', async () => {
@@ -633,14 +657,19 @@ describe('TypeSafe semantic governance', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('does not call Jev when complete state exceeds the safe input budget', async () => {
+  it('reviews every exact UTF-8 source range when complete state exceeds one request', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);
     const semantic = await import(semanticUrl.href);
     await credentials.connect({ workspace, key: 'secret-value' });
-    const oversized = `${'a'.repeat(40 * 1024)}TAIL_DRIFT_MARKER`;
+    const requirementText = '- **FR-001**: The operation must preserve all approved evidence.\n';
+    const oversized = `\uFEFF\n${requirementText}## Supporting evidence\n${'spec heading\nlinked evidence\n'.repeat(2_000)}${'漢🙂é'.repeat(8_000)}TAIL_DRIFT_MARKER`;
     await writeFile(path.join(featureDir, 'spec.md'), oversized);
-    const fetchImpl = vi.fn();
+    await writeFile(
+      path.join(featureDir, 'tasks.md'),
+      '# Tasks\n\nImplementation checks FR-001.\n'
+    );
+    const fetchImpl = vi.fn(async () => alignedResponse());
     const result = await semantic.runSemanticReview({
       workspace,
       featureDir,
@@ -649,25 +678,225 @@ describe('TypeSafe semantic governance', () => {
     });
     expect(result.artifacts['spec.md']).toBe(createHash('sha256').update(oversized).digest('hex'));
     expect(result).toMatchObject({
-      status: 'unavailable',
-      reason: 'input_budget_exceeded',
-      requestSent: false,
+      status: 'aligned',
+      reviewMode: 'bounded_multi_pass',
+      requestSent: true,
+    });
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(1);
+    const packetStates = fetchImpl.mock.calls.map(
+      ([, request]) => JSON.parse(request.body as string).state
+    );
+    expect(
+      packetStates.every(
+        (packetState: { approved_goal_context: Array<{ goal: string }> }) =>
+          packetState.approved_goal_context[0].goal === 'deliver'
+      )
+    ).toBe(true);
+    expect(
+      packetStates.some(
+        (packetState: { requirement_context: Array<{ id: string; content: string }> }) =>
+          packetState.requirement_context.some(
+            (requirement) => requirement.id === 'FR-001' && requirement.content === requirementText
+          )
+      )
+    ).toBe(true);
+    const sentSegments = fetchImpl.mock.calls
+      .flatMap(([, request]) => {
+        const body = JSON.parse(request.body as string);
+        expect(body.state.review.mode).toBe('bounded_multi_pass');
+        expect(body.state.review.packetCount).toBe(fetchImpl.mock.calls.length);
+        return body.state.segments.filter(
+          (segment: { artifact: string }) => segment.artifact === 'spec.md'
+        );
+      })
+      .sort(
+        (left: { startByte: number }, right: { startByte: number }) =>
+          left.startByte - right.startByte
+      );
+    expect(sentSegments[0].startByte).toBe(0);
+    expect(sentSegments.at(-1).endByte).toBe(Buffer.byteLength(oversized));
+    for (let index = 0; index < sentSegments.length; index += 1) {
+      expect(sentSegments[index].endByte - sentSegments[index].startByte).toBe(
+        Buffer.byteLength(sentSegments[index].content)
+      );
+      if (index > 0) expect(sentSegments[index].startByte).toBe(sentSegments[index - 1].endByte);
+    }
+    expect(
+      Buffer.concat(
+        sentSegments.map((segment: { content: string }) => Buffer.from(segment.content))
+      ).toString('utf8')
+    ).toBe(oversized);
+    expect(result.multiPass).toMatchObject({
+      complete: true,
+      packetCount: fetchImpl.mock.calls.length,
+      completedPacketCount: fetchImpl.mock.calls.length,
     });
     expect(result.artifactCoverage['spec.md']).toMatchObject({
       sourceBytes: Buffer.byteLength(oversized),
-      sentBytes: 0,
+      sentBytes: Buffer.byteLength(oversized),
       complete: true,
+      reviewed: true,
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
     const receipt = JSON.parse(
       await readFile(
         path.join(featureDir, 'evidence', 'semantic-review', 'before_validation.json'),
         'utf8'
       )
     );
-    expect(receipt.schemaVersion).toBe(3);
+    expect(receipt.schemaVersion).toBe(4);
     expect(receipt.inputBudget.withinLimits).toBe(false);
     expect(JSON.stringify(receipt)).not.toContain(oversized);
+  });
+
+  it('keeps the exact requirement context with packets that contain continuation text', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    const longRequirement = `- **FR-001**: ${'REQUIREMENT_CONTEXT_'.repeat(700)}\n`;
+    const spec = `${longRequirement}## Supporting evidence\n${'supporting evidence after the requirement\n'.repeat(1_500)}`;
+    await writeFile(path.join(featureDir, 'spec.md'), spec);
+    const fetchImpl = vi.fn(async () => alignedResponse());
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result.status).toBe('aligned');
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(1);
+    const requestStates = fetchImpl.mock.calls.map(
+      ([, request]) => JSON.parse(request.body as string).state
+    );
+    const requirementBytes = Buffer.byteLength(longRequirement);
+    const relevantPackets = requestStates.filter(
+      (state: { segments: Array<{ artifact: string; startByte: number; endByte: number }> }) =>
+        state.segments.some(
+          (segment) =>
+            segment.artifact === 'spec.md' &&
+            segment.startByte < requirementBytes &&
+            segment.endByte > 0
+        )
+    );
+
+    expect(relevantPackets.length).toBeGreaterThan(1);
+    for (const state of relevantPackets) {
+      expect(state.requirement_context).toContainEqual({ id: 'FR-001', content: longRequirement });
+    }
+  });
+
+  it('does not report aligned when any packet is below the confidence threshold', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(40 * 1024));
+    let callCount = 0;
+    const fetchImpl = vi.fn(async () => alignedResponse(++callCount === 2 ? 0.72 : 0.96));
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(callCount).toBeGreaterThan(1);
+    expect(result.status).toBe('reconcile');
+    expect(result.confidence).toBe(0.72);
+    expect(result.confidenceGate.belowMinimum).toBe(true);
+    expect(result.multiPass.complete).toBe(true);
+  });
+
+  it('fails closed when a source artifact changes during a multi-pass review', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(40 * 1024));
+    let changed = false;
+    const fetchImpl = vi.fn(async () => {
+      if (!changed) {
+        changed = true;
+        await writeFile(path.join(featureDir, 'spec.md'), 'changed after snapshot');
+      }
+      return alignedResponse();
+    });
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'source_changed_during_review' });
+    expect(result.multiPass.complete).toBe(false);
+  });
+
+  it('fails before provider calls when the bounded multi-pass caps are exceeded', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(800 * 1024));
+    const fetchImpl = vi.fn();
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      reason: 'segmentation_limits_exceeded',
+      requestSent: false,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('stops on a packet provider error and retains only safe per-packet diagnostics and usage', async () => {
+    const { workspace, featureDir } = await fixture();
+    const credentials = await import(credentialsUrl.href);
+    const semantic = await import(semanticUrl.href);
+    await credentials.connect({ workspace, key: 'secret-value' });
+    await writeFile(path.join(featureDir, 'spec.md'), 'x'.repeat(40 * 1024));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(alignedResponse())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: [{ loc: ['state'], type: 'too_large' }] }), {
+          status: 400,
+          headers: { 'x-typesafe-request-id': 'req-123' },
+        })
+      );
+
+    const result = await semantic.runSemanticReview({
+      workspace,
+      featureDir,
+      event: 'before_validation',
+      fetchImpl,
+    });
+
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      reason: 'provider_http_error',
+      usage: { inputTokens: 100, outputTokens: 12 },
+      usageComplete: false,
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(result.multiPass.complete).toBe(false);
+    expect(result.providerError).toMatchObject({
+      httpStatus: 400,
+      requestId: 'req-123',
+      validation: [{ location: 'state', type: 'too_large' }],
+    });
+    expect(JSON.stringify(result)).not.toContain('x'.repeat(100));
+    expect(JSON.stringify(result)).not.toContain('secret-value');
   });
 
   it('rejects a credential path routed through a symlinked directory', async () => {
@@ -983,7 +1212,7 @@ describe('TypeSafe semantic governance', () => {
         'utf8'
       )
     );
-    expect(receipt.schemaVersion).toBe(3);
+    expect(receipt.schemaVersion).toBe(4);
     expect(receipt.usage).toEqual({ inputTokens: 3210, outputTokens: 44 });
     expect(receipt.confidenceGate.weakestQuestion.probabilities).toEqual({
       aligned: 0.72,

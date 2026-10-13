@@ -11,6 +11,13 @@ const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-
 const TYPE_SAFE_TOTAL_INPUT_LIMIT = 64 * 1024;
 const TYPE_SAFE_STATE_QUESTION_LIMIT = 32 * 1024;
 const TYPE_SAFE_SAFETY_RESERVE_BYTES = 4 * 1024;
+const MAX_REVIEW_SOURCE_BYTES = 768 * 1024;
+const MAX_REVIEW_PACKETS = 64;
+const MAX_REVIEW_PACKET_CONTENT_BYTES = 4 * 1024;
+const MAX_REFERENCE_INDEX_BYTES = 6 * 1024;
+const MAX_GOAL_CONTEXT_BYTES = 4 * 1024;
+const MAX_AGGREGATE_REQUEST_BYTES = 2 * 1024 * 1024;
+const MAX_SINGLE_REQUEST_BODY_BYTES = TYPE_SAFE_TOTAL_INPUT_LIMIT;
 const MAX_PROVIDER_ERROR_BYTES = 4 * 1024;
 const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 const REQUESTED_MODEL = 'jev-latest';
@@ -170,7 +177,9 @@ async function readArtifact(target) {
       hash.update(chunk);
       contentChunks.push(chunk);
     }
-    const content = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(contentChunks));
+    // Preserve an initial UTF-8 BOM as source content. TextDecoder strips it
+    // by default, which would make a "complete" review omit real source bytes.
+    const content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(contentChunks));
     return { present: true, sha256: hash.digest('hex'), bytes: fullBytes, content, complete: true };
   } finally { await handle.close(); }
 }
@@ -272,7 +281,7 @@ function safeLocation(value) {
 
 function providerDiagnostics(response, bodyText, bodyTruncated) {
   const headers = response.headers;
-  const requestId = safeToken(headers?.get?.('x-request-id') || headers?.get?.('request-id') || '', 128);
+  const requestId = safeToken(headers?.get?.('x-typesafe-request-id') || headers?.get?.('x-request-id') || headers?.get?.('request-id') || '', 128);
   const diagnostic = { httpStatus: response.status };
   if (requestId) diagnostic.requestId = requestId;
   if (bodyTruncated) {
@@ -316,6 +325,422 @@ function answerRecord(answer, questionId) {
   };
 }
 
+function splitAtUtf8Boundaries(content, maxBytes) {
+  if (!content) return [''];
+  const lines = content.match(/[^\n]*\n|[^\n]+$/g) || [content];
+  const segments = [];
+  let current = '';
+  let currentBytes = 0;
+  const flush = () => {
+    if (!current) return;
+    segments.push(current);
+    current = '';
+    currentBytes = 0;
+  };
+  for (const line of lines) {
+    const lineBytes = Buffer.byteLength(line, 'utf8');
+    if (lineBytes <= maxBytes) {
+      if (currentBytes + lineBytes > maxBytes) flush();
+      current += line;
+      currentBytes += lineBytes;
+      continue;
+    }
+    flush();
+    let part = '';
+    let partBytes = 0;
+    for (const character of line) {
+      const characterBytes = Buffer.byteLength(character, 'utf8');
+      if (partBytes + characterBytes > maxBytes) {
+        segments.push(part);
+        part = '';
+        partBytes = 0;
+      }
+      part += character;
+      partBytes += characterBytes;
+    }
+    if (part) segments.push(part);
+  }
+  flush();
+  return segments;
+}
+
+function buildSourceManifest(sources) {
+  return sources.map((source) => ({
+    artifact: source.artifact,
+    present: source.present,
+    byteLength: source.byteLength,
+    sha256: source.sha256,
+  }));
+}
+
+function buildReferenceIndex(sources) {
+  const references = new Map();
+  const pattern = /\b(?:FR|NFR|SC)-\d{3,}\b|\b(?:US|T|D)\d{3,}\b/g;
+  for (const source of sources) {
+    for (const match of source.content.matchAll(pattern)) {
+      const id = match[0];
+      if (!references.has(id)) references.set(id, new Set());
+      references.get(id).add(source.artifact);
+    }
+  }
+  return [...references.entries()].sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, artifacts]) => ({ id, artifacts: [...artifacts].sort() }));
+}
+
+function extractReviewAnchors(sources) {
+  const goalSource = sources.find((source) => source.artifact === 'goal-ledger.json');
+  let ledger;
+  try { ledger = JSON.parse(goalSource?.content || 'null'); } catch { ledger = null; }
+  const goals = Array.isArray(ledger?.goals)
+    ? ledger.goals.filter((item) => typeof item?.goal === 'string' && item.goal.trim()).map((item) => ({ id: item.id || null, goal: item.goal }))
+    : typeof ledger?.goal === 'string' && ledger.goal.trim() ? [{ id: ledger.id || null, goal: ledger.goal }] : [];
+  if (!goals.length || Buffer.byteLength(JSON.stringify(goals), 'utf8') > MAX_GOAL_CONTEXT_BYTES) return null;
+
+  const specification = sources.find((source) => source.artifact === 'spec.md')?.content || '';
+  const lines = specification.match(/[^\n]*(?:\n|$)/g)?.filter(Boolean) || [];
+  const requirements = new Map();
+  let currentId = null;
+  let currentLines = [];
+  let currentStartByte = 0;
+  let currentEndByte = 0;
+  let byteOffset = 0;
+  const saveCurrent = () => {
+    if (currentId && currentLines.length) requirements.set(currentId, {
+      content: currentLines.join(''),
+      startByte: currentStartByte,
+      endByte: currentEndByte,
+    });
+    currentId = null;
+    currentLines = [];
+  };
+  for (const line of lines) {
+    const lineStartByte = byteOffset;
+    const lineEndByte = lineStartByte + Buffer.byteLength(line, 'utf8');
+    const match = line.match(/^\s*(?:[-*]\s+)?\*\*((?:FR|NFR|SC)-\d{3,})\*\*\s*:/);
+    if (match) {
+      saveCurrent();
+      currentId = match[1];
+      currentLines = [line];
+      currentStartByte = lineStartByte;
+      currentEndByte = lineEndByte;
+      byteOffset = lineEndByte;
+      continue;
+    }
+    if (currentId && (/^\s*#{1,6}\s/.test(line) || /^\s*[-*]\s+/.test(line))) saveCurrent();
+    if (currentId) {
+      currentLines.push(line);
+      currentEndByte = lineEndByte;
+    }
+    byteOffset = lineEndByte;
+  }
+  saveCurrent();
+  return { goals, requirements };
+}
+
+function packetState({ manifest, referenceIndex, anchors, segments, packetIndex, packetCount, snapshotSha256 }) {
+  const referencedIds = new Set();
+  const referencePattern = /\b(?:FR|NFR|SC)-\d{3,}\b/g;
+  for (const segment of segments) {
+    for (const match of segment.content.matchAll(referencePattern)) referencedIds.add(match[0]);
+    if (segment.artifact === 'spec.md') {
+      for (const [id, requirement] of anchors.requirements) {
+        if (segment.startByte < requirement.endByte && requirement.startByte < segment.endByte) referencedIds.add(id);
+      }
+    }
+  }
+  const requirementContext = [...referencedIds].sort().flatMap((id) => {
+    const requirement = anchors.requirements.get(id);
+    return requirement ? [{ id, content: requirement.content }] : [];
+  });
+  return {
+    review: {
+      mode: 'bounded_multi_pass',
+      packetId: `P${String(packetIndex).padStart(3, '0')}`,
+      packetIndex,
+      packetCount,
+      sourceSnapshotSha256: snapshotSha256,
+      instruction: 'This request contains only the exact source ranges listed below, the exact approved goal statements, and exact specification requirements referenced by this packet. Other ranges are reviewed in separate requests. Do not assume unseen content is aligned; use partial or reconcile when this packet and the structural index do not provide enough evidence.',
+      continuity: 'separate_stateless_evaluation',
+    },
+    approved_goal_context: anchors.goals,
+    requirement_context: requirementContext,
+    artifact_index: manifest,
+    reference_index: referenceIndex,
+    segments: segments.map((segment) => ({
+      artifact: segment.artifact,
+      segmentId: segment.id,
+      startByte: segment.startByte,
+      endByte: segment.endByte,
+      sha256: segment.sha256,
+      content: segment.content,
+    })),
+  };
+}
+
+function createReviewSegments(sources) {
+  const segments = [];
+  const totalBytes = sources.reduce((sum, source) => sum + source.byteLength, 0);
+  if (totalBytes > MAX_REVIEW_SOURCE_BYTES) return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes };
+  let sourceOrdinal = 0;
+  for (const source of sources) {
+    sourceOrdinal += 1;
+    const parts = splitAtUtf8Boundaries(source.content, MAX_REVIEW_PACKET_CONTENT_BYTES);
+    let startByte = 0;
+    let partOrdinal = 0;
+    for (const content of parts) {
+      partOrdinal += 1;
+      const byteLength = Buffer.byteLength(content, 'utf8');
+      const bytes = Buffer.from(content, 'utf8');
+      segments.push({
+        id: `A${String(sourceOrdinal).padStart(2, '0')}-S${String(partOrdinal).padStart(3, '0')}`,
+        artifact: source.artifact,
+        startByte,
+        endByte: startByte + byteLength,
+        sha256: digest(bytes),
+        content,
+      });
+      startByte += byteLength;
+    }
+    if (startByte !== source.byteLength) return { ok: false, reason: 'source_range_coverage_invalid', totalBytes };
+  }
+  return { ok: true, segments, totalBytes };
+}
+
+function verifySegmentCoverage(sources, segments) {
+  const byArtifact = new Map(sources.map((source) => [source.artifact, []]));
+  for (const segment of segments) {
+    if (!byArtifact.has(segment.artifact)) return false;
+    byArtifact.get(segment.artifact).push(segment);
+  }
+  for (const source of sources) {
+    const ranges = byArtifact.get(source.artifact).sort((left, right) => left.startByte - right.startByte);
+    if (!ranges.length) return false;
+    let cursor = 0;
+    for (const range of ranges) {
+      if (range.startByte !== cursor || range.endByte < range.startByte ||
+          digest(Buffer.from(range.content, 'utf8')) !== range.sha256) return false;
+      cursor = range.endByte;
+    }
+    if (cursor !== source.byteLength) return false;
+  }
+  return true;
+}
+
+function buildMultiPassPlan(sources, questions) {
+  const sourcePlan = createReviewSegments(sources);
+  if (!sourcePlan.ok) return sourcePlan;
+  const anchors = extractReviewAnchors(sources);
+  if (!anchors) return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+  const manifest = buildSourceManifest(sources);
+  const referenceIndex = buildReferenceIndex(sources);
+  if (Buffer.byteLength(JSON.stringify(referenceIndex), 'utf8') > MAX_REFERENCE_INDEX_BYTES) {
+    return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+  }
+  const snapshotSha256 = digest(JSON.stringify(manifest));
+  const packets = [];
+  let pending = [];
+  const withinPacketBudget = (candidate, packetIndex) => measureTypeSafeInputBudget(
+    packetState({ manifest, referenceIndex, anchors, segments: candidate, packetIndex, packetCount: MAX_REVIEW_PACKETS, snapshotSha256 }),
+    questions,
+  ).withinLimits;
+  for (const segment of sourcePlan.segments) {
+    const candidate = [...pending, segment];
+    if (withinPacketBudget(candidate, packets.length + 1)) {
+      pending = candidate;
+      continue;
+    }
+    if (!pending.length || packets.length + 1 >= MAX_REVIEW_PACKETS) {
+      return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+    }
+    packets.push(pending);
+    pending = [segment];
+    if (!withinPacketBudget(pending, packets.length + 1)) {
+      return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+    }
+  }
+  if (pending.length) packets.push(pending);
+  if (!packets.length || packets.length > MAX_REVIEW_PACKETS || !verifySegmentCoverage(sources, packets.flat())) {
+    return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+  }
+  const requests = packets.map((segments, index) => {
+    const state = packetState({ manifest, referenceIndex, anchors, segments, packetIndex: index + 1, packetCount: packets.length, snapshotSha256 });
+    const body = JSON.stringify({ model: REQUESTED_MODEL, state, questions });
+    const inputBudget = measureTypeSafeInputBudget(state, questions);
+    return {
+      id: state.review.packetId,
+      index: index + 1,
+      state,
+      body,
+      inputBudget,
+      requestBytes: Buffer.byteLength(body, 'utf8'),
+      sourceRanges: segments.map(({ artifact, startByte, endByte, sha256 }) => ({ artifact, startByte, endByte, sha256 })),
+    };
+  });
+  const aggregateRequestBytes = requests.reduce((sum, request) => sum + request.requestBytes, 0);
+  if (requests.some((request) => !request.inputBudget.withinLimits || request.requestBytes > MAX_SINGLE_REQUEST_BODY_BYTES) ||
+      aggregateRequestBytes > MAX_AGGREGATE_REQUEST_BYTES) {
+    return { ok: false, reason: 'segmentation_limits_exceeded', totalBytes: sourcePlan.totalBytes };
+  }
+  return {
+    ok: true,
+    requests,
+    segmentCount: sourcePlan.segments.length,
+    manifest,
+    snapshotSha256,
+    totalSourceBytes: sourcePlan.totalBytes,
+    totalCoveredBytes: sourcePlan.totalBytes,
+    aggregateRequestBytes,
+    referenceCount: referenceIndex.length,
+  };
+}
+
+function interpretTypeSafeResponse(payload, event, minimumConfidence) {
+  const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
+  const alignmentAnswer = answers.goal_alignment || {};
+  const specificationAnswer = answers.specification_currency || {};
+  const testAnswer = answers.test_coverage || {};
+  const blastRadiusAnswer = answers.blast_radius || {};
+  const actionAnswer = answers.required_action || {};
+  const chatReadinessAnswer = answers.chat_readiness || {};
+  const alignment = normalizeAnswer(alignmentAnswer.choice);
+  const specification = normalizeAnswer(specificationAnswer.choice);
+  const testCoverage = normalizeAnswer(testAnswer.choice);
+  const blastRadius = normalizeAnswer(blastRadiusAnswer.choice);
+  const action = normalizeAnswer(actionAnswer.choice);
+  const chatReadiness = event === 'chat_readiness' ? normalizeAnswer(chatReadinessAnswer.choice) : '';
+  const responseAnswers = [alignmentAnswer, specificationAnswer, testAnswer, blastRadiusAnswer, actionAnswer,
+    ...(event === 'chat_readiness' ? [chatReadinessAnswer] : [])];
+  const confidences = responseAnswers.map((answer) => {
+    const value = Number(answer.confidence);
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
+  });
+  const confidence = Math.min(...confidences);
+  const evidenceAlignments = [alignment, specification, testCoverage, blastRadius];
+  const recognized = evidenceAlignments.every((value) => KNOWN_ALIGNMENTS.has(value)) && KNOWN_ACTIONS.has(action) &&
+    (event !== 'chat_readiness' || KNOWN_CHAT_READINESS.has(chatReadiness));
+  const status = evidenceAlignments.includes('conflict') || action === 'ask_user' || chatReadiness === 'ask_user' ? 'conflict'
+    : !recognized || confidence < minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' || chatReadiness === 'reconcile' ? 'reconcile'
+    : 'aligned';
+  const answerIds = ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
+    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
+  const answerRecords = Object.fromEntries(answerIds.map((id) => [id, answerRecord(answers[id] || {}, id)]));
+  const weakestIndex = confidences.indexOf(confidence);
+  const weakestQuestionId = answerIds[weakestIndex] || null;
+  const providerModel = safeToken(payload.model, 80);
+  const usage = payload.usage && Number.isSafeInteger(payload.usage.input_tokens) && payload.usage.input_tokens >= 0 &&
+    Number.isSafeInteger(payload.usage.output_tokens) && payload.usage.output_tokens >= 0
+    ? { inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens }
+    : null;
+  return {
+    status,
+    reason: status === 'reconcile' ? (confidence < minimumConfidence ? 'confidence_below_minimum_or_evidence_needs_reconciliation' : 'evidence_needs_reconciliation') : null,
+    model: providerModel,
+    usage,
+    confidence,
+    answers: answerRecords,
+    confidenceGate: {
+      observed: confidence,
+      belowMinimum: confidence < minimumConfidence,
+      weakestQuestion: weakestQuestionId ? {
+        id: weakestQuestionId,
+        choice: answerRecords[weakestQuestionId].choice,
+        confidence: answerRecords[weakestQuestionId].confidence,
+        probabilities: answerRecords[weakestQuestionId].probabilities,
+        closestAlternative: answerRecords[weakestQuestionId].closestAlternative,
+      } : null,
+    },
+  };
+}
+
+async function requestTypeSafeEvaluation({ state, body, questions, event, minimumConfidence, fetchImpl, apiKey }) {
+  let response;
+  try {
+    response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
+      method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+      body: body || JSON.stringify({ model: REQUESTED_MODEL, state, questions }),
+    });
+  } catch (error) {
+    return {
+      requestAttempted: true,
+      requestSent: null,
+      status: 'unavailable',
+      reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error',
+    };
+  }
+  if (!response.ok) {
+    const errorBody = await readBoundedResponseText(response);
+    return {
+      requestAttempted: true,
+      requestSent: true,
+      status: 'unavailable',
+      reason: 'provider_http_error',
+      providerError: providerDiagnostics(response, errorBody.text, errorBody.truncated),
+    };
+  }
+  const responseBody = await readBoundedResponseText(response, MAX_PROVIDER_RESPONSE_BYTES);
+  if (responseBody.truncated) {
+    return { requestAttempted: true, requestSent: true, status: 'unavailable', reason: 'response_too_large' };
+  }
+  let payload;
+  try { payload = JSON.parse(responseBody.text); } catch {
+    return { requestAttempted: true, requestSent: true, status: 'unavailable', reason: 'invalid_response_body' };
+  }
+  return { requestAttempted: true, requestSent: true, ...interpretTypeSafeResponse(payload, event, minimumConfidence) };
+}
+
+function aggregatePacketResults(packetResults, minimumConfidence, event) {
+  const conflict = packetResults.some((packet) => packet.status === 'conflict');
+  const incomplete = packetResults.some((packet) => packet.status === 'unavailable');
+  const reconcile = packetResults.some((packet) => packet.status === 'reconcile');
+  const confidenceValues = packetResults.map((packet) => packet.confidence);
+  const confidence = confidenceValues.length && confidenceValues.every(Number.isFinite) ? Math.min(...confidenceValues) : 0;
+  const status = conflict ? 'conflict' : incomplete ? 'unavailable' : reconcile || confidence < minimumConfidence ? 'reconcile' : 'aligned';
+  const answerIds = ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
+    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
+  const answers = {};
+  for (const id of answerIds) {
+    const entries = packetResults.map((packet) => ({ packetId: packet.id, ...(packet.answers?.[id] || {}) }))
+      .filter((answer) => answer.choice !== undefined || answer.confidence !== undefined);
+    const weakest = entries.sort((left, right) => (left.confidence ?? 0) - (right.confidence ?? 0))[0];
+    const choices = [...new Set(entries.map((answer) => answer.choice).filter(Boolean))];
+    answers[id] = weakest ? {
+      ...weakest,
+      choice: choices.length === 1 ? choices[0] : null,
+      choices,
+      confidence: entries.reduce((lowest, answer) => Math.min(lowest, Number.isFinite(answer.confidence) ? answer.confidence : 0), 1),
+    } : { choice: null, confidence: 0, choices: [] };
+  }
+  const weakest = packetResults.flatMap((packet) => Object.entries(packet.answers || {}).map(([id, answer]) => ({
+    id,
+    packetId: packet.id,
+    packetIndex: packet.index,
+    ...answer,
+  }))).sort((left, right) => (left.confidence ?? 0) - (right.confidence ?? 0))[0];
+  const models = [...new Set(packetResults.map((packet) => packet.model).filter(Boolean))];
+  const knownUsage = packetResults.map((packet) => packet.usage).filter(Boolean);
+  const usageComplete = knownUsage.length === packetResults.length && packetResults.length > 0;
+  const usage = knownUsage.length ? {
+    inputTokens: knownUsage.reduce((sum, value) => sum + value.inputTokens, 0),
+    outputTokens: knownUsage.reduce((sum, value) => sum + value.outputTokens, 0),
+  } : null;
+  const gate = {
+    minimum: minimumConfidence,
+    observed: confidence,
+    belowMinimum: confidence < minimumConfidence,
+    weakestQuestion: weakest ? {
+      id: weakest.id,
+      packetId: weakest.packetId,
+      packetIndex: weakest.packetIndex,
+      choice: weakest.choice,
+      confidence: weakest.confidence,
+      probabilities: weakest.probabilities,
+      closestAlternative: weakest.closestAlternative,
+    } : null,
+  };
+  return { status, confidence, answers, confidenceGate: gate, models, model: models.length === 1 ? models[0] : null, usage, usageComplete };
+}
+
 async function saveReceipt(featureDir, event, receipt) {
   const receiptRelativeDir = path.join('evidence', 'semantic-review');
   await assertNoSymlinkComponents(featureDir, receiptRelativeDir);
@@ -333,8 +758,8 @@ async function saveReceipt(featureDir, event, receipt) {
   if (previous) {
     let previousVersion;
     try { previousVersion = JSON.parse(previous).schemaVersion; } catch {}
-    if (previousVersion === 2) {
-      const archivePath = path.join(receiptDir, `${event}.v2.json`);
+    if ([2, 3].includes(previousVersion)) {
+      const archivePath = path.join(receiptDir, `${event}.v${previousVersion}.json`);
       await assertNotSymlink(archivePath);
       try {
         const archiveHandle = await fs.open(archivePath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollowFlag, 0o600);
@@ -393,6 +818,8 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
     complete: Boolean(info.complete),
     sourceBytes: info.bytes ?? 0,
     sentBytes: 0,
+    reviewedBytes: 0,
+    reviewed: false,
   }]));
   const state = Object.fromEntries(artifacts.map(([name, info]) => [name, {
     present: info.present,
@@ -418,16 +845,19 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
   const inputBudget = measureTypeSafeInputBudget(state, questions);
   const missingRequiredEvidence = missingArtifacts.length > 0;
   const baseReceipt = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     provider: 'typesafe',
     event,
     status: 'unavailable',
     reason: null,
+    reviewMode: inputBudget.withinLimits ? 'single_request' : 'bounded_multi_pass',
     requestAttempted: false,
     requestSent: false,
     requestedModel: REQUESTED_MODEL,
     model: null,
+    models: [],
     usage: null,
+    usageComplete: false,
     inputBudget,
     missingArtifacts,
     missingRequiredEvidence,
@@ -452,119 +882,213 @@ export async function runSemanticReview({ workspace = process.cwd(), featureDir,
       reason: 'required_artifacts_missing',
     });
   }
-  if (!inputBudget.withinLimits) {
-    return saveReceipt(featureDir, event, {
-      ...baseReceipt,
-      status: 'unavailable',
-      reason: 'input_budget_exceeded',
+
+  const sources = artifacts.map(([name, info]) => ({
+    artifact: name,
+    present: info.present,
+    byteLength: info.bytes ?? 0,
+    sha256: info.sha256,
+    content: info.content,
+  }));
+  if (event === 'chat_readiness') {
+    sources.push({
+      artifact: 'chat_context',
+      present: true,
+      byteLength: chatContextBytes,
+      sha256: chatContextSha256,
+      content: redactedChatContext,
     });
   }
 
+  if (inputBudget.withinLimits) {
+    const { apiKey } = await resolveApiKey({ workspace, env, keychain });
+    const requestBody = JSON.stringify({ model: REQUESTED_MODEL, state, questions });
+    const evaluation = await requestTypeSafeEvaluation({
+      state, body: requestBody, questions, event, minimumConfidence: policy.minimumConfidence, fetchImpl, apiKey,
+    });
+    const sentBytes = evaluation.requestSent === true;
+    const reviewed = ['aligned', 'reconcile', 'conflict'].includes(evaluation.status);
+    const updatedCoverage = Object.fromEntries(artifacts.map(([name, info]) => [name, {
+      ...artifactCoverage[name],
+      sentBytes: evaluation.requestSent === null ? null : sentBytes ? info.bytes ?? 0 : 0,
+      reviewedBytes: reviewed ? info.bytes ?? 0 : 0,
+      reviewed,
+    }]));
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      ...evaluation,
+      status: evaluation.status,
+      reason: evaluation.reason || null,
+      requestAttempted: evaluation.requestAttempted,
+      requestSent: evaluation.requestSent,
+      models: evaluation.model ? [evaluation.model] : [],
+      usageComplete: Boolean(evaluation.usage),
+      artifactCoverage: updatedCoverage,
+      confidenceGate: { minimum: policy.minimumConfidence, ...evaluation.confidenceGate },
+    });
+  }
+
+  const plan = buildMultiPassPlan(sources, questions);
+  if (!plan.ok) {
+    return saveReceipt(featureDir, event, {
+      ...baseReceipt,
+      reason: plan.reason || 'segmentation_limits_exceeded',
+      multiPass: {
+        complete: false,
+        packetCount: 0,
+        completedPacketCount: 0,
+        sourceBytes: plan.totalBytes ?? sources.reduce((sum, source) => sum + source.byteLength, 0),
+        coveredBytes: 0,
+        aggregateRequestBytes: 0,
+        limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+        packets: [],
+      },
+    });
+  }
+
+  const plannedPackets = plan.requests.map((request) => ({
+    id: request.id,
+    sourceRanges: request.sourceRanges,
+    requestBytes: request.requestBytes,
+    inputBudget: request.inputBudget,
+    status: 'pending',
+  }));
   const { apiKey } = await resolveApiKey({ workspace, env, keychain });
-  let response;
-  try {
-    baseReceipt.requestAttempted = true;
-    response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
-      method: 'POST', headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(10_000),
-      body: JSON.stringify({ model: REQUESTED_MODEL, state, questions }),
+  const pendingReceipt = {
+    ...baseReceipt,
+    reason: 'review_in_progress',
+    multiPass: {
+      complete: false,
+      packetCount: plan.requests.length,
+      completedPacketCount: 0,
+      sourceBytes: plan.totalSourceBytes,
+      coveredBytes: 0,
+      aggregateRequestBytes: plan.aggregateRequestBytes,
+      snapshotSha256: plan.snapshotSha256,
+      referenceCount: plan.referenceCount,
+      crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
+      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+      packets: plannedPackets,
+    },
+  };
+  await saveReceipt(featureDir, event, pendingReceipt);
+
+  const packetResults = [];
+  for (const request of plan.requests) {
+    const evaluation = await requestTypeSafeEvaluation({
+      state: request.state,
+      body: request.body,
+      questions,
+      event,
+      minimumConfidence: policy.minimumConfidence,
+      fetchImpl,
+      apiKey,
     });
-  } catch (error) {
-    return saveReceipt(featureDir, event, {
-      ...baseReceipt,
-      requestSent: null,
-      reason: error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network_error',
-      artifactCoverage: Object.fromEntries(artifacts.map(([name]) => [name, { ...artifactCoverage[name], sentBytes: null }])),
+    packetResults.push({
+      id: request.id,
+      index: request.index,
+      sourceRanges: request.sourceRanges,
+      requestBytes: request.requestBytes,
+      inputBudget: request.inputBudget,
+      ...evaluation,
     });
+    if (evaluation.status === 'unavailable') break;
   }
-  baseReceipt.requestSent = true;
-  baseReceipt.artifactCoverage = Object.fromEntries(artifacts.map(([name, info]) => [name, {
-    ...artifactCoverage[name],
-    sentBytes: info.bytes ?? 0,
-  }]));
-  if (!response.ok) {
-    const errorBody = await readBoundedResponseText(response);
-    const providerError = providerDiagnostics(response, errorBody.text, errorBody.truncated);
-    return saveReceipt(featureDir, event, {
-      ...baseReceipt,
-      requestSent: true,
-      reason: 'provider_http_error',
-      providerError,
-    });
+
+  const snapshotStillCurrent = await Promise.all(artifacts.map(async ([name, original]) => {
+    try {
+      const current = await readArtifact(path.join(featureDir, name));
+      return current.present && current.sha256 === original.sha256 && current.bytes === original.bytes;
+    } catch { return false; }
+  })).then((matches) => matches.every(Boolean));
+  const allResponsesValid = packetResults.length === plan.requests.length &&
+    packetResults.every((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status));
+  const reviewedSegments = new Set(packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
+    .flatMap((packet) => packet.sourceRanges.map((range) => `${range.artifact}:${range.startByte}:${range.endByte}`)));
+  const totalReviewedBytes = packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
+    .flatMap((packet) => packet.sourceRanges).reduce((sum, range) => sum + (range.endByte - range.startByte), 0);
+  const totalSentBytes = packetResults.filter((packet) => packet.requestSent === true)
+    .flatMap((packet) => packet.sourceRanges).reduce((sum, range) => sum + (range.endByte - range.startByte), 0);
+  const aggregate = aggregatePacketResults(packetResults, policy.minimumConfidence, event);
+  const coverageComplete = allResponsesValid && snapshotStillCurrent && reviewedSegments.size === plan.segmentCount;
+  let finalStatus = aggregate.status;
+  let finalReason = aggregate.status === 'reconcile'
+    ? (aggregate.confidence < policy.minimumConfidence ? 'confidence_below_minimum_or_evidence_needs_reconciliation' : 'evidence_needs_reconciliation')
+    : aggregate.status === 'conflict' ? null : null;
+  if (!snapshotStillCurrent) {
+    finalStatus = 'unavailable';
+    finalReason = 'source_changed_during_review';
+  } else if (!allResponsesValid) {
+    finalStatus = aggregate.status === 'conflict' ? 'conflict' : 'unavailable';
+    finalReason = packetResults.at(-1)?.reason || 'packet_review_incomplete';
+  } else if (!coverageComplete) {
+    finalStatus = 'unavailable';
+    finalReason = 'source_range_coverage_invalid';
   }
-  const responseBody = await readBoundedResponseText(response, MAX_PROVIDER_RESPONSE_BYTES);
-  if (responseBody.truncated) {
-    return saveReceipt(featureDir, event, { ...baseReceipt, reason: 'response_too_large' });
-  }
-  let payload;
-  try { payload = JSON.parse(responseBody.text); } catch {
-    return saveReceipt(featureDir, event, { ...baseReceipt, reason: 'invalid_response_body' });
-  }
-  const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
-  const alignmentAnswer = answers.goal_alignment || {};
-  const specificationAnswer = answers.specification_currency || {};
-  const testAnswer = answers.test_coverage || {};
-  const blastRadiusAnswer = answers.blast_radius || {};
-  const actionAnswer = answers.required_action || {};
-  const chatReadinessAnswer = answers.chat_readiness || {};
-  const alignment = normalizeAnswer(alignmentAnswer.choice);
-  const specification = normalizeAnswer(specificationAnswer.choice);
-  const testCoverage = normalizeAnswer(testAnswer.choice);
-  const blastRadius = normalizeAnswer(blastRadiusAnswer.choice);
-  const action = normalizeAnswer(actionAnswer.choice);
-  const chatReadiness = event === 'chat_readiness' ? normalizeAnswer(chatReadinessAnswer.choice) : '';
-  // An invalid or out-of-range confidence must count as zero, not be
-  // dropped: dropping it would let one bad value be outweighed by the
-  // other, and an out-of-range value (e.g. 2) would otherwise satisfy the
-  // minimum-confidence check on a malformed response.
-  const responseAnswers = [alignmentAnswer, specificationAnswer, testAnswer, blastRadiusAnswer, actionAnswer,
-    ...(event === 'chat_readiness' ? [chatReadinessAnswer] : [])];
-  const confidences = responseAnswers.map((answer) => {
-    const value = Number(answer.confidence);
-    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
-  });
-  const confidence = Math.min(...confidences);
-  // An answer outside the known choice set fails toward reconcile, not
-  // toward a silent aligned pass: an unexpected label must not be read as
-  // "everything is fine".
-  const evidenceAlignments = [alignment, specification, testCoverage, blastRadius];
-  const recognized = evidenceAlignments.every((value) => KNOWN_ALIGNMENTS.has(value)) && KNOWN_ACTIONS.has(action) &&
-    (event !== 'chat_readiness' || KNOWN_CHAT_READINESS.has(chatReadiness));
-  const status = evidenceAlignments.includes('conflict') || action === 'ask_user' || chatReadiness === 'ask_user' ? 'conflict'
-    : !recognized || confidence < policy.minimumConfidence || evidenceAlignments.includes('partial') || action === 'reconcile' || chatReadiness === 'reconcile' ? 'reconcile'
-    : 'aligned';
-  const answerIds = ['goal_alignment', 'specification_currency', 'test_coverage', 'blast_radius', 'required_action',
-    ...(event === 'chat_readiness' ? ['chat_readiness'] : [])];
-  const answerRecords = Object.fromEntries(answerIds.map((id) => [id, answerRecord(answers[id] || {}, id)]));
-  const weakestIndex = confidences.indexOf(confidence);
-  const weakestQuestionId = answerIds[weakestIndex] || null;
-  const weakestQuestion = weakestQuestionId ? answerRecords[weakestQuestionId] : null;
-  const providerModel = safeToken(payload.model, 80);
-  const usage = payload.usage && Number.isSafeInteger(payload.usage.input_tokens) && payload.usage.input_tokens >= 0 &&
-    Number.isSafeInteger(payload.usage.output_tokens) && payload.usage.output_tokens >= 0
-    ? { inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens }
-    : null;
+  const updatedCoverage = Object.fromEntries(artifacts.map(([name]) => {
+    const plannedRangeCount = plan.requests.flatMap((request) => request.sourceRanges).filter((range) => range.artifact === name).length;
+    const reviewedRangeCount = packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
+      .flatMap((packet) => packet.sourceRanges).filter((range) => range.artifact === name).length;
+    const sentBytes = packetResults.some((packet) => packet.requestSent === null && packet.sourceRanges.some((range) => range.artifact === name))
+      ? null
+      : packetResults.filter((packet) => packet.requestSent === true).flatMap((packet) => packet.sourceRanges)
+        .filter((range) => range.artifact === name).reduce((sum, range) => sum + range.endByte - range.startByte, 0);
+    const reviewedBytes = packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status))
+      .flatMap((packet) => packet.sourceRanges).filter((range) => range.artifact === name)
+      .reduce((sum, range) => sum + range.endByte - range.startByte, 0);
+    return [name, {
+      ...artifactCoverage[name],
+      sentBytes,
+      reviewedBytes,
+      reviewed: reviewedRangeCount === plannedRangeCount && plannedRangeCount > 0,
+    }];
+  }));
+  const failedPacket = packetResults.find((packet) => packet.providerError);
+  const requestAttempted = packetResults.some((packet) => packet.requestAttempted);
+  const requestSent = packetResults.some((packet) => packet.requestSent === true) ? true
+    : packetResults.some((packet) => packet.requestSent === null) ? null : false;
   return saveReceipt(featureDir, event, {
     ...baseReceipt,
-    status,
-    reason: status === 'reconcile' ? (confidence < policy.minimumConfidence ? 'confidence_below_minimum_or_evidence_needs_reconciliation' : 'evidence_needs_reconciliation') : null,
-    requestSent: true,
-    model: providerModel,
-    usage,
-    confidence,
-    confidenceGate: {
-      minimum: policy.minimumConfidence,
-      observed: confidence,
-      belowMinimum: confidence < policy.minimumConfidence,
-      weakestQuestion: weakestQuestionId ? {
-        id: weakestQuestionId,
-        choice: weakestQuestion.choice,
-        confidence: weakestQuestion.confidence,
-        probabilities: weakestQuestion.probabilities,
-        closestAlternative: weakestQuestion.closestAlternative,
-      } : null,
+    ...aggregate,
+    status: finalStatus,
+    reason: finalReason,
+    reviewMode: 'bounded_multi_pass',
+    requestAttempted,
+    requestSent,
+    requestCount: packetResults.length,
+    artifactCoverage: updatedCoverage,
+    confidenceGate: { ...aggregate.confidenceGate, minimum: policy.minimumConfidence },
+    providerError: failedPacket?.providerError || null,
+    multiPass: {
+      complete: finalStatus !== 'unavailable' && coverageComplete,
+      packetCount: plan.requests.length,
+      completedPacketCount: packetResults.filter((packet) => ['aligned', 'reconcile', 'conflict'].includes(packet.status)).length,
+      sourceBytes: plan.totalSourceBytes,
+      sentBytes: totalSentBytes,
+      coveredBytes: totalReviewedBytes,
+      aggregateRequestBytes: plan.aggregateRequestBytes,
+      snapshotSha256: plan.snapshotSha256,
+      referenceCount: plan.referenceCount,
+      coverageComplete,
+      crossPacketContinuity: 'none_each_packet_is_a_separate_evaluation',
+      limits: { maxSourceBytes: MAX_REVIEW_SOURCE_BYTES, maxPackets: MAX_REVIEW_PACKETS, maxAggregateRequestBytes: MAX_AGGREGATE_REQUEST_BYTES },
+      packets: packetResults.map((packet) => ({
+        id: packet.id,
+        sourceRanges: packet.sourceRanges,
+        requestBytes: packet.requestBytes,
+        inputBudget: packet.inputBudget,
+        status: packet.status,
+        reason: packet.reason || null,
+        requestAttempted: packet.requestAttempted,
+        requestSent: packet.requestSent,
+        model: packet.model || null,
+        usage: packet.usage || null,
+        confidence: packet.confidence ?? null,
+        confidenceGate: packet.confidenceGate || null,
+        answers: packet.answers || {},
+        providerError: packet.providerError || null,
+      })),
     },
-    answers: answerRecords,
   });
 }
 // A CI/automation caller must not read "exit 0" as a pass for anything other
