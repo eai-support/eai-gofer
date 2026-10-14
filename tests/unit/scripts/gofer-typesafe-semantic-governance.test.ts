@@ -586,6 +586,33 @@ describe('TypeSafe semantic governance', () => {
     );
   });
 
+  it.each([2, 3])(
+    'reports the actual prior schema version %i when a receipt archive conflicts',
+    async (schemaVersion) => {
+      const { workspace, featureDir } = await fixture();
+      const credentials = await import(credentialsUrl.href);
+      const semantic = await import(semanticUrl.href);
+      await credentials.connect({ workspace, key: 'secret-value' });
+      const receiptDir = path.join(featureDir, 'evidence', 'semantic-review');
+      await mkdir(receiptDir, { recursive: true });
+      const previous = JSON.stringify({ schemaVersion, status: 'reconcile' }) + '\n';
+      await writeFile(path.join(receiptDir, 'before_validation.json'), previous);
+      await writeFile(
+        path.join(receiptDir, `before_validation.v${schemaVersion}.json`),
+        JSON.stringify({ schemaVersion, status: 'aligned' }) + '\n'
+      );
+
+      await expect(
+        semantic.runSemanticReview({
+          workspace,
+          featureDir,
+          event: 'before_validation',
+          fetchImpl: vi.fn(async () => alignedResponse()),
+        })
+      ).rejects.toThrow(`A different version-${schemaVersion} receipt archive already exists`);
+    }
+  );
+
   it('reports unavailable, not an uncaught exception, on a network failure or timeout', async () => {
     const { workspace, featureDir } = await fixture();
     const credentials = await import(credentialsUrl.href);

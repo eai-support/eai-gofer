@@ -949,7 +949,7 @@ async function saveReceipt(featureDir, event, receipt) {
         const archiveHandle = await openExistingNoFollow(archivePath, constants.O_RDONLY);
         try {
           if ((await archiveHandle.readFile('utf8')) !== previous) {
-            throw new Error('A different version-2 receipt archive already exists. Preserve it before writing a new review.');
+            throw new Error(`A different version-${previousVersion} receipt archive already exists. Preserve it before writing a new review.`);
           }
         } finally { await archiveHandle.close(); }
       }
