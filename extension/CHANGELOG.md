@@ -2,6 +2,10 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.14.5] - 2026-10-14
+
+Complete-evidence Jev review
+
 ## [3.14.4] - 2026-10-14
 
 Offer EAI support only when requested and guide outcome-based issue and pull request titles
