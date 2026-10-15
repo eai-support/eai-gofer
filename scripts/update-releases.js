@@ -119,6 +119,14 @@ const newRelease = {
       latest_download_url: latestAgentPluginZipUrl,
       size_mb: agentPluginSizeMb,
     },
+    antigravity: {
+      bundle_url: publicPluginBundleUrl,
+      manifest_url: `${publicPluginBundleUrl}/plugin.json`,
+      install_url: 'https://github.com/eai-support/eai-gofer',
+      download_url: agentPluginDownloadUrl,
+      latest_download_url: latestAgentPluginZipUrl,
+      size_mb: agentPluginSizeMb,
+    },
     gemini: {
       bundle_url: publicPluginBundleUrl,
       manifest_url: `${publicPluginBundleUrl}/gemini-extension.json`,

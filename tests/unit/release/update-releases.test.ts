@@ -35,6 +35,14 @@ interface ReleaseEntry {
       latest_download_url: string;
       size_mb: number;
     };
+    antigravity?: {
+      bundle_url: string;
+      manifest_url: string;
+      install_url: string;
+      download_url: string;
+      latest_download_url: string;
+      size_mb: number;
+    };
     gemini?: {
       bundle_url: string;
       manifest_url: string;
@@ -151,6 +159,12 @@ describe('update-releases.js', () => {
     );
     expect(updated.releases[0].assets?.codex?.manifest_url).toBe(
       'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json'
+    );
+    expect(updated.releases[0].assets?.antigravity?.manifest_url).toBe(
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugin.json'
+    );
+    expect(updated.releases[0].assets?.antigravity?.install_url).toBe(
+      'https://github.com/eai-support/eai-gofer'
     );
     expect(updated.releases[0].assets?.gemini?.manifest_url).toBe(
       'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
