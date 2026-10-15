@@ -238,13 +238,41 @@ When an app reaches a deployment decision, ask once: **"Where should this app ru
 
 Explain the choices before the user decides:
 
-- **EAI-managed Azure**: use the current local app as source, choose who maintains its GitHub repository, and deploy its verified commit through TenantInfra.
+- **EAI-managed Azure**: EAI builds and runs the app from the local source. The default path is direct mode: sign in, run `eai deploy app <app-key> --target eai`, wait for the URL. No GitHub account, no workflow file, no Docker.
 - **Your Azure**: keep the existing customer-owned Azure deployment path and credentials.
 - **Local only**: stop after local validation. Do not create cloud resources.
 
-For EAI-managed Azure:
+Keep the hosting choice separate from source ownership. Hosting decides where the app runs. Source ownership decides who keeps a copy of the source on GitHub. Ask about source ownership only when the user wants GitHub involved or the app already has a GitHub link.
 
-1. Verify `eai deploy app --help` and `eai deploy doctor --help` from the installed CLI. The doctor command must advertise `--operation-id`, `--app-key`, `--tenant-id`, `--target-tenant-id`, and `--evidence-out`. If it does not, stop and ask the user to update the CLI. Do not reproduce its API, GitHub, workflow, or TenantInfra logic in Gofer.
+### EAI-managed Azure, direct mode (default)
+
+Use direct mode unless the user asks for a GitHub repository or the app already has a GitHub link. The CLI selects `--source direct` on its own when `--source` is omitted and the app has no GitHub link (no `--repo`, `--installation-id`, or GitHub link session, and no local `.eai/cli-managed-source-receipt.json`).
+
+1. Verify `eai deploy app --help` from the installed CLI. It must advertise `--target eai` and `--source direct`. If it does not, stop and ask the user to update the CLI. Do not reproduce its API, build, or TenantInfra logic in Gofer.
+2. Verify EAI login, the selected tenant, and app access. If the CLI says to sign in again, run `eai login`. No GitHub identity, repository, pull request, workflow file, or Docker install is needed. Do not start a GitHub link step.
+3. Run `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> [--environment preview]`. The CLI packages the exact bounded local source and uploads it. EAI builds the image in its own registry and deploys it through TenantInfra. Tell the user: "This takes a few minutes. I will show each step as it happens." Confirm with the user before running it.
+4. Read progress exactly as the CLI prints it, one line per transition:
+   - `uploaded (operation <operationId>)`: the source is on EAI. Nothing is built yet. Record the operation ID and `source: direct` in the active feature notes now.
+   - `building (operation <operationId>)`: EAI is building the app image.
+   - `deploying (operation <operationId>)`: the built image is starting.
+   - `ready <url> (operation <operationId>)`: the app is live. Exit code 0. Give the user the URL.
+   - `failed <reason>: <message> (operation <operationId>)`: exit code 1. The previous version stays live.
+   With `--format json` the CLI prints no transition lines and emits one JSON object at the end (`ok`, `sourceMode: "direct"`, `operationId`, `status`, `activeUrl`, `imageDigest`, `deploymentId`, `failure`, `transitions`). Treat that JSON as the deployment authority. `--no-wait` prints only the `uploaded` line and exits 0; it does not mean the app is live.
+5. If the command stops before `ready`, explain the failure by stage in plain words, then give the one safe next action. Use the CLI reason and `nextAction`; use `eai errors explain <code-or-reason> --format json` at most once for the original failure when advertised.
+   - Before `uploaded`, sign-in, tenant, or app access: sign in, pick the tenant, or ask the workspace admin for access. Nothing was uploaded.
+   - Before `uploaded`, source rejected (too large, symlinks, reserved paths, or secrets found by the server scan): fix the listed files and run the same command again. Nothing was built.
+   - Before `uploaded`, `DIRECT_DEPLOY_DISABLED` (the server answered `409 direct_deploy_disabled`): direct mode is off in this environment. Offer the GitHub-based options below.
+   - `failed` after `building`: the build did not succeed, for example a broken Dockerfile or a dependency that could not be fetched. Show the reason and the build log tail the CLI returns. Reason `build_timeout` means the build ran out of time. The previous version stays live. Fix locally, preview, and run the same command again.
+   - `failed` after `deploying` with reason `failed-readiness`: the new version started but did not become healthy. The previous healthy version is kept. Show the reason, fix locally, and run the same command again.
+   - Polling timeout (`SOURCE_OPERATION_TIMEOUT`): the operation is still running on EAI. Resume with `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --source direct --resume <operation-id>`. Add `--environment` only to have it checked; otherwise the sealed operation's environment is used. Never substitute the latest operation.
+6. Claim deployment complete only on the `ready <url>` line, or JSON `status: active` with an HTTPS `activeUrl`. To ship an edit, run the same command again. Identical source returns the same operation.
+7. Do not run `eai deploy doctor` for a direct operation. Today it accepts only the GitHub-based source modes (`source-unknown`, `eai-cli-generated`) and rejects `direct`. Record the deploy command's `--format json` result (`sourceMode: "direct"`, `operationId`, `status`, `activeUrl`, `imageDigest`, `deploymentId`) in the active feature notes as the deployment evidence. There is no `--retry` for direct; `--source direct --retry` fails with `DEPLOY_MODE_CONFLICT`. Gofer's `[hosting:eai-managed]` receipt gate still expects a GitHub-based source mode, so until it learns `direct`, keep direct deployments out of a `[hosting:eai-managed]` task line and record the JSON result in the feature notes instead.
+
+### EAI-managed Azure with a GitHub repository
+
+Use these GitHub-based options only when the user wants the source on GitHub or the app already has a GitHub link. They are not required for EAI-managed Azure.
+
+1. Verify `eai deploy app --help` and `eai deploy doctor --help` as above. Do not reproduce the CLI's API, GitHub, workflow, or TenantInfra logic in Gofer.
 2. Verify EAI login, the selected tenant, and app access. The CLI must verify a GitHub identity linked to that same EAI actor through its browser handoff. Guide the user to link an existing GitHub account or create one if needed. Matching email text or a local `gh` login does not prove this association.
 3. Ask **"Who should maintain the app source: EAI-maintained or My GitHub?"** after identity verification. Keep this choice separate from EAI Azure hosting. EAI-maintained means a server-owned bot repository; My GitHub means the customer's repository.
 4. For **EAI-maintained**, use `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --source eai-managed --target-tenant-id <runtime-tenant> [--environment preview] [--wait] --format json`. The CLI packages the exact bounded local source. EAI derives the repository, creates and validates the bot PR, merges it, and dispatches the exact merged commit. Do not require an origin remote, a customer push, customer write access to the EAI repository, or customer PR merging. Never treat an accepted bundle or `pending_review` receipt as deployment success.
@@ -257,7 +285,8 @@ For EAI-managed Azure:
 If deployment stops, use the CLI reason and `nextAction`. Then use `eai errors explain <code-or-reason> --format json` at most once for the original failure when advertised. Never retry or explain a failed `eai errors explain` command. Explain what happened, why it matters, and the exact safe resume action. Keep these causes separate:
 
 - EAI login, selected account, tenant membership, or app access;
-- missing or incorrectly linked GitHub identity for the signed-in EAI actor;
+- direct mode: rejected source at upload, direct mode disabled in this environment, build failure or `build_timeout`, `failed-readiness`, or a polling timeout on a still-running operation;
+- missing or incorrectly linked GitHub identity for the signed-in EAI actor (GitHub-based options only);
 - customer-repository GitHub login or wrong GitHub account;
 - missing tenant repository connection for customer-owned source;
 - missing or incorrect GitHub App installation or repository grant;
