@@ -364,10 +364,12 @@ jobs:
             {
               echo "## VS Code Marketplace"
               echo
-              echo "Marketplace publish failed, but the GitHub Release and public Gofer feed were published successfully."
+              echo "Marketplace publish failed. The GitHub Release exists, but this workflow does not confirm the Gofer auto-update feed."
               echo
               echo "Next fixes:"
               echo "- Add the managed identity shown in the workflow logs as a Contributor on the EnterpriseAI Marketplace publisher."
               echo "- Confirm the repository VSCE_AZURE_* variables point at that managed identity."
+              echo "- Run ./release.sh publish-feed ${{ steps.version.outputs.version }} if no public-feed pull request is open."
+              echo "- Review and merge the public-feed pull request, then confirm the GitHub Pages checks pass."
             } >> "$GITHUB_STEP_SUMMARY"
           fi

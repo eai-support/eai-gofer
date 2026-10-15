@@ -202,6 +202,34 @@ describe('update-releases.js', () => {
     expect(updated.releases[0].tag_name).toBe(`v${version}`);
   });
 
+  it('uses official publication time and asset sizes when supplied', async () => {
+    const version = '3.2.2';
+    const publishedAt = '2026-10-15T18:55:01Z';
+    const officialAssets = path.join(tmpRoot, 'official-release-assets');
+    const vsixPath = path.join(officialAssets, `eai-gofer-${version}.vsix`);
+    const pluginZipPath = path.join(officialAssets, `eai-gofer-agent-plugin-${version}.zip`);
+
+    fs.mkdirSync(officialAssets, { recursive: true });
+    fs.writeFileSync(releasesPath, JSON.stringify({ latest_version: '3.2.1', releases: [] }));
+    fs.writeFileSync(vsixPath, Buffer.alloc(1024 * 1024));
+    fs.writeFileSync(pluginZipPath, Buffer.alloc(2 * 1024 * 1024));
+
+    await execFileAsync('node', [scriptPath, version, 'Official release notes', '', publishedAt], {
+      env: {
+        ...process.env,
+        GOFER_RELEASE_VSIX_PATH: vsixPath,
+        GOFER_RELEASE_PLUGIN_ZIP_PATH: pluginZipPath,
+      },
+    });
+
+    const updated = readReleasesJson(releasesPath);
+    expect(updated.latest_version).toBe(version);
+    expect(updated.releases[0].published_at).toBe('2026-10-15T18:55:01.000Z');
+    expect(updated.releases[0].notes).toBe('Official release notes');
+    expect(updated.releases[0].size_mb).toBe(1);
+    expect(updated.releases[0].assets?.claude?.size_mb).toBe(2);
+  });
+
   it('keeps only the latest five releases', async () => {
     const version = '3.3.2';
     const existingReleases = ['3.3.1', '3.3.0', '3.2.2', '3.2.1', '3.2.0'].map(
