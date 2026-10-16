@@ -79,7 +79,9 @@ async function writePublicPluginAliases(pluginDir) {
   ];
 
   for (const [sourceRelativePath, aliasRelativePath] of aliases) {
-    const source = path.join(pluginDir, sourceRelativePath);
+    const nestedPluginSource = path.join(pluginDir, 'plugins', 'eai-gofer', sourceRelativePath);
+    const outerBundleSource = path.join(pluginDir, sourceRelativePath);
+    const source = (await pathExists(nestedPluginSource)) ? nestedPluginSource : outerBundleSource;
     if (!(await pathExists(source))) {
       continue;
     }

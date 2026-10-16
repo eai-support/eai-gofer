@@ -190,18 +190,24 @@ public_release_files_match() {
     local version="$1"
     local vsix_path="$2"
     local plugin_zip_path="$3"
-    local feed_path="docs-site/static/releases.json"
-    local plugin_version_path="docs-site/static/releases/plugins/eai-gofer/.eai-gofer-plugin-version"
-    local feed_version
+    local plugin_root="$4"
+    local published_at="$5"
+    local release_notes="$6"
 
-    [ -f "$feed_path" ] && [ -f "$plugin_version_path" ] || return 1
-    feed_version="$(node -e 'const fs=require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).latest_version || "")' "$feed_path")"
-    [ "$feed_version" = "$version" ] || return 1
-    [ "$(<"$plugin_version_path")" = "$version" ] || return 1
-    cmp -s "$vsix_path" "docs-site/static/releases/eai-gofer-$version.vsix" || return 1
-    cmp -s "$vsix_path" "docs-site/static/releases/eai-gofer-latest.vsix" || return 1
-    cmp -s "$plugin_zip_path" "docs-site/static/releases/eai-gofer-agent-plugin-$version.zip" || return 1
-    cmp -s "$plugin_zip_path" "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip" || return 1
+    node scripts/verify-public-release-publication.mjs \
+        --quiet \
+        --version "$version" \
+        --published-at "$published_at" \
+        --notes "$release_notes" \
+        --vsix "$vsix_path" \
+        --plugin-zip "$plugin_zip_path" \
+        --plugin-root "$plugin_root"
+}
+
+cleanup_public_feed_temp_dir() {
+    if [ -n "${PUBLIC_FEED_TEMP_DIR:-}" ] && [ -d "$PUBLIC_FEED_TEMP_DIR" ]; then
+        rm -rf -- "$PUBLIC_FEED_TEMP_DIR"
+    fi
 }
 
 publish_public_release_feed() {
@@ -217,6 +223,7 @@ publish_public_release_feed() {
     local vsix_path
     local plugin_zip_path
     local plugin_root
+    local plugin_marker_version
     local release_metadata
     local published_at
     local release_notes
@@ -247,6 +254,8 @@ publish_public_release_feed() {
             exit 1
             ;;
     esac
+    PUBLIC_FEED_TEMP_DIR="$metadata_dir"
+    trap cleanup_public_feed_temp_dir EXIT
     metadata_file="$metadata_dir/release.json"
     asset_dir="$metadata_dir/assets"
     extract_dir="$metadata_dir/extracted"
@@ -309,13 +318,21 @@ NODE
         print_error "The official plugin ZIP could not be extracted."
         exit 1
     fi
-    plugin_root="$extract_dir/eai-gofer/plugins/eai-gofer"
-    if [ ! -d "$plugin_root" ] || [ -n "$(find "$extract_dir" -type l -print -quit)" ]; then
+    plugin_root="$extract_dir/eai-gofer"
+    plugin_marker_version=""
+    if [ -f "$plugin_root/.eai-gofer-plugin-version" ]; then
+        IFS= read -r plugin_marker_version < "$plugin_root/.eai-gofer-plugin-version" || true
+    fi
+    if [ ! -d "$plugin_root" ] || [ ! -d "$plugin_root/plugins/eai-gofer" ] || \
+        [ ! -f "$plugin_root/.eai-gofer-plugin-version" ] || \
+        [ "$plugin_marker_version" != "$version" ] || \
+        [ -n "$(find "$extract_dir" -type l -print -quit)" ]; then
         print_error "The official plugin ZIP does not contain a safe Gofer plugin bundle."
         exit 1
     fi
 
-    if [ "$(git branch --show-current)" = "main" ] && public_release_files_match "$version" "$vsix_path" "$plugin_zip_path"; then
+    if [ "$(git branch --show-current)" = "main" ] && \
+        public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$published_at" "$release_notes"; then
         print_success "The public feed and release files already match v$version."
         rm -rf -- "$metadata_dir"
         return 0
@@ -370,6 +387,17 @@ NODE
         --vsix "$vsix_path" \
         --plugin-zip "$plugin_zip_path" \
         --plugin-root "$plugin_root"
+
+    if ! node scripts/verify-public-release-publication.mjs \
+        --version "$version" \
+        --published-at "$published_at" \
+        --notes "$release_notes" \
+        --vsix "$vsix_path" \
+        --plugin-zip "$plugin_zip_path" \
+        --plugin-root "$plugin_root"; then
+        print_error "The public feed does not match the official release. No PR was created."
+        exit 1
+    fi
 
     git add -A docs-site/static/releases.json docs-site/static/releases
     ensure_release_paths_tracked \

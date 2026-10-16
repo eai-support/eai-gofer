@@ -387,6 +387,16 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).not.toContain('--force-with-lease');
     });
 
+    it('should verify the complete official release bundle and public metadata before reporting success', () => {
+      expect(RELEASE_SCRIPT).toContain('plugin_root="$extract_dir/eai-gofer"');
+      expect(RELEASE_SCRIPT).toContain('plugin_root/plugins/eai-gofer');
+      expect(RELEASE_SCRIPT).toContain(
+        'public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$published_at" "$release_notes"'
+      );
+      expect(RELEASE_SCRIPT).toContain('node scripts/verify-public-release-publication.mjs');
+      expect(RELEASE_SCRIPT).toContain('trap cleanup_public_feed_temp_dir EXIT');
+    });
+
     it('should report feed review and Pages deployment as separate release gates', () => {
       expect(RELEASE_SCRIPT).toContain(
         'Auto-updater publication is pending review, merge, and Pages deployment:'
