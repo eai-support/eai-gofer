@@ -1,8 +1,66 @@
 {
-  "latest_version": "3.14.4",
+  "latest_version": "3.14.5",
   "repository": "eai-support/eai-gofer",
-  "last_updated": "2026-10-15T02:34:21.855Z",
+  "last_updated": "2026-10-16T03:13:43.079Z",
   "releases": [
+    {
+      "version": "3.14.5",
+      "tag_name": "v3.14.5",
+      "published_at": "2026-10-15T18:55:01.000Z",
+      "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.14.5.vsix",
+      "notes": "# Gofer v3.14.5\n\n## Changes\n\nChanges since v3.14.4:\n- Keep Gofer public latest on the published 3.14.4 release (#437)\n- chore: release v3.14.5 — Complete-evidence Jev review (#436)\n- Handle oversized Jev reviews without losing source context (#434)\n## Assets\n\n- VS Code extension package\n- Claude/Codex/Copilot/Gemini public bundle package\n- Gofer release archive\n\n## Public Release Host\n\nhttps://eai-support.github.io/eai-gofer/releases/\n\n## Public Agent Plugin Install\n\n```bash\ncurl -fsSL https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip \\\n  -o /tmp/eai-gofer-agent-plugin-3.14.5.zip\n\nrm -rf ~/plugins/eai-gofer\nunzip /tmp/eai-gofer-agent-plugin-3.14.5.zip -d ~/plugins\n```\n\nClaude Code:\n\n```bash\nclaude plugin marketplace add https://github.com/eai-support/eai-gofer --scope user --sparse .claude-plugin --sparse plugins/eai-gofer\nclaude plugin install eai-gofer@eai-gofer --scope user\n```\n\nCodex:\n\n```bash\ncodex plugin marketplace add https://github.com/eai-support/eai-gofer --sparse .agents/plugins --sparse plugins/eai-gofer\ncodex plugin add eai-gofer@eai-gofer\n```\n\nGemini CLI:\n\n```bash\ngemini extensions install https://github.com/eai-support/eai-gofer\n```\n\nCopilot CLI:\n\n```bash\ncopilot plugin marketplace add https://github.com/eai-support/eai-gofer\ncopilot plugin install eai-gofer@eai-gofer\n```\n",
+      "prerelease": false,
+      "size_mb": 13.4,
+      "public_base_url": "https://eai-support.github.io/eai-gofer/releases",
+      "assets": {
+        "vscode": {
+          "file_name": "eai-gofer-3.14.5.vsix",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-3.14.5.vsix",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-latest.vsix",
+          "size_mb": 13.4
+        },
+        "claude": {
+          "bundle_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+          "marketplace_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-marketplace.json",
+          "manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/claude-plugin.json",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip",
+          "size_mb": 2.6
+        },
+        "codex": {
+          "bundle_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+          "marketplace_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-marketplace.json",
+          "manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip",
+          "size_mb": 2.6
+        },
+        "copilot": {
+          "bundle_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+          "marketplace_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-marketplace.json",
+          "manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/copilot-plugin.json",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip",
+          "size_mb": 2.6
+        },
+        "antigravity": {
+          "bundle_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+          "manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugin.json",
+          "install_url": "https://github.com/eai-support/eai-gofer",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip",
+          "size_mb": 2.6
+        },
+        "gemini": {
+          "bundle_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer",
+          "manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json",
+          "commands_manifest_url": "https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-commands-manifest.json",
+          "download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-3.14.5.zip",
+          "latest_download_url": "https://eai-support.github.io/eai-gofer/releases/eai-gofer-agent-plugin-latest.zip",
+          "size_mb": 2.6
+        }
+      }
+    },
     {
       "version": "3.14.4",
       "tag_name": "v3.14.4",

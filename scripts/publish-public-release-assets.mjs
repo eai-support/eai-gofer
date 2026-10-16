@@ -13,12 +13,21 @@ const PUBLIC_PLUGIN_DIR = path.join(PUBLIC_RELEASES_DIR, 'plugins', 'eai-gofer')
 function parseArgs(argv) {
   const args = {
     version: null,
+    vsix: null,
+    pluginZip: null,
+    pluginRoot: null,
   };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--version' && argv[i + 1]) {
       args.version = argv[++i].replace(/^v/, '');
+    } else if (arg === '--vsix' && argv[i + 1]) {
+      args.vsix = path.resolve(argv[++i]);
+    } else if (arg === '--plugin-zip' && argv[i + 1]) {
+      args.pluginZip = path.resolve(argv[++i]);
+    } else if (arg === '--plugin-root' && argv[i + 1]) {
+      args.pluginRoot = path.resolve(argv[++i]);
     } else if (!arg.startsWith('-') && !args.version) {
       args.version = arg.replace(/^v/, '');
     }
@@ -70,7 +79,9 @@ async function writePublicPluginAliases(pluginDir) {
   ];
 
   for (const [sourceRelativePath, aliasRelativePath] of aliases) {
-    const source = path.join(pluginDir, sourceRelativePath);
+    const nestedPluginSource = path.join(pluginDir, 'plugins', 'eai-gofer', sourceRelativePath);
+    const outerBundleSource = path.join(pluginDir, sourceRelativePath);
+    const source = (await pathExists(nestedPluginSource)) ? nestedPluginSource : outerBundleSource;
     if (!(await pathExists(source))) {
       continue;
     }
@@ -86,7 +97,9 @@ async function pruneOldVersionedAssets(releasesJsonPath) {
 
   const releases = await readJson(releasesJsonPath);
   const keptVersions = new Set(
-    Array.isArray(releases.releases) ? releases.releases.map((release) => String(release.version)) : []
+    Array.isArray(releases.releases)
+      ? releases.releases.map((release) => String(release.version))
+      : []
   );
   const entries = await fs.readdir(PUBLIC_RELEASES_DIR, { withFileTypes: true });
 
@@ -116,41 +129,46 @@ async function pruneOldVersionedAssets(releasesJsonPath) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const version =
-    args.version ??
-    (await readJson(path.join(REPO_ROOT, 'extension', 'package.json'))).version;
+    args.version ?? (await readJson(path.join(REPO_ROOT, 'extension', 'package.json'))).version;
 
   if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error(`Version must look like 3.4.0; got '${version}'.`);
   }
 
-  const vsixPath = await resolveArtifact(
-    version,
-    [
-      path.join(REPO_ROOT, `eai-gofer-${version}.vsix`),
-      path.join(REPO_ROOT, `gofer-${version}.vsix`),
-      path.join(REPO_ROOT, 'extension', `eai-gofer-${version}.vsix`),
-      path.join(REPO_ROOT, 'extension', `gofer-${version}.vsix`),
-      path.join(PUBLIC_RELEASES_DIR, `eai-gofer-${version}.vsix`),
-      path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-latest.vsix'),
-    ],
-    'VSIX artifact'
-  );
+  const vsixPath =
+    args.vsix ??
+    (await resolveArtifact(
+      version,
+      [
+        path.join(REPO_ROOT, `eai-gofer-${version}.vsix`),
+        path.join(REPO_ROOT, `gofer-${version}.vsix`),
+        path.join(REPO_ROOT, 'extension', `eai-gofer-${version}.vsix`),
+        path.join(REPO_ROOT, 'extension', `gofer-${version}.vsix`),
+        path.join(PUBLIC_RELEASES_DIR, `eai-gofer-${version}.vsix`),
+        path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-latest.vsix'),
+      ],
+      'VSIX artifact'
+    ));
 
-  const pluginZipPath = await resolveArtifact(
-    version,
-    [
-      path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}.zip`),
-      path.join(PUBLIC_RELEASES_DIR, `eai-gofer-agent-plugin-${version}.zip`),
-      path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-agent-plugin-latest.zip'),
-    ],
-    'agent plugin zip'
-  );
+  const pluginZipPath =
+    args.pluginZip ??
+    (await resolveArtifact(
+      version,
+      [
+        path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}.zip`),
+        path.join(PUBLIC_RELEASES_DIR, `eai-gofer-agent-plugin-${version}.zip`),
+        path.join(PUBLIC_RELEASES_DIR, 'eai-gofer-agent-plugin-latest.zip'),
+      ],
+      'agent plugin zip'
+    ));
 
-  const stagedPluginRoot = await resolveArtifact(
-    version,
-    [path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}`, 'eai-gofer')],
-    'staged public plugin bundle'
-  );
+  const stagedPluginRoot =
+    args.pluginRoot ??
+    (await resolveArtifact(
+      version,
+      [path.join(REPO_ROOT, 'dist', `eai-gofer-agent-plugin-${version}`, 'eai-gofer')],
+      'staged public plugin bundle'
+    ));
 
   await fs.mkdir(PUBLIC_RELEASES_DIR, { recursive: true });
 
