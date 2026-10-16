@@ -387,6 +387,58 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).not.toContain('--force-with-lease');
     });
 
+    it('should allow recovery of the latest published tag after a newer package version is prepared', () => {
+      const feedRecovery = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('publish_public_release_feed()'),
+        RELEASE_SCRIPT.indexOf('should_enforce_vscode_marketplace_publish()')
+      );
+
+      expect(feedRecovery).not.toContain('Feed recovery must use the current package version');
+      expect(feedRecovery).toContain('if [ "$latest_tag" != "$tag_name" ]; then');
+      expect(feedRecovery).toContain(
+        'Only the latest official tag can become the public auto-update version.'
+      );
+    });
+
+    it('should verify an existing recovery PR head against official release files before accepting it', () => {
+      const existingPullRequest = RELEASE_SCRIPT.indexOf(
+        'if [ -n "$open_feed_pr" ] && [ "$current_branch" != "$branch_name" ]; then'
+      );
+      const pullRequestValidation = RELEASE_SCRIPT.indexOf(
+        'public_release_files_match \\',
+        existingPullRequest
+      );
+      const finalPullRequestCheck = RELEASE_SCRIPT.indexOf(
+        'existing-feed-pr-final.json',
+        pullRequestValidation
+      );
+      const acceptedPullRequest = RELEASE_SCRIPT.indexOf(
+        'print_success "The existing public-feed pull request matches',
+        existingPullRequest
+      );
+
+      expect(RELEASE_SCRIPT).toContain('gh pr view "$open_feed_pr" --repo "$repo"');
+      expect(RELEASE_SCRIPT).toContain('--json state,headRefName,headRefOid,baseRefName');
+      expect(RELEASE_SCRIPT).toContain('git fetch origin "$branch_name"');
+      expect(RELEASE_SCRIPT).toContain('git archive --format=tar --output="$pr_archive"');
+      expect(RELEASE_SCRIPT).toContain('"docs-site/static/releases/eai-gofer-$version.vsix"');
+      expect(RELEASE_SCRIPT).toContain(
+        '"docs-site/static/releases/eai-gofer-agent-plugin-$version.zip"'
+      );
+      expect(RELEASE_SCRIPT).toContain('docs-site/static/releases/plugins/eai-gofer');
+      expect(RELEASE_SCRIPT).toContain('"$metadata_file" "$verify_root"');
+      expect(pullRequestValidation).toBeGreaterThan(existingPullRequest);
+      expect(finalPullRequestCheck).toBeGreaterThan(pullRequestValidation);
+      expect(RELEASE_SCRIPT).toContain('EXPECTED_FEED_HEAD="$open_feed_pr_head"');
+      expect(acceptedPullRequest).toBeGreaterThan(finalPullRequestCheck);
+      expect(RELEASE_SCRIPT).toContain(
+        'does not match the official release. Retry from its exact recovery branch'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'The public-feed pull request changed during verification. Retry recovery.'
+      );
+    });
+
     it('should verify the complete official release bundle and public metadata before reporting success', () => {
       expect(RELEASE_SCRIPT).toContain('plugin_root="$extract_dir/eai-gofer"');
       expect(RELEASE_SCRIPT).toContain('plugin_root/plugins/eai-gofer');

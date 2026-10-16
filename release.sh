@@ -192,9 +192,11 @@ public_release_files_match() {
     local plugin_zip_path="$3"
     local plugin_root="$4"
     local release_metadata_file="$5"
+    local public_root="${6:-$PWD}"
 
     node scripts/verify-public-release-publication.mjs \
         --quiet \
+        --root "$public_root" \
         --version "$version" \
         --release-metadata-file "$release_metadata_file" \
         --vsix "$vsix_path" \
@@ -225,11 +227,12 @@ publish_public_release_feed() {
     local current_branch
     local latest_tag
     local open_feed_pr
-
-    if [ "$version" != "$CURRENT_VERSION" ]; then
-        print_error "Feed recovery must use the current package version ($CURRENT_VERSION)."
-        exit 1
-    fi
+    local open_feed_pr_file
+    local final_feed_pr_file
+    local open_feed_pr_head
+    local fetched_pr_head
+    local verify_root
+    local pr_archive
 
     latest_tag="$(latest_release_tag)"
     if [ "$latest_tag" != "$tag_name" ]; then
@@ -334,8 +337,82 @@ NODE
         --jq "map(select(.headRefName == \"$branch_name\" and (.title | contains(\"$version\")) and (.title | test(\"feed|auto-updat\"; \"i\")))) | .[0].url // \"\"")"
     current_branch="$(git branch --show-current)"
     if [ -n "$open_feed_pr" ] && [ "$current_branch" != "$branch_name" ]; then
+        open_feed_pr_file="$metadata_dir/existing-feed-pr.json"
+        if ! gh pr view "$open_feed_pr" --repo "$repo" \
+            --json state,headRefName,headRefOid,baseRefName > "$open_feed_pr_file"; then
+            print_error "Could not verify the existing public-feed pull request."
+            exit 1
+        fi
+        if ! EXPECTED_FEED_BRANCH="$branch_name" node --input-type=module - "$open_feed_pr_file" <<'NODE'
+import fs from 'node:fs';
+const pr = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (
+  pr.state !== 'OPEN' ||
+  pr.baseRefName !== 'main' ||
+  pr.headRefName !== process.env.EXPECTED_FEED_BRANCH ||
+  !/^[a-f0-9]{40,64}$/.test(pr.headRefOid ?? '')
+) {
+  throw new Error('The existing pull request is not the expected open recovery request.');
+}
+NODE
+        then
+            print_error "The existing public-feed pull request does not match the expected recovery branch."
+            exit 1
+        fi
+        open_feed_pr_head="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).headRefOid)' "$open_feed_pr_file")"
+        if ! git fetch origin "$branch_name"; then
+            print_error "Could not fetch the existing public-feed pull request branch."
+            exit 1
+        fi
+        fetched_pr_head="$(git rev-parse --verify FETCH_HEAD)"
+        if [ "$fetched_pr_head" != "$open_feed_pr_head" ]; then
+            print_error "The public-feed pull request changed during verification. Retry recovery."
+            exit 1
+        fi
+        verify_root="$metadata_dir/existing-feed-pr"
+        pr_archive="$metadata_dir/existing-feed-pr.tar"
+        mkdir -p "$verify_root"
+        if ! git archive --format=tar --output="$pr_archive" "$open_feed_pr_head" \
+            docs-site/static/releases.json \
+            "docs-site/static/releases/eai-gofer-$version.vsix" \
+            docs-site/static/releases/eai-gofer-latest.vsix \
+            "docs-site/static/releases/eai-gofer-agent-plugin-$version.zip" \
+            docs-site/static/releases/eai-gofer-agent-plugin-latest.zip \
+            docs-site/static/releases/plugins/eai-gofer || \
+            ! tar -xf "$pr_archive" -C "$verify_root"; then
+            print_error "Could not read the existing public-feed pull request contents."
+            exit 1
+        fi
+        if ! public_release_files_match \
+            "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file" "$verify_root"; then
+            print_error "The existing public-feed pull request does not match the official release. Retry from its exact recovery branch to repair it."
+            exit 1
+        fi
+        final_feed_pr_file="$metadata_dir/existing-feed-pr-final.json"
+        if ! gh pr view "$open_feed_pr" --repo "$repo" \
+            --json state,headRefName,headRefOid,baseRefName > "$final_feed_pr_file"; then
+            print_error "Could not confirm the public-feed pull request stayed unchanged during verification."
+            exit 1
+        fi
+        if ! EXPECTED_FEED_BRANCH="$branch_name" EXPECTED_FEED_HEAD="$open_feed_pr_head" \
+            node --input-type=module - "$final_feed_pr_file" <<'NODE'
+import fs from 'node:fs';
+const pr = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (
+  pr.state !== 'OPEN' ||
+  pr.baseRefName !== 'main' ||
+  pr.headRefName !== process.env.EXPECTED_FEED_BRANCH ||
+  pr.headRefOid !== process.env.EXPECTED_FEED_HEAD
+) {
+  throw new Error('The recovery pull request changed during content verification.');
+}
+NODE
+        then
+            print_error "The public-feed pull request changed during verification. Retry recovery."
+            exit 1
+        fi
         PUBLIC_FEED_PR_URL="$open_feed_pr"
-        print_success "Public-feed review is already open: $open_feed_pr"
+        print_success "The existing public-feed pull request matches the official v$version release: $open_feed_pr"
         print_info "Merge that reviewed pull request and wait for the GitHub Pages checks."
         rm -rf -- "$metadata_dir"
         return 0
