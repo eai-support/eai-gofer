@@ -46,9 +46,26 @@ function firstExistingPath(candidates) {
 const version =
   process.argv[2] ||
   JSON.parse(fs.readFileSync(path.join(__dirname, '../extension/package.json'), 'utf8')).version;
-const releaseNotes = process.argv[3] || 'New release';
+const officialReleasePath = process.env.GOFER_RELEASE_METADATA_FILE
+  ? path.resolve(process.env.GOFER_RELEASE_METADATA_FILE)
+  : null;
+const officialRelease = officialReleasePath
+  ? JSON.parse(fs.readFileSync(officialReleasePath, 'utf8'))
+  : null;
+if (
+  officialRelease &&
+  (officialRelease.tagName !== `v${version}` ||
+    officialRelease.isDraft ||
+    officialRelease.isPrerelease ||
+    !Number.isFinite(Date.parse(officialRelease.publishedAt)))
+) {
+  throw new Error(`Official release metadata does not match version '${version}'.`);
+}
+const releaseNotes = officialRelease
+  ? officialRelease.body || officialRelease.name || `Gofer v${version}`
+  : process.argv[3] || 'New release';
 const customDownloadUrl = process.argv[4]; // Optional custom download URL
-const suppliedPublishedAt = process.argv[5]; // Optional timestamp from the official GitHub Release
+const suppliedPublishedAt = officialRelease?.publishedAt || process.argv[5]; // Optional timestamp from the official GitHub Release
 const publishedAt = suppliedPublishedAt ? new Date(suppliedPublishedAt) : new Date();
 
 if (!Number.isFinite(publishedAt.getTime())) {

@@ -38,11 +38,8 @@ function parseArgs(argv) {
       case '--version':
         args.version = value;
         break;
-      case '--published-at':
-        args.publishedAt = value;
-        break;
-      case '--notes':
-        args.notes = value;
+      case '--release-metadata-file':
+        args.releaseMetadataFile = path.resolve(value);
         break;
       case '--vsix':
         args.vsix = path.resolve(value);
@@ -128,19 +125,38 @@ function compareBundle(sourceRoot, publicRoot, issues) {
 
 export function verifyPublicReleasePublication(args) {
   const issues = [];
-  const required = ['version', 'publishedAt', 'notes', 'vsix', 'pluginZip', 'pluginRoot'];
+  const required = ['version', 'releaseMetadataFile', 'vsix', 'pluginZip', 'pluginRoot'];
   for (const field of required) {
     if (!args[field]) issues.push(`Missing official release input: ${field}.`);
   }
   if (issues.length) return { matches: false, issues };
 
+  let officialRelease;
+  try {
+    officialRelease = JSON.parse(fs.readFileSync(args.releaseMetadataFile, 'utf8'));
+  } catch {
+    return { matches: false, issues: ['Official release metadata is unavailable or invalid.'] };
+  }
+
+  if (
+    officialRelease.tagName !== `v${args.version}` ||
+    officialRelease.isDraft ||
+    officialRelease.isPrerelease
+  ) {
+    return {
+      matches: false,
+      issues: ['Official release metadata does not match the stable target release.'],
+    };
+  }
+
   let publishedAt;
   try {
-    publishedAt = new Date(args.publishedAt);
+    publishedAt = new Date(officialRelease.publishedAt);
     if (!Number.isFinite(publishedAt.getTime())) throw new Error('Invalid publication time.');
   } catch {
     return { matches: false, issues: ['Official release publication time is invalid.'] };
   }
+  const officialNotes = officialRelease.body || officialRelease.name || `Gofer v${args.version}`;
 
   const root = path.resolve(args.root ?? process.cwd());
   const releasesJsonPath = path.join(root, 'docs-site/static/releases.json');
@@ -174,7 +190,7 @@ export function verifyPublicReleasePublication(args) {
         issues.push('Current release is not the first feed entry.');
       compareValue(release.tag_name, `v${version}`, 'Release tag_name', issues);
       compareValue(release.published_at, publishedAt.toISOString(), 'Release published_at', issues);
-      compareValue(release.notes, args.notes, 'Release notes', issues);
+      compareValue(release.notes, officialNotes, 'Release notes', issues);
       compareValue(release.prerelease, false, 'Release prerelease flag', issues);
       compareValue(release.download_url, vsixUrl, 'Release download_url', issues);
       compareValue(

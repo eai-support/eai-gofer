@@ -12,7 +12,7 @@ const SOURCE_SCRIPT_PATH = path.resolve(
 );
 const VERSION = '3.14.5';
 const PUBLISHED_AT = '2026-10-15T18:55:01Z';
-const RELEASE_NOTES = '# Gofer v3.14.5\n\nOfficial release notes.';
+const RELEASE_NOTES = '# Gofer v3.14.5\n\nOfficial release notes.\n\n';
 const RELEASES_BASE_URL = 'https://eai-support.github.io/eai-gofer/releases';
 const PLUGIN_BUNDLE_URL = `${RELEASES_BASE_URL}/plugins/eai-gofer`;
 
@@ -85,6 +85,7 @@ describe('verify-public-release-publication.mjs', () => {
   let officialRoot: string;
   let pluginRoot: string;
   let releasesPath: string;
+  let officialMetadataPath: string;
   let publicReleasesDir: string;
   let publicPluginRoot: string;
   let vsixPath: string;
@@ -97,6 +98,7 @@ describe('verify-public-release-publication.mjs', () => {
     publicReleasesDir = path.join(tmpRoot, 'docs-site', 'static', 'releases');
     publicPluginRoot = path.join(publicReleasesDir, 'plugins', 'eai-gofer');
     releasesPath = path.join(tmpRoot, 'docs-site', 'static', 'releases.json');
+    officialMetadataPath = path.join(officialRoot, 'release.json');
     vsixPath = path.join(officialRoot, `eai-gofer-${VERSION}.vsix`);
     pluginZipPath = path.join(officialRoot, `eai-gofer-agent-plugin-${VERSION}.zip`);
 
@@ -104,6 +106,17 @@ describe('verify-public-release-publication.mjs', () => {
     fs.mkdirSync(publicReleasesDir, { recursive: true });
     fs.writeFileSync(vsixPath, Buffer.alloc(1024 * 1024, 1));
     fs.writeFileSync(pluginZipPath, Buffer.alloc(2 * 1024 * 1024, 2));
+    fs.writeFileSync(
+      officialMetadataPath,
+      JSON.stringify({
+        tagName: `v${VERSION}`,
+        isDraft: false,
+        isPrerelease: false,
+        publishedAt: PUBLISHED_AT,
+        body: RELEASE_NOTES,
+        name: `Gofer v${VERSION}`,
+      })
+    );
 
     writeFile(pluginRoot, '.eai-gofer-plugin-version', `${VERSION}\ngenerated-by-eai-gofer\n`);
     writeFile(pluginRoot, 'AGENTS.md', 'Outer release instructions');
@@ -183,10 +196,8 @@ describe('verify-public-release-publication.mjs', () => {
           tmpRoot,
           '--version',
           VERSION,
-          '--published-at',
-          PUBLISHED_AT,
-          '--notes',
-          RELEASE_NOTES,
+          '--release-metadata-file',
+          officialMetadataPath,
           '--vsix',
           vsixPath,
           '--plugin-zip',
@@ -213,6 +224,27 @@ describe('verify-public-release-publication.mjs', () => {
     fs.writeFileSync(releasesPath, JSON.stringify(feed));
 
     expect(await runVerifier()).toBe(1);
+  });
+
+  it('rejects official metadata for a different release', async () => {
+    const officialRelease = JSON.parse(fs.readFileSync(officialMetadataPath, 'utf8'));
+    officialRelease.tagName = 'v3.14.4';
+    fs.writeFileSync(officialMetadataPath, JSON.stringify(officialRelease));
+
+    expect(await runVerifier()).toBe(1);
+  });
+
+  it('rejects draft and prerelease metadata', async () => {
+    const officialRelease = JSON.parse(fs.readFileSync(officialMetadataPath, 'utf8'));
+
+    for (const releaseState of [{ isDraft: true }, { isPrerelease: true }]) {
+      fs.writeFileSync(
+        officialMetadataPath,
+        JSON.stringify({ ...officialRelease, ...releaseState })
+      );
+
+      expect(await runVerifier()).toBe(1);
+    }
   });
 
   it('rejects a different publication time', async () => {

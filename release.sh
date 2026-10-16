@@ -191,14 +191,12 @@ public_release_files_match() {
     local vsix_path="$2"
     local plugin_zip_path="$3"
     local plugin_root="$4"
-    local published_at="$5"
-    local release_notes="$6"
+    local release_metadata_file="$5"
 
     node scripts/verify-public-release-publication.mjs \
         --quiet \
         --version "$version" \
-        --published-at "$published_at" \
-        --notes "$release_notes" \
+        --release-metadata-file "$release_metadata_file" \
         --vsix "$vsix_path" \
         --plugin-zip "$plugin_zip_path" \
         --plugin-root "$plugin_root"
@@ -224,9 +222,6 @@ publish_public_release_feed() {
     local plugin_zip_path
     local plugin_root
     local plugin_marker_version
-    local release_metadata
-    local published_at
-    local release_notes
     local current_branch
     local latest_tag
     local open_feed_pr
@@ -267,21 +262,18 @@ publish_public_release_feed() {
         exit 1
     fi
 
-    if ! release_metadata="$(RELEASE_METADATA_FILE="$metadata_file" EXPECTED_RELEASE_TAG="$tag_name" node --input-type=module <<'NODE'
+    if ! RELEASE_METADATA_FILE="$metadata_file" EXPECTED_RELEASE_TAG="$tag_name" node --input-type=module - "$metadata_file" <<'NODE'
 import fs from 'node:fs';
 const release = JSON.parse(fs.readFileSync(process.env.RELEASE_METADATA_FILE, 'utf8'));
 if (release.tagName !== process.env.EXPECTED_RELEASE_TAG || release.isDraft || release.isPrerelease || !release.publishedAt) {
   throw new Error('The GitHub Release is not a published stable release for the expected tag.');
 }
 if (!Number.isFinite(Date.parse(release.publishedAt))) throw new Error('The GitHub Release has no valid publication time.');
-process.stdout.write(JSON.stringify({ publishedAt: release.publishedAt, notes: release.body || release.name || `Gofer ${release.tagName}` }));
 NODE
-    )"; then
+    then
         print_error "GitHub Release metadata is incomplete or does not match $tag_name."
         exit 1
     fi
-    published_at="$(printf '%s' "$release_metadata" | node -e 'let value=""; process.stdin.on("data", chunk => value += chunk); process.stdin.on("end", () => console.log(JSON.parse(value).publishedAt));')"
-    release_notes="$(printf '%s' "$release_metadata" | node -e 'let value=""; process.stdin.on("data", chunk => value += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(value).notes));')"
 
     print_info "Downloading the official release assets..."
     if ! gh release download "$tag_name" --repo "$repo" --dir "$asset_dir" \
@@ -332,14 +324,14 @@ NODE
     fi
 
     if [ "$(git branch --show-current)" = "main" ] && \
-        public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$published_at" "$release_notes"; then
+        public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file"; then
         print_success "The public feed and release files already match v$version."
         rm -rf -- "$metadata_dir"
         return 0
     fi
 
-    open_feed_pr="$(gh pr list --repo "$repo" --base main --state open --limit 100 --json url,title \
-        --jq "map(select((.title | contains(\"$version\")) and (.title | test(\"feed|auto-updat\"; \"i\")))) | .[0].url // \"\"")"
+    open_feed_pr="$(gh pr list --repo "$repo" --base main --head "$branch_name" --state open --limit 100 --json url,title,headRefName \
+        --jq "map(select(.headRefName == \"$branch_name\" and (.title | contains(\"$version\")) and (.title | test(\"feed|auto-updat\"; \"i\")))) | .[0].url // \"\"")"
     current_branch="$(git branch --show-current)"
     if [ -n "$open_feed_pr" ] && [ "$current_branch" != "$branch_name" ]; then
         PUBLIC_FEED_PR_URL="$open_feed_pr"
@@ -381,7 +373,7 @@ NODE
 
     print_info "Updating the public release feed from the official assets..."
     GOFER_RELEASE_VSIX_PATH="$vsix_path" GOFER_RELEASE_PLUGIN_ZIP_PATH="$plugin_zip_path" \
-        node scripts/update-releases.js "$version" "$release_notes" "" "$published_at"
+        GOFER_RELEASE_METADATA_FILE="$metadata_file" node scripts/update-releases.js "$version"
     node scripts/publish-public-release-assets.mjs \
         --version "$version" \
         --vsix "$vsix_path" \
@@ -390,8 +382,7 @@ NODE
 
     if ! node scripts/verify-public-release-publication.mjs \
         --version "$version" \
-        --published-at "$published_at" \
-        --notes "$release_notes" \
+        --release-metadata-file "$metadata_file" \
         --vsix "$vsix_path" \
         --plugin-zip "$plugin_zip_path" \
         --plugin-root "$plugin_root"; then

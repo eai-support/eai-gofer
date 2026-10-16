@@ -391,10 +391,22 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain('plugin_root="$extract_dir/eai-gofer"');
       expect(RELEASE_SCRIPT).toContain('plugin_root/plugins/eai-gofer');
       expect(RELEASE_SCRIPT).toContain(
-        'public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$published_at" "$release_notes"'
+        'public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file"'
       );
       expect(RELEASE_SCRIPT).toContain('node scripts/verify-public-release-publication.mjs');
+      expect(RELEASE_SCRIPT).toContain('--release-metadata-file "$metadata_file"');
+      expect(RELEASE_SCRIPT).toContain(
+        'GOFER_RELEASE_METADATA_FILE="$metadata_file" node scripts/update-releases.js "$version"'
+      );
       expect(RELEASE_SCRIPT).toContain('trap cleanup_public_feed_temp_dir EXIT');
+    });
+
+    it('should match an open recovery PR by the exact generated head branch', () => {
+      expect(RELEASE_SCRIPT).toContain(
+        'gh pr list --repo "$repo" --base main --head "$branch_name"'
+      );
+      expect(RELEASE_SCRIPT).toContain('--json url,title,headRefName');
+      expect(RELEASE_SCRIPT).toMatch(/\.headRefName == \\"\$branch_name\\"/);
     });
 
     it('should report feed review and Pages deployment as separate release gates', () => {
