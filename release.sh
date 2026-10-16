@@ -44,7 +44,7 @@ resolve_github_repo() {
 
 latest_release_tag() {
     git ls-remote --tags --refs origin 'v*' \
-        | awk '{print $2}' \
+        | awk '$2 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/ {print $2}' \
         | sed 's#refs/tags/##' \
         | sort -V \
         | tail -n 1
@@ -431,6 +431,7 @@ NODE
             git switch --track -c "$branch_name" "origin/$branch_name"
             ensure_public_feed_branch_scope
         else
+            ensure_feed_recovery_main
             git switch -c "$branch_name"
         fi
     elif [ "$current_branch" = "$branch_name" ]; then
@@ -899,6 +900,30 @@ ensure_release_base() {
     if ! git merge-base --is-ancestor origin/main HEAD; then
         print_error "Local main has diverged from origin/main."
         print_error "Rebase or merge origin/main before releasing."
+        exit 1
+    fi
+}
+
+ensure_feed_recovery_main() {
+    local local_head
+    local remote_head
+
+    if [ "$(git branch --show-current)" != "main" ]; then
+        print_error "Feed recovery base verification requires local main."
+        exit 1
+    fi
+
+    if ! git fetch origin refs/heads/main:refs/remotes/origin/main; then
+        print_error "Cannot fetch origin/main. No recovery branch was created."
+        exit 1
+    fi
+
+    local_head="$(git rev-parse --verify HEAD)"
+    remote_head="$(git rev-parse --verify refs/remotes/origin/main)"
+    if [ "$local_head" != "$remote_head" ]; then
+        print_error "Feed recovery requires local main to match fetched origin/main exactly."
+        print_error "Local main: $local_head; origin/main: $remote_head. No recovery branch was created."
+        print_error "Sync local main, then rerun feed recovery."
         exit 1
     fi
 }

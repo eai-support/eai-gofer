@@ -337,6 +337,55 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain('git pull --ff-only origin main');
     });
 
+    it('should select only stable semantic-version tags for the public feed', () => {
+      const selectorStart = RELEASE_SCRIPT.indexOf('latest_release_tag() {');
+      const selectorEnd = RELEASE_SCRIPT.indexOf('\n}', selectorStart);
+      const selector = RELEASE_SCRIPT.slice(selectorStart, selectorEnd);
+      const stableTagPattern = /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/;
+      const tags = [
+        'refs/tags/v3.14.4',
+        'refs/tags/v3.14.5',
+        'refs/tags/v3.14.6-beta.1',
+        'refs/tags/v3.14.6-rc.1',
+        'refs/tags/v3.14.7',
+        'refs/tags/v3.14',
+      ];
+
+      expect(selector).toContain(
+        "awk '$2 ~ /^refs\\/tags\\/v[0-9]+\\.[0-9]+\\.[0-9]+$/ {print $2}'"
+      );
+      expect(tags.filter((tag) => stableTagPattern.test(tag)).at(-1)).toBe('refs/tags/v3.14.7');
+    });
+
+    it('should reject a local main that differs from fetched origin/main before creating a feed branch', () => {
+      const feedRecovery = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('publish_public_release_feed()'),
+        RELEASE_SCRIPT.indexOf('should_enforce_vscode_marketplace_publish()')
+      );
+      const createBranchIndex = feedRecovery.indexOf('git switch -c "$branch_name"');
+      const baseCheckIndex = feedRecovery.lastIndexOf(
+        'ensure_feed_recovery_main',
+        createBranchIndex
+      );
+      const baseCheckFunction = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('ensure_feed_recovery_main() {'),
+        RELEASE_SCRIPT.indexOf('\n}', RELEASE_SCRIPT.indexOf('ensure_feed_recovery_main() {'))
+      );
+
+      expect(createBranchIndex).toBeGreaterThan(-1);
+      expect(baseCheckIndex).toBeGreaterThan(-1);
+      expect(baseCheckIndex).toBeLessThan(createBranchIndex);
+      expect(baseCheckFunction).toContain(
+        'git fetch origin refs/heads/main:refs/remotes/origin/main'
+      );
+      expect(baseCheckFunction).toContain('local_head="$(git rev-parse --verify HEAD)"');
+      expect(baseCheckFunction).toContain(
+        'remote_head="$(git rev-parse --verify refs/remotes/origin/main)"'
+      );
+      expect(baseCheckFunction).toContain('[ "$local_head" != "$remote_head" ]');
+      expect(baseCheckFunction).toContain('No recovery branch was created.');
+    });
+
     it('should detect dirty worktrees using git status porcelain output', () => {
       expect(RELEASE_SCRIPT).toContain('git status --porcelain');
       expect(RELEASE_SCRIPT).not.toContain('git diff-index --quiet HEAD --');
