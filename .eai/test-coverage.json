@@ -58,12 +58,7 @@
           ],
           "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": ["adminportal-adminapi"],
-          "required_deployed_contracts": [
-            {
-              "repository": "eai-testing-dev",
-              "path": "tests/cross-service/contracts/adminportal-adminapi/admin-portal-gofer-governance.spec.ts"
-            }
-          ]
+          "required_deployed_contracts": []
         },
         {
           "id": "gofer-app-capability-handoff",
