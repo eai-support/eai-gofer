@@ -27,7 +27,7 @@
     "gray-matter": "4.0.3",
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.12",
-    "yaml": "2.8.3",
+    "yaml": "2.9.1",
     "zod": "3.25.76"
   },
   "devDependencies": {
