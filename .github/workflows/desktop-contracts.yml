@@ -37,7 +37,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ inputs.source-sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           cache: npm
@@ -64,7 +64,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ inputs.source-sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           cache: npm
