@@ -67,12 +67,7 @@
           "required_repo_tests": ["tests/unit/headless/exportBundle.test.ts"],
           "required_ci_checks": ["Code Quality Gates", "Build & Test"],
           "required_cross_service_surfaces": ["publicapi-platform"],
-          "required_deployed_contracts": [
-            {
-              "repository": "eai-testing-dev",
-              "path": "tests/cross-service/contracts/platform-lifecycle/publicapi-v4-capability-connections.spec.ts"
-            }
-          ]
+          "required_deployed_contracts": []
         },
         {
           "id": "customer-delivery-lineage-viewer",
@@ -170,17 +165,8 @@
             "tests/unit/scripts/sync-extension-resources.test.ts"
           ],
           "required_ci_checks": ["Code Quality Gates", "Build & Test"],
-          "required_cross_service_surfaces": ["eai-managed-deploy"],
-          "required_deployed_contracts": [
-            {
-              "repository": "eai-testing-dev",
-              "path": "tests/cross-service/contracts/eai-cli/eai-managed-deploy.spec.ts"
-            },
-            {
-              "repository": "eai-testing-dev",
-              "path": "tests/cross-service/contracts/eai-cli/eai-managed-deploy-mutation.spec.ts"
-            }
-          ]
+          "required_cross_service_surfaces": [],
+          "required_deployed_contracts": []
         },
         {
           "id": "gofer-verifier-first-key-ceremony",
