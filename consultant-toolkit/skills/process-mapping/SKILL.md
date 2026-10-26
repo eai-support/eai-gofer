@@ -19,13 +19,13 @@ Show how one business process works today, why it underperforms, and how it shou
 4. Measure each step: volume, touch time, waiting time, and error or rework rate. Total the elapsed time and the share that adds value for the customer.
 5. Find waste: waiting, rework, extra hand-offs, extra approvals, duplicate data entry, and idle capacity.
 6. For the top 3 pain points, find root causes with 5 whys or a fishbone diagram.
-7. Design the future state: remove, combine, and simplify steps before you automate them. Note what changes for each role.
+7. Design the future state: remove, combine, and simplify steps before you automate them. Note role changes as input to `change-plan`.
 8. List improvements with their expected effect on time, cost, and quality.
 
 ## Output
 
 1. SIPOC table.
-2. Current-state table: Step | Role | Action | Hand-off to | Touch time | Wait time | Error rate | Pain point.
+2. Current-state table: Step | Role | Action | Hand-off to | Touch time | Wait time | Error rate | Adds value (Y/N) | Pain point.
 3. Root causes for the top pain points.
 4. Future-state steps and an improvement list: Improvement | Effect | Effort | Owner.
 5. Optional: a Mermaid flowchart where it renders.
@@ -33,7 +33,7 @@ Show how one business process works today, why it underperforms, and how it shou
 ## Quality bar
 
 - Times and volumes come from data or are labeled.
-- Root causes explain why a problem happens, not what the symptom is.
+- Root causes are checked against data, and explain why a problem happens, not what the symptom is.
 
 ## Boundaries
 
@@ -41,6 +41,8 @@ Show how one business process works today, why it underperforms, and how it shou
 - Not for organization design: use `operating-model`.
 - Not for valuing an improvement that needs investment: use `business-case`.
 - Not for helping people adopt the new process: use `change-plan`.
+- Not for sequencing improvements: use `implementation-roadmap`.
+- Not for who approves each step: use `raci-builder`.
 
 ## Rules
 

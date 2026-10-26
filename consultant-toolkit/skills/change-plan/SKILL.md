@@ -9,7 +9,7 @@ Help each affected group move from the old way of working to the new one, and pr
 
 ## Input
 
-- The change, the operating model gaps (from `operating-model` if any), the affected groups, and the timeline (from `implementation-roadmap` if available).
+- The change, the operating model gaps (from `operating-model` if any), the future-state process (from `process-mapping` if any), the affected groups, and the timeline (from `implementation-roadmap` if available).
 
 ## Method
 

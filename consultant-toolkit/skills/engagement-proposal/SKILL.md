@@ -9,24 +9,24 @@ Write the client offer: what the engagement will deliver, how, by whom, by when,
 
 ## Input
 
-- The client request or brief, what you know of the client's situation, budget and timing limits, and the draft key question (from `problem-framing` if done).
+- The client request or brief, what you know of the client's situation, budget and timing limits, and the key question (from `problem-framing`).
 
 ## Method
 
 1. Restate the client's situation and need in their words. Show why the work matters now.
-2. State the objectives and the key question the engagement will answer.
-3. Set scope: what is in, what is out, and what the client must provide.
+2. State the objectives. Take the key question and success criteria from `problem-framing`; do not rewrite them.
+3. Set engagement scope: workstreams, business units, and locations covered, what is excluded, and what the client must provide.
 4. Describe the approach by phase: activities, methods, and client touchpoints.
 5. List deliverables per phase, each with an acceptance criterion.
 6. Propose the team: roles, seniority, time commitment, and client counterparts.
 7. Set the timeline with milestones and steering committee dates.
-8. Price the work: fee model (fixed fee, time and materials, or value-based), total fees, expenses, and payment schedule.
+8. Price the work: fee model (for example fixed fee, time and materials, capped time and materials, retainer, or success fee), total fees, expenses, and payment schedule.
 9. State assumptions, dependencies, and change control: what triggers a change to scope or fees.
 10. Add relevant credentials and the next steps to start.
 
 ## Output
 
-A proposal with these sections: Understanding, Objectives, Scope, Approach, Deliverables, Team, Timeline, Fees, Assumptions and change control, Credentials, Next steps. For a statement of work, keep Scope, Deliverables, Timeline, Fees, and Assumptions, and add acceptance terms and sign-off.
+A proposal with these sections: Understanding, Objectives, Scope, Approach, Deliverables, Team, Timeline, Fees, Assumptions and change control, Credentials, Next steps. For a statement of work, keep Scope, Deliverables, Team and key roles, Timeline, Fees, Assumptions, and client responsibilities, and add acceptance terms and sign-off.
 
 ## Quality bar
 

@@ -75,4 +75,13 @@
 - [x] Reject software delivery vocabulary in every skill, so the pack stays
       business consulting, not app development.
 - [x] Trim descriptions so 53 skills fit the 8,000-byte Codex list budget.
-- [ ] Run the validator, tests, linters, and an independent review.
+- [x] Run the validator, tests, linters, and an independent review.
+
+## Review
+
+- Independent review found no software delivery wording. It found overlaps on
+  engagement scope, workplan, decisions, and RAG thresholds, plus weak
+  hand-offs. All were fixed: the proposal reuses the key question, the status
+  report uses measurable RAG rules and `kpi-dashboard` thresholds, and process
+  maps hand off to the roadmap, RACI, and change plan.
+- Validator and 12 focused tests passed after the fixes.

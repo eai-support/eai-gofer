@@ -35,6 +35,7 @@ Turn an issue tree into a hypothesis-driven workplan, so the team tests a likely
 ## Boundaries
 
 - Not for building the tree: use `issue-tree`.
+- Not for engagement phases, staffing, timeline, and fees: use `engagement-proposal`.
 - Not for running the analyses: use the analysis skills, for example `market-sizing` or `unit-economics`.
 - Hand off to: `insight-synthesis` after tests return.
 

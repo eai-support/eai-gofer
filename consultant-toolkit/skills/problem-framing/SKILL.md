@@ -1,6 +1,6 @@
 ---
 name: problem-framing
-description: "Turns a vague business ask into one precise key question with scope, success criteria and constraints. Use at the start of any engagement."
+description: "Turns a vague business ask into one precise key question with scope, success criteria and constraints. Use before analysis starts."
 ---
 
 # Problem Framing

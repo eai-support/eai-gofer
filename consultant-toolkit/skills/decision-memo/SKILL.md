@@ -37,6 +37,7 @@ The memo, with the sections above as headings.
 
 - Not for summarizing an existing deck: use `executive-summary`.
 - Not for the financial case itself: use `business-case`.
+- Not for a routine progress update: use `status-report`.
 
 ## Rules
 

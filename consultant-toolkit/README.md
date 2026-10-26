@@ -227,7 +227,7 @@ These are deliberate gaps, not overlaps:
 
 - Collecting evidence: survey and interview-guide design, data collection, and
   workshop facilitation.
-- Detailed operations work: sizing cost-saving levers.
+- Cost programmes: firm-wide cost baselines and savings targets.
 - Specialist advice: legal, tax, and M&A due diligence.
 
 ## Attribution

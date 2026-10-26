@@ -1,6 +1,6 @@
 ---
 name: kpi-dashboard
-description: "Designs a KPI tree and dashboard spec with definitions, formulas, targets, owners, cadence and layout. Use to track performance or benefits."
+description: "Designs a KPI tree and dashboard spec with definitions, formulas, targets, owners, cadence and layout. Use to define how performance is measured."
 ---
 
 # KPI Dashboard
