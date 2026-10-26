@@ -1,7 +1,7 @@
 /**
- * Validates the portable consultant toolkit: 50 Agent Skills that must load on
- * Claude and OpenAI surfaces, own one distinct output each, and hand off only
- * to skills that exist.
+ * Validates the portable consultant toolkit: business consulting Agent Skills
+ * that must load on Claude and OpenAI surfaces, own one distinct output each,
+ * and hand off only to skills that exist.
  */
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import fs from 'node:fs';
@@ -26,7 +26,7 @@ type ValidateToolkit = (
 ) => Promise<{ errors: string[]; stats: ToolkitStats }>;
 
 let validateToolkit: ValidateToolkit;
-let TOOLKIT_LIMITS: { listBudgetBytes: number; descriptionMaxBytes: number };
+let TOOLKIT_LIMITS: { skillCount: number; listBudgetBytes: number; descriptionMaxBytes: number };
 let SHARED_RULES: string[];
 const tempRoots: string[] = [];
 
@@ -108,10 +108,10 @@ const validPair = (): Record<string, string> => ({
 const validRows = ['| 1 | `alpha-skill` | Alpha output |', '| 2 | `beta-skill` | Beta output |'];
 
 describe('consultant toolkit skills', () => {
-  it('ships 50 skills that pass every portability and ownership check', async () => {
+  it('ships every catalog skill and passes every portability and ownership check', async () => {
     const { errors, stats } = await validateToolkit();
     expect(errors).toEqual([]);
-    expect(stats.skillCount).toBe(50);
+    expect(stats.skillCount).toBe(TOOLKIT_LIMITS.skillCount);
   });
 
   it('parses every frontmatter as YAML with only name and description', () => {
@@ -180,6 +180,17 @@ describe('consultant toolkit skills', () => {
     );
     const { errors } = await validateToolkit(makeToolkit(skills, validRows), { expectedCount: 2 });
     expect(errors.some((e) => e.includes('host-specific term "ChatGPT"'))).toBe(true);
+  });
+
+  it('rejects software delivery language in a consulting skill', async () => {
+    const skills = validPair();
+    skills['beta-skill'] = skillFile(
+      'beta-skill',
+      'Does beta work. Use for beta.',
+      '- Add it to the sprint backlog.'
+    );
+    const { errors } = await validateToolkit(makeToolkit(skills, validRows), { expectedCount: 2 });
+    expect(errors.some((e) => e.includes('software delivery term "sprint"'))).toBe(true);
   });
 
   it('rejects two skills that own the same output', async () => {

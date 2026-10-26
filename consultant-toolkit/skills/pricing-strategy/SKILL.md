@@ -36,6 +36,7 @@ Recommend how to charge, how much, and how to protect price in the market.
 
 ## Boundaries
 
+- Not for pricing a consulting engagement: use `engagement-proposal`.
 - Not for unit costs and margins: use `unit-economics`.
 - Not for defining segments: use `customer-segmentation`.
 - Not for competitor price research: use `competitor-benchmark`.

@@ -2,7 +2,8 @@
 
 // Validates the consultant toolkit skills against the open Agent Skills format
 // and the stricter limits shared by Claude and OpenAI surfaces. It also checks
-// that every skill owns one distinct output and only hands off to real skills.
+// that every skill owns one distinct output, only hands off to real skills, and
+// stays a business consulting skill rather than a software delivery skill.
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -10,12 +11,10 @@ import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultToolkitRoot = path.resolve(path.dirname(scriptPath), '..', 'consultant-toolkit');
-const isDirectRun = process.argv[1]
-  ? path.resolve(process.argv[1]) === scriptPath
-  : false;
+const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === scriptPath : false;
 
 export const TOOLKIT_LIMITS = {
-  skillCount: 50,
+  skillCount: 53,
   nameMaxChars: 64,
   // Codex shortens or drops skills when the startup list exceeds its budget
   // (8,000 characters when the context window is unknown).
@@ -44,6 +43,9 @@ const RESERVED_NAME_WORDS = /claude|anthropic|openai/;
 const NON_ASCII = /[^\t\n\r\x20-\x7e]/;
 const HOST_SPECIFIC_TERMS =
   /\b(Claude|Anthropic|OpenAI|ChatGPT|Codex|Copilot|GPT-\d)\b|\$ARGUMENTS|allowed-tools/;
+// Software delivery vocabulary marks an app development skill, not a consulting one.
+const SOFTWARE_DELIVERY_TERMS =
+  /\b(sprints?|backlogs?|user stor(?:y|ies)|epics?|jira|tickets?|deploy(?:s|ed|ment)?|repositor(?:y|ies)|pull requests?|codebases?|bugs?|devops|ci\/cd|code reviews?|unit tests?)\b/i;
 const SKILL_REFERENCE = /`([a-z0-9]+(?:-[a-z0-9]+)+)`/g;
 const CATALOG_ROW = /^\|\s*(\d+)\s*\|\s*`([a-z0-9-]+)`\s*\|\s*([^|]+?)\s*\|/gm;
 
@@ -107,7 +109,8 @@ function checkSkill(dirName, content, knownNames) {
   if (NON_ASCII.test(content)) fail('use ASCII only, so byte and character limits agree');
 
   if (name !== dirName) fail(`name "${name}" must match the folder name`);
-  if (name && !NAME_PATTERN.test(name)) fail('name must be lowercase words joined by single hyphens');
+  if (name && !NAME_PATTERN.test(name))
+    fail('name must be lowercase words joined by single hyphens');
   if (name && name.length > TOOLKIT_LIMITS.nameMaxChars) fail('name is too long');
   if (name && RESERVED_NAME_WORDS.test(name)) fail('name uses a reserved vendor word');
 
@@ -116,7 +119,9 @@ function checkSkill(dirName, content, knownNames) {
     fail('description is missing');
   } else {
     if (descriptionBytes > TOOLKIT_LIMITS.descriptionMaxBytes) {
-      fail(`description is ${descriptionBytes} bytes; limit is ${TOOLKIT_LIMITS.descriptionMaxBytes}`);
+      fail(
+        `description is ${descriptionBytes} bytes; limit is ${TOOLKIT_LIMITS.descriptionMaxBytes}`
+      );
     }
     if (/[<>]/.test(description)) fail('description must not contain angle brackets');
     if (!/\. Use /.test(description)) fail('description must end with a "Use ..." trigger');
@@ -132,12 +137,23 @@ function checkSkill(dirName, content, knownNames) {
   const hostTerm = body.match(HOST_SPECIFIC_TERMS);
   if (hostTerm) fail(`host-specific term "${hostTerm[0]}" breaks portability`);
 
+  const deliveryTerm = content.match(SOFTWARE_DELIVERY_TERMS);
+  if (deliveryTerm)
+    fail(
+      `software delivery term "${deliveryTerm[0]}"; keep skills in business consulting language`
+    );
+
   for (const [, reference] of body.matchAll(SKILL_REFERENCE)) {
     if (reference === dirName) fail('references itself');
     else if (!knownNames.has(reference)) fail(`references unknown skill "${reference}"`);
   }
 
-  return { errors, listBytes: Buffer.byteLength(dirName, 'utf8') + descriptionBytes, descriptionBytes, fileBytes };
+  return {
+    errors,
+    listBytes: Buffer.byteLength(dirName, 'utf8') + descriptionBytes,
+    descriptionBytes,
+    fileBytes,
+  };
 }
 
 function checkCatalog(readme, skillNames) {
@@ -147,7 +163,8 @@ function checkCatalog(readme, skillNames) {
   const seenOwns = new Map();
 
   rows.forEach((row, index) => {
-    if (row.number !== index + 1) errors.push(`catalog: row ${row.name} is numbered ${row.number}, expected ${index + 1}`);
+    if (row.number !== index + 1)
+      errors.push(`catalog: row ${row.name} is numbered ${row.number}, expected ${index + 1}`);
     seenNames.set(row.name, (seenNames.get(row.name) ?? 0) + 1);
     const owns = row.owns.toLowerCase();
     if (seenOwns.has(owns)) {
@@ -175,7 +192,10 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
   const expectedCount = options.expectedCount ?? TOOLKIT_LIMITS.skillCount;
   const skillsDir = path.join(toolkitRoot, 'skills');
   const entries = await fs.readdir(skillsDir, { withFileTypes: true });
-  const skillNames = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  const skillNames = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
   const knownNames = new Set(skillNames);
   const errors = [];
 
@@ -183,7 +203,12 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
     errors.push(`expected ${expectedCount} skills, found ${skillNames.length}`);
   }
 
-  const stats = { skillCount: skillNames.length, listBytes: 0, maxDescriptionBytes: 0, maxFileBytes: 0 };
+  const stats = {
+    skillCount: skillNames.length,
+    listBytes: 0,
+    maxDescriptionBytes: 0,
+    maxFileBytes: 0,
+  };
   for (const name of skillNames) {
     let content;
     try {
@@ -200,7 +225,9 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
   }
 
   if (stats.listBytes > TOOLKIT_LIMITS.listBudgetBytes) {
-    errors.push(`names and descriptions total ${stats.listBytes} bytes; budget is ${TOOLKIT_LIMITS.listBudgetBytes}`);
+    errors.push(
+      `names and descriptions total ${stats.listBytes} bytes; budget is ${TOOLKIT_LIMITS.listBudgetBytes}`
+    );
   }
 
   try {

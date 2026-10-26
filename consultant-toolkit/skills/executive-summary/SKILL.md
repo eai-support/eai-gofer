@@ -1,6 +1,6 @@
 ---
 name: executive-summary
-description: "Condenses a finished deck or report into a one-page, answer-first summary with key numbers and next steps. Use as the deliverable's front page."
+description: "Condenses a finished deck or report into a one-page, answer-first summary with key numbers and next steps. Use as the front page."
 ---
 
 # Executive Summary

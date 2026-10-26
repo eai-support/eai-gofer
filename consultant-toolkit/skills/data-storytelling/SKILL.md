@@ -1,6 +1,6 @@
 ---
 name: data-storytelling
-description: "Turns one analysis into a data narrative: a big idea, the right comparison, emphasis and plain-language numbers. Use to explain data to non-experts."
+description: "Turns one analysis into a data narrative: big idea, right comparison, emphasis and plain numbers. Use to explain data to non-experts."
 ---
 
 # Data Storytelling

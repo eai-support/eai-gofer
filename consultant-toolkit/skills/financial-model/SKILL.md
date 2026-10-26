@@ -1,6 +1,6 @@
 ---
 name: financial-model
-description: "Designs a driver-based financial model with inputs, calculations, P&L and cash flow outputs, and checks. Use to project financial performance."
+description: "Designs a driver-based financial model with P&L and cash flow outputs and checks. Use to project financial performance."
 ---
 
 # Financial Model

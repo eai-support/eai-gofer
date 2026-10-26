@@ -37,6 +37,7 @@ Turn the recommendation into a sequenced plan with clear milestones.
 
 - Not for the people side of change: use `change-plan`.
 - Not for permanent (run-state) governance: use `operating-model`.
+- Not for progress reporting: use `status-report`.
 - Not for roles and decision rights: use `raci-builder`.
 - Not for risks: use `risk-assessment`. Not for KPIs: use `kpi-dashboard`.
 

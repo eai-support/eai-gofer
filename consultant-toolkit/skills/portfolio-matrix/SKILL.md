@@ -1,6 +1,6 @@
 ---
 name: portfolio-matrix
-description: "Positions existing units or products on a growth-share or nine-box matrix and assigns invest, hold or exit roles. Use for portfolio allocation."
+description: "Positions existing units on a growth-share or nine-box matrix and assigns invest, hold or exit roles. Use for portfolio allocation."
 ---
 
 # Portfolio Matrix

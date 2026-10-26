@@ -1,6 +1,6 @@
 ---
 name: decision-memo
-description: "Writes a stand-alone memo that asks a forum for one decision, with options, recommendation, risks and deadline. Use when a decision needs approval."
+description: "Writes a stand-alone memo asking a forum for one decision, with options, recommendation, risks and deadline. Use when approval is needed."
 ---
 
 # Decision Memo

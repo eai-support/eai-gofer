@@ -35,6 +35,7 @@ Find what could stop the plan from delivering, and decide how to manage it.
 
 - Not for external trends: use `pestel-scan` or `swot-analysis`.
 - Not for flexing model inputs: use `sensitivity-analysis`.
+- Not for the issue, action, and decision log: use `status-report`.
 
 ## Rules
 

@@ -1,6 +1,6 @@
 ---
 name: operating-model
-description: "Designs a target operating model covering structure, processes, people, governance, technology and locations, with gaps. Use for org redesign."
+description: "Designs a target operating model: structure, processes, people, governance, technology and locations. Use for organization redesign."
 ---
 
 # Operating Model
@@ -16,7 +16,7 @@ Design how the organization must work to deliver the strategy.
 1. Write 5 to 7 design principles that come from the strategy.
 2. Describe the current state and the target state for each element:
    - Structure: organization type (functional, divisional, matrix), spans, and layers.
-   - Processes: the key end-to-end processes.
+   - Processes: the key end-to-end processes. Map one process in detail with `process-mapping`.
    - People: roles, capabilities, and sizing.
    - Governance: run-state forums, decision rights, and cadence.
    - Technology and data: core systems and data ownership.

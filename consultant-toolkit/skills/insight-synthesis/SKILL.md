@@ -1,6 +1,6 @@
 ---
 name: insight-synthesis
-description: "Combines findings across workstreams into ranked so-what insights: observation, implication, action. Use when analyses must become a point of view."
+description: "Combines findings across workstreams into ranked so-what insights and one answer. Use when analyses must become a point of view."
 ---
 
 # Insight Synthesis

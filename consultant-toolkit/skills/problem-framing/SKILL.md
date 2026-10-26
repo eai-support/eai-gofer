@@ -36,6 +36,7 @@ A problem statement worksheet with these fields: Decision and decision maker, Ke
 
 - Not for profiling who will receive the answer: use `audience-brief`.
 - Not for splitting the question into parts: use `issue-tree`.
+- Not for the engagement scope, team, timeline, and fees: use `engagement-proposal`.
 - Hand off to: `issue-tree`, `audience-brief`.
 
 ## Rules

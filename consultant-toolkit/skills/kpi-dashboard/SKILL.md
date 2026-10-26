@@ -34,6 +34,7 @@ Define what to measure, how, and how to show it, so leaders can steer.
 
 - Not for drawing the charts: use `data-visualization`.
 - Not for valuing benefits: use `business-case`.
+- Not for periodic progress reports: use `status-report`.
 
 ## Rules
 

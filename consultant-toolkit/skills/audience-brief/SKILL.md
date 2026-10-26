@@ -1,6 +1,6 @@
 ---
 name: audience-brief
-description: "Profiles the audience for one deliverable: decision needed, prior beliefs, objections and preferred format. Use before writing any deck, memo or summary."
+description: "Profiles the audience for one deliverable: decision needed, beliefs, objections and format. Use before writing any deck, memo or summary."
 ---
 
 # Audience Brief

@@ -1,6 +1,6 @@
 ---
 name: strategic-options
-description: "Builds 3 to 5 mutually exclusive strategic alternatives and scores them on weighted criteria to reach a recommendation. Use to choose a strategy."
+description: "Builds 3 to 5 mutually exclusive strategic alternatives and scores them on weighted criteria. Use to choose a strategy."
 ---
 
 # Strategic Options

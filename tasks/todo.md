@@ -65,3 +65,14 @@
 - Gofer generation parity is unchanged. Full suite: 4,945 passed, 1 failed. The
   failure (`gofer-verifier-key-custody`, root-ownership check) also fails on an
   untouched `main` checkout because this container runs as root.
+
+# Consultant Toolkit: Business Consulting Extensions
+
+- [x] Add `engagement-proposal`, `process-mapping`, and `status-report` as
+      business consulting skills, each with one owned output.
+- [x] Route neighbors to the new owners: proposal scope and fees, single-process
+      maps, and the issue, action, and decision log.
+- [x] Reject software delivery vocabulary in every skill, so the pack stays
+      business consulting, not app development.
+- [x] Trim descriptions so 53 skills fit the 8,000-byte Codex list budget.
+- [ ] Run the validator, tests, linters, and an independent review.

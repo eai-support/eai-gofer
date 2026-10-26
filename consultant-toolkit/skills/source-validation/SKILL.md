@@ -1,6 +1,6 @@
 ---
 name: source-validation
-description: "Rates sources and claims for credibility, recency, method and bias, then decides use, caveat or exclude. Use before evidence enters an analysis."
+description: "Rates sources and claims for credibility, recency, method and bias. Use before any evidence enters an analysis."
 ---
 
 # Source Validation

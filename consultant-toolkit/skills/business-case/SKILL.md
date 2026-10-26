@@ -1,6 +1,6 @@
 ---
 name: business-case
-description: "Builds an investment case against a base case with costs, benefits, NPV, IRR, payback and the funding ask. Use to justify funding a decision."
+description: "Builds an investment case against a base case with NPV, IRR, payback and the funding ask. Use to justify funding a decision."
 ---
 
 # Business Case

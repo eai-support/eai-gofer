@@ -1,6 +1,6 @@
 ---
 name: mece-check
-description: "Audits any list, tree, segmentation or framework for overlaps, gaps and mixed logic, then proposes fixes. Use to test a structure before use."
+description: "Audits any list, tree, segmentation or framework for overlaps, gaps and mixed logic. Use to test a structure before use."
 ---
 
 # MECE Check

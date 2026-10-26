@@ -1,6 +1,6 @@
 ---
 name: change-plan
-description: "Plans the people side of change: impact by group, readiness, communications, training, resistance and adoption metrics. Use to drive adoption."
+description: "Plans the people side of change: impact, readiness, communications, training and adoption metrics. Use to drive adoption."
 ---
 
 # Change Plan
