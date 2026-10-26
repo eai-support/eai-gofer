@@ -254,6 +254,10 @@ describe('consulting routing in Gofer', () => {
     const content = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
     expect(content).toContain('## Business Consulting Route');
     expect(content).toContain('.specify/references/consulting/routing.md');
+    // Journey State runs before the route section, so it must not send consulting into the pipeline.
+    expect(content).toContain(
+      'For business consulting, follow the Business Consulting Route section and skip steps 4 to 6.'
+    );
   });
 
   it.each([
