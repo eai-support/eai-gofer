@@ -14,8 +14,12 @@ OpenAI products.
 - **Explicit hand-offs.** Each skill lists what it is not for and which skill to
   use instead, so a request reaches one owner.
 - **Additive outputs.** All skills use the same labels: `[Assumption]`,
-  `[Estimate]`, and inline sources. One skill's output is the next skill's
-  input.
+  `[Estimate]`, `[Unverified]`, and inline sources. One skill's output is the
+  next skill's input.
+- **One owner for shared elements.** `insight-synthesis` owns the one-line
+  answer. `chart-selection` owns chart encoding. `visual-consistency` owns
+  deck-wide number and term rules. `recommendation-deck` decides what goes to
+  the appendix. Other skills reuse these outputs; they do not redo them.
 
 ```mermaid
 flowchart LR
@@ -134,18 +138,18 @@ could go wrong, and how we measure.
 
 ## Example chains
 
-- **Growth strategy:** `problem-framing` > `issue-tree` > `hypothesis-map` >
-  `market-sizing` > `customer-segmentation` > `growth-strategy` >
-  `strategic-options` > `business-case` > `insight-synthesis` >
-  `pyramid-structure` > `recommendation-deck` > `action-titles` >
-  `deck-quality-check`.
+- **Growth strategy:** `problem-framing` > `audience-brief` > `issue-tree` >
+  `hypothesis-map` > `market-sizing` > `customer-segmentation` >
+  `growth-strategy` > `strategic-options` > `business-case` >
+  `insight-synthesis` > `scqa-storyline` > `pyramid-structure` >
+  `recommendation-deck` > `action-titles` > `deck-quality-check`.
 - **Cost diagnostic:** `problem-framing` > `issue-tree` > `value-chain` >
-  `competitor-benchmark` > `sensitivity-analysis` > `insight-synthesis` >
-  `executive-summary`.
+  `competitor-benchmark` > `financial-model` > `sensitivity-analysis` >
+  `insight-synthesis` > `executive-summary`.
 - **Board decision:** `audience-brief` > `strategic-options` > `business-case` >
-  `risk-assessment` > `decision-memo`.
-- **Rollout:** `implementation-roadmap` > `operating-model` > `raci-builder` >
-  `stakeholder-map` > `change-plan` > `kpi-dashboard`.
+  `decision-memo`.
+- **Rollout:** `operating-model` > `implementation-roadmap` > `raci-builder` >
+  `stakeholder-map` > `change-plan` > `risk-assessment` > `kpi-dashboard`.
 
 ## Install
 
@@ -189,16 +193,16 @@ References: [Agent Skills specification](https://agentskills.io/specification),
 
 Run `npm run consultant-toolkit:check` after any edit. It enforces:
 
-| Rule                                                                                        | Why                                                                                       |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Frontmatter has only `name` and a double-quoted `description`                               | These are the two fields every surface reads.                                             |
-| `name` matches the folder: lowercase words joined by single hyphens, with no vendor words   | Open-standard naming rule. Claude rejects reserved words.                                 |
-| Description of 160 bytes or less, ASCII, no angle brackets, ending with a "Use ..." trigger | Under the strictest per-field limits. Claude rejects XML tags. The trigger helps routing. |
-| All names and descriptions total 8,000 bytes or less                                        | Fits the Codex skill-list budget, so no skill is shortened or dropped.                    |
-| Each `SKILL.md` is 4 KB or less                                                             | Loads in full on every surface.                                                           |
-| No product names, tool names, or host syntax in the body                                    | The same instructions work in every product.                                              |
-| Same sections and shared rules in every skill                                               | Outputs chain cleanly from one skill to the next.                                         |
-| Every skill reference resolves to a real skill, and each catalog output is unique           | Hand-offs work, and no two skills overlap.                                                |
+| Rule                                                                                                                                     | Why                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Frontmatter has only `name` and a double-quoted `description`                                                                            | These are the two fields every surface reads.                                             |
+| `name` matches the folder: lowercase words joined by single hyphens, with no vendor words                                                | Open-standard naming rule. Claude rejects reserved words.                                 |
+| Description of 160 bytes or less, ASCII, no angle brackets, ending with a "Use ..." trigger                                              | Under the strictest per-field limits. Claude rejects XML tags. The trigger helps routing. |
+| All names and descriptions total 8,000 bytes or less                                                                                     | Fits the Codex skill-list budget, so no skill is shortened or dropped.                    |
+| Each `SKILL.md` is 4 KB or less                                                                                                          | Loads in full on every surface.                                                           |
+| No vendor product names, host tool names, or host syntax in the body. Open formats (Vega-Lite, Mermaid) appear only as optional outputs. | The same instructions work in every product.                                              |
+| Same sections and shared rules in every skill                                                                                            | Outputs chain cleanly from one skill to the next.                                         |
+| Every skill reference resolves to a real skill, and each catalog output is unique                                                        | Hand-offs work, and no two skills overlap.                                                |
 
 Skills that can use code (for example `data-visualization` and
 `financial-model`) say what to do when code execution is available and when it
@@ -206,8 +210,15 @@ is not. No skill needs scripts, network access, or a specific tool.
 
 ## Out of scope
 
-These are deliberate gaps, not overlaps: designing surveys or interview guides,
-collecting data, running workshops, legal or tax advice, and M&A due diligence.
+These are deliberate gaps, not overlaps:
+
+- Selling and scoping work: proposals and statements of work.
+- Collecting evidence: survey and interview-guide design, data collection, and
+  workshop facilitation.
+- Detailed operations work: process mapping, and sizing cost-saving levers.
+- Programme reporting: status reports and RAID logs (risks, actions, issues,
+  decisions).
+- Specialist advice: legal, tax, and M&A due diligence.
 
 ## Attribution
 

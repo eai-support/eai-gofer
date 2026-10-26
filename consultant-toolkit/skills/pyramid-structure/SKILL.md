@@ -9,11 +9,11 @@ Arrange the argument top-down, so the answer comes first and every point support
 
 ## Input
 
-- The answer (from `insight-synthesis` or `scqa-storyline`) and the supporting findings.
+- The answer (from `insight-synthesis`) and the supporting findings.
 
 ## Method
 
-1. Put the governing thought at the top: the answer in one sentence.
+1. Put the governing thought at the top: the answer from `insight-synthesis`, worded for this audience.
 2. Ask the question the governing thought raises (why, how, or what).
 3. Answer it with 3 to 5 key lines. Prefer an inductive group (parallel reasons). Use a deductive chain only when the logic must build step by step.
 4. Under each key line, add 2 to 4 supporting points with evidence.
@@ -40,4 +40,4 @@ Arrange the argument top-down, so the answer comes first and every point support
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

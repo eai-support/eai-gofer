@@ -9,7 +9,7 @@ Plan the whole deck as a ghost deck before anyone builds a slide.
 
 ## Input
 
-- The pyramid (from `pyramid-structure`), the SCQA opening, and the audience brief.
+- The pyramid (from `pyramid-structure`), the SCQA opening (from `scqa-storyline`), and the audience brief. An existing deck to restructure also works.
 
 ## Method
 
@@ -39,4 +39,4 @@ Ghost deck table: # | Section | Draft title (the message) | Exhibit or content |
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

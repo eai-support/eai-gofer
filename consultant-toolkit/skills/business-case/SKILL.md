@@ -9,7 +9,7 @@ Show whether an investment is worth making, compared with not making it.
 
 ## Input
 
-- The proposed initiative, the base case, cost and benefit estimates, the hurdle or discount rate, and the time horizon.
+- The proposed initiative, the base case, cost and benefit estimates or cash flows (from `financial-model` if one is built), the discount rate, the hurdle rate, and the time horizon.
 
 ## Method
 
@@ -18,7 +18,7 @@ Show whether an investment is worth making, compared with not making it.
 3. List costs: one-off (capex, implementation) and ongoing (opex).
 4. List benefits: revenue, cost savings, avoided costs or risks, and non-financial benefits.
 5. Phase costs and benefits over time, including ramp-up.
-6. Compute NPV at the stated rate, IRR, and payback period.
+6. Compute NPV at the discount rate, IRR, and payback. Compare IRR with the hurdle rate. Rank exclusive options by NPV, because IRR can mislead when options differ in size or cash flows change sign.
 7. State key assumptions with confidence levels.
 8. Summarize the main risks and link to the risk register.
 9. State the ask: amount, phasing, decision gates, and owner.
@@ -42,4 +42,4 @@ Show whether an investment is worth making, compared with not making it.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

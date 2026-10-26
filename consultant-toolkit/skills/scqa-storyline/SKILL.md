@@ -9,14 +9,14 @@ Write the opening that makes the audience want the answer, then gives it.
 
 ## Input
 
-- The answer or recommendation, the context, and the audience (from `audience-brief` if available).
+- The answer (from `insight-synthesis`), the context, and the audience (from `audience-brief` if available).
 
 ## Method
 
 1. Situation: a fact the audience already accepts. Keep it short and uncontroversial.
 2. Complication: what changed, or the tension that makes the situation unstable.
 3. Question: the question the complication raises. It may stay implied.
-4. Answer: the governing thought, in one sentence.
+4. Answer: the governing thought. Take it from `insight-synthesis` and refine only the wording.
 5. Choose the order:
    - Standard (S-C-Q-A) for most audiences.
    - Direct (A, then S-C) for senior or time-poor audiences.
@@ -42,4 +42,4 @@ Write the opening that makes the audience want the answer, then gives it.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

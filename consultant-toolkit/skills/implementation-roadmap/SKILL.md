@@ -9,17 +9,18 @@ Turn the recommendation into a sequenced plan with clear milestones.
 
 ## Input
 
-- The approved recommendation and its initiatives, constraints (budget, people, deadlines), and governance needs.
+- The approved recommendation and its initiatives, operating model gaps (from `operating-model` if any), and constraints (budget, people, deadlines).
 
 ## Method
 
 1. Group initiatives into 3 to 6 workstreams.
-2. For each initiative, define scope, owner, start and end, deliverables, resources, and budget.
-3. Set phases, for example: mobilize (0 to 3 months), scale, sustain.
-4. Identify quick wins that deliver results within 90 days.
-5. Map dependencies and find the critical path.
-6. Set milestones and stage gates with clear exit criteria.
-7. Set the governance rhythm, for example a weekly delivery meeting and a monthly steering committee.
+2. Rank initiatives by value and effort. Do high-value, low-effort work first.
+3. For each initiative, define scope, owner, start and end, deliverables, resources, and budget.
+4. Set phases, for example: mobilize (0 to 3 months), scale, sustain.
+5. Identify quick wins that deliver results within 90 days.
+6. Map dependencies and find the critical path.
+7. Set milestones and stage gates with clear exit criteria.
+8. Set programme governance for the delivery period, for example a weekly delivery meeting and a monthly steering committee.
 
 ## Output
 
@@ -35,10 +36,11 @@ Turn the recommendation into a sequenced plan with clear milestones.
 ## Boundaries
 
 - Not for the people side of change: use `change-plan`.
+- Not for permanent (run-state) governance: use `operating-model`.
 - Not for roles and decision rights: use `raci-builder`.
 - Not for risks: use `risk-assessment`. Not for KPIs: use `kpi-dashboard`.
 
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

@@ -9,7 +9,7 @@ Turn findings from many analyses into a short, ranked set of insights and one an
 
 ## Input
 
-- Findings from research, interviews, surveys, and analyses, plus the key question and hypotheses.
+- Findings from `research-synthesis`, `interview-synthesis`, `survey-analysis`, and the analysis skills, plus the key question and hypotheses. Run the per-source skills on raw material first.
 
 ## Method
 
@@ -41,4 +41,4 @@ Turn findings from many analyses into a short, ranked set of insights and one an
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

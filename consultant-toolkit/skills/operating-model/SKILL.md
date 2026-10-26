@@ -18,7 +18,7 @@ Design how the organization must work to deliver the strategy.
    - Structure: organization type (functional, divisional, matrix), spans, and layers.
    - Processes: the key end-to-end processes.
    - People: roles, capabilities, and sizing.
-   - Governance: forums, decision rights, and cadence.
+   - Governance: run-state forums, decision rights, and cadence.
    - Technology and data: core systems and data ownership.
    - Locations and sourcing: in-house, shared services, or outsourced.
    - Performance management: how results are measured.
@@ -38,10 +38,10 @@ Design how the organization must work to deliver the strategy.
 ## Boundaries
 
 - Not for role-level responsibilities: use `raci-builder`.
-- Not for the transition plan: use `implementation-roadmap`.
+- Not for the transition plan or programme governance: use `implementation-roadmap`.
 - Not for the people transition: use `change-plan`.
 
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

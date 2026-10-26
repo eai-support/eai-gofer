@@ -1,6 +1,6 @@
 ---
 name: raci-builder
-description: "Builds a RACI matrix of activities or decisions by role with exactly one Accountable per row. Use to clarify roles and decision rights."
+description: "Builds a RACI matrix of activities or decisions by role with exactly one Accountable per row. Use to clarify who does and approves each item."
 ---
 
 # RACI Builder
@@ -21,7 +21,7 @@ Make clear who does, owns, advises on, and hears about each activity or decision
    - C (Consulted): gives input before the work; two-way.
    - I (Informed): told after; one-way.
 4. Check every row: exactly one A, at least one R. A and R can be the same role.
-5. Check every column: no role is overloaded with A. Remove roles that have only I.
+5. Check every column: no role is overloaded with A. Remove roles that have no letter in any row.
 6. Limit C to people whose input changes the result.
 
 ## Output
@@ -42,4 +42,4 @@ Make clear who does, owns, advises on, and hears about each activity or decision
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

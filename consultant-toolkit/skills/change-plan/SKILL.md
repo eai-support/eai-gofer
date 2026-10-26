@@ -9,7 +9,7 @@ Help each affected group move from the old way of working to the new one, and pr
 
 ## Input
 
-- The change, the affected groups, and the timeline (from `implementation-roadmap` if available).
+- The change, the operating model gaps (from `operating-model` if any), the affected groups, and the timeline (from `implementation-roadmap` if available).
 
 ## Method
 
@@ -44,4 +44,4 @@ Help each affected group move from the old way of working to the new one, and pr
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

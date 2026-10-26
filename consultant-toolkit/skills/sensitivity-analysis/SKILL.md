@@ -1,6 +1,6 @@
 ---
 name: sensitivity-analysis
-description: "Flexes key drivers one or two at a time to rank impact in a tornado and find breakeven thresholds. Use to stress-test a model or case."
+description: "Flexes key drivers one or two at a time to rank impact and find thresholds where the decision flips. Use to stress-test a model or case."
 ---
 
 # Sensitivity Analysis
@@ -36,8 +36,9 @@ Find which assumptions move the answer most, and where the answer flips.
 
 - Not for coherent multi-driver futures: use `scenario-analysis`.
 - Not for building the model: use `financial-model`.
+- Not for the base breakeven volume of a unit: use `unit-economics`.
 
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

@@ -1,6 +1,6 @@
 ---
 name: growth-strategy
-description: "Maps growth avenues across markets, products and build, partner or buy, sized and phased. Use to find where and how a business can grow."
+description: "Maps and ranks growth avenues that can be combined, across markets, products and build, partner or buy. Use to find where a business can grow."
 ---
 
 # Growth Strategy
@@ -36,10 +36,10 @@ Find and prioritize where and how the business can grow.
 
 ## Boundaries
 
-- Not for packaging into mutually exclusive choices and scoring them: use `strategic-options`.
+- Not for choosing among mutually exclusive alternatives: use `strategic-options`.
 - Not for allocating resources across existing units: use `portfolio-matrix`.
 
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

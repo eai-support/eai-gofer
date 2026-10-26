@@ -14,7 +14,7 @@ Describe a few coherent futures, test the plan in each, and find moves that work
 ## Method
 
 1. List driving forces. Rate each by impact and uncertainty.
-2. Choose the two most impactful and uncertain forces. Cross them in a 2x2 to get four scenarios. For a financial plan, low, base, and high cases are acceptable.
+2. Choose the two most impactful and uncertain forces. Cross them in a 2x2 to get four scenarios. Low, base, and high cases are acceptable only if all drivers move together in each case.
 3. Give each scenario a name and a short narrative.
 4. Set the value of every key driver in each scenario so they move together consistently.
 5. Define signposts: early signals that show which scenario is unfolding.
@@ -41,4 +41,4 @@ Describe a few coherent futures, test the plan in each, and find moves that work
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

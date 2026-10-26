@@ -26,7 +26,7 @@ Check each item. Rate each issue Blocker, Major, or Minor.
 9. Sensitivity: is confidential or personal data removed or approved?
 10. Close: are next steps and asks stated?
 
-Route each fix to its owner: titles to `action-titles`, body text to `slide-copy-editor`, style to `visual-consistency`, logic to `mece-check`, evidence to `source-validation`. This skill owns checks 1, 2, 5, 9, and 10 and the verdict.
+Route each fix to its owner: answer and logic gaps to `pyramid-structure`; missing slides, order, and next steps to `recommendation-deck`; titles to `action-titles`; body text and typos to `slide-copy-editor`; style to `visual-consistency`; missing source lines to `exhibit-builder`; weak sources to `source-validation`; figure mismatches to the skill that produced the number; confidential content to the deck owner. This skill owns the checks and the verdict.
 
 ## Output
 
@@ -46,4 +46,4 @@ Route each fix to its owner: titles to `action-titles`, body text to `slide-copy
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

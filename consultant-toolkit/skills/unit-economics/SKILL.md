@@ -1,6 +1,6 @@
 ---
 name: unit-economics
-description: "Calculates per-unit or per-customer economics: contribution margin, CAC, LTV, payback and breakeven. Use to test if a model makes money."
+description: "Calculates per-unit or per-customer economics: contribution margin, CAC, LTV, CAC payback and breakeven volume. Use to test if a model makes money."
 ---
 
 # Unit Economics
@@ -16,8 +16,8 @@ Show whether each unit or customer makes money, and which levers matter most.
 1. Define the unit: order, customer, store, seat, or another unit.
 2. Build the unit waterfall: revenue per unit, minus variable costs (goods, fulfillment, payment, support), equals contribution margin.
 3. CAC = fully loaded sales and marketing spend / new customers in the same period.
-4. LTV = average revenue per period x gross margin % x expected lifetime in periods. Expected lifetime is about 1 / churn rate. Discount if periods are long.
-5. LTV to CAC ratio, and CAC payback in months = CAC / (monthly revenue per customer x gross margin %).
+4. LTV = average revenue per period x contribution margin % x expected lifetime in periods. Expected lifetime is about 1 / churn rate. Discount if periods are long. If you use gross margin instead (common in software), say so.
+5. LTV to CAC ratio, and CAC payback in months = CAC / (monthly revenue per customer x the same margin %).
 6. Breakeven volume = fixed costs / contribution per unit.
 7. Show cohorts if the data allows, because blended averages hide decay.
 8. Name the 3 levers with the biggest effect.
@@ -42,4 +42,4 @@ Show whether each unit or customer makes money, and which levers matter most.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

@@ -50,4 +50,18 @@
       budget, portability, unique ownership, and valid cross-references.
 - [x] Keep the pack outside Gofer's generated host folders so the `eai`-only
       picker and release mirrors do not change.
-- [ ] Run the validator, focused tests, and an independent overlap review.
+- [x] Run the validator, focused tests, and an independent overlap review.
+
+## Review
+
+- Validator passed: 50 skills; names and descriptions total 7,670 of 8,000
+  bytes; longest description 153 bytes; largest `SKILL.md` 2,130 bytes.
+- All 50 frontmatter blocks parse as YAML with only `name` and `description`.
+- Focused tests passed: 11 tests, including rejection cases for each rule.
+- Independent review found 12 overlap clusters, 6 broken hand-offs, and 6 method
+  errors. All were fixed. Shared elements now have one owner each.
+- Shared rule now forbids invented sources and labels unchecked knowledge
+  `[Unverified]`, so skills stay safe on models without web access.
+- Gofer generation parity is unchanged. Full suite: 4,945 passed, 1 failed. The
+  failure (`gofer-verifier-key-custody`, root-ownership check) also fails on an
+  untouched `main` checkout because this container runs as root.

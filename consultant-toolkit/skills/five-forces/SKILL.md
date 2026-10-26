@@ -20,7 +20,7 @@ Explain how attractive an industry is, and why, using Porter's Five Forces.
    - Threat of substitutes: price and performance of alternatives, switching costs.
    - Buyer power: concentration, volume, switching costs, price sensitivity, backward integration.
    - Supplier power: concentration, uniqueness of inputs, switching costs, forward integration.
-3. Rate each force Low, Medium, or High, with its trend (rising, stable, falling).
+3. Rate each force Low, Medium, or High, with its trend (rising, stable, falling). A high force lowers industry attractiveness.
 4. Note complementors and regulation where they shape profits.
 5. Conclude on overall attractiveness and where profit pools sit in the value chain.
 
@@ -43,4 +43,4 @@ Explain how attractive an industry is, and why, using Porter's Five Forces.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

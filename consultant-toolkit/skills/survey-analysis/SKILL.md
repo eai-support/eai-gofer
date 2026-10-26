@@ -18,9 +18,10 @@ Turn questionnaire responses into reliable, segment-level findings.
 3. Weight to the population when the sample is skewed. State the weighting variables.
 4. Report descriptive results with base sizes (n) for every figure.
 5. Cross-tab by key segments.
-6. Test differences: chi-square for proportions, t-test for means. Flag bases under 30 as directional. Margin of error for a share p is about 1.96 x sqrt(p(1-p)/n).
-7. Code open-ended answers into categories with counts.
-8. If asked for drivers, use correlation or regression, and state that correlation is not causation.
+6. Test differences: chi-square for proportions, t-test for means. Flag bases under 30 as directional. At 95% confidence, a simple random sample has a margin of error of about 1.96 x sqrt(p(1-p)/n) for a share p. With weights, use effective n = sum(w)^2 / sum(w^2). Flag results when you run many tests.
+7. Without code execution, report descriptive results only and mark tests as not run.
+8. Code open-ended answers into categories with counts.
+9. If asked for drivers, use correlation or regression, and state that correlation is not causation.
 
 ## Output
 
@@ -43,4 +44,4 @@ Turn questionnaire responses into reliable, segment-level findings.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

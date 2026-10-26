@@ -14,7 +14,7 @@ Group customers into segments that need different offers, and choose which to ta
 ## Method
 
 1. Choose a basis that predicts behavior: needs, behaviors, or value. Use demographics only if they predict behavior.
-2. Choose a method: rules from research (a priori), or clustering when data allows. State the method.
+2. Choose a method: rules from research (a priori), or clustering when data and code execution allow. State the method. Do not claim clustering you did not run.
 3. Aim for 4 to 7 segments. Give each a descriptive name.
 4. Profile each segment: size, revenue or profit, growth, needs, behaviors, channels, and pain points.
 5. Test each segment: measurable, substantial, accessible, differentiated, actionable.
@@ -39,4 +39,4 @@ Group customers into segments that need different offers, and choose which to ta
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

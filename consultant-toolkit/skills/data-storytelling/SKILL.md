@@ -18,7 +18,7 @@ Explain what one analysis means, in a sequence a non-analyst can follow.
 3. Choose the comparison that proves the idea: against target, prior period, peers, or plan.
 4. Add context: baseline, benchmark, and scale.
 5. Remove data that does not serve the idea.
-6. Plan emphasis: highlight one series or point, mute the rest, and annotate the moment that matters.
+6. Write emphasis notes: what to highlight, what to mute, and which moment to annotate. Pass them to `data-visualization` and `exhibit-builder`.
 7. Arrange beats: setup (what is normal), tension (what changed), resolution (what it means and what to do).
 8. Say numbers plainly: round them, use relatable ratios ("1 in 4"), keep units consistent, avoid false precision.
 
@@ -42,4 +42,4 @@ Explain what one analysis means, in a sequence a non-analyst can follow.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

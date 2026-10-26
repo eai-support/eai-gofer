@@ -13,7 +13,7 @@ Identify who can make or break the initiative, and plan how to engage each one.
 
 ## Method
 
-1. List individuals and groups who are affected by, or can influence, the initiative.
+1. List individuals and decision bodies (boards, committees, unions) who can block or speed the initiative. Leave broad employee groups to `change-plan`.
 2. Rate influence (High, Medium, Low) and interest (High, Medium, Low).
 3. Rate current stance from -2 (opposed) to +2 (champion), and the stance you need.
 4. Record each stakeholder's concerns and what they gain or lose.
@@ -38,4 +38,4 @@ Identify who can make or break the initiative, and plan how to engage each one.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

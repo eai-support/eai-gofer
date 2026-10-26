@@ -17,7 +17,7 @@ Assemble a chart or table into a finished exhibit that proves its headline on it
 2. Add a subtitle: what is measured, units, time frame, and scope.
 3. Place the chart or table as the main element.
 4. Add up to 3 callouts tied to the message, for example "+12 pts vs. 2023".
-5. Use direct labels or a short legend.
+5. Keep the labels from `data-visualization`. Add only text elements: headline, subtitle, callouts, takeaway, footnotes, and source.
 6. Add an optional takeaway box with one sentence.
 7. Add footnotes for definitions, exclusions, and method.
 8. Add a source line, for example: "Source: Company filings 2024; team analysis".
@@ -25,7 +25,7 @@ Assemble a chart or table into a finished exhibit that proves its headline on it
 
 ## Output
 
-Exhibit spec: Element | Exact text or content | Position. Include a rendered version when tools allow.
+Exhibit spec: Element | Exact text or content. Include a rendered version when tools allow.
 
 ## Quality bar
 
@@ -41,4 +41,4 @@ Exhibit spec: Element | Exact text or content | Position. Include a rendered ver
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

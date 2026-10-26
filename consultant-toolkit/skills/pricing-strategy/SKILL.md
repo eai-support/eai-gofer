@@ -14,7 +14,7 @@ Recommend how to charge, how much, and how to protect price in the market.
 ## Method
 
 1. Set the pricing objective.
-2. Estimate value to the customer: price of the next best alternative plus the value of differences.
+2. Estimate value to the customer: price of the next best alternative, plus the value of positive differences, minus the value of negative differences.
 3. Estimate willingness to pay. Name the method used: interviews, price-sensitivity survey (Van Westendorp), conjoint, or market tests.
 4. Choose the price metric: per unit, per user, by usage, by outcome, or subscription.
 5. Design the structure: good-better-best tiers, bundles, and add-ons.
@@ -43,4 +43,4 @@ Recommend how to charge, how much, and how to protect price in the market.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

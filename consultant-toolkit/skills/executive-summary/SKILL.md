@@ -32,10 +32,10 @@ The summary, as headed paragraphs or answer-first bullets.
 
 ## Boundaries
 
-- Not for a stand-alone document that requests a decision: use `decision-memo`.
+- Not for a document whose reader must approve a decision, even when a deck exists: use `decision-memo`.
 - Not for slide headlines: use `action-titles`.
 
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].

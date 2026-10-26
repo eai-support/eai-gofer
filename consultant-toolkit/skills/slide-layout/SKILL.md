@@ -22,7 +22,7 @@ Arrange one slide so the eye reads the message first and the proof second.
    - Timeline.
    - Table.
    - Text only, with 3 points or fewer.
-2. Apply a grid: fixed margins, aligned columns, and consistent gutters.
+2. Apply the grid and margins from the `visual-consistency` spec, or a standard grid if none exists.
 3. Set hierarchy: title, then main exhibit, then callouts, then footnotes and source.
 4. Follow reading order: top-left to bottom-right.
 5. Keep one main exhibit per slide. Leave white space.
@@ -45,4 +45,4 @@ Arrange one slide so the eye reads the message first and the proof second.
 ## Rules
 
 - If a required input is missing, ask once when you can. Otherwise state an assumption, label it [Assumption], and continue.
-- Do not invent facts or figures. Label estimates [Estimate] and cite every source.
+- Do not invent facts, figures, or sources. Use provided material or sources you can check; label other knowledge [Unverified] and estimates [Estimate].
