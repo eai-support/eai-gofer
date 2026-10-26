@@ -21,6 +21,11 @@ description: Generate actionable task breakdown from implementation plan
 
 # Gofer Tasks
 
+> **Business consulting route:** if `discovery.md` records the business
+> consulting route, skip the software steps in this file. Follow the
+> `4_gofer_tasks` row of the stage map in
+> `.specify/references/consulting/routing.md` instead.
+
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->
 

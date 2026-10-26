@@ -6,6 +6,11 @@ description:
 
 # Gofer Validate
 
+> **Business consulting route:** if `discovery.md` records the business
+> consulting route, skip the software steps in this file. Follow the
+> `6_gofer_validate` row of the stage map in
+> `.specify/references/consulting/routing.md` instead.
+
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->
 

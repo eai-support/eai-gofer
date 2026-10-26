@@ -937,7 +937,27 @@ Classify as non-app only when the user is asking for work such as:
 - Codebase exploration, cloud audit, engineering review, or migration planning.
 - A one-off analysis task where no durable user workflow will be implemented.
 
-If non-app, first confirm once:
+Non-app work has two routes. Choose exactly one by the subject of the work:
+
+| Route | Subject | Owner |
+| ----- | ------- | ----- |
+| Business consulting | The client's business: strategy, markets, customers, finances, operations, organization, change, and the proposals, decks, memos, and plans that carry the answer | Consulting skills, through `.specify/references/consulting/routing.md` |
+| Technical non-app | Software, code, cloud, data platforms, engineering review, migration planning, or delivery documentation | The existing Gofer research/docs path |
+
+Check the business consulting route before the app default. App signals such
+as a dashboard, workflow, or better way of working mean app delivery only when
+something will be built. A KPI definition, dashboard wireframe, process map,
+operating model, change plan, or other business deliverable with nothing to
+build is business consulting. If a consulting result later calls for
+something to be built, start app delivery and use that result as discovery
+input.
+
+If non-app, first confirm once. For the business consulting route, ask:
+
+> This looks like business consulting work, so I will skip EAI workspace/app
+> setup and use the Gofer consulting skills. Is that right?
+
+For the technical non-app route, ask:
 
 > This looks like non-app work, so I will skip EAI workspace/app setup and continue
 > the Gofer research/docs path. Is that right?
@@ -950,12 +970,15 @@ If the user confirms, record this explicitly in `discovery.md`:
 | Field | Decision |
 | ----- | -------- |
 | Classification | Non-application work |
+| Route | {{business-consulting-or-technical-non-app}} |
 | Reason | {{why-this-is-not-an-app-or-workflow}} |
 | Four-step AI journey required | No |
 ```
 
 Then continue through the pipeline without running EAI app setup and without
-creating a four-step AI-augmented app journey.
+creating a four-step AI-augmented app journey. For the business consulting
+route, the numbered stages use the consulting skills as their method; follow
+the stage map in `.specify/references/consulting/routing.md`.
 
 If the user says this is actually app work, switch back to app delivery, run the
 EAI app-delivery preflight, and continue to Step 2.7.
@@ -973,6 +996,7 @@ remove existing non-app functionality or fork Gofer into unrelated products.
 | ---- | -------------- |
 | Application delivery | Shared stages gain EAI Platform/Azure stack enforcement, a UI-first interview, an EAI App Template constrained preview loop, preview self-review, optional branding intake, continuous UI show-and-tell, and EnterpriseAI service-fit review before plan/tasks are finalized |
 | Non-app work | Shared stages preserve the current research, documentation, exploration, bug-fix, migration, audit, and other non-app workflows without app-only preview, branding, or service-fit requirements |
+| Business consulting (non-app route) | Shared stages use the consulting skills as their method, through the stage map in `.specify/references/consulting/routing.md`. They produce business deliverables and skip software-delivery checks |
 
 ---
 

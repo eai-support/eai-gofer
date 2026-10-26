@@ -85,3 +85,18 @@
   report uses measurable RAG rules and `kpi-dashboard` thresholds, and process
   maps hand off to the roadmap, RACI, and change plan.
 - Validator and 12 focused tests passed after the fixes.
+
+# Consulting Route Through `/eai`
+
+- [x] Move the pack to `.specify/references/consulting/`, so workspace
+      bootstrap, the VS Code extension, and plugin bundles ship it unchanged.
+- [x] Add one shared `Business Consulting Route` section to the `eai` entry on
+      every surface and to the plugin umbrella skill.
+- [x] Split stage 0 non-app work into business consulting and technical non-app
+      routes, checked before the app default.
+- [x] Guard stages 1 to 6 so the consulting route skips software steps and
+      follows the stage map.
+- [x] Write `routing.md`: route test, owner table against Gofer functions, stage
+      map for all 53 skills, and requests with no owner.
+- [x] Validate routing owners, surface coverage, and the portable inventory.
+- [ ] Independent MECE check of realistic requests against the routing.

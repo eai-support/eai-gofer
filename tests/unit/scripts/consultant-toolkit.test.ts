@@ -11,7 +11,9 @@ import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 
 const validatorUrl = new URL('../../../scripts/verify-consultant-toolkit.mjs', import.meta.url);
-const SKILLS_DIR = fileURLToPath(new URL('../../../consultant-toolkit/skills', import.meta.url));
+const SKILLS_DIR = fileURLToPath(
+  new URL('../../../.specify/references/consulting/skills', import.meta.url)
+);
 
 interface ToolkitStats {
   skillCount: number;
@@ -204,5 +206,49 @@ describe('consultant toolkit skills', () => {
       expectedCount: 2,
     });
     expect(errors).toContain('catalog: beta-skill is listed 0 times; expected once');
+  });
+});
+
+describe('consulting routing in Gofer', () => {
+  const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+
+  it('rejects a routing reference that names an unknown owner or misses a skill', async () => {
+    const root = makeToolkit(validPair(), validRows);
+    fs.writeFileSync(path.join(root, 'routing.md'), '- `alpha-skill` then `gamma-skill`.\n');
+    const { errors } = await validateToolkit(root, { expectedCount: 2 });
+    expect(errors).toContain(
+      'routing: "gamma-skill" is not a consulting skill, Gofer command, or Gofer agent'
+    );
+    expect(errors).toContain('routing: beta-skill has no stage in the stage map');
+  });
+
+  // Every surface Gofer delivers to reaches the consulting skills through `eai`.
+  const ENTRY_POINTS = [
+    '.claude/skills/eai/SKILL.md',
+    '.claude/commands/eai.md',
+    '.agents/skills/eai/SKILL.md',
+    '.system/skills/eai/SKILL.md',
+    '.github/skills/eai/SKILL.md',
+    '.grok/skills/eai/SKILL.md',
+    'skills/eai/SKILL.md',
+    'plugin-skills/eai/SKILL.md',
+    'plugins/eai-gofer/skills/eai/SKILL.md',
+    'extension/resources/claude-skills/eai/SKILL.md',
+    'extension/resources/github-skills/eai/SKILL.md',
+  ];
+
+  it.each(ENTRY_POINTS)('%s routes business consulting to the consulting skills', (rel) => {
+    const content = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+    expect(content).toContain('## Business Consulting Route');
+    expect(content).toContain('.specify/references/consulting/routing.md');
+  });
+
+  it.each([
+    'plugins/eai-gofer/.specify/references/consulting',
+    'extension/resources/references/consulting',
+  ])('%s ships the routing reference and every skill', (rel) => {
+    const root = path.join(REPO_ROOT, rel);
+    expect(fs.existsSync(path.join(root, 'routing.md'))).toBe(true);
+    expect(fs.readdirSync(path.join(root, 'skills'))).toHaveLength(TOOLKIT_LIMITS.skillCount);
   });
 });

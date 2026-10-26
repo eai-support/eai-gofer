@@ -10,7 +10,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
-const defaultToolkitRoot = path.resolve(path.dirname(scriptPath), '..', 'consultant-toolkit');
+const defaultToolkitRoot = path.resolve(
+  path.dirname(scriptPath),
+  '..',
+  '.specify',
+  'references',
+  'consulting'
+);
 const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === scriptPath : false;
 
 export const TOOLKIT_LIMITS = {
@@ -184,9 +190,56 @@ function checkCatalog(readme, skillNames) {
   return errors;
 }
 
+async function listNames(dir, toName) {
+  try {
+    return (await fs.readdir(dir, { withFileTypes: true })).map(toName).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Checks that the Gofer routing reference only names real owners: consulting
+ * skills, Gofer specialist agents and skills (kebab-case), and Gofer commands
+ * (snake-case stems in .specify/commands).
+ * @param {string} routing
+ * @param {string} toolkitRoot
+ * @param {string[]} skillNames
+ */
+async function checkRouting(routing, toolkitRoot, skillNames) {
+  const specifyRoot = path.resolve(toolkitRoot, '..', '..');
+  const repoRoot = path.resolve(specifyRoot, '..');
+  const commands = new Set(
+    await listNames(path.join(specifyRoot, 'commands'), (e) =>
+      e.isFile() && e.name.endsWith('.md') ? e.name.slice(0, -3) : null
+    )
+  );
+  const kebabOwners = new Set([
+    ...skillNames,
+    ...(await listNames(path.join(repoRoot, '.claude', 'agents'), (e) =>
+      e.isFile() && e.name.endsWith('.md') ? e.name.slice(0, -3) : null
+    )),
+    ...(await listNames(path.join(specifyRoot, 'skills'), (e) =>
+      e.isDirectory() ? e.name : null
+    )),
+  ]);
+
+  const errors = [];
+  for (const [, token] of routing.matchAll(/`([a-z0-9]+(?:[-_][a-z0-9]+)+)`/g)) {
+    const known = token.includes('_') ? commands.has(token) : kebabOwners.has(token);
+    if (!known)
+      errors.push(`routing: "${token}" is not a consulting skill, Gofer command, or Gofer agent`);
+  }
+  for (const name of skillNames) {
+    if (!routing.includes(`\`${name}\``))
+      errors.push(`routing: ${name} has no stage in the stage map`);
+  }
+  return errors;
+}
+
 /**
  * @param {string} [toolkitRoot]
- * @param {{ expectedCount?: number }} [options]
+ * @param {{ expectedCount?: number, requireRouting?: boolean }} [options]
  */
 export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options = {}) {
   const expectedCount = options.expectedCount ?? TOOLKIT_LIMITS.skillCount;
@@ -235,6 +288,17 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
     errors.push(...checkCatalog(readme, skillNames));
   } catch {
     errors.push('missing README.md catalog');
+  }
+
+  // Routing applies only when the pack ships inside Gofer.
+  try {
+    const routing = await fs.readFile(path.join(toolkitRoot, 'routing.md'), 'utf8');
+    errors.push(...(await checkRouting(routing, toolkitRoot, skillNames)));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    if (options.requireRouting ?? toolkitRoot === defaultToolkitRoot) {
+      errors.push('missing routing.md for Gofer');
+    }
   }
 
   return { errors, stats };

@@ -12,7 +12,7 @@ import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
-import { buildAuthAccessDecisionContract, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract, buildSupportReportContract, ensureSupportReportContract } from './generate-commands.mjs';
+import { buildAuthAccessDecisionContract, buildConsultingRouteSection, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract, buildSupportReportContract, ensureSupportReportContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -603,6 +603,8 @@ ${buildAlwaysEaiSection()}
 - If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
 - If the user confirms non-app, do not run \`eai whoami\`, workspace selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.
 - If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
+
+${buildConsultingRouteSection()}
 
 ${buildJourneyStateSection()}
 

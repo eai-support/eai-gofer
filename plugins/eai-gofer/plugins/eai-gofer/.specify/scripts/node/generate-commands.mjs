@@ -341,6 +341,19 @@ Before routing work, decide where the user is now.
 7. Keep the user-facing explanation at the business level.`;
 }
 
+export function buildConsultingRouteSection() {
+  return `## Business Consulting Route
+
+Business consulting is non-app work about the client's business: strategy, markets, customers, finances, operations, organization, change, and the proposals, decks, memos, and plans that carry the answer.
+
+1. Use this route only when the request is clearly business consulting and nothing will be built. Check it before the app default: a KPI definition, dashboard wireframe, process map, or operating model with nothing to build is consulting. App delivery and ambiguous requests keep the app path. Software, code, cloud, and delivery-documentation work keeps the Gofer research/docs path.
+2. Confirm once instead of the general non-app question: **"This looks like business consulting work, so I will skip EAI workspace/app setup and use the Gofer consulting skills. Is that right?"**
+3. Read \`.specify/references/consulting/routing.md\`. Use its owner table so each requested output has exactly one owner: one consulting skill or one Gofer function.
+4. Follow the chosen skill at \`.specify/references/consulting/skills/<name>/SKILL.md\`. Chain skills through their hand-offs. Do not redo an output that another skill owns.
+5. Do not run \`eai whoami\`, EAI setup, app preview, or software-delivery gates for consulting work.
+6. If the workspace has no \`.specify/\` scaffold, read the same files from the installed Gofer plugin.`;
+}
+
 function buildMvpCapabilityValidationSection() {
   return `## MVP Capability-Based Validation
 
@@ -562,6 +575,8 @@ ${buildAuthAccessDecisionContract()}
 3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
 4. When the user confirms non-app, do not run \`eai whoami\`, workspace selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate Gofer research, documentation, audit, migration, or planning path.
 5. If the user says it is app work, switch to EAI app delivery and run EAI readiness.
+
+${buildConsultingRouteSection()}
 
 ## EAI Platform Readiness
 

@@ -7,9 +7,18 @@ plus three engagement skills (`engagement-proposal`, `process-mapping`, and
 them without duplicated work. The same files run on Claude and OpenAI products.
 
 These are business consulting skills, not app development skills. They use
-client-engagement language, contain no software delivery steps, and do not run
-through Gofer's app delivery pipeline. The validator rejects software delivery
-terms such as sprint, backlog, or deployment.
+client-engagement language and contain no software delivery steps. The validator
+rejects software delivery terms such as sprint, backlog, or deployment.
+
+## In Gofer
+
+Gofer ships these skills on every surface it supports: Claude, Codex, Copilot,
+Grok, and VS Code. Use `/eai` (or `$eai` in Codex) as usual. When a request is
+business consulting with nothing to build, Gofer routes it to the right skill
+and skips app setup. [`routing.md`](routing.md) holds the route test, the owner
+table that keeps the non-app path MECE with Gofer's own functions, and the map
+from Gofer's numbered stages to these skills. The skills stay out of the host
+skill pickers, so `eai` remains the only public command.
 
 ## How the set stays MECE
 
@@ -165,7 +174,8 @@ could go wrong, how we measure, and how we report progress.
 
 ## Install
 
-Each skill is one folder with one `SKILL.md`. Install only the skills you need,
+Gofer users need no separate install. To use the skills without Gofer, install
+each skill as one folder with one `SKILL.md`. Install only the skills you need,
 or all 53.
 
 | Surface                    | How to install                                                                                                                                                                                           |
@@ -182,7 +192,7 @@ or all 53.
 Make one zip per skill, with the folder at the zip root:
 
 ```sh
-cd consultant-toolkit/skills
+cd .specify/references/consulting/skills
 mkdir -p ../dist
 for d in */; do zip -qr "../dist/${d%/}.zip" "$d"; done
 ```
@@ -190,7 +200,7 @@ for d in */; do zip -qr "../dist/${d%/}.zip" "$d"; done
 On Windows PowerShell:
 
 ```powershell
-cd consultant-toolkit\skills
+cd .specify\references\consulting\skills
 New-Item -ItemType Directory -Force ..\dist | Out-Null
 Get-ChildItem -Directory | ForEach-Object { Compress-Archive -Path $_.Name -DestinationPath "..\dist\$($_.Name).zip" -Force }
 ```

@@ -21,6 +21,11 @@ description: Deep codebase and technology research for feature implementation
 
 # Gofer Research
 
+> **Business consulting route:** if `discovery.md` records the business
+> consulting route, skip the software steps in this file. Follow the
+> `1_gofer_research` row of the stage map in
+> `.specify/references/consulting/routing.md` instead.
+
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->
 
