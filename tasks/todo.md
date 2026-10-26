@@ -99,4 +99,15 @@
 - [x] Write `routing.md`: route test, owner table against Gofer functions, stage
       map for all 53 skills, and requests with no owner.
 - [x] Validate routing owners, surface coverage, and the portable inventory.
-- [ ] Independent MECE check of realistic requests against the routing.
+- [x] Independent MECE check of realistic requests against the routing.
+
+## Review
+
+- An independent check routed 24 realistic requests. It found two leaks where
+  stage 0 could run software steps on consulting work, plus ordering and wording
+  overlaps. All were fixed: stage 0 applies the route test first, every guard
+  says exactly what stays, single outputs skip the pipeline, and each
+  owner-table cell names one owner.
+- Lint, format, typecheck, generation parity, and the plugin bundle passed. Full
+  suite: one pre-existing failure (`gofer-verifier-key-custody`) that also fails
+  on `main` because this container runs as root.

@@ -435,8 +435,8 @@ function buildJourneyStateSection() {
 Before routing work, decide where the user is now.
 
 1. Read current feature state from \`.specify/specs/\`, \`goal-ledger.json\`, \`eai-preflight.md\`, \`research.md\`, \`spec.md\`, \`plan.md\`, \`tasks.md\`, validation reports, loop evidence, and handoff notes when they exist.
-2. Classify the request as conversation, research/docs/audit, EAI app delivery, or ambiguous.
-3. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
+2. Classify the request as conversation, business consulting, research/docs/audit, EAI app delivery, or ambiguous.
+3. For business consulting, follow the Business Consulting Route section. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
 4. For EAI app delivery or ambiguous app work, continue directly into EAI readiness.
 5. Find the earliest missing pipeline artifact or blocked EAI gate.
 6. Run that internal stage next, then continue forward.

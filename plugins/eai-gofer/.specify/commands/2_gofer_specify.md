@@ -22,9 +22,12 @@ description: Create feature specification informed by codebase research
 # Gofer Specify
 
 > **Business consulting route:** if `discovery.md` records the business
-> consulting route, skip the software steps in this file. Follow the
+> consulting route, follow the
 > `2_gofer_specify` row of the stage map in
-> `.specify/references/consulting/routing.md` instead.
+> `.specify/references/consulting/routing.md`.
+> On this route, keep only the Continuation And Stop Contract from this file.
+> Skip every other section, including EAI preflight and classification,
+> delivery lineage, spec guards, delivery checkpoints, and auto-chain gates.
 
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->

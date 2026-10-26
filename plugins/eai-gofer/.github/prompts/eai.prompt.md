@@ -153,8 +153,8 @@ For EAI app delivery, every UI preview must use the repo runner when it exists.
 Before routing work, decide where the user is now.
 
 1. Read current feature state from `.specify/specs/`, `goal-ledger.json`, `eai-preflight.md`, `research.md`, `spec.md`, `plan.md`, `tasks.md`, validation reports, loop evidence, and handoff notes when they exist.
-2. Classify the request as conversation, research/docs/audit, EAI app delivery, or ambiguous.
-3. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
+2. Classify the request as conversation, business consulting, research/docs/audit, EAI app delivery, or ambiguous.
+3. For business consulting, follow the Business Consulting Route section. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
 4. For EAI app delivery or ambiguous app work, continue directly into EAI readiness.
 5. Find the earliest missing pipeline artifact or blocked EAI gate.
 6. Run that internal stage next, then continue forward.
@@ -194,14 +194,14 @@ Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Ve
 
 ## Business Consulting Route
 
-Business consulting is non-app work about the client's business: strategy, markets, customers, finances, operations, organization, change, and the proposals, decks, memos, and plans that carry the answer.
+Business consulting is non-app work about the client's business: strategy, markets, customers, finances, operations, organization, change, and the proposals, decks, memos, and plans that carry the answer. For consulting requests, this section replaces the pipeline routing steps in this file.
 
-1. Use this route only when the request is clearly business consulting and nothing will be built. Check it before the app default: a KPI definition, dashboard wireframe, process map, or operating model with nothing to build is consulting. App delivery and ambiguous requests keep the app path. Software, code, cloud, and delivery-documentation work keeps the Gofer research/docs path.
+1. Apply the route test in `.specify/references/consulting/routing.md` before the app default. A KPI definition, dashboard wireframe, process map, or operating model with nothing to build is consulting. A request to build or change something stays app delivery. Work on an existing Gofer feature keeps that feature's route.
 2. Confirm once instead of the general non-app question: **"This looks like business consulting work, so I will skip EAI workspace/app setup and use the Gofer consulting skills. Is that right?"**
-3. Read `.specify/references/consulting/routing.md`. Use its owner table so each requested output has exactly one owner: one consulting skill or one Gofer function.
-4. Follow the chosen skill at `.specify/references/consulting/skills/<name>/SKILL.md`. Chain skills through their hand-offs. Do not redo an output that another skill owns.
-5. Do not run `eai whoami`, EAI setup, app preview, or software-delivery gates for consulting work.
-6. If the workspace has no `.specify/` scaffold, read the same files from the installed Gofer plugin.
+3. Size the work. For a single output, follow that skill at `.specify/references/consulting/skills/<name>/SKILL.md`. Create no feature files, run no numbered stages, and skip the workspace preflight. If `.specify/` is missing, read the same files from the installed Gofer plugin.
+4. For a multi-session engagement, run the workspace preflight, record `Route: Business consulting` in `.specify/specs/{engagement}/discovery.md`, and follow the stage map. Each stage file then defers to the stage map.
+5. Use the owner table so each requested output has exactly one owner. Chain skills through their hand-offs. Do not redo an output that another skill owns.
+6. Do not run `eai whoami`, EAI setup, app preview, delivery lineage, delivery checkpoints, or other software-delivery gates for consulting work. `deck-quality-check` is the consulting quality gate.
 
 ## EAI Platform Readiness
 

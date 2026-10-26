@@ -4,6 +4,15 @@ description: Start Gofer, confirm EAI readiness, and orchestrate the unified pip
 
 # Gofer Start
 
+> **Business consulting route:** apply the route test in
+> `.specify/references/consulting/routing.md` before any step below. If the
+> request is business consulting, follow that file. For a multi-session
+> engagement, record `Route: Business consulting` in `discovery.md` and follow
+> the `0_gofer_start` row of its stage map.
+> On this route, keep only the Continuation And Stop Contract from this file.
+> Skip every other section, including EAI preflight and classification,
+> delivery lineage, spec guards, delivery checkpoints, and auto-chain gates.
+
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->
 
@@ -908,7 +917,8 @@ Before journey mapping, classify the request as **application delivery** or
 **non-application work**.
 
 In EnterpriseAI mode, assume the request is application delivery unless the
-user's intent is clearly non-app. Roughly 90% of Gofer business requests should
+user's intent is clearly non-app. Business consulting with nothing to build is
+clearly non-app. Roughly 90% of Gofer business requests should
 be treated this way: the user is trying to improve a customer journey or
 business process by building an app, workflow, portal, dashboard, mobile
 experience, form, assistant, or app.
@@ -920,7 +930,8 @@ only.
 
 ### Application Signals
 
-Treat the request as application delivery when it includes any of these signals:
+Treat the request as application delivery when it asks Gofer to build or change
+something and includes any of these signals:
 
 - Build an app, tool, dashboard, portal, workflow, form, chatbot, or app.
 - Improve how a customer, employee, advisor, agent, or operator completes work.
