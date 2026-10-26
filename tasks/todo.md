@@ -35,3 +35,19 @@
   seed are retried.
 - Full Gofer suite passed: 3,443 tests across 276 files.
 - Typecheck, lint, format, build, and generation checks passed.
+
+# Consultant Toolkit: 50 Portable Agent Skills
+
+- [x] Define a MECE taxonomy: 7 engagement phases, one owned output per skill,
+      explicit hand-offs and "not for" boundaries.
+- [x] Write 50 `SKILL.md` files in `consultant-toolkit/skills/` that use only
+      the open Agent Skills fields (`name`, `description`) and plain Markdown.
+- [x] Keep descriptions short, ASCII, and front-loaded so all 50 fit the Codex
+      8,000-character skill-list budget.
+- [x] Write the catalog, MECE map, and install steps for Claude and OpenAI
+      surfaces in `consultant-toolkit/README.md`.
+- [x] Add `scripts/verify-consultant-toolkit.mjs` and unit tests for format,
+      budget, portability, unique ownership, and valid cross-references.
+- [x] Keep the pack outside Gofer's generated host folders so the `eai`-only
+      picker and release mirrors do not change.
+- [ ] Run the validator, focused tests, and an independent overlap review.
