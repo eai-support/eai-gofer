@@ -351,7 +351,7 @@ Business consulting is non-app work about the client's business: strategy, marke
 3. Size the work. For a single output, follow that skill at \`.specify/references/consulting/skills/<name>/SKILL.md\`. Create no feature files, run no numbered stages, and skip the workspace preflight. If \`.specify/\` is missing, read the same files from the installed Gofer plugin.
 4. For a multi-session engagement, run the workspace preflight, record \`Route: Business consulting\` in \`.specify/specs/{engagement}/discovery.md\`, and follow the stage map. Each stage file then defers to the stage map.
 5. Use the owner table so each requested output has exactly one owner. Chain skills through their hand-offs. Do not redo an output that another skill owns.
-6. Do not run \`eai whoami\`, EAI setup, app preview, delivery lineage, delivery checkpoints, or other software-delivery gates for consulting work. \`deck-quality-check\` is the consulting quality gate.`;
+6. Do not run \`eai whoami\`, EAI setup, app preview, delivery lineage, delivery checkpoints, or other software-delivery gates for consulting work. Before delivery, check each output against the Quality bar of the skill that owns it. Decks also pass \`deck-quality-check\`.`;
 }
 
 function buildMvpCapabilityValidationSection() {
@@ -550,6 +550,8 @@ ${buildAlwaysEaiSection()}
 
 ## Workspace Preflight
 
+A single-output business consulting request skips this preflight; follow the Business Consulting Route section instead.
+
 ${workspaceHostSelection}
 
 1. Resolve the repository root.
@@ -572,7 +574,7 @@ ${buildAuthAccessDecisionContract()}
 
 1. Classify the request before EAI readiness: EAI app delivery, non-application work, or ambiguous.
 2. If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path; do not ask for confirmation just because app delivery is inferred.
-3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"** For business consulting, ask the Business Consulting Route question instead.
 4. When the user confirms non-app, do not run \`eai whoami\`, workspace selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate Gofer research, documentation, audit, migration, or planning path.
 5. If the user says it is app work, switch to EAI app delivery and run EAI readiness.
 

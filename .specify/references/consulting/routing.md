@@ -48,7 +48,7 @@ brackets says which part it owns.
 | Measure performance            | `business-metrics-analyzer` (Gofer delivery metrics)                                                   | `kpi-dashboard` (business KPIs)                                                           |
 | Write durable documents        | `gofer-documentation` (delivery documentation and lineage)                                             | The consulting skill that owns the deliverable                                            |
 | Define terms                   | `gofer_vocabulary` (feature glossary)                                                                  | `appendix-builder` (deck glossary page)                                                   |
-| Validate the work              | `6_gofer_validate`                                                                                     | `deck-quality-check`                                                                      |
+| Validate the work              | `6_gofer_validate`                                                                                     | The Quality bar of the skill that owns the deliverable (`deck-quality-check` for decks)   |
 | Plan the work                  | `3_gofer_plan` (software plan), then `4_gofer_tasks`                                                   | `implementation-roadmap` (client initiatives)                                             |
 
 These owners do not depend on the subject:
@@ -76,7 +76,7 @@ does not redo it.
 | `3_gofer_plan`      | `scqa-storyline`, `pyramid-structure`, `recommendation-deck`, `data-storytelling`                                                                                                                                                                                                                                                                                     | Storyline and deliverable plan (a ghost deck when the deliverable is a deck) |
 | `4_gofer_tasks`     | No consulting skill. Split the deliverable plan into section and exhibit tasks                                                                                                                                                                                                                                                                                        | Task list                                                                    |
 | `5_gofer_implement` | `chart-selection`, `data-visualization`, `exhibit-builder`, `action-titles`, `slide-layout`, `slide-copy-editor`, `visual-consistency`, `appendix-builder`, `speaker-notes`, `executive-summary`, `decision-memo`, `implementation-roadmap`, `operating-model`, `raci-builder`, `stakeholder-map`, `change-plan`, `risk-assessment`, `kpi-dashboard`, `status-report` | The deliverable                                                              |
-| `6_gofer_validate`  | `deck-quality-check`                                                                                                                                                                                                                                                                                                                                                  | Readiness verdict and routed fixes                                           |
+| `6_gofer_validate`  | `deck-quality-check` for decks; for any other deliverable, the Quality bar of the skill that owns it                                                                                                                                                                                                                                                                  | Readiness verdict and routed fixes                                           |
 
 ## Rules For The Consulting Route
 
@@ -88,8 +88,8 @@ does not redo it.
    the one output each skill owns.
 3. Do not run EAI readiness, app preview, UI branding intake, service-fit
    review, code review, test generation, delivery lineage, or delivery
-   checkpoints for consulting work. `deck-quality-check` is the consulting
-   quality gate.
+   checkpoints for consulting work. Each deliverable passes the Quality bar of
+   the skill that owns it. Decks also pass `deck-quality-check`.
 4. Keep Gofer's response gate, blocker rules, and session checkpoints
    (`7_gofer_save`). They apply to every route.
 5. Consulting skills do not call Gofer functions. Only this router moves work

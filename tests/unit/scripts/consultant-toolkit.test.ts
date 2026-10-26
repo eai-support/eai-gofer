@@ -212,14 +212,27 @@ describe('consultant toolkit skills', () => {
 describe('consulting routing in Gofer', () => {
   const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
-  it('rejects a routing reference that names an unknown owner or misses a skill', async () => {
+  it('rejects unknown owners and skills with zero or several stages', async () => {
     const root = makeToolkit(validPair(), validRows);
-    fs.writeFileSync(path.join(root, 'routing.md'), '- `alpha-skill` then `gamma-skill`.\n');
+    const routing = [
+      '## Stage Map',
+      '',
+      '| Stage | Consulting method | Stage output |',
+      '| --- | --- | --- |',
+      '| start | `alpha-skill`, `gamma-skill` | Brief |',
+      '| research | `alpha-skill` | Findings |',
+      '',
+      '## Rules',
+      '',
+      '- `beta-skill` is named here but has no stage.',
+    ].join('\n');
+    fs.writeFileSync(path.join(root, 'routing.md'), routing);
     const { errors } = await validateToolkit(root, { expectedCount: 2 });
     expect(errors).toContain(
       'routing: "gamma-skill" is not a consulting skill, Gofer command, or Gofer agent'
     );
-    expect(errors).toContain('routing: beta-skill has no stage in the stage map');
+    expect(errors).toContain('routing: alpha-skill has 2 stages in the stage map; expected 1');
+    expect(errors).toContain('routing: beta-skill has 0 stages in the stage map; expected 1');
   });
 
   // Every surface Gofer delivers to reaches the consulting skills through `eai`.

@@ -199,6 +199,26 @@ async function listNames(dir, toName) {
 }
 
 /**
+ * Counts how many stage-map rows name each skill in their method column.
+ * @param {string} routing
+ * @returns {Map<string, number>}
+ */
+export function countStageAssignments(routing) {
+  const counts = new Map();
+  const section = routing.split(/^## Stage Map$/m)[1]?.split(/^## /m)[0] ?? '';
+  for (const line of section.split('\n')) {
+    const cells = line.split('|').map((cell) => cell.trim());
+    const method = cells[2];
+    if (!line.startsWith('|') || !method || /^-+$/.test(method) || method === 'Consulting method')
+      continue;
+    for (const [, name] of method.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)) {
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/**
  * Checks that the Gofer routing reference only names real owners: consulting
  * skills, Gofer specialist agents and skills (kebab-case), and Gofer commands
  * (snake-case stems in .specify/commands).
@@ -230,9 +250,11 @@ async function checkRouting(routing, toolkitRoot, skillNames) {
     if (!known)
       errors.push(`routing: "${token}" is not a consulting skill, Gofer command, or Gofer agent`);
   }
+  const stageCounts = countStageAssignments(routing);
   for (const name of skillNames) {
-    if (!routing.includes(`\`${name}\``))
-      errors.push(`routing: ${name} has no stage in the stage map`);
+    const count = stageCounts.get(name) ?? 0;
+    if (count !== 1)
+      errors.push(`routing: ${name} has ${count} stages in the stage map; expected 1`);
   }
   return errors;
 }

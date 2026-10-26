@@ -546,6 +546,8 @@ ${buildContinuationContractSection()}
 
 ## Workspace First
 
+A single-output business consulting request skips this preflight; follow the Business Consulting Route section instead.
+
 Before stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.
 
 ${buildLocalSettingsCleanupContract()}
@@ -600,7 +602,7 @@ ${buildAlwaysEaiSection()}
 
 - Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.
 - If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.
-- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"** For business consulting, ask the Business Consulting Route question instead.
 - If the user confirms non-app, do not run \`eai whoami\`, workspace selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.
 - If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
 
