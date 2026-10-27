@@ -17,7 +17,7 @@ Show where AI can create the most value in a client's business, in the client's 
 2. List the work in scope by activity or process step. Reuse `process-mapping` or `value-chain` output when it exists.
 3. For each activity, name the AI pattern that could change it: draft, summarize, classify, extract, answer questions, predict, recommend, check, or route work. Describe each use as a change in the work, in plain words.
 4. Estimate gross value at stake per year. For time: volume x share of items AI can handle x time saved per item x loaded hourly cost. For revenue: volume x uplift x margin. Label each figure [Estimate] gross capacity, not savings, and show its inputs.
-5. Rate effort, risk, and data readiness from 1 (hard) to 5 (easy). Ease is their average. Risk covers errors, privacy, harm to customers, and regulation. A risk score of 1 holds the use until governance clears it.
+5. Rate three scores from 1 to 5, where 5 is always best: effort (1 very hard, 5 easy), risk (1 high or blocked, 5 low), and data readiness (1 not available, 5 ready). Ease is their average. Risk covers errors, privacy, harm to customers, and regulation. A risk score of 1 holds the use until governance clears it.
 6. Rank the uses on a value-versus-ease matrix. Expect most value from a few uses; do not spread effort across many.
 7. Where industry evidence exists, show adoption and reported returns for similar uses, with sources.
 8. Pick 3 to 5 priority uses and state the next step for each.
