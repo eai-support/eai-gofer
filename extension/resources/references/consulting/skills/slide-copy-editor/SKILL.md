@@ -1,6 +1,6 @@
 ---
 name: slide-copy-editor
-description: "Edits slide body text for brevity, parallel bullets, plain words and consistent numbers. Use to tighten the text below a slide title."
+description: "Edits slide body text for brevity, parallel bullets, plain words and consistent numbers. Use to tighten slide text."
 ---
 
 # Slide Copy Editor

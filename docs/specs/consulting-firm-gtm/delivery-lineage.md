@@ -1,14 +1,13 @@
 ---
-feature: 'consulting-firm-gtm'
-source: 'delivery-lineage.json'
+feature: "consulting-firm-gtm"
+source: "delivery-lineage.json"
 schema: eai.delivery_lineage.v1
 plane: customer
 ---
 
 # Delivery Lineage: consulting-firm-gtm
 
-> Customer-safe graph. EAI dependencies stop at published PublicAPI
-> capabilities.
+> Customer-safe graph. EAI dependencies stop at published PublicAPI capabilities.
 
 ```mermaid
 flowchart LR
@@ -42,7 +41,7 @@ flowchart LR
     n18["D1 Free plugin, paid when apps run<br/>Decision"]:::current
     n19["D1 Rejected: paid plugin subscription<br/>Decision"]:::rejected_decision
     n20["D2 One public command with playbooks on demand<br/>Decision"]:::current
-    n21["D2 Rejected: 53 separate public skills<br/>Decision"]:::rejected_decision
+    n21["D2 Rejected: a separate public skill for each playbook<br/>Decision"]:::rejected_decision
     n22["D2 Rejected: depend on skills over MCP now<br/>Decision"]:::rejected_decision
     n23["D3 Direct install link, person posts<br/>Decision"]:::current
     n24["D3 Rejected: comment Go to receive it<br/>Decision"]:::rejected_decision
@@ -246,5 +245,4 @@ flowchart LR
   classDef rejected_decision fill:#eceff1,stroke:#8b949e,stroke-dasharray:5 4,color:#30363d
 ```
 
-Generated from `delivery-lineage.json`. Open **Gofer: Show Delivery Lineage**
-for the interactive viewer.
+Generated from `delivery-lineage.json`. Open **Gofer: Show Delivery Lineage** for the interactive viewer.

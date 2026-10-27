@@ -37,6 +37,7 @@ Show whether an investment is worth making, compared with not making it.
 
 - Not for building the model mechanics: use `financial-model`.
 - Not for the detailed risk register: use `risk-assessment`.
+- Not for turning AI time savings into P&L results: use `ai-value-capture-plan`.
 - Hand off to: `decision-memo`, `sensitivity-analysis`.
 
 ## Rules

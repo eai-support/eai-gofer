@@ -1,6 +1,6 @@
 ---
 name: speaker-notes
-description: "Writes presenter notes per slide: key message, talk track, transitions, timing and likely questions. Use to prepare a live presentation."
+description: "Writes presenter notes per slide: message, talk track, transitions, timing and likely questions. Use to prepare a live talk."
 ---
 
 # Speaker Notes

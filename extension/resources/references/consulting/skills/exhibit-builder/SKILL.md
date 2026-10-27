@@ -1,6 +1,6 @@
 ---
 name: exhibit-builder
-description: "Assembles a complete exhibit from a chart or table, with callouts, units, legend, source and footnotes. Use to make a chart slide-ready."
+description: "Builds a full exhibit from a chart or table: callouts, units, legend, source and footnotes. Use to make a chart slide-ready."
 ---
 
 # Exhibit Builder

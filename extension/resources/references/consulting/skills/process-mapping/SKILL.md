@@ -1,6 +1,6 @@
 ---
 name: process-mapping
-description: "Maps one business process end to end, finds waste and root causes, and designs the future state. Use to fix a slow or costly process."
+description: "Maps one process end to end, finds waste and root causes, and designs the future state. Use to fix a slow or costly process."
 ---
 
 # Process Mapping
@@ -38,6 +38,7 @@ Show how one business process works today, why it underperforms, and how it shou
 ## Boundaries
 
 - Not for firm-wide activity costs: use `value-chain`.
+- Not for redesigning a workflow around AI: use `ai-workflow-redesign`.
 - Not for organization design: use `operating-model`.
 - Not for valuing an improvement that needs investment: use `business-case`.
 - Not for helping people adopt the new process: use `change-plan`.

@@ -1,6 +1,6 @@
 ---
 name: stakeholder-map
-description: "Maps stakeholders by influence and support, current versus needed position, and engagement actions. Use to plan who to engage and how."
+description: "Maps stakeholders by influence and support, current versus needed stance, and actions. Use to plan who to engage and how."
 ---
 
 # Stakeholder Map

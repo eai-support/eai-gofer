@@ -1,6 +1,6 @@
 ---
 name: appendix-builder
-description: "Structures backup material into an appendix with numbering, cross-references, methods and data sources. Use after the main deck is planned."
+description: "Structures backup material into an appendix with numbering, cross-references and sources. Use after the main deck is planned."
 ---
 
 # Appendix Builder

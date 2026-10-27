@@ -1,6 +1,6 @@
 ---
 name: issue-tree
-description: "Breaks a key question into a MECE logic tree of answerable sub-questions. Use after framing the problem and before planning analyses."
+description: "Breaks a key question into a MECE logic tree of answerable sub-questions. Use after framing and before planning analyses."
 ---
 
 # Issue Tree

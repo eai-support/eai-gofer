@@ -1,6 +1,6 @@
 ---
 name: sensitivity-analysis
-description: "Flexes key drivers one or two at a time to rank impact and find thresholds where the decision flips. Use to stress-test a model or case."
+description: "Flexes key drivers one or two at a time to rank impact and find where the decision flips. Use to stress-test a case."
 ---
 
 # Sensitivity Analysis

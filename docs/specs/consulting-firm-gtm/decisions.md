@@ -36,7 +36,7 @@ certification, from partner fees and from consulting help.
 
 ### Selected Approach: One Public Command With Playbooks On Demand
 
-`/eai` is the only public command. The 53 consulting playbooks load only when a
+`/eai` is the only public command. The consulting playbooks load only when a
 request needs them and stay out of the slash menu. A Gofer connector serves the
 methods to Claude chat and Cowork in the Next release.
 
@@ -46,7 +46,7 @@ methods to Claude chat and Cowork in the Next release.
 - **Effect:** The `/eai` description must route every consulting request well.
   The routing tests in this repository protect it.
 
-### Rejected Alternative: 53 Separate Public Skills
+### Rejected Alternative: A Separate Public Skill For Each Playbook
 
 - **Why not:** The slash menu becomes long and hard to use. Each description
   also uses part of Claude's skill listing budget.

@@ -1,6 +1,6 @@
 ---
 name: vrio-analysis
-description: "Tests resources and capabilities for Value, Rarity, Imitability and Organization to judge advantage. Use to find sustainable strengths."
+description: "Tests resources and capabilities for Value, Rarity, Imitability and Organization. Use to find sustainable strengths."
 ---
 
 # VRIO Analysis

@@ -282,18 +282,19 @@ This feature is mixed:
 
 ## Capability Maturity And Validation Scope
 
-| Capability                              | Status                      | Evidence needed now                        |
-| --------------------------------------- | --------------------------- | ------------------------------------------ |
-| `/eai` routing and consulting playbooks | implemented (pending merge) | Unit tests and routing checks              |
-| Industry packs and opportunity scan     | planned                     | Method review and sample outputs           |
-| ROI model                               | planned                     | Worked examples with known answers         |
-| Code tab guidance                       | planned                     | Screenshots checked against Claude Desktop |
-| Website sign-up guide                   | planned                     | Guided run with a new test account         |
-| Client workspace deploy                 | planned                     | Deploy to a test client workspace          |
-| Share post and post check               | planned                     | Post check test cases                      |
-| Gofer connector                         | not_applicable (Next)       | None in MVP                                |
-| Training catalogue                      | not_applicable (Next)       | None in MVP                                |
-| EMA                                     | not_applicable (Later)      | None in MVP                                |
+| Capability                                                                  | Status                      | Evidence needed now                        |
+| --------------------------------------------------------------------------- | --------------------------- | ------------------------------------------ |
+| `/eai` routing and consulting playbooks                                     | implemented (pending merge) | Unit tests and routing checks              |
+| AI value playbooks (scan, bootcamp, redesign, capture, tracking, readiness) | implemented (pending merge) | Toolkit checks and sample outputs          |
+| Industry packs                                                              | planned                     | Method review and sample outputs           |
+| ROI model                                                                   | planned                     | Worked examples with known answers         |
+| Code tab guidance                                                           | planned                     | Screenshots checked against Claude Desktop |
+| Website sign-up guide                                                       | planned                     | Guided run with a new test account         |
+| Client workspace deploy                                                     | planned                     | Deploy to a test client workspace          |
+| Share post and post check                                                   | planned                     | Post check test cases                      |
+| Gofer connector                                                             | not_applicable (Next)       | None in MVP                                |
+| Training catalogue                                                          | not_applicable (Next)       | None in MVP                                |
+| EMA                                                                         | not_applicable (Later)      | None in MVP                                |
 
 ## Success Criteria
 

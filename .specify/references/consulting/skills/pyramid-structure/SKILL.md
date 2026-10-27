@@ -1,6 +1,6 @@
 ---
 name: pyramid-structure
-description: "Structures an argument as a Minto pyramid: governing thought, MECE key lines, then support. Use to organize the logic of a recommendation."
+description: "Structures an argument as a Minto pyramid: governing thought, MECE key lines and support. Use to organize a recommendation."
 ---
 
 # Pyramid Structure

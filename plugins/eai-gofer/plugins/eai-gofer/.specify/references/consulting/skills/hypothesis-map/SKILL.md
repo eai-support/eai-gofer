@@ -1,6 +1,6 @@
 ---
 name: hypothesis-map
-description: "Assigns a testable hypothesis, analysis, data source and priority to each issue-tree branch. Use to build a hypothesis-driven workplan."
+description: "Assigns each issue-tree branch a hypothesis, analysis, data source and priority. Use to build a hypothesis-driven workplan."
 ---
 
 # Hypothesis Map

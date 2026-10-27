@@ -1,6 +1,6 @@
 ---
 name: interview-synthesis
-description: "Codes interview, expert-call or focus-group notes into themes with counts and quotes. Use for qualitative primary research."
+description: "Codes interview, expert-call or focus-group notes into themes with counts and quotes. Use for qualitative research."
 ---
 
 # Interview Synthesis

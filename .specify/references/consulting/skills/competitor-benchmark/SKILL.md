@@ -1,6 +1,6 @@
 ---
 name: competitor-benchmark
-description: "Compares named competitors on KPIs, capabilities, offer and positioning, and shows the gaps. Use for competitor or peer comparisons."
+description: "Compares named competitors on KPIs, capabilities, offer and positioning, with gaps. Use for peer comparisons."
 ---
 
 # Competitor Benchmark

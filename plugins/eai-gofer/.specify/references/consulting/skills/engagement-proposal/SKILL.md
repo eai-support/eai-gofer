@@ -1,6 +1,6 @@
 ---
 name: engagement-proposal
-description: "Writes a consulting proposal or statement of work: objectives, scope, approach, team, timeline and fees. Use to win or contract work."
+description: "Writes a consulting proposal or statement of work: objectives, scope, approach, team, timeline and fees. Use to win work."
 ---
 
 # Engagement Proposal

@@ -33,13 +33,13 @@ flowchart LR
 
 ### Phase 0: Validate And Approve
 
-| Work                                                                                                 | Owner               | Output                              |
-| ---------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------- |
-| Interview 12 firms, four in each segment, about the problem, LinkedIn habits and willingness to pay. | EAI Growth          | Interview synthesis                 |
-| Confirm the plugin deep link form and the Claude plans that support plugins (Q1, Q4).                | EAI Growth          | Updated research                    |
-| Merge PR #441, which adds `/eai` routing and the consulting playbooks (FR-05).                       | EAI Engineering     | Merged playbooks                    |
-| Approve the MVP scope, business model and decisions D1 to D8.                                        | EAI Product and CEO | Dated approval in the specification |
-| Set targets for SC-01 to SC-05 and name owners for LinkedIn and partners.                            | EAI Product and CEO | Targets in the specification        |
+| Work                                                                                                                     | Owner               | Output                              |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------- | ----------------------------------- |
+| Interview 12 firms, four in each segment, about the problem, LinkedIn habits and willingness to pay.                     | EAI Growth          | Interview synthesis                 |
+| Confirm the plugin deep link form and the Claude plans that support plugins (Q1, Q4).                                    | EAI Growth          | Updated research                    |
+| Merge PR #441, which adds `/eai` routing and the consulting playbooks, including the AI opportunity scan (FR-05, FR-08). | EAI Engineering     | Merged playbooks                    |
+| Approve the MVP scope, business model and decisions D1 to D8.                                                            | EAI Product and CEO | Dated approval in the specification |
+| Set targets for SC-01 to SC-05 and name owners for LinkedIn and partners.                                                | EAI Product and CEO | Targets in the specification        |
 
 **Gate:** Phase 1 starts only after the dated Product and CEO approval.
 
@@ -52,7 +52,7 @@ the dependency column says otherwise.
 | --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---------- | ------------------- |
 | W1  | Directory listing and landing page with referral codes and the data-handling summary                                       | FR-01, FR-02 (visits), FR-03, FR-43             | EAI Growth | Phase 0             |
 | W2  | First run and industry packs                                                                                               | FR-04, FR-07                                    | Gofer team | Phase 0             |
-| W3  | New playbooks: AI opportunity scan, ROI one-page summary, share post with post check, personal data warning                | FR-08, FR-09, FR-10, FR-12, FR-13, FR-34, FR-37 | Gofer team | W2 for packs        |
+| W3  | New playbooks: ROI one-page summary, share post with post check, personal data warning                                     | FR-09, FR-10, FR-12, FR-13, FR-34, FR-37        | Gofer team | W2 for packs        |
 | W4  | Advice to app: ROI baseline into the spec, Code tab guide, intake and triage template, local prototype, demo pack          | FR-14, FR-15, FR-16 (intake), FR-17, FR-18      | Gofer team | W3 for the ROI case |
 | W5  | Account and deploy: readiness check, website sign-up guide, client workspaces, access, recovery, deploy, adoption material | FR-19, FR-20, FR-22, FR-23, FR-24, FR-29, FR-33 | Gofer team | None                |
 | W6  | Measurement from the directory report, landing page and platform counts                                                    | FR-44                                           | EAI Growth | W1                  |

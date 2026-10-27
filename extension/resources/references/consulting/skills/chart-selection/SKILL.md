@@ -1,6 +1,6 @@
 ---
 name: chart-selection
-description: "Chooses the chart type that best proves one message for the data's shape, and rejects weaker options. Use before building any chart."
+description: "Chooses the chart type that best proves one message for the data's shape. Use before building any chart."
 ---
 
 # Chart Selection

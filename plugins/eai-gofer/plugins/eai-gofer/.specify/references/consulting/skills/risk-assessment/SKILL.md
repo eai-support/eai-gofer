@@ -1,6 +1,6 @@
 ---
 name: risk-assessment
-description: "Builds a risk register for delivering an approved plan with likelihood, impact, mitigation, owner and trigger. Use to manage delivery risks."
+description: "Builds a risk register for an approved plan: likelihood, impact, mitigation, owner and trigger. Use to manage delivery risks."
 ---
 
 # Risk Assessment

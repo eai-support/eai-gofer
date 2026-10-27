@@ -1,6 +1,6 @@
 ---
 name: value-chain
-description: "Maps a firm's primary and support activities with cost and value drivers to find advantage and leakage. Use for internal activity analysis."
+description: "Maps a firm's primary and support activities with cost and value drivers. Use to find advantage and leakage inside a firm."
 ---
 
 # Value Chain

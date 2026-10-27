@@ -1,6 +1,6 @@
 ---
 name: status-report
-description: "Writes a programme status report with RAG ratings, milestones, issues, actions and decisions needed. Use for steering committee updates."
+description: "Writes a programme status report: RAG ratings, milestones, issues, actions and decisions needed. Use for steering updates."
 ---
 
 # Status Report

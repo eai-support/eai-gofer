@@ -1,6 +1,6 @@
 ---
 name: raci-builder
-description: "Builds a RACI matrix of activities or decisions by role with exactly one Accountable per row. Use to clarify who does and approves each item."
+description: "Builds a RACI matrix of activities or decisions by role, one Accountable per row. Use to clarify who does and approves each item."
 ---
 
 # RACI Builder

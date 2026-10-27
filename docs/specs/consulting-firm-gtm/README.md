@@ -46,7 +46,9 @@ Read them in this order.
 
 ## Related Work
 
-- PR #441 adds the `/eai` consulting route and the 53 consulting playbooks that
-  this design builds on.
+- PR #441 adds the `/eai` consulting route and the 59 consulting playbooks that
+  this design builds on. Six of them cover the AI value cycle: readiness,
+  opportunity scan, bootcamp, workflow redesign, value capture and value
+  tracking.
 - EAI Platform requests (EPR-1 to EPR-10) in the [specification](spec.md) go to
   the EAI Platform team, which plans them separately.

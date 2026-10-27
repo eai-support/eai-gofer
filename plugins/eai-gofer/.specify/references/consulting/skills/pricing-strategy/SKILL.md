@@ -1,6 +1,6 @@
 ---
 name: pricing-strategy
-description: "Sets price metric, structure and level from customer value, competitors and costs, plus discount rules. Use for pricing decisions."
+description: "Sets price metric, structure, level and discount rules from value, competitors and costs. Use for pricing decisions."
 ---
 
 # Pricing Strategy

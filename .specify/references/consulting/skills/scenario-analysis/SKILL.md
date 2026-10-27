@@ -1,6 +1,6 @@
 ---
 name: scenario-analysis
-description: "Builds 3 to 4 internally consistent future scenarios from key uncertainties, with signposts and impacts. Use to plan under uncertainty."
+description: "Builds 3 to 4 consistent future scenarios from key uncertainties, with signposts and impacts. Use to plan under uncertainty."
 ---
 
 # Scenario Analysis

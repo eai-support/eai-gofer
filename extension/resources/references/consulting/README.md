@@ -1,10 +1,11 @@
 # Consultant Toolkit: Business Consulting Agent Skills
 
-Fifty-three single-purpose business consulting skills that take a client
+Fifty-nine single-purpose business consulting skills that take a client
 engagement from the first proposal to an adopted change: the 50 core skills,
-plus three engagement skills (`engagement-proposal`, `process-mapping`, and
-`status-report`). Each skill owns exactly one output, so you can combine any of
-them without duplicated work. The same files run on Claude and OpenAI products.
+three engagement skills (`engagement-proposal`, `process-mapping`, and
+`status-report`), and six AI value skills that find, prove, and capture the
+return on AI. Each skill owns exactly one output, so you can combine any of them
+without duplicated work. The same files run on Claude and OpenAI products.
 
 These are business consulting skills, not app development skills. They use
 client-engagement language and contain no software delivery steps. The validator
@@ -24,8 +25,10 @@ skill pickers, so `eai` remains the only public command.
 
 - **One skill, one output.** The catalog below names the one output each skill
   owns. No two skills own the same output. The validator enforces this.
-- **Seven phases, in engagement order.** Each phase answers one question. Inside
-  a phase, skills split on a single rule (shown in each heading).
+- **Eight phases.** Phases 1 to 7 follow engagement order. Phase 8 is the AI
+  value cycle, which an engagement can add whenever AI is in scope. Each phase
+  answers one question. Inside a phase, skills split on a single rule (shown in
+  each heading).
 - **Explicit hand-offs.** Each skill lists what it is not for and which skill to
   use instead, so a request reaches one owner.
 - **Additive outputs.** All skills use the same labels: `[Assumption]`,
@@ -43,6 +46,7 @@ flowchart LR
   E --> F[6 Build exhibits and slides] --> G[7 Implement and govern]
   B -.-> E
   C -.-> E
+  C -.-> H[8 AI value] -.-> G
 ```
 
 ## Catalog
@@ -155,6 +159,20 @@ could go wrong, how we measure, and how we report progress.
 | 52  | `kpi-dashboard`          | KPI tree, dictionary, and dashboard wireframe                |
 | 53  | `status-report`          | Programme status report with issue, action, and decision log |
 
+### 8. AI value: where does AI pay, and how is the return proven?
+
+Split: by step in the AI value cycle. Readiness, opportunities, proof on client
+data, workflow redesign, value capture, and value tracking.
+
+| #   | Skill                     | Owns (one output)                            |
+| --- | ------------------------- | -------------------------------------------- |
+| 54  | `ai-readiness-assessment` | AI readiness scorecard and first actions     |
+| 55  | `ai-opportunity-scan`     | Ranked AI use list with value at stake       |
+| 56  | `ai-bootcamp-design`      | AI bootcamp plan with go or no-go criteria   |
+| 57  | `ai-workflow-redesign`    | People and AI task design for one workflow   |
+| 58  | `ai-value-capture-plan`   | Plan that turns AI capacity into P&L results |
+| 59  | `ai-value-tracker`        | AI value baseline and realized ROI report    |
+
 ## Example chains
 
 - **Growth strategy:** `engagement-proposal` > `problem-framing` >
@@ -171,12 +189,15 @@ could go wrong, how we measure, and how we report progress.
 - **Rollout:** `operating-model` > `implementation-roadmap` > `raci-builder` >
   `stakeholder-map` > `change-plan` > `risk-assessment` > `kpi-dashboard` >
   `status-report`.
+- **AI value:** `ai-readiness-assessment` > `ai-opportunity-scan` >
+  `ai-bootcamp-design` > `ai-workflow-redesign` > `business-case` >
+  `ai-value-capture-plan` > `change-plan` > `ai-value-tracker`.
 
 ## Install
 
 Gofer users need no separate install. To use the skills without Gofer, install
 each skill as one folder with one `SKILL.md`. Install only the skills you need,
-or all 53.
+or all 59.
 
 | Surface                    | How to install                                                                                                                                                                                           |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -236,8 +257,10 @@ is not. No skill needs scripts, network access, or a specific tool.
 These are deliberate gaps, not overlaps:
 
 - Collecting evidence: survey and interview-guide design, data collection, and
-  workshop facilitation.
+  workshop facilitation. `ai-bootcamp-design` plans an AI bootcamp; it does not
+  run it.
 - Cost programmes: firm-wide cost baselines and savings targets.
+  `ai-value-tracker` sets the baseline for one AI use only.
 - Specialist advice: legal, tax, and M&A due diligence.
 
 ## Attribution

@@ -240,6 +240,12 @@ const GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
 /** Business consulting skills that `/eai` routes to on the non-app path. */
 const CONSULTING_SKILL_NAMES = [
   'action-titles',
+  'ai-bootcamp-design',
+  'ai-opportunity-scan',
+  'ai-readiness-assessment',
+  'ai-value-capture-plan',
+  'ai-value-tracker',
+  'ai-workflow-redesign',
   'appendix-builder',
   'audience-brief',
   'business-case',

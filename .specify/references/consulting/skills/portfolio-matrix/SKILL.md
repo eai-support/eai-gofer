@@ -1,6 +1,6 @@
 ---
 name: portfolio-matrix
-description: "Positions existing units on a growth-share or nine-box matrix and assigns invest, hold or exit roles. Use for portfolio allocation."
+description: "Places existing units on a growth-share or nine-box matrix with invest, hold or exit roles. Use for portfolio allocation."
 ---
 
 # Portfolio Matrix
@@ -36,6 +36,7 @@ Decide how to allocate resources across existing business units or product lines
 
 - Not for finding new growth avenues: use `growth-strategy`.
 - Not for drawing the chart: use `data-visualization`.
+- Not for ranking AI uses: use `ai-opportunity-scan`.
 
 ## Rules
 

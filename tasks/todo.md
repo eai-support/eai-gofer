@@ -111,3 +111,17 @@
 - Lint, format, typecheck, generation parity, and the plugin bundle passed. Full
   suite: one pre-existing failure (`gofer-verifier-key-custody`) that also fails
   on `main` because this container runs as root.
+
+# Consultant Toolkit: AI Value Skills (Wave 1)
+
+- [x] Add six AI value skills, each with one owned output:
+      `ai-readiness-assessment`, `ai-opportunity-scan`, `ai-bootcamp-design`,
+      `ai-workflow-redesign`, `ai-value-capture-plan`, and `ai-value-tracker`.
+- [x] Add catalog phase 8, owner-table rows, and one stage per skill in
+      `routing.md`.
+- [x] Route neighbors to the new owners: `process-mapping`, `business-case`,
+      `kpi-dashboard`, and `portfolio-matrix`.
+- [x] Shorten descriptions so 59 skills fit the 8,000-byte Codex list budget.
+- [x] Regenerate extension resources and plugin bundles, and update the pinned
+      portable inventory count.
+- [ ] Independent review of overlaps, hand-offs, and methods.

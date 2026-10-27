@@ -1,6 +1,6 @@
 ---
 name: research-synthesis
-description: "Synthesizes desk research such as reports, articles and filings into sourced findings per question. Use for secondary research."
+description: "Synthesizes desk research such as reports, articles and filings into sourced findings. Use for secondary research."
 ---
 
 # Research Synthesis

@@ -1,6 +1,6 @@
 ---
 name: scqa-storyline
-description: "Writes the Situation, Complication, Question, Answer opening that frames a storyline. Use to start any deck, memo or presentation."
+description: "Writes the Situation, Complication, Question, Answer opening of a storyline. Use to start any deck, memo or presentation."
 ---
 
 # SCQA Storyline

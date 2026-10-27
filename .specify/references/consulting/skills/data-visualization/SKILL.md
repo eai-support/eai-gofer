@@ -1,6 +1,6 @@
 ---
 name: data-visualization
-description: "Builds a clean, accessible chart as code or a portable spec with correct encoding, scales and labels. Use to render a chosen chart."
+description: "Builds an accessible chart as code or a portable spec with correct encoding and labels. Use to render a chosen chart."
 ---
 
 # Data Visualization

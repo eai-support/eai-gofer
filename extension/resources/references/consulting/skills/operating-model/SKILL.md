@@ -1,6 +1,6 @@
 ---
 name: operating-model
-description: "Designs a target operating model: structure, processes, people, governance, technology and locations. Use for organization redesign."
+description: "Designs a target operating model: structure, processes, people, governance and technology. Use for organization redesign."
 ---
 
 # Operating Model

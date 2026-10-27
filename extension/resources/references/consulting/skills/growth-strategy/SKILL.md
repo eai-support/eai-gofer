@@ -1,6 +1,6 @@
 ---
 name: growth-strategy
-description: "Maps and ranks growth avenues that can be combined, across markets, products and build, partner or buy. Use to find where a business can grow."
+description: "Maps and ranks combinable growth avenues: markets, products, and build, partner or buy. Use to find where a business can grow."
 ---
 
 # Growth Strategy

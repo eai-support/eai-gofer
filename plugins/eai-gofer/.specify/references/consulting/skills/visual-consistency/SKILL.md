@@ -1,6 +1,6 @@
 ---
 name: visual-consistency
-description: "Audits a whole deck for consistent fonts, colors, chart styles, alignment, terms and number formats. Use before a deck is shared."
+description: "Audits a deck for consistent fonts, colors, chart styles, alignment, terms and numbers. Use before a deck is shared."
 ---
 
 # Visual Consistency

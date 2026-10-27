@@ -1,6 +1,6 @@
 ---
 name: recommendation-deck
-description: "Turns a storyline into a ghost deck: slide-by-slide draft titles, exhibits and sources, split into main and appendix. Use to plan a deck."
+description: "Turns a storyline into a ghost deck: slide-by-slide titles, exhibits and sources, main and appendix. Use to plan a deck."
 ---
 
 # Recommendation Deck

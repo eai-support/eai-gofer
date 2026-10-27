@@ -1,6 +1,6 @@
 ---
 name: five-forces
-description: "Rates industry attractiveness with Porter's Five Forces, their drivers and profit-pool implications. Use to assess an industry's structure."
+description: "Rates industry attractiveness with Porter's Five Forces and profit-pool implications. Use to assess industry structure."
 ---
 
 # Five Forces

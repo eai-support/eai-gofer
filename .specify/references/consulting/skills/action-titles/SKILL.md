@@ -1,6 +1,6 @@
 ---
 name: action-titles
-description: "Writes full-sentence insight headlines for slides and checks that the titles read as the storyline. Use for slide titles and headlines."
+description: "Writes full-sentence insight headlines and checks that titles read as the storyline. Use for slide titles and headlines."
 ---
 
 # Action Titles

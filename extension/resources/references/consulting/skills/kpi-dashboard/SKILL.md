@@ -1,6 +1,6 @@
 ---
 name: kpi-dashboard
-description: "Designs a KPI tree and dashboard spec with definitions, formulas, targets, owners, cadence and layout. Use to define how performance is measured."
+description: "Designs a KPI tree and dashboard spec: definitions, formulas, targets, owners and layout. Use to define performance measures."
 ---
 
 # KPI Dashboard
@@ -35,6 +35,7 @@ Define what to measure, how, and how to show it, so leaders can steer.
 - Not for drawing the charts: use `data-visualization`.
 - Not for valuing benefits: use `business-case`.
 - Not for periodic progress reports: use `status-report`.
+- Not for proving the return of an AI use: use `ai-value-tracker`.
 
 ## Rules
 

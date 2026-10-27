@@ -1,6 +1,6 @@
 ---
 name: customer-segmentation
-description: "Defines needs- or behavior-based customer segments with size, value and priority. Use to decide which customers to target."
+description: "Defines needs- or behavior-based customer segments with size, value and priority. Use to choose target customers."
 ---
 
 # Customer Segmentation

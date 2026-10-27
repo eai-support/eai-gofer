@@ -1,6 +1,6 @@
 ---
 name: swot-analysis
-description: "Consolidates internal and external findings into an evidence-based SWOT with strategic implications. Use to summarize strategic position."
+description: "Consolidates findings into an evidence-based SWOT with strategic implications. Use to summarize strategic position."
 ---
 
 # SWOT Analysis

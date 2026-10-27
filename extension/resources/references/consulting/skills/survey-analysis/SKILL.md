@@ -1,6 +1,6 @@
 ---
 name: survey-analysis
-description: "Analyzes survey data: sample checks, weighting, cross-tabs, significance and open-ends. Use when results come from a questionnaire."
+description: "Analyzes survey data: sample checks, weighting, cross-tabs, significance and open-ends. Use for questionnaire results."
 ---
 
 # Survey Analysis

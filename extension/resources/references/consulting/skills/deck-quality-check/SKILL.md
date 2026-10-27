@@ -1,6 +1,6 @@
 ---
 name: deck-quality-check
-description: "Runs the final readiness review of a deck: answer, figure tie-out, sources and routed fixes. Use as the last gate before sending."
+description: "Runs a deck's final readiness review: answer, figure tie-out, sources and routed fixes. Use as the last gate before sending."
 ---
 
 # Deck Quality Check

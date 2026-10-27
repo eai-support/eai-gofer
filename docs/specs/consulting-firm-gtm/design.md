@@ -108,21 +108,22 @@ playbooks stay out of the slash menu.
 
 ### Reuse Of Existing Playbooks
 
-Most requirements reuse the 53 consulting playbooks already in Gofer.
+Most requirements reuse the 59 consulting playbooks in PR #441.
 
-| Requirement                  | Existing playbooks                                                                             | New work                                                                    |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| FR-08 AI opportunity scan    | `process-mapping`, `value-chain`, `interview-synthesis`, `portfolio-matrix`, `risk-assessment` | New `ai-opportunity-scan` playbook that chains them and adds data readiness |
-| FR-09 ROI model              | `business-case`, `financial-model`, `sensitivity-analysis`, `unit-economics`                   | ROI one-page summary for a non-technical executive                          |
-| FR-10 Plain-language outputs | `executive-summary`, `audience-brief`                                                          | Glossary step                                                               |
-| FR-11 Firm branding          | Gofer branding helper                                                                          | None                                                                        |
-| FR-12 Quality check          | `mece-check`, `source-validation`, `deck-quality-check`                                        | None                                                                        |
-| FR-14 Advice to build        | Gofer business scenario stage                                                                  | ROI baseline carried into the spec                                          |
-| FR-18 Demo pack              | `process-mapping`, `speaker-notes`                                                             | Screenshot step from the preview check                                      |
-| FR-33 Adoption material      | `change-plan`, Gofer stakeholder communications                                                | None                                                                        |
-| FR-07 Industry packs         | None                                                                                           | New pack files, one per industry                                            |
-| FR-34, FR-37 Share post      | None                                                                                           | New `share-post` playbook with the post check                               |
-| FR-15 Code tab guide         | None                                                                                           | New guide with screenshots                                                  |
+| Requirement                  | Existing playbooks                                                                 | New work                                           |
+| ---------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------- |
+| FR-08 AI opportunity scan    | `ai-opportunity-scan`, `ai-readiness-assessment`, `process-mapping`, `value-chain` | Industry packs feed it (FR-07)                     |
+| FR-09 ROI model              | `business-case`, `financial-model`, `sensitivity-analysis`, `unit-economics`       | ROI one-page summary for a non-technical executive |
+| FR-10 Plain-language outputs | `executive-summary`, `audience-brief`                                              | Glossary step                                      |
+| FR-11 Firm branding          | Gofer branding helper                                                              | None                                               |
+| FR-12 Quality check          | `mece-check`, `source-validation`, `deck-quality-check`                            | None                                               |
+| FR-14 Advice to build        | `ai-bootcamp-design`, `ai-workflow-redesign`, Gofer business scenario stage        | ROI baseline carried into the spec                 |
+| FR-31 Realised ROI report    | `ai-value-tracker`, `ai-value-capture-plan`                                        | The app records the ROI measures                   |
+| FR-18 Demo pack              | `process-mapping`, `speaker-notes`                                                 | Screenshot step from the preview check             |
+| FR-33 Adoption material      | `change-plan`, Gofer stakeholder communications                                    | None                                               |
+| FR-07 Industry packs         | None                                                                               | New pack files, one per industry                   |
+| FR-34, FR-37 Share post      | None                                                                               | New `share-post` playbook with the post check      |
+| FR-15 Code tab guide         | None                                                                               | New guide with screenshots                         |
 
 ### Industry Packs
 
