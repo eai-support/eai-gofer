@@ -1,0 +1,1680 @@
+{
+  "schemaVersion": "eai.delivery_lineage.v1",
+  "plane": "customer",
+  "featureId": "consulting-firm-gtm",
+  "generatedAt": "2026-10-27T00:00:00.000Z",
+  "nodes": [
+    {
+      "id": "need-icp",
+      "kind": "customer-need",
+      "label": "Consulting firms of 1 to 250 people need credible AI advice, ROI proof and client apps",
+      "stage": "intent",
+      "visibility": "customer",
+      "status": "current",
+      "summary": "Clients know little about AI. Firms know the industry but cannot build apps.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/discovery.md",
+        "contentHash": "8477c77caf49612274147be75249762dc8aa5301dbc3a018cb6d272cd146a13a",
+        "anchor": "problem-statement"
+      }
+    },
+    {
+      "id": "doc-discovery",
+      "kind": "documentation-file",
+      "label": "Customer and problem",
+      "stage": "intent",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/discovery.md",
+        "contentHash": "8477c77caf49612274147be75249762dc8aa5301dbc3a018cb6d272cd146a13a"
+      }
+    },
+    {
+      "id": "doc-research",
+      "kind": "documentation-file",
+      "label": "Research evidence",
+      "stage": "intent",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/research.md",
+        "contentHash": "d4de8b6294b4449f49a066032ee82c4fdb4bd5a54821a0c10037a1821b0ac4b6"
+      }
+    },
+    {
+      "id": "doc-scenarios",
+      "kind": "documentation-file",
+      "label": "50 business scenarios",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/business-scenarios.md",
+        "contentHash": "dc645a8547babd13a5237b974bebad15802ab9c263aef1d596e239a18489ba61"
+      }
+    },
+    {
+      "id": "doc-spec",
+      "kind": "documentation-file",
+      "label": "Specification",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd"
+      }
+    },
+    {
+      "id": "req-attract",
+      "kind": "requirement",
+      "label": "FR-01 to FR-04 Attract and install",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "attract-and-install"
+      }
+    },
+    {
+      "id": "req-methods",
+      "kind": "requirement",
+      "label": "FR-05 to FR-13 Consulting methods",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "consulting-methods"
+      }
+    },
+    {
+      "id": "req-advice-to-app",
+      "kind": "requirement",
+      "label": "FR-14 to FR-18 Advice to app",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "advice-to-app"
+      }
+    },
+    {
+      "id": "req-account",
+      "kind": "requirement",
+      "label": "FR-19 to FR-24 Account and workspace",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "account-and-workspace"
+      }
+    },
+    {
+      "id": "req-learn",
+      "kind": "requirement",
+      "label": "FR-25 to FR-28 Learn and certify",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "learn-and-certify"
+      }
+    },
+    {
+      "id": "req-deploy-roi",
+      "kind": "requirement",
+      "label": "FR-29 to FR-33 Deploy, run and prove ROI",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "deploy-run-and-prove-roi"
+      }
+    },
+    {
+      "id": "req-share",
+      "kind": "requirement",
+      "label": "FR-34 to FR-37 Share and grow",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "share-and-grow"
+      }
+    },
+    {
+      "id": "req-firm",
+      "kind": "requirement",
+      "label": "FR-38 to FR-44 Firm, enterprise and measurement",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "firm-and-enterprise"
+      }
+    },
+    {
+      "id": "req-platform",
+      "kind": "requirement",
+      "label": "EPR-1 to EPR-10 EAI Platform requests at the PublicAPI boundary",
+      "stage": "requirements",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/spec.md",
+        "contentHash": "b834be93f6efadf854e98077a7167f3de77b934c00e020349361b514b49be1fd",
+        "anchor": "eai-platform-requests"
+      }
+    },
+    {
+      "id": "doc-design",
+      "kind": "documentation-file",
+      "label": "End-to-end design",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/design.md",
+        "contentHash": "c94874bd6dedb0e47e81363c95fc566975f3b1255bd1eca450e99b9623c674f9"
+      }
+    },
+    {
+      "id": "arch-e2e",
+      "kind": "architecture",
+      "label": "Gofer plugin, landing page, connector and EAI Platform path",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/design.md",
+        "contentHash": "c94874bd6dedb0e47e81363c95fc566975f3b1255bd1eca450e99b9623c674f9",
+        "anchor": "system-context"
+      }
+    },
+    {
+      "id": "arch-workspaces",
+      "kind": "architecture",
+      "label": "Firm parent workspace with one child workspace per client",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/design.md",
+        "contentHash": "c94874bd6dedb0e47e81363c95fc566975f3b1255bd1eca450e99b9623c674f9",
+        "anchor": "firm-and-client-workspaces"
+      }
+    },
+    {
+      "id": "doc-decisions",
+      "kind": "documentation-file",
+      "label": "Decisions",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8"
+      }
+    },
+    {
+      "id": "d1",
+      "kind": "decision",
+      "label": "D1 Free plugin, paid when apps run",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d1-business-model"
+      }
+    },
+    {
+      "id": "d1-r1",
+      "kind": "decision",
+      "label": "D1 Rejected: paid plugin subscription",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d1-business-model"
+      }
+    },
+    {
+      "id": "d2",
+      "kind": "decision",
+      "label": "D2 One public command with playbooks on demand",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d2-how-consultants-reach-the-methods"
+      }
+    },
+    {
+      "id": "d2-r1",
+      "kind": "decision",
+      "label": "D2 Rejected: 53 separate public skills",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d2-how-consultants-reach-the-methods"
+      }
+    },
+    {
+      "id": "d2-r2",
+      "kind": "decision",
+      "label": "D2 Rejected: depend on skills over MCP now",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d2-how-consultants-reach-the-methods"
+      }
+    },
+    {
+      "id": "d3",
+      "kind": "decision",
+      "label": "D3 Direct install link, person posts",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d3-how-people-install-from-a-post"
+      }
+    },
+    {
+      "id": "d3-r1",
+      "kind": "decision",
+      "label": "D3 Rejected: comment Go to receive it",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d3-how-people-install-from-a-post"
+      }
+    },
+    {
+      "id": "d3-r2",
+      "kind": "decision",
+      "label": "D3 Rejected: automatic posting",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d3-how-people-install-from-a-post"
+      }
+    },
+    {
+      "id": "d4",
+      "kind": "decision",
+      "label": "D4 Landing page referral code first",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d4-referral-counting-in-the-mvp"
+      }
+    },
+    {
+      "id": "d4-r1",
+      "kind": "decision",
+      "label": "D4 Rejected: build the connector before launch",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d4-referral-counting-in-the-mvp"
+      }
+    },
+    {
+      "id": "d5",
+      "kind": "decision",
+      "label": "D5 Guide to the website sign-up now",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d5-account-sign-up"
+      }
+    },
+    {
+      "id": "d5-r1",
+      "kind": "decision",
+      "label": "D5 Rejected: a Gofer sign-up command now",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d5-account-sign-up"
+      }
+    },
+    {
+      "id": "d6",
+      "kind": "decision",
+      "label": "D6 Firm parent workspace with one child per client",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d6-firm-and-client-workspaces"
+      }
+    },
+    {
+      "id": "d6-r1",
+      "kind": "decision",
+      "label": "D6 Rejected: one shared workspace for all clients",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d6-firm-and-client-workspaces"
+      }
+    },
+    {
+      "id": "d6-r2",
+      "kind": "decision",
+      "label": "D6 Rejected: a separate account for each client",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d6-firm-and-client-workspaces"
+      }
+    },
+    {
+      "id": "d7",
+      "kind": "decision",
+      "label": "D7 Build in the Code tab of Claude Desktop",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d7-where-consultants-build"
+      }
+    },
+    {
+      "id": "d7-r1",
+      "kind": "decision",
+      "label": "D7 Rejected: terminal-only build path",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d7-where-consultants-build"
+      }
+    },
+    {
+      "id": "d8",
+      "kind": "decision",
+      "label": "D8 Enterprise Managed Auth in a later phase",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d8-enterprise-sign-in"
+      }
+    },
+    {
+      "id": "d8-r1",
+      "kind": "decision",
+      "label": "D8 Rejected: EMA in the MVP",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d8-enterprise-sign-in"
+      }
+    },
+    {
+      "id": "d9",
+      "kind": "decision",
+      "label": "D9 Stop at the PublicAPI boundary",
+      "stage": "architecture",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d9-documentation-boundary"
+      }
+    },
+    {
+      "id": "cap-signup",
+      "kind": "public-api-capability",
+      "label": "PublicAPI account sign-up",
+      "stage": "architecture",
+      "visibility": "public-contract",
+      "status": "suspect",
+      "capabilityId": "eai.publicapi.capability.account-signup.v4",
+      "contractVersion": "v4",
+      "summary": "Capability name to confirm against the published PublicAPI contract."
+    },
+    {
+      "id": "cap-workspace",
+      "kind": "public-api-capability",
+      "label": "PublicAPI workspace management",
+      "stage": "architecture",
+      "visibility": "public-contract",
+      "status": "suspect",
+      "capabilityId": "eai.publicapi.capability.workspace-management.v4",
+      "contractVersion": "v4",
+      "summary": "Capability name to confirm against the published PublicAPI contract."
+    },
+    {
+      "id": "cap-deploy",
+      "kind": "public-api-capability",
+      "label": "PublicAPI app deploy",
+      "stage": "architecture",
+      "visibility": "public-contract",
+      "status": "suspect",
+      "capabilityId": "eai.publicapi.capability.app-deploy.v4",
+      "contractVersion": "v4",
+      "summary": "Capability name to confirm against the published PublicAPI contract."
+    },
+    {
+      "id": "doc-plan",
+      "kind": "documentation-file",
+      "label": "Delivery plan",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/plan.md",
+        "contentHash": "9534b10a6f7ca7393ef4914336f5eb54af96fd40734ce52e5616cf2a4b883a51"
+      }
+    },
+    {
+      "id": "d10",
+      "kind": "decision",
+      "label": "D10 An MVP that needs no new platform work",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "selected",
+      "summary": "Proposed 80:20 MVP scope for Product and CEO approval.",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d10-delivery-order"
+      }
+    },
+    {
+      "id": "d10-r1",
+      "kind": "decision",
+      "label": "D10 Rejected: wait for the platform requests before launch",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "decisionOutcome": "rejected",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/decisions.md",
+        "contentHash": "c97705854876abd599ca81efebbd8fa570ae85216e6b938efae4828ec23b61d8",
+        "anchor": "d10-delivery-order"
+      }
+    },
+    {
+      "id": "wo-p0",
+      "kind": "work-order",
+      "label": "Phase 0 Validate and approve",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/plan.md",
+        "contentHash": "9534b10a6f7ca7393ef4914336f5eb54af96fd40734ce52e5616cf2a4b883a51",
+        "anchor": "phase-0-validate-and-approve"
+      }
+    },
+    {
+      "id": "wo-p1",
+      "kind": "work-order",
+      "label": "Phase 1 MVP: install, win, share, deploy (W1 to W7)",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/plan.md",
+        "contentHash": "9534b10a6f7ca7393ef4914336f5eb54af96fd40734ce52e5616cf2a4b883a51",
+        "anchor": "phase-1-mvp---install-first-win-share-deploy"
+      }
+    },
+    {
+      "id": "wo-p2",
+      "kind": "work-order",
+      "label": "Phase 2 Connector, learning and ROI proof (W8 to W13)",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/plan.md",
+        "contentHash": "9534b10a6f7ca7393ef4914336f5eb54af96fd40734ce52e5616cf2a4b883a51",
+        "anchor": "phase-2-connector-learning-and-roi-proof"
+      }
+    },
+    {
+      "id": "wo-p3",
+      "kind": "work-order",
+      "label": "Phase 3 Enterprise and partner scale (W14 to W19)",
+      "stage": "delivery",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/plan.md",
+        "contentHash": "9534b10a6f7ca7393ef4914336f5eb54af96fd40734ce52e5616cf2a4b883a51",
+        "anchor": "phase-3-enterprise-and-partner-scale"
+      }
+    },
+    {
+      "id": "doc-trace",
+      "kind": "documentation-file",
+      "label": "Traceability",
+      "stage": "validation",
+      "visibility": "customer",
+      "status": "current",
+      "source": {
+        "repository": "eai-gofer",
+        "path": "docs/specs/consulting-firm-gtm/traceability.md",
+        "contentHash": "24548138972082e5a67308ec4df780e025dfa29b040d85381fa7ff2f76aea364"
+      }
+    },
+    {
+      "id": "owner-product",
+      "kind": "owner",
+      "label": "EAI Product",
+      "stage": "intent",
+      "visibility": "customer",
+      "status": "current"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-doc-decisions-records-decision-d1",
+      "source": "doc-decisions",
+      "target": "d1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D1.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d1-r1",
+      "source": "doc-decisions",
+      "target": "d1-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D1.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d2",
+      "source": "doc-decisions",
+      "target": "d2",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D2.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d2-r1",
+      "source": "doc-decisions",
+      "target": "d2-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D2.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d2-r2",
+      "source": "doc-decisions",
+      "target": "d2-r2",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D2.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d3",
+      "source": "doc-decisions",
+      "target": "d3",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D3.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d3-r1",
+      "source": "doc-decisions",
+      "target": "d3-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D3.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d3-r2",
+      "source": "doc-decisions",
+      "target": "d3-r2",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D3.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d4",
+      "source": "doc-decisions",
+      "target": "d4",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D4.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d4-r1",
+      "source": "doc-decisions",
+      "target": "d4-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D4.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d5",
+      "source": "doc-decisions",
+      "target": "d5",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D5.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d5-r1",
+      "source": "doc-decisions",
+      "target": "d5-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D5.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d6",
+      "source": "doc-decisions",
+      "target": "d6",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D6.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d6-r1",
+      "source": "doc-decisions",
+      "target": "d6-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D6.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d6-r2",
+      "source": "doc-decisions",
+      "target": "d6-r2",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D6.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d7",
+      "source": "doc-decisions",
+      "target": "d7",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D7.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d7-r1",
+      "source": "doc-decisions",
+      "target": "d7-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D7.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d8",
+      "source": "doc-decisions",
+      "target": "d8",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D8.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d8-r1",
+      "source": "doc-decisions",
+      "target": "d8-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "human-directed",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D8.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d9",
+      "source": "doc-decisions",
+      "target": "d9",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D9.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d10",
+      "source": "doc-decisions",
+      "target": "d10",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records D10.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-decisions-records-decision-d10-r1",
+      "source": "doc-decisions",
+      "target": "d10-r1",
+      "relation": "records-decision",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "decisions.md records the rejected option for D10.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-discovery-supports-need-icp",
+      "source": "doc-discovery",
+      "target": "need-icp",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "discovery.md defines the ICP and problem.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-need-icp-informs-doc-scenarios",
+      "source": "need-icp",
+      "target": "doc-scenarios",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The ICP shapes the 50 scenarios.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-attract",
+      "source": "doc-scenarios",
+      "target": "req-attract",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-attract-informs-arch-e2e",
+      "source": "req-attract",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-methods",
+      "source": "doc-scenarios",
+      "target": "req-methods",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-methods-informs-arch-e2e",
+      "source": "req-methods",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-advice-to-app",
+      "source": "doc-scenarios",
+      "target": "req-advice-to-app",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-advice-to-app-informs-arch-e2e",
+      "source": "req-advice-to-app",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-account",
+      "source": "doc-scenarios",
+      "target": "req-account",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-account-informs-arch-e2e",
+      "source": "req-account",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-learn",
+      "source": "doc-scenarios",
+      "target": "req-learn",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-learn-informs-arch-e2e",
+      "source": "req-learn",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-deploy-roi",
+      "source": "doc-scenarios",
+      "target": "req-deploy-roi",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-deploy-roi-informs-arch-e2e",
+      "source": "req-deploy-roi",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-share",
+      "source": "doc-scenarios",
+      "target": "req-share",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-share-informs-arch-e2e",
+      "source": "req-share",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-firm",
+      "source": "doc-scenarios",
+      "target": "req-firm",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-firm-informs-arch-e2e",
+      "source": "req-firm",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-scenarios-supports-req-platform",
+      "source": "doc-scenarios",
+      "target": "req-platform",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Scenarios link to these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-platform-informs-arch-e2e",
+      "source": "req-platform",
+      "target": "arch-e2e",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The design meets these requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-account-informs-arch-workspaces",
+      "source": "req-account",
+      "target": "arch-workspaces",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "FR-22 and FR-23 need client separation.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-research-informs-doc-spec",
+      "source": "doc-research",
+      "target": "doc-spec",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Research facts constrain the requirements.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-research-informs-d2",
+      "source": "doc-research",
+      "target": "d2",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Skills over MCP is unconfirmed.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-research-informs-d5",
+      "source": "doc-research",
+      "target": "d5",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The CLI cannot create accounts today.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-research-informs-d8",
+      "source": "doc-research",
+      "target": "d8",
+      "relation": "informs",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "EMA needs a sign-in service check.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d1-constrains-arch-e2e",
+      "source": "d1",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d2-constrains-arch-e2e",
+      "source": "d2",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d3-constrains-arch-e2e",
+      "source": "d3",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d4-constrains-arch-e2e",
+      "source": "d4",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d5-constrains-arch-e2e",
+      "source": "d5",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d7-constrains-arch-e2e",
+      "source": "d7",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d8-constrains-arch-e2e",
+      "source": "d8",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d9-constrains-arch-e2e",
+      "source": "d9",
+      "target": "arch-e2e",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "The selected approach shapes the design.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d6-constrains-arch-workspaces",
+      "source": "d6",
+      "target": "arch-workspaces",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "D6 selects the workspace model.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-design-supports-arch-e2e",
+      "source": "doc-design",
+      "target": "arch-e2e",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "design.md describes the system context.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-design-supports-arch-workspaces",
+      "source": "doc-design",
+      "target": "arch-workspaces",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "design.md describes the workspace model.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-arch-e2e-depends-on-cap-signup",
+      "source": "arch-e2e",
+      "target": "cap-signup",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Sign-up goes through the EAI website to this capability.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-arch-workspaces-depends-on-cap-workspace",
+      "source": "arch-workspaces",
+      "target": "cap-workspace",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Client workspaces use this capability.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-arch-e2e-depends-on-cap-deploy",
+      "source": "arch-e2e",
+      "target": "cap-deploy",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Deploy uses the EAI CLI and this capability.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-req-platform-constrains-cap-signup",
+      "source": "req-platform",
+      "target": "cap-signup",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "EPR-1 to EPR-3 change sign-up behaviour.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-d10-constrains-wo-p1",
+      "source": "d10",
+      "target": "wo-p1",
+      "relation": "constrains",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "D10 sets the MVP scope.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-plan-supports-wo-p1",
+      "source": "doc-plan",
+      "target": "wo-p1",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "plan.md lists W1 to W7.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-depends-on-wo-p0",
+      "source": "wo-p1",
+      "target": "wo-p0",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 waits for dated approval.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p2-depends-on-wo-p1",
+      "source": "wo-p2",
+      "target": "wo-p1",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 2 follows the MVP.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p3-depends-on-wo-p2",
+      "source": "wo-p3",
+      "target": "wo-p2",
+      "relation": "depends-on",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 3 follows Phase 2.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-attract",
+      "source": "wo-p1",
+      "target": "req-attract",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-methods",
+      "source": "wo-p1",
+      "target": "req-methods",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-advice-to-app",
+      "source": "wo-p1",
+      "target": "req-advice-to-app",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-account",
+      "source": "wo-p1",
+      "target": "req-account",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-deploy-roi",
+      "source": "wo-p1",
+      "target": "req-deploy-roi",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p1-implements-req-share",
+      "source": "wo-p1",
+      "target": "req-share",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 1 delivers the MVP items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p2-implements-req-learn",
+      "source": "wo-p2",
+      "target": "req-learn",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 2 delivers the Next items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p2-implements-req-firm",
+      "source": "wo-p2",
+      "target": "req-firm",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 2 delivers the Next items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p2-implements-req-platform",
+      "source": "wo-p2",
+      "target": "req-platform",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 2 delivers the Next items in this group.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-wo-p3-implements-req-firm",
+      "source": "wo-p3",
+      "target": "req-firm",
+      "relation": "implements",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Phase 3 delivers the Later enterprise items.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-trace-supports-doc-spec",
+      "source": "doc-trace",
+      "target": "doc-spec",
+      "relation": "supports",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Every requirement maps to a scenario and a workstream.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-spec-owned-by-owner-product",
+      "source": "doc-spec",
+      "target": "owner-product",
+      "relation": "owned-by",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Product owns the specification.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    },
+    {
+      "id": "e-doc-plan-owned-by-owner-product",
+      "source": "doc-plan",
+      "target": "owner-product",
+      "relation": "owned-by",
+      "visibility": "customer",
+      "status": "current",
+      "origin": "agent-initiated",
+      "verifiedBy": "agent",
+      "claim": "Product owns the plan.",
+      "verifiedAt": "2026-10-27T00:00:00.000Z"
+    }
+  ]
+}
