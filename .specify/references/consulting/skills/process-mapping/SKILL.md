@@ -19,7 +19,7 @@ Show how one business process works today, why it underperforms, and how it shou
 4. Measure each step: volume, touch time, waiting time, and error or rework rate. Total the elapsed time and the share that adds value for the customer.
 5. Find waste: waiting, rework, extra hand-offs, extra approvals, duplicate data entry, and idle capacity.
 6. For the top 3 pain points, find root causes with 5 whys or a fishbone diagram.
-7. Design the future state: remove, combine, and simplify steps before you automate them. Note role changes as input to `change-plan`.
+7. Design the future state: remove, combine, and simplify steps before you automate them. Note role changes as input to `change-plan`. If AI will take on tasks, stop after the root causes and hand the current state to `ai-workflow-redesign`.
 8. List improvements with their expected effect on time, cost, and quality.
 
 ## Output

@@ -1,6 +1,6 @@
 ---
 name: ai-value-tracker
-description: "Sets the baseline and attribution for an AI use, then reports realized ROI. Use to prove AI value after launch."
+description: "Sets an AI use's baseline and attribution before launch, then reports realized ROI. Use to prove an AI pilot's ROI."
 ---
 
 # AI Value Tracker
@@ -15,29 +15,29 @@ Prove what an AI use returns, with numbers that a finance team accepts.
 
 1. Choose 3 to 5 measures: one financial result, one or two operating measures such as cycle time, volume, or error rate, and one adoption measure.
 2. Set the baseline from data before launch over a comparable period. Note seasonal effects and one-off events.
-3. Choose the attribution method, strongest first: a comparison group without the AI use, a phased start across teams, or a before-and-after trend. State its limits.
+3. Before launch, choose the attribution method, strongest first: a randomized comparison group, a phased start across teams, a matched comparison group, or the trend before launch projected forward. Compare changes, not levels, and check that the groups moved together before launch. State the limits.
 4. Agree the measure owners, data sources, and reporting cadence with finance.
-5. Report results: actual against baseline and target, value realized to date, and costs to date, including AI running costs.
-6. Compute the return: net value, ROI, and payback to date.
-7. Separate capacity from captured value. Use `ai-value-capture-plan` output when it exists.
+5. Report results: actual against baseline and target, and all costs to date, one-off and running, including AI running costs.
+6. Separate capacity from captured value. Use `ai-value-capture-plan` output when it exists. Count only captured value as a return.
+7. Compute the return on captured value only: net value is captured value minus all costs to date; ROI is net value divided by costs; payback is the month when cumulative captured value first exceeds cumulative cost, or a forecast month.
 8. Recommend the next step: scale, fix, or stop, and why.
 
 ## Output
 
 1. Measurement plan: Measure | Definition | Baseline | Target | Source | Owner | Cadence.
-2. Value report: Measure | Baseline | Actual | Target | Value to date.
-3. Return summary: Value realized | Costs | Net value | ROI | Payback.
+2. Value report: Measure | Baseline | Actual | Target | Change.
+3. Return summary: Captured value | Capacity (not counted) | Costs | Net value | ROI | Payback month.
 4. Next-step recommendation.
 
 ## Quality bar
 
-- The baseline and attribution method are fixed before results are reported.
+- The baseline and attribution method are fixed before launch, or the report says that only a trend method was possible.
 - Costs include AI running costs, not only the first investment.
 
 ## Boundaries
 
 - Not for a KPI tree or dashboard design: use `kpi-dashboard`.
-- Not for the investment case before launch: use `business-case`.
+- Not for the forecast investment case: use `business-case`.
 - Not for programme progress reporting: use `status-report`.
 - Not for converting capacity into financial results: use `ai-value-capture-plan`.
 

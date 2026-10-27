@@ -1,6 +1,6 @@
 ---
 name: market-sizing
-description: "Estimates TAM, SAM and SOM with top-down and bottom-up triangulation and stated assumptions. Use to size a market."
+description: "Estimates TAM, SAM and SOM by top-down and bottom-up triangulation. Use to size a market or opportunity."
 ---
 
 # Market Sizing

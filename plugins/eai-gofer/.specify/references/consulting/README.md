@@ -190,8 +190,8 @@ data, workflow redesign, value capture, and value tracking.
   `stakeholder-map` > `change-plan` > `risk-assessment` > `kpi-dashboard` >
   `status-report`.
 - **AI value:** `ai-readiness-assessment` > `ai-opportunity-scan` >
-  `ai-bootcamp-design` > `ai-workflow-redesign` > `business-case` >
-  `ai-value-capture-plan` > `change-plan` > `ai-value-tracker`.
+  `ai-bootcamp-design` > `ai-workflow-redesign` > `ai-value-capture-plan` >
+  `business-case` > `change-plan` > `ai-value-tracker`.
 
 ## Install
 
@@ -257,8 +257,8 @@ is not. No skill needs scripts, network access, or a specific tool.
 These are deliberate gaps, not overlaps:
 
 - Collecting evidence: survey and interview-guide design, data collection, and
-  workshop facilitation. `ai-bootcamp-design` plans an AI bootcamp; it does not
-  run it.
+  workshop facilitation. `ai-bootcamp-design` plans an AI bootcamp or hands-on
+  workshop; it does not run it.
 - Cost programmes: firm-wide cost baselines and savings targets.
   `ai-value-tracker` sets the baseline for one AI use only.
 - Specialist advice: legal, tax, and M&A due diligence.

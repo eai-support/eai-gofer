@@ -1,6 +1,6 @@
 ---
 name: pestel-scan
-description: "Scans political, economic, social, technological, environmental and legal trends by impact. Use for macro-trend analysis."
+description: "Scans political, economic, social, technological, environmental and legal trends by impact. Use for macro-environment analysis."
 ---
 
 # PESTEL Scan

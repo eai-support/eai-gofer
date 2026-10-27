@@ -1,6 +1,6 @@
 ---
 name: unit-economics
-description: "Calculates per-unit economics: contribution margin, CAC, LTV, payback and breakeven. Use to test if a business model makes money."
+description: "Calculates per-unit economics: contribution margin, CAC, LTV, CAC payback and breakeven. Use to test if a business model makes money."
 ---
 
 # Unit Economics

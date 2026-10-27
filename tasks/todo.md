@@ -124,4 +124,19 @@
 - [x] Shorten descriptions so 59 skills fit the 8,000-byte Codex list budget.
 - [x] Regenerate extension resources and plugin bundles, and update the pinned
       portable inventory count.
-- [ ] Independent review of overlaps, hand-offs, and methods.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- An independent review found one blocking method error: the value tracker
+  computed ROI before it removed unused capacity, which overstates the return.
+  It now computes ROI, net value, and payback month on captured value only.
+- It also found weaker method steps and routing gaps. All were fixed:
+  attribution is ordered by strength and set before launch; the opportunity scan
+  gives money, not hours, and defines ease; readiness scores use written level
+  definitions and target scores; bootcamp trials use held-out cases and a
+  same-case baseline; value capture counts each hour once and nets capture
+  costs; the capture plan now feeds `business-case`; the bootcamp moved to the
+  research stage; and neighbor skills point back to the new owners.
+- Shortened descriptions that lost trigger words were restored. The list is
+  7,977 of 8,000 bytes.

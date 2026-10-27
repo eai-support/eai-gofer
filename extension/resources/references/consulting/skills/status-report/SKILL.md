@@ -40,6 +40,7 @@ Give the steering committee an honest one-page view of progress, and the decisio
 - Not for defining KPIs: use `kpi-dashboard`.
 - Not for re-planning the programme: use `implementation-roadmap`.
 - Not for a stand-alone decision request: use `decision-memo`.
+- Not for an AI use's realized return: use `ai-value-tracker`; report its figures here.
 
 ## Rules
 

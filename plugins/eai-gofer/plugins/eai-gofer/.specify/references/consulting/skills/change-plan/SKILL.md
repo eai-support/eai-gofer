@@ -40,6 +40,7 @@ Help each affected group move from the old way of working to the new one, and pr
 - Not for individual stakeholder tactics: use `stakeholder-map`.
 - Not for the project timeline: use `implementation-roadmap`.
 - Not for roles: use `raci-builder`.
+- Not for an organization's readiness to scale AI: use `ai-readiness-assessment`.
 
 ## Rules
 

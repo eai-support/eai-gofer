@@ -37,6 +37,7 @@ Show where the business spends money and creates value, activity by activity.
 - Not for testing if a strength is sustainable: use `vrio-analysis`.
 - Not for mapping one process step by step: use `process-mapping`.
 - Not for designing the future organization: use `operating-model`.
+- Not for finding AI uses: use `ai-opportunity-scan`.
 - Hand off to: `swot-analysis`.
 
 ## Rules

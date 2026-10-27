@@ -1,6 +1,6 @@
 ---
 name: implementation-roadmap
-description: "Plans phases, workstreams, milestones and dependencies on a timeline. Use to turn a recommendation into a plan."
+description: "Plans phases, workstreams, milestones, dependencies and quick wins. Use to turn a recommendation into a plan."
 ---
 
 # Implementation Roadmap

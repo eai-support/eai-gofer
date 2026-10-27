@@ -1,11 +1,11 @@
 ---
 name: ai-bootcamp-design
-description: "Designs a 1 to 5 day bootcamp where staff build an AI use on their own data, ending in go or no-go. Use to prove value fast."
+description: "Plans a 1 to 5 day AI bootcamp or workshop where staff build a use on their own data, ending in go or no-go. Use before funding."
 ---
 
 # AI Bootcamp Design
 
-Plan a short, hands-on working session that proves one AI use on the client's own data and ends in a decision.
+Plan a short, hands-on working session that tests one AI use on the client's own data and ends in a decision.
 
 ## Input
 
@@ -18,7 +18,7 @@ Plan a short, hands-on working session that proves one AI use on the client's ow
 3. Confirm data access and approvals in advance: sample data, privacy checks, and the systems needed. If data or approvals are not ready, move the date.
 4. Choose the team: the business owner, 2 to 4 people who do the work today, and a builder who can make a working prototype.
 5. Plan each day as a timed agenda: understand the work, build, try real cases, measure, and decide.
-6. Plan the trial: a set of real cases with known answers, and how errors and time saved are counted.
+6. Plan the trial: a stated number of real cases with known answers, held out from the build. Time the same cases done today's way as the baseline. Count errors by severity. Any critical error is a no-go.
 7. Plan the closing session: show the prototype working, compare results with the criteria, and record the go or no-go decision with owners.
 8. Plan the next step after a go: the next owner, the workflow redesign, and how value will be tracked.
 
@@ -27,17 +27,17 @@ Plan a short, hands-on working session that proves one AI use on the client's ow
 1. Bootcamp charter: Decision | Use | Success criteria | Baseline | Target | Go threshold.
 2. Readiness checklist: Item | Owner | Status | Due before day 1.
 3. Day-by-day agenda: Day | Session | Purpose | Who | Output.
-4. Trial template: Case | Expected result | Actual result | Time taken | Error (Y/N).
+4. Trial template: Case | Expected result | AI result | Time with AI | Time today | Error severity.
 5. Decision record: Decision | Evidence | Owner | Next step.
 
 ## Quality bar
 
 - The success criteria and go threshold are set before the work starts.
-- The trial uses the client's real cases or a labeled sample.
+- The trial uses held-out real cases, or a labeled sample, and the same cases done today's way.
 
 ## Boundaries
 
-- Not for choosing which use to try: use `ai-opportunity-scan`.
+- Not for choosing which use to test: use `ai-opportunity-scan`.
 - Not for redesigning the full workflow after a go: use `ai-workflow-redesign`.
 - Not for a multi-month rollout plan: use `implementation-roadmap`.
 - Not for the proposal that sells the bootcamp: use `engagement-proposal`.
