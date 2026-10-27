@@ -2,7 +2,7 @@
   "schemaVersion": "eai.delivery_lineage.v1",
   "plane": "customer",
   "featureId": "consulting-firm-gtm",
-  "generatedAt": "2026-10-27T17:40:00.000Z",
+  "generatedAt": "2026-10-27T17:50:00.000Z",
   "nodes": [
     {
       "id": "need-icp",
@@ -55,7 +55,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/business-scenarios.md",
-        "contentHash": "dc645a8547babd13a5237b974bebad15802ab9c263aef1d596e239a18489ba61"
+        "contentHash": "bed770d0aa75dfd33ded98b2a0fbcb17505c320bca775e28eea3b0c11182dd52"
       }
     },
     {
@@ -68,7 +68,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c"
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c"
       }
     },
     {
@@ -81,7 +81,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "attract-and-install"
       }
     },
@@ -95,7 +95,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "consulting-methods"
       }
     },
@@ -109,7 +109,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "advice-to-app"
       }
     },
@@ -123,7 +123,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "account-and-workspace"
       }
     },
@@ -137,7 +137,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "learn-and-certify"
       }
     },
@@ -151,7 +151,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "deploy-run-and-prove-roi"
       }
     },
@@ -165,7 +165,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "share-and-grow"
       }
     },
@@ -179,7 +179,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "firm-and-enterprise"
       }
     },
@@ -193,7 +193,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/spec.md",
-        "contentHash": "6eb4afe0344043a46e49a7c9459c871de84fb33683396249fd271f06f6adf12c",
+        "contentHash": "26ff867c265aa55abf689b9a6a51ba1841cb07bbb24d4b42032c2c896f49c14c",
         "anchor": "eai-platform-requests"
       }
     },
@@ -207,7 +207,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf"
+        "contentHash": "3227c6678eee0e82546d860ec1e8fcad9b2c93e3ef16632fdaea04e11a495d49"
       }
     },
     {
@@ -220,7 +220,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf",
+        "contentHash": "3227c6678eee0e82546d860ec1e8fcad9b2c93e3ef16632fdaea04e11a495d49",
         "anchor": "system-context"
       }
     },
@@ -234,7 +234,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf",
+        "contentHash": "3227c6678eee0e82546d860ec1e8fcad9b2c93e3ef16632fdaea04e11a495d49",
         "anchor": "firm-and-client-workspaces"
       }
     },
@@ -594,7 +594,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3"
+        "contentHash": "f41463dc8205a2c225fd2becf263885f9154beda62ac5f6c90e4e601a745adfb"
       }
     },
     {
@@ -637,7 +637,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
+        "contentHash": "f41463dc8205a2c225fd2becf263885f9154beda62ac5f6c90e4e601a745adfb",
         "anchor": "phase-0-validate-and-approve"
       }
     },
@@ -651,7 +651,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
+        "contentHash": "f41463dc8205a2c225fd2becf263885f9154beda62ac5f6c90e4e601a745adfb",
         "anchor": "phase-1-mvp---install-first-win-share-deploy"
       }
     },
@@ -665,7 +665,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
+        "contentHash": "f41463dc8205a2c225fd2becf263885f9154beda62ac5f6c90e4e601a745adfb",
         "anchor": "phase-2-connector-learning-and-roi-proof"
       }
     },
@@ -679,7 +679,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
+        "contentHash": "f41463dc8205a2c225fd2becf263885f9154beda62ac5f6c90e4e601a745adfb",
         "anchor": "phase-3-enterprise-and-partner-scale"
       }
     },
@@ -693,7 +693,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/traceability.md",
-        "contentHash": "3d69ab724548c20d23086cf2f6bbb4df48d4f4741d13b0e2c6910c28f9162399"
+        "contentHash": "e1a70d807f38e2d5575d16f24849b223b8f0f3608ca713bf2c0962ecdc0736aa"
       }
     },
     {

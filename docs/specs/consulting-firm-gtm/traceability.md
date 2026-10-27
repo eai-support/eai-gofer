@@ -65,18 +65,18 @@ scenario and one workstream.
 
 ## EAI Platform Requests
 
-| Request | Requirements | Scenarios                  | Phase   |
-| ------- | ------------ | -------------------------- | ------- |
-| EPR-1   | FR-21        | BS-26                      | Phase 2 |
-| EPR-2   | FR-20, FR-21 | BS-25, BS-26               | Phase 2 |
-| EPR-3   | FR-19, FR-29 | BS-25, BS-36, BS-41        | Phase 2 |
-| EPR-4   | FR-06, FR-39 | BS-32, BS-42, BS-44, BS-47 | Phase 2 |
-| EPR-5   | FR-39        | BS-47                      | Phase 3 |
-| EPR-6   | FR-40        | BS-47                      | Phase 3 |
-| EPR-7   | FR-25        | BS-32                      | Phase 2 |
-| EPR-8   | FR-31        | BS-38                      | Phase 3 |
-| EPR-9   | FR-20        | BS-25                      | Phase 2 |
-| EPR-10  | FR-22        | BS-27, BS-31               | Phase 2 |
+| Request | Requirements                                         | Scenarios                  | Phase   |
+| ------- | ---------------------------------------------------- | -------------------------- | ------- |
+| EPR-1   | FR-21                                                | BS-26                      | Phase 2 |
+| EPR-2   | FR-20, FR-21                                         | BS-25, BS-26               | Phase 2 |
+| EPR-3   | FR-19, FR-29                                         | BS-25, BS-36, BS-41        | Phase 2 |
+| EPR-4   | FR-06, FR-39                                         | BS-32, BS-42, BS-44, BS-47 | Phase 2 |
+| EPR-5   | FR-39                                                | BS-47                      | Phase 3 |
+| EPR-6   | FR-40                                                | BS-47                      | Phase 3 |
+| EPR-7   | FR-25                                                | BS-32                      | Phase 2 |
+| EPR-8   | FR-31                                                | BS-38                      | Phase 3 |
+| EPR-9   | FR-20                                                | BS-25                      | Phase 2 |
+| EPR-10  | FR-22 (Admin Portal path only; the MVP uses the CLI) | BS-27, BS-31               | Phase 2 |
 
 ## Decisions
 

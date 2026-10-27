@@ -382,7 +382,8 @@ Scenarios marked **(edge)** cover a failure or exception path.
   deploys the client's app there.
 - **Outcome:** Each client's data stays separate. The firm sees all its clients.
 - **Measure:** Client workspaces per firm.
-- **Needs:** FR-22, EPR-10.
+- **Needs:** FR-22. EPR-10 later adds Admin Portal creation and builder roles
+  for other consultants.
 - **Acceptance:** Given two clients, when both apps run, then neither client can
   see the other's data.
 

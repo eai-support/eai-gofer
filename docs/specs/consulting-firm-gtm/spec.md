@@ -134,7 +134,8 @@ waits for a platform or Anthropic dependency.
   session. Depends on EPR-1.
 - **FR-22 (MVP)** Gofer must deploy each client's app into a client workspace
   under the firm's workspace. It must name the target workspace and wait for
-  confirmation before deploy.
+  confirmation before deploy. The MVP creates client workspaces with the
+  existing EAI CLI child-workspace capability.
 - **FR-23 (MVP)** Client apps must default to workspace-only access. Gofer must
   help invite client staff.
 - **FR-24 (MVP)** Gofer must recover safely from an expired sign-in, an
@@ -241,8 +242,9 @@ document does not describe how the platform meets them.
   completion status.
 - **EPR-8** PublicAPI must let an app record and read named ROI measures.
 - **EPR-9** All sign-up flows must be managed and tested as configuration code.
-- **EPR-10** A firm administrator must be able to create a client workspace
-  under the firm's workspace and give firm consultants a builder role in it.
+- **EPR-10** A firm administrator must be able to create a client workspace from
+  the EAI Admin Portal and give other firm consultants a builder role in it. The
+  MVP does not need this request: it uses the existing CLI capability.
 
 ### Key Entities
 

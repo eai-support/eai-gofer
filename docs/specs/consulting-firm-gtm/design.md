@@ -243,6 +243,9 @@ flowchart TB
 ```
 
 - One parent workspace per firm. One child workspace per client (FR-22).
+- The MVP creates client workspaces with the existing EAI CLI child-workspace
+  capability. EPR-10 later adds creation from the EAI Admin Portal and builder
+  roles for other consultants.
 - Consultants build in each client workspace. Client staff are members of their
   own workspace only (FR-23, NFR-02).
 - Gofer names the target workspace and waits for confirmation before each deploy
