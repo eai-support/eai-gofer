@@ -13,7 +13,7 @@ updated: 2026-10-27
 This design shows how a consulting firm moves from a LinkedIn post to a client
 app that runs on EAI with proven ROI. It meets the [specification](spec.md) and
 the [50 business scenarios](business-scenarios.md). The
-[decisions](decisions.md) record why each choice was made.
+[decisions](decisions.md) explain each proposed choice.
 
 ## System Context
 
@@ -96,7 +96,7 @@ flowchart LR
 
 ## Gofer Plugin
 
-### Selected Approach: One Public Command With Playbooks On Demand
+### Proposed Approach: One Public Command With Playbooks On Demand
 
 `/eai` stays the only public command. Claude reads one short description at
 start. It opens a consulting playbook only when the request needs it. The
@@ -151,7 +151,7 @@ industry (BS-15). A firm can add its own pack later (FR-42).
 
 ## Landing Page And Referral Code
 
-### Selected Approach: Landing Page Referral Code In The MVP
+### Proposed Approach: Landing Page Referral Code In The MVP
 
 The MVP uses a static landing page. The share link adds a short referral code.
 The page counts visits per code. The page links to the Anthropic directory

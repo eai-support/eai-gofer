@@ -38,26 +38,26 @@ flowchart LR
     n15["Gofer plugin, landing page, connector and EAI Platform path<br/>Architecture"]:::current
     n16["Firm parent workspace with one child workspace per client<br/>Architecture"]:::current
     n17["Decisions<br/>Documentation File"]:::current
-    n18["D1 Free plugin, paid when apps run<br/>Decision"]:::current
-    n19["D1 Rejected: paid plugin subscription<br/>Decision"]:::rejected_decision
-    n20["D2 One public command with playbooks on demand<br/>Decision"]:::current
-    n21["D2 Rejected: a separate public skill for each playbook<br/>Decision"]:::rejected_decision
-    n22["D2 Rejected: depend on skills over MCP now<br/>Decision"]:::rejected_decision
-    n23["D3 Direct install link, person posts<br/>Decision"]:::current
-    n24["D3 Rejected: comment Go to receive it<br/>Decision"]:::rejected_decision
-    n25["D3 Rejected: automatic posting<br/>Decision"]:::rejected_decision
-    n26["D4 Landing page referral code first<br/>Decision"]:::current
-    n27["D4 Rejected: build the connector before launch<br/>Decision"]:::rejected_decision
-    n28["D5 Guide to the website sign-up now<br/>Decision"]:::current
-    n29["D5 Rejected: a Gofer sign-up command now<br/>Decision"]:::rejected_decision
-    n30["D6 Firm parent workspace with one child per client<br/>Decision"]:::current
-    n31["D6 Rejected: one shared workspace for all clients<br/>Decision"]:::rejected_decision
-    n32["D6 Rejected: a separate account for each client<br/>Decision"]:::rejected_decision
-    n33["D7 Build in the Code tab of Claude Desktop<br/>Decision"]:::current
-    n34["D7 Rejected: terminal-only build path<br/>Decision"]:::rejected_decision
-    n35["D8 Enterprise Managed Auth in a later phase<br/>Decision"]:::current
-    n36["D8 Rejected: EMA in the MVP<br/>Decision"]:::rejected_decision
-    n37["D9 Stop at the PublicAPI boundary<br/>Decision"]:::current
+    n18["D1 Proposed: Free plugin, paid when apps run<br/>Decision"]:::current
+    n19["D1 Not recommended: paid plugin subscription<br/>Decision"]:::current
+    n20["D2 Proposed: One public command with playbooks on demand<br/>Decision"]:::current
+    n21["D2 Not recommended: a separate public skill for each playbook<br/>Decision"]:::current
+    n22["D2 Not recommended: depend on skills over MCP now<br/>Decision"]:::current
+    n23["D3 Proposed: Direct install link, person posts<br/>Decision"]:::current
+    n24["D3 Not recommended: comment Go to receive it<br/>Decision"]:::current
+    n25["D3 Not recommended: automatic posting<br/>Decision"]:::current
+    n26["D4 Proposed: Landing page referral code first<br/>Decision"]:::current
+    n27["D4 Not recommended: build the connector before launch<br/>Decision"]:::current
+    n28["D5 Proposed: Guide to the website sign-up now<br/>Decision"]:::current
+    n29["D5 Not recommended: a Gofer sign-up command now<br/>Decision"]:::current
+    n30["D6 Proposed: Firm parent workspace with one child per client<br/>Decision"]:::current
+    n31["D6 Not recommended: one shared workspace for all clients<br/>Decision"]:::current
+    n32["D6 Not recommended: a separate account for each client<br/>Decision"]:::current
+    n33["D7 Proposed: Build in the Code tab of Claude Desktop<br/>Decision"]:::current
+    n34["D7 Not recommended: terminal-only build path<br/>Decision"]:::current
+    n35["D8 Proposed: Enterprise Managed Auth in a later phase<br/>Decision"]:::current
+    n36["D8 Not recommended: EMA in the MVP<br/>Decision"]:::current
+    n37["D9 Proposed: Stop at the PublicAPI boundary<br/>Decision"]:::current
     n38["PublicAPI account sign-up<br/>Public Api Capability"]:::suspect
     n39["PublicAPI workspace management<br/>Public Api Capability"]:::suspect
     n40["PublicAPI app deploy<br/>Public Api Capability"]:::suspect
@@ -65,8 +65,8 @@ flowchart LR
   subgraph stage_delivery["Delivery"]
     direction TB
     n41["Delivery plan<br/>Documentation File"]:::current
-    n42["D10 An MVP that needs no new platform work<br/>Decision<br/>FINAL SELECTED DECISION"]:::final_selected
-    n43["D10 Rejected: wait for the platform requests before launch<br/>Decision"]:::rejected_decision
+    n42["D10 Proposed: An MVP that needs no new platform work<br/>Decision"]:::current
+    n43["D10 Not recommended: wait for the platform requests before launch<br/>Decision"]:::current
     n44["Phase 0 Validate and approve<br/>Work Order"]:::current
     n45["Phase 1 MVP: install, win, share, deploy (W1 to W7)<br/>Work Order"]:::current
     n46["Phase 2 Connector, learning and ROI proof (W8 to W13)<br/>Work Order"]:::current

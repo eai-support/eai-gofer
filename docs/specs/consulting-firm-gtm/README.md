@@ -39,10 +39,16 @@ Read them in this order.
 | [Research evidence](research.md)               | Which facts does the design depend on, and how sure are we?         |
 | [Specification](spec.md)                       | What must Gofer and the EAI Platform do?                            |
 | [End-to-end design](design.md)                 | How do the parts fit together?                                      |
-| [Decisions](decisions.md)                      | Which choices were made, and which were rejected?                   |
+| [Decisions](decisions.md)                      | Which choices are proposed, and which are not recommended?          |
 | [Delivery plan](plan.md)                       | In what order is the work done, and by whom?                        |
 | [Traceability](traceability.md)                | Which scenario, design part and workstream covers each requirement? |
 | [Delivery lineage](delivery-lineage.md)        | A diagram of the links from need to plan.                           |
+
+## Delivery Lineage Export
+
+The lineage graph names this repository, `eai-gofer`, as the source of each
+document. A customer export must list `eai-gofer` in the projection allowlist.
+Without it, the projection fails closed by design.
 
 ## Related Work
 

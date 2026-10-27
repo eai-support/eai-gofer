@@ -38,7 +38,7 @@ flowchart LR
 | Interview 12 firms, four in each segment, about the problem, LinkedIn habits and willingness to pay.                     | EAI Growth          | Interview synthesis                 |
 | Confirm the plugin deep link form and the Claude plans that support plugins (Q1, Q4).                                    | EAI Growth          | Updated research                    |
 | Merge PR #441, which adds `/eai` routing and the consulting playbooks, including the AI opportunity scan (FR-05, FR-08). | EAI Engineering     | Merged playbooks                    |
-| Approve the MVP scope, business model and decisions D1 to D8.                                                            | EAI Product and CEO | Dated approval in the specification |
+| Approve the MVP scope, business model and decisions D1 to D10.                                                           | EAI Product and CEO | Dated approval in the specification |
 | Set targets for SC-01 to SC-05 and name owners for LinkedIn and partners.                                                | EAI Product and CEO | Targets in the specification        |
 
 **Gate:** Phase 1 starts only after the dated Product and CEO approval.

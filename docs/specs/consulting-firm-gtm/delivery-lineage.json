@@ -2,7 +2,7 @@
   "schemaVersion": "eai.delivery_lineage.v1",
   "plane": "customer",
   "featureId": "consulting-firm-gtm",
-  "generatedAt": "2026-10-27T17:30:00.000Z",
+  "generatedAt": "2026-10-27T17:40:00.000Z",
   "nodes": [
     {
       "id": "need-icp",
@@ -207,7 +207,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "af688552aba08d03e0dc4afec9acd478a2a5d897c6db06229a8c26666b7686c7"
+        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf"
       }
     },
     {
@@ -220,7 +220,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "af688552aba08d03e0dc4afec9acd478a2a5d897c6db06229a8c26666b7686c7",
+        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf",
         "anchor": "system-context"
       }
     },
@@ -234,7 +234,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/design.md",
-        "contentHash": "af688552aba08d03e0dc4afec9acd478a2a5d897c6db06229a8c26666b7686c7",
+        "contentHash": "96795cfafb72c63a252714b1c6bb811c7727baf28450e4ce87abe7c3380340bf",
         "anchor": "firm-and-client-workspaces"
       }
     },
@@ -248,315 +248,306 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a"
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804"
       }
     },
     {
       "id": "d1",
       "kind": "decision",
-      "label": "D1 Free plugin, paid when apps run",
+      "label": "D1 Proposed: Free plugin, paid when apps run",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d1-business-model"
       }
     },
     {
       "id": "d1-r1",
       "kind": "decision",
-      "label": "D1 Rejected: paid plugin subscription",
+      "label": "D1 Not recommended: paid plugin subscription",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d1-business-model"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d2",
       "kind": "decision",
-      "label": "D2 One public command with playbooks on demand",
+      "label": "D2 Proposed: One public command with playbooks on demand",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d2-how-consultants-reach-the-methods"
       }
     },
     {
       "id": "d2-r1",
       "kind": "decision",
-      "label": "D2 Rejected: a separate public skill for each playbook",
+      "label": "D2 Not recommended: a separate public skill for each playbook",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d2-how-consultants-reach-the-methods"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d2-r2",
       "kind": "decision",
-      "label": "D2 Rejected: depend on skills over MCP now",
+      "label": "D2 Not recommended: depend on skills over MCP now",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d2-how-consultants-reach-the-methods"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d3",
       "kind": "decision",
-      "label": "D3 Direct install link, person posts",
+      "label": "D3 Proposed: Direct install link, person posts",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d3-how-people-install-from-a-post"
       }
     },
     {
       "id": "d3-r1",
       "kind": "decision",
-      "label": "D3 Rejected: comment Go to receive it",
+      "label": "D3 Not recommended: comment Go to receive it",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d3-how-people-install-from-a-post"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d3-r2",
       "kind": "decision",
-      "label": "D3 Rejected: automatic posting",
+      "label": "D3 Not recommended: automatic posting",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d3-how-people-install-from-a-post"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d4",
       "kind": "decision",
-      "label": "D4 Landing page referral code first",
+      "label": "D4 Proposed: Landing page referral code first",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d4-referral-counting-in-the-mvp"
       }
     },
     {
       "id": "d4-r1",
       "kind": "decision",
-      "label": "D4 Rejected: build the connector before launch",
+      "label": "D4 Not recommended: build the connector before launch",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d4-referral-counting-in-the-mvp"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d5",
       "kind": "decision",
-      "label": "D5 Guide to the website sign-up now",
+      "label": "D5 Proposed: Guide to the website sign-up now",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d5-account-sign-up"
       }
     },
     {
       "id": "d5-r1",
       "kind": "decision",
-      "label": "D5 Rejected: a Gofer sign-up command now",
+      "label": "D5 Not recommended: a Gofer sign-up command now",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d5-account-sign-up"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d6",
       "kind": "decision",
-      "label": "D6 Firm parent workspace with one child per client",
+      "label": "D6 Proposed: Firm parent workspace with one child per client",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d6-firm-and-client-workspaces"
       }
     },
     {
       "id": "d6-r1",
       "kind": "decision",
-      "label": "D6 Rejected: one shared workspace for all clients",
+      "label": "D6 Not recommended: one shared workspace for all clients",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d6-firm-and-client-workspaces"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d6-r2",
       "kind": "decision",
-      "label": "D6 Rejected: a separate account for each client",
+      "label": "D6 Not recommended: a separate account for each client",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d6-firm-and-client-workspaces"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d7",
       "kind": "decision",
-      "label": "D7 Build in the Code tab of Claude Desktop",
+      "label": "D7 Proposed: Build in the Code tab of Claude Desktop",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d7-where-consultants-build"
       }
     },
     {
       "id": "d7-r1",
       "kind": "decision",
-      "label": "D7 Rejected: terminal-only build path",
+      "label": "D7 Not recommended: terminal-only build path",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d7-where-consultants-build"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d8",
       "kind": "decision",
-      "label": "D8 Enterprise Managed Auth in a later phase",
+      "label": "D8 Proposed: Enterprise Managed Auth in a later phase",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d8-enterprise-sign-in"
       }
     },
     {
       "id": "d8-r1",
       "kind": "decision",
-      "label": "D8 Rejected: EMA in the MVP",
+      "label": "D8 Not recommended: EMA in the MVP",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d8-enterprise-sign-in"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "d9",
       "kind": "decision",
-      "label": "D9 Stop at the PublicAPI boundary",
+      "label": "D9 Proposed: Stop at the PublicAPI boundary",
       "stage": "architecture",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d9-documentation-boundary"
       }
     },
@@ -603,39 +594,38 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "020167b3a1a594cb18f815bf3c9d0a65a0c137071d694ce77614363023dd6d93"
+        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3"
       }
     },
     {
       "id": "d10",
       "kind": "decision",
-      "label": "D10 An MVP that needs no new platform work",
+      "label": "D10 Proposed: An MVP that needs no new platform work",
       "stage": "delivery",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "selected",
-      "summary": "Proposed 80:20 MVP scope for Product and CEO approval.",
+      "summary": "Proposed. Product and CEO approval is pending.",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d10-delivery-order"
       }
     },
     {
       "id": "d10-r1",
       "kind": "decision",
-      "label": "D10 Rejected: wait for the platform requests before launch",
+      "label": "D10 Not recommended: wait for the platform requests before launch",
       "stage": "delivery",
       "visibility": "customer",
       "status": "current",
-      "decisionOutcome": "rejected",
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/decisions.md",
-        "contentHash": "e314d65e47c5c8ec57a6b2f9659020b3c001f06938af5e4ddb26f6221783ca1a",
+        "contentHash": "cdb7288661dfc688af6cd5fe3e00ddd56bb902807f5da4e271317f5f7397b804",
         "anchor": "d10-delivery-order"
-      }
+      },
+      "summary": "Alternative not recommended in the proposal. Product and CEO approval is pending."
     },
     {
       "id": "wo-p0",
@@ -647,7 +637,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "020167b3a1a594cb18f815bf3c9d0a65a0c137071d694ce77614363023dd6d93",
+        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
         "anchor": "phase-0-validate-and-approve"
       }
     },
@@ -661,7 +651,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "020167b3a1a594cb18f815bf3c9d0a65a0c137071d694ce77614363023dd6d93",
+        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
         "anchor": "phase-1-mvp---install-first-win-share-deploy"
       }
     },
@@ -675,7 +665,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "020167b3a1a594cb18f815bf3c9d0a65a0c137071d694ce77614363023dd6d93",
+        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
         "anchor": "phase-2-connector-learning-and-roi-proof"
       }
     },
@@ -689,7 +679,7 @@
       "source": {
         "repository": "eai-gofer",
         "path": "docs/specs/consulting-firm-gtm/plan.md",
-        "contentHash": "020167b3a1a594cb18f815bf3c9d0a65a0c137071d694ce77614363023dd6d93",
+        "contentHash": "a01cbe5fd50f2bdf26506ae894f0fa8492e3c5d86ab593e3c4e5e86e0e3e1da3",
         "anchor": "phase-3-enterprise-and-partner-scale"
       }
     },
