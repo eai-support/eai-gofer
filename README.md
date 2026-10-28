@@ -98,6 +98,17 @@ The internal pipeline still has clear stages:
 | Implement      | Makes code and documentation changes with feedback loops      | code and document changes                      |
 | Validate       | Checks quality, security, evidence, tests, and business fit   | validation artifacts and final review evidence |
 
+### Business Consulting Requests
+
+Gofer also handles business consulting work with nothing to build: strategy,
+market sizing, business cases, process maps, operating models, change plans,
+decks, memos, and the AI value cycle from readiness and opportunity scans to
+realized ROI. `/eai` routes these requests to 66 consulting skills in
+`.specify/references/consulting/` on every supported app, and skips EAI app
+setup. Each skill owns one output, and the routing reference names exactly one
+owner for each request, so consulting work never overlaps Gofer's software
+stages.
+
 Validation is the terminal quality gate. The previous standalone
 engineering-review stage is folded into validation.
 
@@ -353,19 +364,20 @@ Cross-platform behavior:
 
 ## Repository Layout
 
-| Path                  | Purpose                                       |
-| --------------------- | --------------------------------------------- |
-| `extension/`          | VS Code extension package                     |
-| `language-server/`    | Language server and MCP-facing support        |
-| `src/`                | Node-based orchestration and utilities        |
-| `.specify/commands/`  | Canonical command source                      |
-| `.specify/templates/` | Repo bootstrap templates and helpers          |
-| `.specify/specs/`     | Local working artifacts created per feature   |
-| `plugins/eai-gofer/`  | Portable plugin bundle for CLI hosts          |
-| `.claude/skills/`     | Claude Code app/plugin umbrella skill         |
-| `.github/agents/`     | VS Code/GitHub Copilot custom agents          |
-| `.github/skills/`     | VS Code/GitHub Copilot umbrella skill         |
-| `.tech-docs/`         | Public documentation source for the docs site |
+| Path                              | Purpose                                       |
+| --------------------------------- | --------------------------------------------- |
+| `extension/`                      | VS Code extension package                     |
+| `language-server/`                | Language server and MCP-facing support        |
+| `src/`                            | Node-based orchestration and utilities        |
+| `.specify/commands/`              | Canonical command source                      |
+| `.specify/templates/`             | Repo bootstrap templates and helpers          |
+| `.specify/references/consulting/` | Business consulting skills and their routing  |
+| `.specify/specs/`                 | Local working artifacts created per feature   |
+| `plugins/eai-gofer/`              | Portable plugin bundle for CLI hosts          |
+| `.claude/skills/`                 | Claude Code app/plugin umbrella skill         |
+| `.github/agents/`                 | VS Code/GitHub Copilot custom agents          |
+| `.github/skills/`                 | VS Code/GitHub Copilot umbrella skill         |
+| `.tech-docs/`                     | Public documentation source for the docs site |
 
 ## Development
 

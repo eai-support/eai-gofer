@@ -21,6 +21,15 @@ description: Start Gofer, confirm EAI readiness, and orchestrate the unified pip
 
 # Gofer Start
 
+> **Business consulting route:** apply the route test in
+> `.specify/references/consulting/routing.md` before any step below. If the
+> request is business consulting, follow that file. For a multi-session
+> engagement, record `Route: Business consulting` in `discovery.md` and follow
+> the `0_gofer_start` row of its stage map.
+> On this route, keep only the Continuation And Stop Contract from this file.
+> Skip every other section, including EAI preflight and classification,
+> delivery lineage, spec guards, delivery checkpoints, and auto-chain gates.
+
 ## Continuation And Stop Contract
 <!-- gofer:continuation:start -->
 
@@ -120,7 +129,7 @@ For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md
 
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
-Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
+Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, except work on the business consulting route, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
 
 For status, blocker, low-confidence, and decision replies, use the Recommendation, Why, Next step, Owner, and User action labels in .specify/references/blocker-mediation.md, then add the --business-update option to the response checker. State only evidence-backed causes; probabilities show the closest alternative, not why Jev chose its answer.
 
@@ -925,7 +934,8 @@ Before journey mapping, classify the request as **application delivery** or
 **non-application work**.
 
 In EnterpriseAI mode, assume the request is application delivery unless the
-user's intent is clearly non-app. Roughly 90% of Gofer business requests should
+user's intent is clearly non-app. Business consulting with nothing to build is
+clearly non-app. Roughly 90% of Gofer business requests should
 be treated this way: the user is trying to improve a customer journey or
 business process by building an app, workflow, portal, dashboard, mobile
 experience, form, assistant, or app.
@@ -937,7 +947,8 @@ only.
 
 ### Application Signals
 
-Treat the request as application delivery when it includes any of these signals:
+Treat the request as application delivery when it asks Gofer to build or change
+something and includes any of these signals:
 
 - Build an app, tool, dashboard, portal, workflow, form, chatbot, or app.
 - Improve how a customer, employee, advisor, agent, or operator completes work.
@@ -954,7 +965,27 @@ Classify as non-app only when the user is asking for work such as:
 - Codebase exploration, cloud audit, engineering review, or migration planning.
 - A one-off analysis task where no durable user workflow will be implemented.
 
-If non-app, first confirm once:
+Non-app work has two routes. Choose exactly one by the subject of the work:
+
+| Route | Subject | Owner |
+| ----- | ------- | ----- |
+| Business consulting | The client's business: strategy, markets, customers, finances, operations, organization, change, and the proposals, decks, memos, and plans that carry the answer | Consulting skills, through `.specify/references/consulting/routing.md` |
+| Technical non-app | Software, code, cloud, data platforms, engineering review, migration planning, or delivery documentation | The existing Gofer research/docs path |
+
+Check the business consulting route before the app default. App signals such
+as a dashboard, workflow, or better way of working mean app delivery only when
+something will be built. A KPI definition, dashboard wireframe, process map,
+operating model, change plan, or other business deliverable with nothing to
+build is business consulting. If a consulting result later calls for
+something to be built, start app delivery and use that result as discovery
+input.
+
+If non-app, first confirm once. For the business consulting route, ask:
+
+> This looks like business consulting work, so I will skip EAI workspace/app
+> setup and use the Gofer consulting skills. Is that right?
+
+For the technical non-app route, ask:
 
 > This looks like non-app work, so I will skip EAI workspace/app setup and continue
 > the Gofer research/docs path. Is that right?
@@ -967,12 +998,15 @@ If the user confirms, record this explicitly in `discovery.md`:
 | Field | Decision |
 | ----- | -------- |
 | Classification | Non-application work |
+| Route | {{business-consulting-or-technical-non-app}} |
 | Reason | {{why-this-is-not-an-app-or-workflow}} |
 | Four-step AI journey required | No |
 ```
 
 Then continue through the pipeline without running EAI app setup and without
-creating a four-step AI-augmented app journey.
+creating a four-step AI-augmented app journey. For the business consulting
+route, the numbered stages use the consulting skills as their method; follow
+the stage map in `.specify/references/consulting/routing.md`.
 
 If the user says this is actually app work, switch back to app delivery, run the
 EAI app-delivery preflight, and continue to Step 2.7.
@@ -990,6 +1024,7 @@ remove existing non-app functionality or fork Gofer into unrelated products.
 | ---- | -------------- |
 | Application delivery | Shared stages gain EAI Platform/Azure stack enforcement, a UI-first interview, an EAI App Template constrained preview loop, preview self-review, optional branding intake, continuous UI show-and-tell, and EnterpriseAI service-fit review before plan/tasks are finalized |
 | Non-app work | Shared stages preserve the current research, documentation, exploration, bug-fix, migration, audit, and other non-app workflows without app-only preview, branding, or service-fit requirements |
+| Business consulting (non-app route) | Shared stages use the consulting skills as their method, through the stage map in `.specify/references/consulting/routing.md`. They produce business deliverables and skip software-delivery checks |
 
 ---
 

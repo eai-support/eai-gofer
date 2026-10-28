@@ -4,7 +4,8 @@ description:
   'Write or update customer-facing delivery documentation and generate its
   PublicAPI-capped lineage diagram. Use for Markdown, requirements,
   architecture, decisions, plans, validation evidence, or documentation graphs
-  in a Gofer workspace.'
+  for a Gofer feature or app being delivered. Not for business consulting
+  deliverables.'
 ---
 
 # Gofer Documentation And Lineage

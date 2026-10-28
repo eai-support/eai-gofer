@@ -35,3 +35,170 @@
   seed are retried.
 - Full Gofer suite passed: 3,443 tests across 276 files.
 - Typecheck, lint, format, build, and generation checks passed.
+
+# Consultant Toolkit: 50 Portable Agent Skills
+
+- [x] Define a MECE taxonomy: 7 engagement phases, one owned output per skill,
+      explicit hand-offs and "not for" boundaries.
+- [x] Write 50 `SKILL.md` files in `consultant-toolkit/skills/` that use only
+      the open Agent Skills fields (`name`, `description`) and plain Markdown.
+- [x] Keep descriptions short, ASCII, and front-loaded so all 50 fit the Codex
+      8,000-character skill-list budget.
+- [x] Write the catalog, MECE map, and install steps for Claude and OpenAI
+      surfaces in `consultant-toolkit/README.md`.
+- [x] Add `scripts/verify-consultant-toolkit.mjs` and unit tests for format,
+      budget, portability, unique ownership, and valid cross-references.
+- [x] Keep the pack outside Gofer's generated host folders so the `eai`-only
+      picker and release mirrors do not change.
+- [x] Run the validator, focused tests, and an independent overlap review.
+
+## Review
+
+- Validator passed: 50 skills; names and descriptions total 7,670 of 8,000
+  bytes; longest description 153 bytes; largest `SKILL.md` 2,130 bytes.
+- All 50 frontmatter blocks parse as YAML with only `name` and `description`.
+- Focused tests passed: 11 tests, including rejection cases for each rule.
+- Independent review found 12 overlap clusters, 6 broken hand-offs, and 6 method
+  errors. All were fixed. Shared elements now have one owner each.
+- Shared rule now forbids invented sources and labels unchecked knowledge
+  `[Unverified]`, so skills stay safe on models without web access.
+- Gofer generation parity is unchanged. Full suite: 4,945 passed, 1 failed. The
+  failure (`gofer-verifier-key-custody`, root-ownership check) also fails on an
+  untouched `main` checkout because this container runs as root.
+
+# Consultant Toolkit: Business Consulting Extensions
+
+- [x] Add `engagement-proposal`, `process-mapping`, and `status-report` as
+      business consulting skills, each with one owned output.
+- [x] Route neighbors to the new owners: proposal scope and fees, single-process
+      maps, and the issue, action, and decision log.
+- [x] Reject software delivery vocabulary in every skill, so the pack stays
+      business consulting, not app development.
+- [x] Trim descriptions so 53 skills fit the 8,000-byte Codex list budget.
+- [x] Run the validator, tests, linters, and an independent review.
+
+## Review
+
+- Independent review found no software delivery wording. It found overlaps on
+  engagement scope, workplan, decisions, and RAG thresholds, plus weak
+  hand-offs. All were fixed: the proposal reuses the key question, the status
+  report uses measurable RAG rules and `kpi-dashboard` thresholds, and process
+  maps hand off to the roadmap, RACI, and change plan.
+- Validator and 12 focused tests passed after the fixes.
+
+# Consulting Route Through `/eai`
+
+- [x] Move the pack to `.specify/references/consulting/`, so workspace
+      bootstrap, the VS Code extension, and plugin bundles ship it unchanged.
+- [x] Add one shared `Business Consulting Route` section to the `eai` entry on
+      every surface and to the plugin umbrella skill.
+- [x] Split stage 0 non-app work into business consulting and technical non-app
+      routes, checked before the app default.
+- [x] Guard stages 1 to 6 so the consulting route skips software steps and
+      follows the stage map.
+- [x] Write `routing.md`: route test, owner table against Gofer functions, stage
+      map for all 53 skills, and requests with no owner.
+- [x] Validate routing owners, surface coverage, and the portable inventory.
+- [x] Independent MECE check of realistic requests against the routing.
+
+## Review
+
+- An independent check routed 24 realistic requests. It found two leaks where
+  stage 0 could run software steps on consulting work, plus ordering and wording
+  overlaps. All were fixed: stage 0 applies the route test first, every guard
+  says exactly what stays, single outputs skip the pipeline, and each
+  owner-table cell names one owner.
+- Lint, format, typecheck, generation parity, and the plugin bundle passed. Full
+  suite: one pre-existing failure (`gofer-verifier-key-custody`) that also fails
+  on `main` because this container runs as root.
+
+# Consultant Toolkit: AI Value Skills (Wave 1)
+
+- [x] Add six AI value skills, each with one owned output:
+      `ai-readiness-assessment`, `ai-opportunity-scan`, `ai-bootcamp-design`,
+      `ai-workflow-redesign`, `ai-value-capture-plan`, and `ai-value-tracker`.
+- [x] Add catalog phase 8, owner-table rows, and one stage per skill in
+      `routing.md`.
+- [x] Route neighbors to the new owners: `process-mapping`, `business-case`,
+      `kpi-dashboard`, and `portfolio-matrix`.
+- [x] Shorten descriptions so 59 skills fit the 8,000-byte Codex list budget.
+- [x] Regenerate extension resources and plugin bundles, and update the pinned
+      portable inventory count.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- An independent review found one blocking method error: the value tracker
+  computed ROI before it removed unused capacity, which overstates the return.
+  It now computes ROI, net value, and payback month on captured value only.
+- It also found weaker method steps and routing gaps. All were fixed:
+  attribution is ordered by strength and set before launch; the opportunity scan
+  gives money, not hours, and defines ease; readiness scores use written level
+  definitions and target scores; bootcamp trials use held-out cases and a
+  same-case baseline; value capture counts each hour once and nets capture
+  costs; the capture plan now feeds `business-case`; the bootcamp moved to the
+  research stage; and neighbor skills point back to the new owners.
+- Shortened descriptions that lost trigger words were restored. The list is
+  7,977 of 8,000 bytes.
+
+# Consultant Toolkit: AI Value Skills (Waves 2 and 3) and Industry Coverage
+
+- [x] Add `pilot-to-scale-review`, `ai-governance-controls`, and
+      `ai-workforce-plan` to catalog phase 8, and `business-object-map` and
+      `ai-disruption-assessment` to catalog phase 3.
+- [x] Add two-way hand-offs, owner-table rows, and one stage per skill.
+- [x] Split the Codex list budget into two install sets (core and AI value),
+      each checked against 8,000 bytes.
+- [x] Map the 90 EAI industry scenarios to the skills and to Gofer's app
+      delivery path in `docs/specs/consulting-firm-gtm/industry-coverage.md`.
+- [x] Confirm that Gofer's app delivery functions are unchanged.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- The review found one blocking routing conflict: due diligence was on the
+  no-owner list, so an AI threat review of a deal target went to conversation.
+  `ai-disruption-assessment` now owns the AI threat view, including deal
+  targets.
+- It also found method gaps. All were fixed: pilot decisions follow ordered
+  rules with review dates and future costs only; governance lists harms, defines
+  four tiers including prohibited, adds independent review, re-approval, and
+  retirement, and names approvers; the workforce plan weights task exposure by
+  time and defines proficiency scales; the object map adds business keys and
+  optional links; and the disruption assessment maps industry profit pools and
+  EBITDA at risk over a horizon.
+- Stage order now follows dependencies: pilot review and governance move to the
+  specify stage, ahead of workflow redesign. The validator now rejects a catalog
+  phase outside every install set and rows without a phase heading.
+
+# Consultant Toolkit: Industry Gap Skills
+
+- [x] Add `customer-journey-map` to catalog phase 3 (stage `1_gofer_research`)
+      to close gap G1 for 33 industry scenarios.
+- [x] Add `compliance-obligation-map` to catalog phase 7 (stage
+      `1_gofer_research`) to close gap G2 for 21 industry scenarios.
+- [x] Add owner-table rows, two-way hand-offs, and the legal-opinion note on the
+      no-owner list.
+- [x] Update counts to 66 skills (core set 57) and keep the core set inside the
+      8,000-byte list budget.
+- [x] Mark G1 and G2 closed in `industry-coverage.md` and refresh lineage
+      hashes.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- The independent review found no blocking issues. It found eight should-fix
+  issues and three nits. All are fixed.
+- Routing: both new owner rows now name `2_gofer_specify` as the Gofer owner
+  (feature user journeys, and the rules a feature must meet as non-functional
+  requirements).
+- Compliance map: the skill's reading of each clause is labeled [Unverified],
+  ratings rest on evidence seen, the register records start dates, source
+  watchers, attestations, and its next review, and the output states it is not
+  legal advice. It no longer reuses `business-object-map`, which comes later in
+  the stage order. `ai-governance-controls` now reads its privacy and sector
+  rules from it.
+- Journey map: failure paths are mapped and pain points are ranked by frequency
+  and effect. Root causes stay with `process-mapping`.
+- Hand-offs: `pestel-scan` owns proposed rules, and `raci-builder` points to the
+  compliance map for obligation owners.

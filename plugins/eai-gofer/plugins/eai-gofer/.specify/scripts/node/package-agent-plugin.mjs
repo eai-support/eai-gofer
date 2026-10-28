@@ -12,7 +12,7 @@ import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseStageCommand } from './parse-stage-command.mjs';
-import { buildAuthAccessDecisionContract, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract, buildSupportReportContract, ensureSupportReportContract } from './generate-commands.mjs';
+import { buildAuthAccessDecisionContract, buildConsultingRouteSection, buildEaiHostingAndDeploymentContract, buildContinuationContractSection, buildDeliveryDisciplineContract, buildBlockerMediationContract, buildSupportReportContract, ensureSupportReportContract } from './generate-commands.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -435,8 +435,8 @@ function buildJourneyStateSection() {
 Before routing work, decide where the user is now.
 
 1. Read current feature state from \`.specify/specs/\`, \`goal-ledger.json\`, \`eai-preflight.md\`, \`research.md\`, \`spec.md\`, \`plan.md\`, \`tasks.md\`, validation reports, loop evidence, and handoff notes when they exist.
-2. Classify the request as conversation, research/docs/audit, EAI app delivery, or ambiguous.
-3. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
+2. Classify the request as conversation, business consulting, research/docs/audit, EAI app delivery, or ambiguous.
+3. For business consulting, follow the Business Consulting Route section and skip steps 4 to 6. For conversation or research/docs/audit, continue the non-app Gofer path after the one required non-app confirmation.
 4. For EAI app delivery or ambiguous app work, continue directly into EAI readiness.
 5. Find the earliest missing pipeline artifact or blocked EAI gate.
 6. Run that internal stage next, then continue forward.
@@ -546,6 +546,8 @@ ${buildContinuationContractSection()}
 
 ## Workspace First
 
+A single-output business consulting request skips this preflight; follow the Business Consulting Route section instead.
+
 Before stage work, resolve the repository root and run \`node .specify/scripts/node/gofer-workspace-check.mjs --host auto --json\` when available. If the repo is missing or stale, ask before running \`node .specify/scripts/node/gofer-workspace-bootstrap.mjs --host auto --include-mirrors\`, then resume the original command.
 
 ${buildLocalSettingsCleanupContract()}
@@ -600,9 +602,11 @@ ${buildAlwaysEaiSection()}
 
 - Classify each request before EAI readiness as EAI app delivery, non-application work, or ambiguous.
 - If the request is EAI app delivery or ambiguous, continue directly into the EAI app delivery path and run EAI readiness.
-- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+- If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"** For business consulting, ask the Business Consulting Route question instead.
 - If the user confirms non-app, do not run \`eai whoami\`, workspace selection, \`eai init\`, or first-run setup. Record the decision and continue the appropriate non-app path.
 - If the user says it is app work, switch to EAI app delivery and run EAI app preflight.
+
+${buildConsultingRouteSection()}
 
 ${buildJourneyStateSection()}
 
