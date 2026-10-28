@@ -20,7 +20,7 @@ const defaultToolkitRoot = path.resolve(
 const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === scriptPath : false;
 
 export const TOOLKIT_LIMITS = {
-  skillCount: 64,
+  skillCount: 66,
   nameMaxChars: 64,
   // Codex shortens or drops skills when the startup list exceeds its budget
   // (8,000 characters when the context window is unknown).

@@ -35,6 +35,7 @@ Group customers into segments that need different offers, and choose which to ta
 - Not for total market size: use `market-sizing`.
 - Not for setting prices per segment: use `pricing-strategy`.
 - Not for auditing an existing segmentation: use `mece-check`.
+- Not for one segment's journey and pain points: use `customer-journey-map`.
 
 ## Rules
 

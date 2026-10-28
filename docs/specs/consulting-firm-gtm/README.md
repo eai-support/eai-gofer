@@ -53,7 +53,7 @@ Without it, the projection fails closed by design.
 
 ## Related Work
 
-- PR #441 adds the `/eai` consulting route and the 64 consulting playbooks that
+- PR #441 adds the `/eai` consulting route and the 66 consulting playbooks that
   this design builds on. Nine of them cover the AI value cycle: readiness, pilot
   review, opportunity scan, bootcamp, workflow redesign, governance, workforce,
   value capture and value tracking.

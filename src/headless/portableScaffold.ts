@@ -256,6 +256,8 @@ const CONSULTING_SKILL_NAMES = [
   'change-plan',
   'chart-selection',
   'competitor-benchmark',
+  'compliance-obligation-map',
+  'customer-journey-map',
   'customer-segmentation',
   'data-storytelling',
   'data-visualization',

@@ -108,7 +108,7 @@ playbooks stay out of the slash menu.
 
 ### Reuse Of Existing Playbooks
 
-Most requirements reuse the 64 consulting playbooks in PR #441.
+Most requirements reuse the 66 consulting playbooks in PR #441.
 
 | Requirement                  | Existing playbooks                                                                 | New work                                           |
 | ---------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------- |

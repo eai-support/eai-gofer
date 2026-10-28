@@ -41,6 +41,7 @@ Set the rules and controls that let an organization use AI safely, with the leve
 - Not for the organization's overall readiness: use `ai-readiness-assessment`.
 - Not for assigning tasks between people and AI in one workflow: use `ai-workflow-redesign`.
 - Not for standing forums and decision rights: use `operating-model`.
+- Not for rules a process must meet whether or not it uses AI: use `compliance-obligation-map`.
 - Not a legal opinion: refer legal questions to counsel.
 
 ## Rules

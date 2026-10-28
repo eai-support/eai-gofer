@@ -44,7 +44,7 @@ the follow-on revenue.
 - Clients expect AI advice from the advisers they already trust.
 - Claude now runs plugins in Chat, Cowork and the Code tab of Claude Desktop. A
   consultant can build an app without a command line.
-- Gofer already contains 64 consulting methods, nine of them for AI value, and
+- Gofer already contains 66 consulting methods, nine of them for AI value, and
   an app delivery pipeline to the EAI Platform.
 
 ## Segments

@@ -170,3 +170,17 @@
 - Stage order now follows dependencies: pilot review and governance move to the
   specify stage, ahead of workflow redesign. The validator now rejects a catalog
   phase outside every install set and rows without a phase heading.
+
+# Consultant Toolkit: Industry Gap Skills
+
+- [x] Add `customer-journey-map` to catalog phase 3 (stage `1_gofer_research`)
+      to close gap G1 for 33 industry scenarios.
+- [x] Add `compliance-obligation-map` to catalog phase 7 (stage
+      `1_gofer_research`) to close gap G2 for 21 industry scenarios.
+- [x] Add owner-table rows, two-way hand-offs, and the legal-opinion note on the
+      no-owner list.
+- [x] Update counts to 66 skills (core set 57) and keep the core set inside the
+      8,000-byte list budget.
+- [x] Mark G1 and G2 closed in `industry-coverage.md` and refresh lineage
+      hashes.
+- [ ] Independent review of overlaps, hand-offs, and methods.

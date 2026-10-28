@@ -39,6 +39,7 @@ Redesign one workflow end to end so that people and AI each do the tasks they do
 ## Boundaries
 
 - Not for the current-state map and waste analysis: use `process-mapping`.
+- Not for the customer's view of the journey: use `customer-journey-map`.
 - Not for organization structure: use `operating-model`.
 - Not for turning freed time into financial results: use `ai-value-capture-plan`.
 - Not for helping people adopt the new way of working: use `change-plan`.

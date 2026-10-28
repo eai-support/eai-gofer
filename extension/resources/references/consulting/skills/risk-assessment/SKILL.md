@@ -37,6 +37,7 @@ Find what could stop the plan from delivering, and decide how to manage it.
 - Not for flexing model inputs: use `sensitivity-analysis`.
 - Not for the issue, action, and decision log: use `status-report`.
 - Not for controls and oversight of AI uses: use `ai-governance-controls`.
+- Not for the rules a process must meet: use `compliance-obligation-map`.
 
 ## Rules
 
