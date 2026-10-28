@@ -34,7 +34,7 @@ Find the macro trends that will help or hurt the business, and rank them.
 - Not for industry structure or rivalry: use `five-forces`.
 - Not for company-level competitor facts: use `competitor-benchmark`.
 - Not for AI's effect on profit pools: use `ai-disruption-assessment`.
-- Not for the obligations one process must meet now: use `compliance-obligation-map`.
+- Not for the obligations one process must meet: use `compliance-obligation-map`.
 - Hand off to: `swot-analysis` (opportunities and threats), `scenario-analysis` (key uncertainties).
 
 ## Rules

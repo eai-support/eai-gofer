@@ -14,21 +14,22 @@ Show every rule a process must meet, how each is met, and the evidence that prov
 ## Method
 
 1. Set the scope: the process, entities, products, and jurisdictions.
-2. List the rule sources: laws, regulations, licence conditions, standards, contracts, funder or accreditor terms, and internal policies. Label each [Unverified] until counsel or the compliance owner confirms that it applies.
-3. Break each source into obligations, one action or outcome each, written as who must do what, by when, and for which cases.
-4. Link each obligation to the process step and the business object it touches. Reuse `process-mapping` and `business-object-map` output when it exists.
+2. List the rule sources: laws, regulations, licence conditions, standards, contracts, funder or accreditor terms, and internal policies, in force or with a set start date. Label each [Unverified] until counsel or the compliance owner confirms that it applies.
+3. Break each source into obligations, one action or outcome each, written as who must do what, by when, and for which cases. Cite the clause, and label your reading [Unverified] until counsel or the compliance owner confirms it.
+4. Link each obligation to the process step and the records it touches. Reuse `process-mapping` output when it exists.
 5. For each obligation, name the control that meets it (preventive or detective, manual or automated), the evidence it produces, the owner, the frequency or deadline, and the record kept.
-6. Rate each obligation: met, partly met, or not met. Rate the severity of a breach: fine, loss of licence, harm to people, or damage to reputation.
-7. Build a calendar of recurring filings, reports, and renewals.
+6. Rate each obligation met, partly met, or not met from evidence seen, not from policy alone. Rate the severity of a breach: fine, loss of licence, harm to people, or damage to reputation.
+7. Build a calendar of recurring filings, reports, renewals, and owner attestations. Name who watches each source for changes and when the register is next reviewed.
 8. List the gaps and first actions with owners, and the questions for counsel.
 
 ## Output
 
-1. Obligation register: Obligation | Source | Applies to | Process step | Owner.
+1. Obligation register: Obligation | Source and clause | Start date | Applies to | Process step | Owner.
 2. Control and evidence map: Obligation | Control | Type | Evidence | Frequency | Status.
 3. Compliance calendar: Obligation | Deadline | Frequency | Owner.
 4. Gap list: Gap | Severity | Action | Owner | Date.
 5. Questions for counsel.
+6. A note that this is a working map, not legal advice or an audit opinion.
 
 ## Quality bar
 
@@ -40,7 +41,7 @@ Show every rule a process must meet, how each is met, and the evidence that prov
 - Not a legal opinion: refer legal questions to counsel.
 - Not for controls on AI uses: use `ai-governance-controls`.
 - Not for risks to delivering a plan: use `risk-assessment`.
-- Not for macro regulatory trends: use `pestel-scan`.
+- Not for proposed rules or regulatory trends: use `pestel-scan`.
 - Not for accountability for activities: use `raci-builder`.
 
 ## Rules

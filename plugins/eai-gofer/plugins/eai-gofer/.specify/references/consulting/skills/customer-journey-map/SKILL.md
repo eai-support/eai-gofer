@@ -15,11 +15,11 @@ Show one journey as the customer lives it, find where it fails them, and trace e
 
 1. Choose one segment (from `customer-segmentation` when it exists) and one journey, with a start and end in the customer's words, for example from "I need to make a claim" to "I have been paid".
 2. Gather the evidence. Reuse `interview-synthesis` or `survey-analysis` output when it exists.
-3. Map the stages as the customer sees them. For each stage, record the customer's goal, actions, touchpoints and channels, what they think and feel, waiting time, and effort.
+3. Map the main path and the common failure paths, such as a rejected or delayed claim. Show the stages as the customer sees them. For each stage, record the customer's goal, actions, touchpoints and channels, what they think and feel, waiting time, and effort.
 4. Mark the pain points and the moments that matter, where trust is won or lost. Give each its evidence and how often it happens.
-5. Add the service blueprint below the customer's view: front-stage staff actions, back-stage actions, systems and data, and hand-offs. Link each pain point to its back-stage cause.
+5. Add the service blueprint below the customer's view: front-stage staff actions, back-stage actions, systems and data, and hand-offs. Link each pain point to the back-stage step where it starts; `process-mapping` finds its root cause.
 6. Add the measures per stage where data exists: drop-off, time, effort score, and satisfaction.
-7. Design the future journey for the top pain points: remove steps, give proactive updates, add self-service or AI help, and meet accessibility needs.
+7. Rank pain points by how often they happen and their effect on the customer and on the cost to serve. Design the future journey for the top ones: remove steps, give proactive updates, add self-service or AI help, and meet accessibility needs.
 8. List the improvements with their expected effect on the customer measures and on the cost to serve.
 
 ## Output
@@ -33,7 +33,8 @@ Show one journey as the customer lives it, find where it fails them, and trace e
 ## Quality bar
 
 - Every pain point rests on customer evidence, not staff opinion alone.
-- Every pain point links to a back-stage cause.
+- Every pain point links to the back-stage step where it starts.
+- Failure paths are mapped, not only the main path.
 
 ## Boundaries
 
@@ -41,6 +42,7 @@ Show one journey as the customer lives it, find where it fails them, and trace e
 - Not for internal process steps and waste: use `process-mapping`.
 - Not for redesigning a workflow around AI: use `ai-workflow-redesign`.
 - Not for coding raw interview notes: use `interview-synthesis`.
+- Not for ranking AI uses: use `ai-opportunity-scan`.
 - Not for a KPI tree: use `kpi-dashboard`.
 
 ## Rules

@@ -39,6 +39,7 @@ Make clear who does, owns, advises on, and hears about each activity or decision
 - Not for organization structure and forums: use `operating-model`.
 - Not for stakeholder engagement: use `stakeholder-map`.
 - Not for who may see or change records: use `business-object-map`.
+- Not for owners of compliance obligations: use `compliance-obligation-map`.
 
 ## Rules
 

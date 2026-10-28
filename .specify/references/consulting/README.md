@@ -204,9 +204,9 @@ value capture, and value tracking.
 - **Service experience:** `customer-segmentation` > `interview-synthesis` >
   `customer-journey-map` > `process-mapping` > `ai-opportunity-scan` >
   `business-case` > `kpi-dashboard`.
-- **Regulated process review:** `process-mapping` > `business-object-map` >
-  `compliance-obligation-map` > `risk-assessment` > `ai-governance-controls` >
-  `raci-builder`.
+- **Regulated process review:** `process-mapping` >
+  `compliance-obligation-map` > `business-object-map` >
+  `ai-governance-controls` > `raci-builder` > `risk-assessment`.
 - **AI value:** `ai-readiness-assessment` > `pilot-to-scale-review` >
   `ai-opportunity-scan` > `ai-bootcamp-design` > `ai-governance-controls` >
   `ai-workflow-redesign` > `business-object-map` > `ai-value-capture-plan` >

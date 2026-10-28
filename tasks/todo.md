@@ -183,4 +183,22 @@
       8,000-byte list budget.
 - [x] Mark G1 and G2 closed in `industry-coverage.md` and refresh lineage
       hashes.
-- [ ] Independent review of overlaps, hand-offs, and methods.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- The independent review found no blocking issues. It found eight should-fix
+  issues and three nits. All are fixed.
+- Routing: both new owner rows now name `2_gofer_specify` as the Gofer owner
+  (feature user journeys, and the rules a feature must meet as non-functional
+  requirements).
+- Compliance map: the skill's reading of each clause is labeled [Unverified],
+  ratings rest on evidence seen, the register records start dates, source
+  watchers, attestations, and its next review, and the output states it is not
+  legal advice. It no longer reuses `business-object-map`, which comes later in
+  the stage order. `ai-governance-controls` now reads its privacy and sector
+  rules from it.
+- Journey map: failure paths are mapped and pain points are ranked by frequency
+  and effect. Root causes stay with `process-mapping`.
+- Hand-offs: `pestel-scan` owns proposed rules, and `raci-builder` points to the
+  compliance map for obligation owners.

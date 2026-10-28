@@ -16,7 +16,7 @@ Set the rules and controls that let an organization use AI safely, with the leve
 1. List the AI uses and what each does: drafts, recommends, decides, or acts.
 2. For each use, list how it could fail or cause harm: wrong output, unfair treatment, privacy or security breach, over-reliance, and supplier failure.
 3. Write criteria for four tiers before rating: prohibited, high, medium, and low. Base them on impact: effect on people, money, safety, or legal rights; how reversible a mistake is; how sensitive the data is; and how much the AI acts on its own. Then rate each use.
-4. List the rules that apply: privacy law, sector rules, and AI-specific laws or standards in each jurisdiction. Label each [Unverified] until counsel or the compliance owner confirms it.
+4. List the rules that apply: AI-specific laws and standards in each jurisdiction, plus privacy and sector rules from `compliance-obligation-map` when it exists. Label each [Unverified] until counsel or the compliance owner confirms it.
 5. Set the human oversight level for each tier: a person decides; a person approves each AI recommendation; a person reviews samples; or AI acts within set limits under monitoring.
 6. Set controls for each tier across the life of a use: approval to start, independent review before use for high tiers, data protection, checks on held-out cases before use (accuracy and fairness), monitoring (accuracy, override rate, complaints, and drift), incident response, records for audit, supplier checks, notice to affected people, re-approval after a material change, periodic revalidation, and retirement.
 7. Name the forum or role that approves uses at each tier, and the escalation path.
