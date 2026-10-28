@@ -41,6 +41,7 @@ Help each affected group move from the old way of working to the new one, and pr
 - Not for the project timeline: use `implementation-roadmap`.
 - Not for roles: use `raci-builder`.
 - Not for an organization's readiness to scale AI: use `ai-readiness-assessment`.
+- Not for role redesign and skills uplift for AI: use `ai-workforce-plan`.
 
 ## Rules
 

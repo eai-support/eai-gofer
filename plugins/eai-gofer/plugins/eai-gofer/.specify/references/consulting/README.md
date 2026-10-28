@@ -1,11 +1,12 @@
 # Consultant Toolkit: Business Consulting Agent Skills
 
-Fifty-nine single-purpose business consulting skills that take a client
+Sixty-four single-purpose business consulting skills that take a client
 engagement from the first proposal to an adopted change: the 50 core skills,
-three engagement skills (`engagement-proposal`, `process-mapping`, and
-`status-report`), and six AI value skills that find, prove, and capture the
-return on AI. Each skill owns exactly one output, so you can combine any of them
-without duplicated work. The same files run on Claude and OpenAI products.
+five extension skills (`engagement-proposal`, `process-mapping`,
+`status-report`, `business-object-map`, and `ai-disruption-assessment`), and
+nine AI value skills that find, prove, govern, and capture the return on AI.
+Each skill owns exactly one output, so you can combine any of them without
+duplicated work. The same files run on Claude and OpenAI products.
 
 These are business consulting skills, not app development skills. They use
 client-engagement language and contain no software delivery steps. The validator
@@ -78,24 +79,27 @@ Split: by source type. Rate sources first, then synthesize each type.
 
 ### 3. Analyze: where do we stand, and where could we go?
 
-Split: outside-in (macro, industry, market, customers, competitors), then
-inside-out (activities, processes, capabilities), then choices.
+Split: outside-in (macro, industry, AI disruption, market, customers,
+competitors), then inside-out (activities, processes, business objects,
+capabilities), then choices.
 
-| #   | Skill                   | Owns (one output)                                      |
-| --- | ----------------------- | ------------------------------------------------------ |
-| 11  | `pestel-scan`           | Ranked macro-trend table                               |
-| 12  | `five-forces`           | Industry attractiveness assessment                     |
-| 13  | `market-sizing`         | TAM, SAM, and SOM estimate                             |
-| 14  | `customer-segmentation` | Customer segment definitions and targeting             |
-| 15  | `competitor-benchmark`  | Client-versus-peer comparison table                    |
-| 16  | `value-chain`           | Activity cost and value map                            |
-| 17  | `process-mapping`       | Current- and future-state map of one business process  |
-| 18  | `vrio-analysis`         | Sustained-advantage test of resources and capabilities |
-| 19  | `swot-analysis`         | Consolidated SWOT with strategic implications          |
-| 20  | `growth-strategy`       | Prioritized growth avenue map                          |
-| 21  | `strategic-options`     | Scored, mutually exclusive strategic alternatives      |
-| 22  | `portfolio-matrix`      | Portfolio roles for existing units                     |
-| 23  | `pricing-strategy`      | Price metric, structure, level, and discount rules     |
+| #   | Skill                      | Owns (one output)                                           |
+| --- | -------------------------- | ----------------------------------------------------------- |
+| 11  | `pestel-scan`              | Ranked macro-trend table                                    |
+| 12  | `five-forces`              | Industry attractiveness assessment                          |
+| 13  | `ai-disruption-assessment` | AI impact on profit pools and the firm's defensibility      |
+| 14  | `market-sizing`            | TAM, SAM, and SOM estimate                                  |
+| 15  | `customer-segmentation`    | Customer segment definitions and targeting                  |
+| 16  | `competitor-benchmark`     | Client-versus-peer comparison table                         |
+| 17  | `value-chain`              | Activity cost and value map                                 |
+| 18  | `process-mapping`          | Current- and future-state map of one business process       |
+| 19  | `business-object-map`      | Map of business objects, fields, links, states, and actions |
+| 20  | `vrio-analysis`            | Sustained-advantage test of resources and capabilities      |
+| 21  | `swot-analysis`            | Consolidated SWOT with strategic implications               |
+| 22  | `growth-strategy`          | Prioritized growth avenue map                               |
+| 23  | `strategic-options`        | Scored, mutually exclusive strategic alternatives           |
+| 24  | `portfolio-matrix`         | Portfolio roles for existing units                          |
+| 25  | `pricing-strategy`         | Price metric, structure, level, and discount rules          |
 
 ### 4. Quantify: what is it worth?
 
@@ -104,11 +108,11 @@ futures, and single-driver stress test.
 
 | #   | Skill                  | Owns (one output)                           |
 | --- | ---------------------- | ------------------------------------------- |
-| 24  | `unit-economics`       | Per-unit profitability and payback          |
-| 25  | `financial-model`      | Driver-based financial projection           |
-| 26  | `business-case`        | Incremental investment case and funding ask |
-| 27  | `scenario-analysis`    | Consistent multi-driver future scenarios    |
-| 28  | `sensitivity-analysis` | Driver ranking and breakeven thresholds     |
+| 26  | `unit-economics`       | Per-unit profitability and payback          |
+| 27  | `financial-model`      | Driver-based financial projection           |
+| 28  | `business-case`        | Incremental investment case and funding ask |
+| 29  | `scenario-analysis`    | Consistent multi-driver future scenarios    |
+| 30  | `sensitivity-analysis` | Driver ranking and breakeven thresholds     |
 
 ### 5. Synthesize and storyline: what is the answer, and how do we argue it?
 
@@ -117,13 +121,13 @@ formats (summary of a deliverable versus a request for a decision).
 
 | #   | Skill                 | Owns (one output)                                        |
 | --- | --------------------- | -------------------------------------------------------- |
-| 29  | `insight-synthesis`   | Ranked cross-workstream insights and the one-line answer |
-| 30  | `scqa-storyline`      | Situation-complication-question-answer opening           |
-| 31  | `pyramid-structure`   | Governing thought, key lines, and support                |
-| 32  | `executive-summary`   | One-page summary of a finished deliverable               |
-| 33  | `decision-memo`       | Stand-alone memo that requests one decision              |
-| 34  | `recommendation-deck` | Ghost deck (slide-by-slide plan)                         |
-| 35  | `data-storytelling`   | Narrative for one analysis                               |
+| 31  | `insight-synthesis`   | Ranked cross-workstream insights and the one-line answer |
+| 32  | `scqa-storyline`      | Situation-complication-question-answer opening           |
+| 33  | `pyramid-structure`   | Governing thought, key lines, and support                |
+| 34  | `executive-summary`   | One-page summary of a finished deliverable               |
+| 35  | `decision-memo`       | Stand-alone memo that requests one decision              |
+| 36  | `recommendation-deck` | Ghost deck (slide-by-slide plan)                         |
+| 37  | `data-storytelling`   | Narrative for one analysis                               |
 
 ### 6. Build exhibits and slides: how do we show it?
 
@@ -132,16 +136,16 @@ style each have one owner. The last skill is the readiness gate.
 
 | #   | Skill                | Owns (one output)                                       |
 | --- | -------------------- | ------------------------------------------------------- |
-| 36  | `chart-selection`    | Chart type choice for one message                       |
-| 37  | `data-visualization` | Rendered chart or chart spec                            |
-| 38  | `exhibit-builder`    | Slide-ready exhibit with callouts and sources           |
-| 39  | `action-titles`      | Slide headlines                                         |
-| 40  | `slide-layout`       | Layout of one slide                                     |
-| 41  | `slide-copy-editor`  | Edited slide body text                                  |
-| 42  | `visual-consistency` | Deck-wide style spec and deviation log                  |
-| 43  | `appendix-builder`   | Appendix and cross-reference map                        |
-| 44  | `speaker-notes`      | Presenter notes and timing                              |
-| 45  | `deck-quality-check` | Readiness verdict, figure tie-out, and routed issue log |
+| 38  | `chart-selection`    | Chart type choice for one message                       |
+| 39  | `data-visualization` | Rendered chart or chart spec                            |
+| 40  | `exhibit-builder`    | Slide-ready exhibit with callouts and sources           |
+| 41  | `action-titles`      | Slide headlines                                         |
+| 42  | `slide-layout`       | Layout of one slide                                     |
+| 43  | `slide-copy-editor`  | Edited slide body text                                  |
+| 44  | `visual-consistency` | Deck-wide style spec and deviation log                  |
+| 45  | `appendix-builder`   | Appendix and cross-reference map                        |
+| 46  | `speaker-notes`      | Presenter notes and timing                              |
+| 47  | `deck-quality-check` | Readiness verdict, figure tie-out, and routed issue log |
 
 ### 7. Implement and govern: how does it happen and stick?
 
@@ -150,28 +154,32 @@ could go wrong, how we measure, and how we report progress.
 
 | #   | Skill                    | Owns (one output)                                            |
 | --- | ------------------------ | ------------------------------------------------------------ |
-| 46  | `implementation-roadmap` | Phased roadmap with milestones and dependencies              |
-| 47  | `operating-model`        | Target operating model and gaps                              |
-| 48  | `raci-builder`           | RACI matrix                                                  |
-| 49  | `stakeholder-map`        | Stakeholder register and engagement plan                     |
-| 50  | `change-plan`            | People-side change plan and adoption metrics                 |
-| 51  | `risk-assessment`        | Delivery risk register                                       |
-| 52  | `kpi-dashboard`          | KPI tree, dictionary, and dashboard wireframe                |
-| 53  | `status-report`          | Programme status report with issue, action, and decision log |
+| 48  | `implementation-roadmap` | Phased roadmap with milestones and dependencies              |
+| 49  | `operating-model`        | Target operating model and gaps                              |
+| 50  | `raci-builder`           | RACI matrix                                                  |
+| 51  | `stakeholder-map`        | Stakeholder register and engagement plan                     |
+| 52  | `change-plan`            | People-side change plan and adoption metrics                 |
+| 53  | `risk-assessment`        | Delivery risk register                                       |
+| 54  | `kpi-dashboard`          | KPI tree, dictionary, and dashboard wireframe                |
+| 55  | `status-report`          | Programme status report with issue, action, and decision log |
 
 ### 8. AI value: where does AI pay, and how is the return proven?
 
-Split: by step in the AI value cycle. Readiness, opportunities, proof on client
-data, workflow redesign, value capture, and value tracking.
+Split: by step in the AI value cycle. Readiness, existing pilots, new
+opportunities, proof on client data, workflow redesign, controls, workforce,
+value capture, and value tracking.
 
-| #   | Skill                     | Owns (one output)                            |
-| --- | ------------------------- | -------------------------------------------- |
-| 54  | `ai-readiness-assessment` | AI readiness scorecard and first actions     |
-| 55  | `ai-opportunity-scan`     | Ranked AI use list with value at stake       |
-| 56  | `ai-bootcamp-design`      | AI bootcamp plan with go or no-go criteria   |
-| 57  | `ai-workflow-redesign`    | People and AI task design for one workflow   |
-| 58  | `ai-value-capture-plan`   | Plan that turns AI capacity into P&L results |
-| 59  | `ai-value-tracker`        | AI value baseline and realized ROI report    |
+| #   | Skill                     | Owns (one output)                                   |
+| --- | ------------------------- | --------------------------------------------------- |
+| 56  | `ai-readiness-assessment` | AI readiness scorecard and first actions            |
+| 57  | `pilot-to-scale-review`   | Scale, fix, or stop decision for each AI pilot      |
+| 58  | `ai-opportunity-scan`     | Ranked AI use list with value at stake              |
+| 59  | `ai-bootcamp-design`      | AI bootcamp plan with go or no-go criteria          |
+| 60  | `ai-workflow-redesign`    | People and AI task design for one workflow          |
+| 61  | `ai-governance-controls`  | AI risk tiers, oversight levels, and control matrix |
+| 62  | `ai-workforce-plan`       | Role impact and skills uplift plan for AI           |
+| 63  | `ai-value-capture-plan`   | Plan that turns AI capacity into P&L results        |
+| 64  | `ai-value-tracker`        | AI value baseline and realized ROI report           |
 
 ## Example chains
 
@@ -189,15 +197,27 @@ data, workflow redesign, value capture, and value tracking.
 - **Rollout:** `operating-model` > `implementation-roadmap` > `raci-builder` >
   `stakeholder-map` > `change-plan` > `risk-assessment` > `kpi-dashboard` >
   `status-report`.
-- **AI value:** `ai-readiness-assessment` > `ai-opportunity-scan` >
-  `ai-bootcamp-design` > `ai-workflow-redesign` > `ai-value-capture-plan` >
-  `business-case` > `change-plan` > `ai-value-tracker`.
+- **AI value:** `ai-readiness-assessment` > `pilot-to-scale-review` >
+  `ai-opportunity-scan` > `ai-bootcamp-design` > `ai-workflow-redesign` >
+  `business-object-map` > `ai-governance-controls` > `ai-value-capture-plan` >
+  `business-case` > `ai-workforce-plan` > `change-plan` > `ai-value-tracker`.
+- **AI threat review:** `pestel-scan` > `five-forces` >
+  `ai-disruption-assessment` > `scenario-analysis` > `strategic-options`.
 
 ## Install
 
 Gofer users need no separate install. To use the skills without Gofer, install
-each skill as one folder with one `SKILL.md`. Install only the skills you need,
-or all 59.
+each skill as one folder with one `SKILL.md`. Install only the skills you need.
+
+The pack has two install sets. Each set fits the Codex skill-list budget on its
+own:
+
+- **Core set:** phases 1 to 7, 55 skills.
+- **AI value set:** phase 8, 9 skills.
+
+If you install both sets in one Codex scope, the skill list can go over the
+budget, and Codex can then shorten or drop skills. Gofer loads a skill only when
+a request needs it, so it has no list limit.
 
 | Surface                    | How to install                                                                                                                                                                                           |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +261,7 @@ Run `npm run consultant-toolkit:check` after any edit. It enforces:
 | Frontmatter has only `name` and a double-quoted `description`                                                                            | These are the two fields every surface reads.                                             |
 | `name` matches the folder: lowercase words joined by single hyphens, with no vendor words                                                | Open-standard naming rule. Claude rejects reserved words.                                 |
 | Description of 160 bytes or less, ASCII, no angle brackets, ending with a "Use ..." trigger                                              | Under the strictest per-field limits. Claude rejects XML tags. The trigger helps routing. |
-| All names and descriptions total 8,000 bytes or less                                                                                     | Fits the Codex skill-list budget, so no skill is shortened or dropped.                    |
+| Each install set's names and descriptions total 8,000 bytes or less                                                                      | Fits the Codex skill-list budget, so no skill in a set is shortened or dropped.           |
 | Each `SKILL.md` is 4 KB or less                                                                                                          | Loads in full on every surface.                                                           |
 | No vendor product names, host tool names, or host syntax in the body. Open formats (Vega-Lite, Mermaid) appear only as optional outputs. | The same instructions work in every product.                                              |
 | No software delivery terms (sprint, backlog, deployment, repository, and similar)                                                        | Every skill stays a business consulting skill, not an app development skill.              |

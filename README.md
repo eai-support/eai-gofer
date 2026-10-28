@@ -103,7 +103,7 @@ The internal pipeline still has clear stages:
 Gofer also handles business consulting work with nothing to build: strategy,
 market sizing, business cases, process maps, operating models, change plans,
 decks, memos, and the AI value cycle from readiness and opportunity scans to
-realized ROI. `/eai` routes these requests to 59 consulting skills in
+realized ROI. `/eai` routes these requests to 64 consulting skills in
 `.specify/references/consulting/` on every supported app, and skips EAI app
 setup. Each skill owns one output, and the routing reference names exactly one
 owner for each request, so consulting work never overlaps Gofer's software

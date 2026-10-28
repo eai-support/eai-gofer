@@ -15,11 +15,11 @@ Redesign one workflow end to end so that people and AI each do the tasks they do
 
 1. Start from the outcome the workflow delivers, not from the current steps.
 2. Find the constraint: the step that sets the pace of the whole workflow. Faster work at other steps frees capacity but does not raise throughput.
-3. List the tasks and decisions. For each, choose who does it: a person, AI with a person checking, or AI alone within set limits.
-4. Set the level of AI autonomy by risk. High-impact or hard-to-reverse decisions keep a named person accountable.
+3. Group the work into four stages: capture the request and its context, prepare the decision, carry out the work with others, and resolve, explain, and learn. List the tasks and decisions in each stage. For each, choose who does it: a person, AI with a person checking, or AI alone within set limits.
+4. Set the level of AI autonomy by risk, using the oversight levels from `ai-governance-controls` when they exist. High-impact or hard-to-reverse decisions keep a named person accountable.
 5. Design the handoffs: what AI passes to a person, what the person checks, and how fast. Check that the review step does not become the new constraint.
 6. Design the exceptions: low confidence, missing data, complaints, and errors go to a named role.
-7. Redesign the roles: tasks added, tasks removed, and skills needed.
+7. List the role changes in this workflow: tasks added, tasks removed, and skills needed, as input to `ai-workforce-plan`.
 8. Estimate the effect on elapsed time, cost per item, quality, and net hours freed by role, as input to `ai-value-capture-plan`. Label estimates.
 9. State the controls and measures that show the workflow works: accuracy, override rate, cycle time, and volume.
 
@@ -43,6 +43,8 @@ Redesign one workflow end to end so that people and AI each do the tasks they do
 - Not for turning freed time into financial results: use `ai-value-capture-plan`.
 - Not for helping people adopt the new way of working: use `change-plan`.
 - Not for who approves each step: use `raci-builder`.
+- Not for skills uplift across roles: use `ai-workforce-plan`.
+- Not for the records and states the workflow changes: use `business-object-map`.
 
 ## Rules
 

@@ -20,7 +20,7 @@ const defaultToolkitRoot = path.resolve(
 const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === scriptPath : false;
 
 export const TOOLKIT_LIMITS = {
-  skillCount: 59,
+  skillCount: 64,
   nameMaxChars: 64,
   // Codex shortens or drops skills when the startup list exceeds its budget
   // (8,000 characters when the context window is unknown).
@@ -29,6 +29,13 @@ export const TOOLKIT_LIMITS = {
   // Codex inlines a skill in full only when SKILL.md stays small.
   skillFileMaxBytes: 4096,
 };
+
+// Each install set must fit the list budget on its own. Sets group catalog
+// phases; a catalog without phase headings is one set.
+export const INSTALL_SETS = [
+  { name: 'core', phases: [1, 2, 3, 4, 5, 6, 7] },
+  { name: 'ai-value', phases: [8] },
+];
 
 export const REQUIRED_SECTIONS = [
   '## Input',
@@ -53,7 +60,8 @@ const HOST_SPECIFIC_TERMS =
 const SOFTWARE_DELIVERY_TERMS =
   /\b(sprints?|backlogs?|user stor(?:y|ies)|epics?|jira|tickets?|deploy(?:s|ed|ment)?|repositor(?:y|ies)|pull requests?|codebases?|bugs?|devops|ci\/cd|code reviews?|unit tests?)\b/i;
 const SKILL_REFERENCE = /`([a-z0-9]+(?:-[a-z0-9]+)+)`/g;
-const CATALOG_ROW = /^\|\s*(\d+)\s*\|\s*`([a-z0-9-]+)`\s*\|\s*([^|]+?)\s*\|/gm;
+const CATALOG_ROW = /^\|\s*(\d+)\s*\|\s*`([a-z0-9-]+)`\s*\|\s*([^|]+?)\s*\|/;
+const CATALOG_PHASE = /^###\s+(\d+)\./;
 
 /**
  * Splits a SKILL.md file into its two allowed frontmatter fields and body.
@@ -92,14 +100,28 @@ export function parseSkillFile(content) {
 
 /**
  * @param {string} readme
- * @returns {Array<{ number: number, name: string, owns: string }>}
+ * @returns {Array<{ number: number, name: string, owns: string, phase?: number }>}
  */
 export function parseCatalog(readme) {
-  return [...readme.matchAll(CATALOG_ROW)].map((row) => ({
-    number: Number(row[1]),
-    name: row[2],
-    owns: row[3],
-  }));
+  const rows = [];
+  let phase;
+  for (const line of readme.split('\n')) {
+    const heading = line.match(CATALOG_PHASE);
+    if (heading) phase = Number(heading[1]);
+    const row = line.match(CATALOG_ROW);
+    if (row) rows.push({ number: Number(row[1]), name: row[2], owns: row[3], phase });
+  }
+  return rows;
+}
+
+/**
+ * Names the install set for a catalog phase. Skills without a phase form one set.
+ * @param {number | undefined} phase
+ * @returns {string}
+ */
+export function installSetFor(phase) {
+  if (phase === undefined) return 'all';
+  return INSTALL_SETS.find((set) => set.phases.includes(phase))?.name ?? `phase-${phase}`;
 }
 
 function checkSkill(dirName, content, knownNames) {
@@ -281,9 +303,11 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
   const stats = {
     skillCount: skillNames.length,
     listBytes: 0,
+    setBytes: {},
     maxDescriptionBytes: 0,
     maxFileBytes: 0,
   };
+  const skillListBytes = new Map();
   for (const name of skillNames) {
     let content;
     try {
@@ -295,21 +319,31 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
     const result = checkSkill(name, content, knownNames);
     errors.push(...result.errors);
     stats.listBytes += result.listBytes;
+    skillListBytes.set(name, result.listBytes);
     stats.maxDescriptionBytes = Math.max(stats.maxDescriptionBytes, result.descriptionBytes);
     stats.maxFileBytes = Math.max(stats.maxFileBytes, result.fileBytes);
   }
 
-  if (stats.listBytes > TOOLKIT_LIMITS.listBudgetBytes) {
-    errors.push(
-      `names and descriptions total ${stats.listBytes} bytes; budget is ${TOOLKIT_LIMITS.listBudgetBytes}`
-    );
-  }
-
+  let catalog = [];
   try {
     const readme = await fs.readFile(path.join(toolkitRoot, 'README.md'), 'utf8');
     errors.push(...checkCatalog(readme, skillNames));
+    catalog = parseCatalog(readme);
   } catch {
     errors.push('missing README.md catalog');
+  }
+
+  const phaseOf = new Map(catalog.map((row) => [row.name, row.phase]));
+  for (const [name, bytes] of skillListBytes) {
+    const set = installSetFor(phaseOf.get(name));
+    stats.setBytes[set] = (stats.setBytes[set] ?? 0) + bytes;
+  }
+  for (const [set, bytes] of Object.entries(stats.setBytes)) {
+    if (bytes > TOOLKIT_LIMITS.listBudgetBytes) {
+      errors.push(
+        `install set ${set}: names and descriptions total ${bytes} bytes; budget is ${TOOLKIT_LIMITS.listBudgetBytes}`
+      );
+    }
   }
 
   // Routing applies only when the pack ships inside Gofer.
@@ -329,8 +363,11 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
 if (isDirectRun) {
   const root = process.argv[2] ? path.resolve(process.argv[2]) : defaultToolkitRoot;
   const { errors, stats } = await validateToolkit(root);
+  const sets = Object.entries(stats.setBytes)
+    .map(([set, bytes]) => `${set} ${bytes}/${TOOLKIT_LIMITS.listBudgetBytes}`)
+    .join(', ');
   console.log(
-    `consultant-toolkit: ${stats.skillCount} skills, list ${stats.listBytes}/${TOOLKIT_LIMITS.listBudgetBytes} bytes, ` +
+    `consultant-toolkit: ${stats.skillCount} skills, list bytes by install set: ${sets}, ` +
       `longest description ${stats.maxDescriptionBytes} bytes, largest SKILL.md ${stats.maxFileBytes} bytes`
   );
   if (errors.length > 0) {

@@ -18,6 +18,7 @@ const SKILLS_DIR = fileURLToPath(
 interface ToolkitStats {
   skillCount: number;
   listBytes: number;
+  setBytes: Record<string, number>;
   maxDescriptionBytes: number;
   maxFileBytes: number;
 }
@@ -124,10 +125,33 @@ describe('consultant toolkit skills', () => {
     }
   });
 
-  it('keeps the whole skill list inside the Codex fallback budget', async () => {
+  it('keeps each install set inside the Codex fallback budget', async () => {
     const { stats } = await validateToolkit();
-    expect(stats.listBytes).toBeLessThanOrEqual(TOOLKIT_LIMITS.listBudgetBytes);
+    expect(Object.keys(stats.setBytes).sort()).toEqual(['ai-value', 'core']);
+    for (const bytes of Object.values(stats.setBytes)) {
+      expect(bytes).toBeLessThanOrEqual(TOOLKIT_LIMITS.listBudgetBytes);
+    }
     expect(stats.maxDescriptionBytes).toBeLessThanOrEqual(TOOLKIT_LIMITS.descriptionMaxBytes);
+  });
+
+  it('counts the list budget per install set from the catalog phases', async () => {
+    const long = `Does long work ${'x'.repeat(120)}. Use for it.`;
+    const skills: Record<string, string> = {};
+    const coreRows = ['### 1. Frame', ''];
+    const aiRows = ['### 8. AI value', ''];
+    for (let i = 0; i < 60; i += 1) {
+      const name = `core-skill-${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}`;
+      skills[name] = skillFile(name, long);
+      coreRows.push(`| ${i + 1} | \`${name}\` | Core output ${i} |`);
+    }
+    skills['ai-skill'] = skillFile('ai-skill', 'Does AI work. Use for AI.');
+    aiRows.push('| 61 | `ai-skill` | AI output |');
+    const root = makeToolkit(skills, [...coreRows, ...aiRows]);
+    const { errors, stats } = await validateToolkit(root, { expectedCount: 61 });
+    expect(stats.setBytes['ai-value']).toBeLessThan(TOOLKIT_LIMITS.listBudgetBytes);
+    expect(stats.setBytes.core).toBeGreaterThan(TOOLKIT_LIMITS.listBudgetBytes);
+    expect(errors.some((e) => e.startsWith('install set core:'))).toBe(true);
+    expect(errors.some((e) => e.startsWith('install set ai-value:'))).toBe(false);
   });
 
   it('accepts a minimal valid toolkit', async () => {

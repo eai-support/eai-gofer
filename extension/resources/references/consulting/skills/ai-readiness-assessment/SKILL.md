@@ -21,7 +21,7 @@ Show how ready an organization is to get value from AI at scale, and what to fix
    - People: AI skills by role, leadership sponsorship, and capacity to change.
    - Governance: AI policy, risk tiers, human oversight, privacy, and regulatory compliance.
    - Operating model: who funds, prioritizes, builds, and runs AI work, and how value is measured.
-3. Check the scale gap: list current pilots and record whether each has an owner, a measured result, and a path to everyday use.
+3. Check the scale gap: count the current pilots that have an owner, a measured result, and a path to everyday use. Use `pilot-to-scale-review` for a decision on each pilot.
 4. Set a target score per dimension from the ambition. The gap is the target minus the score. A low score matters only where the ambition needs that dimension.
 5. Rank the gaps by effect on value and by effort to close.
 6. Recommend the first 3 to 5 actions with owners.
@@ -30,7 +30,7 @@ Show how ready an organization is to get value from AI at scale, and what to fix
 
 1. Scorecard: Dimension | Score | Target | Evidence | Gap.
 2. Level definitions: Dimension | What 1 looks like | What 3 looks like | What 5 looks like.
-3. Pilot table: Pilot | Owner | Measured result | Path to everyday use (Y/N).
+3. Pilot summary: Pilots | With owner | With measured result | With path to everyday use.
 4. Ranked gaps and first actions: Action | Gap closed | Owner | Effort.
 5. A one-paragraph readiness verdict.
 

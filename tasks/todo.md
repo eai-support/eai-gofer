@@ -140,3 +140,16 @@
   research stage; and neighbor skills point back to the new owners.
 - Shortened descriptions that lost trigger words were restored. The list is
   7,977 of 8,000 bytes.
+
+# Consultant Toolkit: AI Value Skills (Waves 2 and 3) and Industry Coverage
+
+- [x] Add `pilot-to-scale-review`, `ai-governance-controls`, and
+      `ai-workforce-plan` to catalog phase 8, and `business-object-map` and
+      `ai-disruption-assessment` to catalog phase 3.
+- [x] Add two-way hand-offs, owner-table rows, and one stage per skill.
+- [x] Split the Codex list budget into two install sets (core and AI value),
+      each checked against 8,000 bytes.
+- [x] Map the 90 EAI industry scenarios to the skills and to Gofer's app
+      delivery path in `docs/specs/consulting-firm-gtm/industry-coverage.md`.
+- [x] Confirm that Gofer's app delivery functions are unchanged.
+- [ ] Independent review of overlaps, hand-offs, and methods.

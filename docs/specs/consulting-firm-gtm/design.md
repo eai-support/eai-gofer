@@ -108,7 +108,7 @@ playbooks stay out of the slash menu.
 
 ### Reuse Of Existing Playbooks
 
-Most requirements reuse the 59 consulting playbooks in PR #441.
+Most requirements reuse the 64 consulting playbooks in PR #441.
 
 | Requirement                  | Existing playbooks                                                                 | New work                                           |
 | ---------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------- |
@@ -118,7 +118,7 @@ Most requirements reuse the 59 consulting playbooks in PR #441.
 | FR-11 Firm branding          | Gofer branding helper                                                              | None                                               |
 | FR-12 Quality check          | `mece-check`, `source-validation`, `deck-quality-check`                            | None                                               |
 | FR-14 Advice to build        | `ai-bootcamp-design`, `ai-workflow-redesign`, Gofer business scenario stage        | ROI baseline carried into the spec                 |
-| FR-31 Realised ROI report    | `ai-value-tracker`, `ai-value-capture-plan`                                        | The app records the ROI measures                   |
+| FR-31 Realised ROI report    | `ai-value-tracker`, `ai-value-capture-plan`, `pilot-to-scale-review`               | The app records the ROI measures                   |
 | FR-18 Demo pack              | `process-mapping`, `speaker-notes`                                                 | Screenshot step from the preview check             |
 | FR-33 Adoption material      | `change-plan`, Gofer stakeholder communications                                    | None                                               |
 | FR-07 Industry packs         | None                                                                               | New pack files, one per industry                   |

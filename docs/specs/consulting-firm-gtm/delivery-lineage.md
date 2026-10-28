@@ -75,6 +75,7 @@ flowchart LR
   subgraph stage_validation["Validation"]
     direction TB
     n48["Traceability<br/>Documentation File"]:::current
+    n50["Industry scenario coverage<br/>Documentation File"]:::current
   end
   n17 -->|"Records Decision"| n18
   n17 -->|"Records Decision"| n19
@@ -156,6 +157,8 @@ flowchart LR
   n48 -->|"Supports"| n4
   n4 -->|"Owned By"| n49
   n41 -->|"Owned By"| n49
+  n50 -->|"Supports"| n6
+  n50 -->|"Supports"| n15
   linkStyle 0 stroke:#1565c0,stroke-width:2px
   linkStyle 1 stroke:#1565c0,stroke-width:2px
   linkStyle 2 stroke:#1565c0,stroke-width:2px
@@ -236,6 +239,8 @@ flowchart LR
   linkStyle 77 stroke:#1565c0,stroke-width:2px
   linkStyle 78 stroke:#1565c0,stroke-width:2px
   linkStyle 79 stroke:#1565c0,stroke-width:2px
+  linkStyle 80 stroke:#1565c0,stroke-width:2px
+  linkStyle 81 stroke:#1565c0,stroke-width:2px
   classDef current fill:#e8f5e9,stroke:#2e7d32,color:#102a13
   classDef suspect fill:#fff4ce,stroke:#f59e0b,color:#3d2800
   classDef anchor_lost fill:#ffebee,stroke:#e53935,color:#3f1010

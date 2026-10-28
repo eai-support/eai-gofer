@@ -39,6 +39,7 @@ Show how one business process works today, why it underperforms, and how it shou
 
 - Not for firm-wide activity costs: use `value-chain`.
 - Not for redesigning a workflow around AI: use `ai-workflow-redesign`.
+- Not for the records, states, and actions a process uses: use `business-object-map`.
 - Not for organization design: use `operating-model`.
 - Not for valuing an improvement that needs investment: use `business-case`.
 - Not for helping people adopt the new process: use `change-plan`.

@@ -20,14 +20,14 @@ Prove what an AI use returns, with numbers that a finance team accepts.
 5. Report results: actual against baseline and target, and all costs to date, one-off and running, including AI running costs.
 6. Separate capacity from captured value. Use `ai-value-capture-plan` output when it exists. Count only captured value as a return.
 7. Compute the return on captured value only: net value is captured value minus all costs to date; ROI is net value divided by costs; payback is the month when cumulative captured value first exceeds cumulative cost, or a forecast month.
-8. Recommend the next step: scale, fix, or stop, and why.
+8. State what the results mean for this use. For decisions across several pilots, use `pilot-to-scale-review`.
 
 ## Output
 
 1. Measurement plan: Measure | Definition | Baseline | Target | Source | Owner | Cadence.
 2. Value report: Measure | Baseline | Actual | Target | Change.
 3. Return summary: Captured value | Capacity (not counted) | Costs | Net value | ROI | Payback month.
-4. Next-step recommendation.
+4. Note on what the results mean for this use.
 
 ## Quality bar
 

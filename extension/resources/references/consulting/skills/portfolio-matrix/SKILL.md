@@ -37,6 +37,7 @@ Decide how to allocate resources across existing business units or product lines
 - Not for finding new growth avenues: use `growth-strategy`.
 - Not for drawing the chart: use `data-visualization`.
 - Not for ranking AI uses: use `ai-opportunity-scan`.
+- Not for scale or stop decisions on AI pilots: use `pilot-to-scale-review`.
 
 ## Rules
 

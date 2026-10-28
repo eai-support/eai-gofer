@@ -15,7 +15,7 @@ Show where AI can create the most value in a client's business, in the client's 
 
 1. Set the scope and the value lens: cost, revenue, quality, risk, or speed.
 2. List the work in scope by activity or process step. Reuse `process-mapping` or `value-chain` output when it exists.
-3. For each activity, name the AI pattern that could change it: draft, summarize, classify, extract, answer questions, predict, recommend, check, or route work. Describe each use as a change in the work, in plain words.
+3. For each activity, name the AI pattern that could change it: draft, summarize, classify, extract, answer questions, predict, recommend, optimize or schedule, check, or route work. Describe each use as a change in the work, in plain words.
 4. Estimate gross value at stake per year. For time: volume x share of items AI can handle x time saved per item x loaded hourly cost. For revenue: volume x uplift x margin. Label each figure [Estimate] gross capacity, not savings, and show its inputs.
 5. Rate three scores from 1 to 5, where 5 is always best: effort (1 very hard, 5 easy), risk (1 high or blocked, 5 low), and data readiness (1 not available, 5 ready). Ease is their average. Risk covers errors, privacy, harm to customers, and regulation. A risk score of 1 holds the use until governance clears it.
 6. Rank the uses on a value-versus-ease matrix. Expect most value from a few uses; do not spread effort across many.
@@ -40,6 +40,8 @@ Show where AI can create the most value in a client's business, in the client's 
 - Not for organization-wide readiness: use `ai-readiness-assessment`.
 - Not for testing one use on client data: use `ai-bootcamp-design`.
 - Not for ranking existing business units: use `portfolio-matrix`.
+- Not for decisions on existing AI pilots: use `pilot-to-scale-review`.
+- Not for AI's effect on the whole industry: use `ai-disruption-assessment`.
 
 ## Rules
 

@@ -38,6 +38,7 @@ Explain how attractive an industry is, and why, using Porter's Five Forces.
 
 - Not for macro trends: use `pestel-scan`.
 - Not for comparing named competitors: use `competitor-benchmark`.
+- Not for AI's effect on profit pools: use `ai-disruption-assessment`.
 - Hand off to: `swot-analysis`, `strategic-options`.
 
 ## Rules

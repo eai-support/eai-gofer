@@ -42,6 +42,7 @@ Read them in this order.
 | [Decisions](decisions.md)                      | Which choices are proposed, and which are not recommended?          |
 | [Delivery plan](plan.md)                       | In what order is the work done, and by whom?                        |
 | [Traceability](traceability.md)                | Which scenario, design part and workstream covers each requirement? |
+| [Industry coverage](industry-coverage.md)      | Do the skills cover the 90 EAI industry scenarios?                  |
 | [Delivery lineage](delivery-lineage.md)        | A diagram of the links from need to plan.                           |
 
 ## Delivery Lineage Export
@@ -52,9 +53,11 @@ Without it, the projection fails closed by design.
 
 ## Related Work
 
-- PR #441 adds the `/eai` consulting route and the 59 consulting playbooks that
-  this design builds on. Six of them cover the AI value cycle: readiness,
-  opportunity scan, bootcamp, workflow redesign, value capture and value
-  tracking.
+- PR #441 adds the `/eai` consulting route and the 64 consulting playbooks that
+  this design builds on. Nine of them cover the AI value cycle: readiness, pilot
+  review, opportunity scan, bootcamp, workflow redesign, governance, workforce,
+  value capture and value tracking.
+- The [industry coverage check](industry-coverage.md) maps the 90 EAI industry
+  scenarios to these playbooks and to Gofer's app delivery path.
 - EAI Platform requests (EPR-1 to EPR-10) in the [specification](spec.md) go to
   the EAI Platform team, which plans them separately.

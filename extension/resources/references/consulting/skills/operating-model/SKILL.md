@@ -40,6 +40,7 @@ Design how the organization must work to deliver the strategy.
 - Not for role-level responsibilities: use `raci-builder`.
 - Not for the transition plan or programme governance: use `implementation-roadmap`.
 - Not for the people transition: use `change-plan`.
+- Not for how AI changes roles and skills: use `ai-workforce-plan`.
 
 ## Rules
 
