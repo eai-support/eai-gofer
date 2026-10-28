@@ -21,7 +21,7 @@ Decide what to do with each AI pilot, so effort moves to the few that can reach 
    - Controls: the required approvals and controls are in place, from `ai-governance-controls` when they exist.
    - Ownership: a business owner and a funded running budget exist.
 3. Name the main reason each stalled pilot is stuck: no measured value, low adoption, data not ready, controls not cleared, no owner or budget, or the work around it was not redesigned.
-4. Decide with these rules, in order. Stop: measured value is below the minimum target, or a failed gate has no fix whose remaining cost is below the expected value. Scale: Value and Controls pass, and every other gate passes or is partial with a dated fix. Fix: all other cases, with a review date; a pilot not fixed by then stops. Compare only future costs with future value; money already spent does not count.
+4. Decide with these rules, in order. Stop: measured value is below the minimum target, or a failed gate has no fix whose remaining cost is below the expected value. Scale: Value, Data, Controls, and Ownership pass, and Adoption passes or is partial with a dated fix. Fix: all other cases, with a review date; a pilot not fixed by then stops. Compare only future costs with future value; money already spent does not count.
 5. For each fix, state the action, owner, date, and the gate it clears. For each stop, state what is kept, such as data or lessons.
 6. Summarize the portfolio: pilots by decision, future budget freed by stops, and the few pilots to back.
 

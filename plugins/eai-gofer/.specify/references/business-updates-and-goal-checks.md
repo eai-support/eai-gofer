@@ -40,7 +40,9 @@ host's responsibility. Never claim universal message interception.
    exact unresolved decision. Do not wait until final validation to reconcile.
 
 This applies to app and non-app features. Conversation-only requests need no
-feature files. Maintenance commands stay maintenance-only. Keep local MVP
+feature files. Business consulting work follows
+`.specify/references/consulting/routing.md` instead: each deliverable passes the
+Quality bar of the skill that owns it, with no delivery checkpoint. Maintenance commands stay maintenance-only. Keep local MVP
 exemptions: no forced sign-in or deployment if the current scope excludes them.
 
 ## Delivery Checkpoint
