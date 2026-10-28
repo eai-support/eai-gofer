@@ -1,6 +1,6 @@
 ---
 name: ai-disruption-assessment
-description: "Assesses how AI could replace, reshape or improve an industry's profit pools and how defensible a firm is. Use for AI threat and diligence."
+description: "Assesses how AI could replace, reshape or improve an industry's profit pools and a firm's defenses. Use for AI threat reviews, including deal targets."
 ---
 
 # AI Disruption Assessment
@@ -13,20 +13,20 @@ Show how AI could change the economics of an industry and how well a firm can de
 
 ## Method
 
-1. Split the firm's revenue and profit into pools by product, customer, or activity.
-2. For each pool, rate the likely effect of AI: replace (AI makes the offer free or unnecessary), reshape (AI changes how value is delivered and who captures it), or improve (AI lowers cost or raises quality without changing the model).
-3. Test the firm's defenses for each pool: unique data, customer relationships and distribution, regulation and licenses, switching costs, network effects, and physical assets.
-4. Run a replication test: estimate how fast and how cheaply a new entrant could rebuild the core offer with current AI tools. Label the estimate and its basis.
-5. Estimate revenue and margin at risk per pool as a range, with a timeline and the signposts that would show the change is coming.
+1. Map the industry's profit pools by value chain stage, product, or customer: size, margin, and the firm's share. Note where profit could move, for example to AI suppliers, platforms, or customers.
+2. For each pool, rate the likely effect of AI: replace (AI makes the offer free or unnecessary), reshape (AI changes how value is delivered and who captures it), or improve (AI lowers cost or raises quality without changing the model). For improve, state whether rivals get the same gain, so that the saving passes to customers in price.
+3. Test the firm's defenses for each pool: unique data, customer relationships and distribution, regulation and licenses, switching costs, network effects, and physical assets, and whether AI weakens each defense.
+4. Run a replication test: estimate how fast and how cheaply a new entrant, an adjacent player, or a customer could rebuild the core offer with current AI tools. Label the estimate and its basis.
+5. Estimate revenue and EBITDA at risk per pool by year as low, base, and high over the decision horizon, for example a hold period. Do not count one loss twice. Name the signposts that would show the change is coming.
 6. List the opportunities AI opens for the firm: new offers, new pricing models, and a better cost position.
-7. Recommend a stance for each pool: defend, attack, partner, or exit, with the first moves.
+7. List the moves worth testing per pool, such as defend, attack, partner, or exit. Hand the choice to `strategic-options`.
 
 ## Output
 
-1. Impact map: Pool | Revenue | Margin | Effect (replace, reshape, improve) | Timeline | Value at risk range.
+1. Impact map: Pool | Size | Margin | Firm share | Effect (replace, reshape, improve) | Where profit moves | EBITDA at risk (low, base, high).
 2. Defense scorecard: Pool | Data | Relationships | Regulation | Switching costs | Network effects | Assets.
 3. Replication test summary.
-4. Opportunities and recommended stance with first moves.
+4. Opportunities and moves worth testing per pool.
 
 ## Quality bar
 

@@ -115,13 +115,14 @@ export function parseCatalog(readme) {
 }
 
 /**
- * Names the install set for a catalog phase. Skills without a phase form one set.
+ * Names the install set for a catalog phase. A catalog without phase headings
+ * is one set; a phase outside every install set has no set.
  * @param {number | undefined} phase
- * @returns {string}
+ * @returns {string | undefined}
  */
 export function installSetFor(phase) {
   if (phase === undefined) return 'all';
-  return INSTALL_SETS.find((set) => set.phases.includes(phase))?.name ?? `phase-${phase}`;
+  return INSTALL_SETS.find((set) => set.phases.includes(phase))?.name;
 }
 
 function checkSkill(dirName, content, knownNames) {
@@ -333,9 +334,20 @@ export async function validateToolkit(toolkitRoot = defaultToolkitRoot, options 
     errors.push('missing README.md catalog');
   }
 
+  if (
+    catalog.some((row) => row.phase !== undefined) &&
+    catalog.some((row) => row.phase === undefined)
+  ) {
+    errors.push('catalog: every row needs a phase heading');
+  }
   const phaseOf = new Map(catalog.map((row) => [row.name, row.phase]));
   for (const [name, bytes] of skillListBytes) {
-    const set = installSetFor(phaseOf.get(name));
+    const phase = phaseOf.get(name);
+    const set = installSetFor(phase);
+    if (!set) {
+      errors.push(`catalog: ${name} is in phase ${phase}, which is in no install set`);
+      continue;
+    }
     stats.setBytes[set] = (stats.setBytes[set] ?? 0) + bytes;
   }
   for (const [set, bytes] of Object.entries(stats.setBytes)) {

@@ -21,14 +21,14 @@ Redesign one workflow end to end so that people and AI each do the tasks they do
 6. Design the exceptions: low confidence, missing data, complaints, and errors go to a named role.
 7. List the role changes in this workflow: tasks added, tasks removed, and skills needed, as input to `ai-workforce-plan`.
 8. Estimate the effect on elapsed time, cost per item, quality, and net hours freed by role, as input to `ai-value-capture-plan`. Label estimates.
-9. State the controls and measures that show the workflow works: accuracy, override rate, cycle time, and volume.
+9. State the measures that show the workflow works: accuracy, override rate, cycle time, and volume. Take the controls each AI task needs from `ai-governance-controls` when they exist.
 
 ## Output
 
 1. Future workflow: Step | Done by (person, AI checked, or AI alone) | Check | Handoff to | Exception route | Time.
 2. Constraint analysis: Current constraint | Change | Expected elapsed time.
 3. Role changes: Role | Tasks added | Tasks removed | Skills needed | Net hours freed.
-4. Controls and measures.
+4. Measures, and the controls each AI task needs.
 5. Expected effect: Measure | Today | Future | Basis.
 
 ## Quality bar

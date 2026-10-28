@@ -41,6 +41,7 @@ Plan a short, hands-on working session that tests one AI use on the client's own
 - Not for redesigning the full workflow after a go: use `ai-workflow-redesign`.
 - Not for a multi-month rollout plan: use `implementation-roadmap`.
 - Not for the proposal that sells the bootcamp: use `engagement-proposal`.
+- Not for pilots already running: use `pilot-to-scale-review`.
 
 ## Rules
 

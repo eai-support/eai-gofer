@@ -152,4 +152,21 @@
 - [x] Map the 90 EAI industry scenarios to the skills and to Gofer's app
       delivery path in `docs/specs/consulting-firm-gtm/industry-coverage.md`.
 - [x] Confirm that Gofer's app delivery functions are unchanged.
-- [ ] Independent review of overlaps, hand-offs, and methods.
+- [x] Independent review of overlaps, hand-offs, and methods.
+
+## Review
+
+- The review found one blocking routing conflict: due diligence was on the
+  no-owner list, so an AI threat review of a deal target went to conversation.
+  `ai-disruption-assessment` now owns the AI threat view, including deal
+  targets.
+- It also found method gaps. All were fixed: pilot decisions follow ordered
+  rules with review dates and future costs only; governance lists harms, defines
+  four tiers including prohibited, adds independent review, re-approval, and
+  retirement, and names approvers; the workforce plan weights task exposure by
+  time and defines proficiency scales; the object map adds business keys and
+  optional links; and the disruption assessment maps industry profit pools and
+  EBITDA at risk over a horizon.
+- Stage order now follows dependencies: pilot review and governance move to the
+  specify stage, ahead of workflow redesign. The validator now rejects a catalog
+  phase outside every install set and rows without a phase heading.

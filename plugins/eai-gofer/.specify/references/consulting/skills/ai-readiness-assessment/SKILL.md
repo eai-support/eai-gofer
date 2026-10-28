@@ -46,6 +46,7 @@ Show how ready an organization is to get value from AI at scale, and what to fix
 - Not for general strengths and weaknesses: use `swot-analysis`.
 - Not for risks to delivering a plan: use `risk-assessment`.
 - Not for one group's readiness to adopt a change: use `change-plan`.
+- Not for AI risk tiers and controls: use `ai-governance-controls`.
 
 ## Rules
 

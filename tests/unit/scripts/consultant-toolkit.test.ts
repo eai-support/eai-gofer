@@ -154,6 +154,15 @@ describe('consultant toolkit skills', () => {
     expect(errors.some((e) => e.startsWith('install set ai-value:'))).toBe(false);
   });
 
+  it('rejects a catalog phase that is in no install set, and rows without a phase', async () => {
+    const rows = ['### 9. Unplaced', '', ...validRows];
+    const { errors } = await validateToolkit(makeToolkit(validPair(), rows), { expectedCount: 2 });
+    expect(errors).toContain('catalog: alpha-skill is in phase 9, which is in no install set');
+    const mixed = [validRows[0], '### 1. Frame', '', validRows[1]];
+    const result = await validateToolkit(makeToolkit(validPair(), mixed), { expectedCount: 2 });
+    expect(result.errors).toContain('catalog: every row needs a phase heading');
+  });
+
   it('accepts a minimal valid toolkit', async () => {
     const root = makeToolkit(validPair(), validRows);
     const { errors } = await validateToolkit(root, { expectedCount: 2 });

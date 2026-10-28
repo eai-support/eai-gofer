@@ -198,8 +198,8 @@ value capture, and value tracking.
   `stakeholder-map` > `change-plan` > `risk-assessment` > `kpi-dashboard` >
   `status-report`.
 - **AI value:** `ai-readiness-assessment` > `pilot-to-scale-review` >
-  `ai-opportunity-scan` > `ai-bootcamp-design` > `ai-workflow-redesign` >
-  `business-object-map` > `ai-governance-controls` > `ai-value-capture-plan` >
+  `ai-opportunity-scan` > `ai-bootcamp-design` > `ai-governance-controls` >
+  `ai-workflow-redesign` > `business-object-map` > `ai-value-capture-plan` >
   `business-case` > `ai-workforce-plan` > `change-plan` > `ai-value-tracker`.
 - **AI threat review:** `pestel-scan` > `five-forces` >
   `ai-disruption-assessment` > `scenario-analysis` > `strategic-options`.
@@ -215,9 +215,11 @@ own:
 - **Core set:** phases 1 to 7, 55 skills.
 - **AI value set:** phase 8, 9 skills.
 
-If you install both sets in one Codex scope, the skill list can go over the
-budget, and Codex can then shorten or drop skills. Gofer loads a skill only when
-a request needs it, so it has no list limit.
+The AI value set hands off to core skills such as `business-case`,
+`change-plan`, and `process-mapping`. Both sets together go over the budget, and
+Codex can then shorten or drop skills. On Codex, install the AI value set with
+only the core skills its hand-offs need. Gofer loads a skill only when a request
+needs it, so it has no list limit.
 
 | Surface                    | How to install                                                                                                                                                                                           |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -281,7 +283,8 @@ These are deliberate gaps, not overlaps:
   workshop; it does not run it.
 - Cost programmes: firm-wide cost baselines and savings targets.
   `ai-value-tracker` sets the baseline for one AI use only.
-- Specialist advice: legal, tax, and M&A due diligence.
+- Specialist advice: legal, tax, and financial due diligence.
+  `ai-disruption-assessment` covers only the AI threat to a target.
 
 ## Attribution
 
