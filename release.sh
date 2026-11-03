@@ -44,7 +44,7 @@ resolve_github_repo() {
 
 latest_release_tag() {
     git ls-remote --tags --refs origin 'v*' \
-        | awk '{print $2}' \
+        | awk '$2 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/ {print $2}' \
         | sed 's#refs/tags/##' \
         | sort -V \
         | tail -n 1
@@ -108,8 +108,11 @@ create_release_pr() {
 ## Release Prep
 
 - bumps Gofer to \`$version\`
-- refreshes generated command surfaces and public release assets
+- refreshes generated command surfaces and validates the release package
+- keeps the stable public auto-update feed on the last published release
 - prepares \`main\` so a follow-up \`./release.sh\` run can publish tag \`v$version\`
+
+After the tagged GitHub Release succeeds, \`release.sh\` creates a separate reviewed pull request to publish the new version to the public auto-update feed.
 
 ## Release Notes
 
@@ -123,6 +126,374 @@ EOF
         --head "$branch_name" \
         --title "chore: release v$version — $notes" \
         --body "$body"
+}
+
+create_public_feed_pr() {
+    local branch_name="$1"
+    local version="$2"
+    local repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+    local body
+
+    body=$(cat <<EOF
+## Public Auto-Update Feed
+
+- publishes the exact VSIX, plugin ZIP, and plugin bundle from GitHub Release \`v$version\`
+- updates the release feed and stable download aliases
+- keeps publication behind normal review, CI, merge, and GitHub Pages deployment
+
+This pull request does not create or move a release tag. Auto-updater publication is pending until this pull request merges and Pages serves the new version.
+EOF
+)
+
+    gh pr create \
+        --repo "$repo" \
+        --base main \
+        --head "$branch_name" \
+        --title "Publish Gofer $version update feed and static assets" \
+        --body "$body"
+}
+
+ensure_public_feed_branch_scope() {
+    local status_line
+    local status_code
+    local changed_path
+    local committed_path
+
+    while IFS= read -r -d '' status_line; do
+        status_code="${status_line:0:2}"
+        changed_path="${status_line:3}"
+        if [[ "$status_code" == *R* || "$status_code" == *C* ]]; then
+            print_error "The public-feed branch contains a rename or copy outside the supported retry flow."
+            exit 1
+        fi
+        case "$changed_path" in
+            docs-site/static/releases.json|docs-site/static/releases/*) ;;
+            *)
+                print_error "The public-feed retry branch contains an unrelated change: $changed_path"
+                exit 1
+                ;;
+        esac
+    done < <(git status --porcelain -z --untracked-files=all)
+
+    while IFS= read -r -d '' committed_path; do
+        case "$committed_path" in
+            docs-site/static/releases.json|docs-site/static/releases/*) ;;
+            *)
+                print_error "The public-feed retry branch contains a committed unrelated change: $committed_path"
+                exit 1
+                ;;
+        esac
+    done < <(git diff --name-only --no-renames -z origin/main...HEAD)
+}
+
+public_release_files_match() {
+    local version="$1"
+    local vsix_path="$2"
+    local plugin_zip_path="$3"
+    local plugin_root="$4"
+    local release_metadata_file="$5"
+    local public_root="${6:-$PWD}"
+
+    node scripts/verify-public-release-publication.mjs \
+        --quiet \
+        --root "$public_root" \
+        --version "$version" \
+        --release-metadata-file "$release_metadata_file" \
+        --vsix "$vsix_path" \
+        --plugin-zip "$plugin_zip_path" \
+        --plugin-root "$plugin_root"
+}
+
+cleanup_public_feed_temp_dir() {
+    if [ -n "${PUBLIC_FEED_TEMP_DIR:-}" ] && [ -d "$PUBLIC_FEED_TEMP_DIR" ]; then
+        rm -rf -- "$PUBLIC_FEED_TEMP_DIR"
+    fi
+}
+
+publish_public_release_feed() {
+    local version="$1"
+    local tag_name="v$version"
+    local repo="${GITHUB_REPO:-$(resolve_github_repo)}"
+    local branch_name="release/public-feed-v$version"
+    local temp_root
+    local metadata_dir
+    local metadata_file
+    local asset_dir
+    local extract_dir
+    local vsix_path
+    local plugin_zip_path
+    local plugin_root
+    local plugin_marker_version
+    local current_branch
+    local latest_tag
+    local open_feed_pr
+    local open_feed_pr_file
+    local final_feed_pr_file
+    local open_feed_pr_head
+    local fetched_pr_head
+    local verify_root
+    local pr_archive
+
+    latest_tag="$(latest_release_tag)"
+    if [ "$latest_tag" != "$tag_name" ]; then
+        print_error "Only the latest official tag can become the public auto-update version."
+        print_error "Expected $tag_name, found ${latest_tag:-no release tag}."
+        exit 1
+    fi
+
+    temp_root="${TMPDIR:-/tmp}"
+    temp_root="${temp_root%/}"
+    [ -n "$temp_root" ] || temp_root="/tmp"
+    metadata_dir="$(mktemp -d "$temp_root/gofer-release-feed.XXXXXX")"
+    case "$metadata_dir" in
+        "$temp_root"/gofer-release-feed.*) ;;
+        *)
+            print_error "Could not create a safe temporary directory for release assets."
+            exit 1
+            ;;
+    esac
+    PUBLIC_FEED_TEMP_DIR="$metadata_dir"
+    trap cleanup_public_feed_temp_dir EXIT
+    metadata_file="$metadata_dir/release.json"
+    asset_dir="$metadata_dir/assets"
+    extract_dir="$metadata_dir/extracted"
+    mkdir -p "$asset_dir" "$extract_dir"
+
+    print_info "Reading official GitHub Release $tag_name..."
+    if ! gh release view "$tag_name" --repo "$repo" --json tagName,isDraft,isPrerelease,publishedAt,body,name > "$metadata_file"; then
+        print_error "GitHub Release $tag_name is not available. No feed files were changed."
+        exit 1
+    fi
+
+    if ! RELEASE_METADATA_FILE="$metadata_file" EXPECTED_RELEASE_TAG="$tag_name" node --input-type=module - "$metadata_file" <<'NODE'
+import fs from 'node:fs';
+const release = JSON.parse(fs.readFileSync(process.env.RELEASE_METADATA_FILE, 'utf8'));
+if (release.tagName !== process.env.EXPECTED_RELEASE_TAG || release.isDraft || release.isPrerelease || !release.publishedAt) {
+  throw new Error('The GitHub Release is not a published stable release for the expected tag.');
+}
+if (!Number.isFinite(Date.parse(release.publishedAt))) throw new Error('The GitHub Release has no valid publication time.');
+NODE
+    then
+        print_error "GitHub Release metadata is incomplete or does not match $tag_name."
+        exit 1
+    fi
+
+    print_info "Downloading the official release assets..."
+    if ! gh release download "$tag_name" --repo "$repo" --dir "$asset_dir" \
+        --pattern "eai-gofer-$version.vsix" \
+        --pattern "eai-gofer-agent-plugin-$version.zip"; then
+        print_error "GitHub Release $tag_name is missing one or more required public assets."
+        exit 1
+    fi
+    vsix_path="$asset_dir/eai-gofer-$version.vsix"
+    plugin_zip_path="$asset_dir/eai-gofer-agent-plugin-$version.zip"
+    if [ ! -s "$vsix_path" ] || [ ! -s "$plugin_zip_path" ]; then
+        print_error "The official GitHub Release assets are incomplete. No feed files were changed."
+        exit 1
+    fi
+
+    if ! node --input-type=module - "$plugin_zip_path" <<'NODE'
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+const entries = execFileSync('unzip', ['-Z1', process.argv[2]], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
+if (!entries.some(entry => entry.startsWith('eai-gofer/plugins/eai-gofer/'))) throw new Error('Expected Gofer plugin bundle path is missing.');
+for (const entry of entries) {
+  const normalized = path.posix.normalize(entry);
+  if (entry.includes('\\') || path.posix.isAbsolute(entry) || normalized === '..' || normalized.startsWith('../') || entry.split('/').includes('..')) {
+    throw new Error('Unsafe path in official plugin archive.');
+  }
+}
+NODE
+    then
+        print_error "The official plugin ZIP has an invalid or unsafe archive layout."
+        exit 1
+    fi
+
+    if ! unzip -q "$plugin_zip_path" -d "$extract_dir"; then
+        print_error "The official plugin ZIP could not be extracted."
+        exit 1
+    fi
+    plugin_root="$extract_dir/eai-gofer"
+    plugin_marker_version=""
+    if [ -f "$plugin_root/.eai-gofer-plugin-version" ]; then
+        IFS= read -r plugin_marker_version < "$plugin_root/.eai-gofer-plugin-version" || true
+    fi
+    if [ ! -d "$plugin_root" ] || [ ! -d "$plugin_root/plugins/eai-gofer" ] || \
+        [ ! -f "$plugin_root/.eai-gofer-plugin-version" ] || \
+        [ "$plugin_marker_version" != "$version" ] || \
+        [ -n "$(find "$extract_dir" -type l -print -quit)" ]; then
+        print_error "The official plugin ZIP does not contain a safe Gofer plugin bundle."
+        exit 1
+    fi
+
+    if [ "$(git branch --show-current)" = "main" ] && \
+        public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file"; then
+        print_success "The public feed and release files already match v$version."
+        rm -rf -- "$metadata_dir"
+        return 0
+    fi
+
+    open_feed_pr="$(gh pr list --repo "$repo" --base main --head "$branch_name" --state open --limit 100 --json url,title,headRefName \
+        --jq "map(select(.headRefName == \"$branch_name\" and (.title | contains(\"$version\")) and (.title | test(\"feed|auto-updat\"; \"i\")))) | .[0].url // \"\"")"
+    current_branch="$(git branch --show-current)"
+    if [ -n "$open_feed_pr" ] && [ "$current_branch" != "$branch_name" ]; then
+        open_feed_pr_file="$metadata_dir/existing-feed-pr.json"
+        if ! gh pr view "$open_feed_pr" --repo "$repo" \
+            --json state,headRefName,headRefOid,baseRefName > "$open_feed_pr_file"; then
+            print_error "Could not verify the existing public-feed pull request."
+            exit 1
+        fi
+        if ! EXPECTED_FEED_BRANCH="$branch_name" node --input-type=module - "$open_feed_pr_file" <<'NODE'
+import fs from 'node:fs';
+const pr = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (
+  pr.state !== 'OPEN' ||
+  pr.baseRefName !== 'main' ||
+  pr.headRefName !== process.env.EXPECTED_FEED_BRANCH ||
+  !/^[a-f0-9]{40,64}$/.test(pr.headRefOid ?? '')
+) {
+  throw new Error('The existing pull request is not the expected open recovery request.');
+}
+NODE
+        then
+            print_error "The existing public-feed pull request does not match the expected recovery branch."
+            exit 1
+        fi
+        open_feed_pr_head="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).headRefOid)' "$open_feed_pr_file")"
+        if ! git fetch origin "$branch_name"; then
+            print_error "Could not fetch the existing public-feed pull request branch."
+            exit 1
+        fi
+        fetched_pr_head="$(git rev-parse --verify FETCH_HEAD)"
+        if [ "$fetched_pr_head" != "$open_feed_pr_head" ]; then
+            print_error "The public-feed pull request changed during verification. Retry recovery."
+            exit 1
+        fi
+        verify_root="$metadata_dir/existing-feed-pr"
+        pr_archive="$metadata_dir/existing-feed-pr.tar"
+        mkdir -p "$verify_root"
+        if ! git archive --format=tar --output="$pr_archive" "$open_feed_pr_head" \
+            docs-site/static/releases.json \
+            "docs-site/static/releases/eai-gofer-$version.vsix" \
+            docs-site/static/releases/eai-gofer-latest.vsix \
+            "docs-site/static/releases/eai-gofer-agent-plugin-$version.zip" \
+            docs-site/static/releases/eai-gofer-agent-plugin-latest.zip \
+            docs-site/static/releases/plugins/eai-gofer || \
+            ! tar -xf "$pr_archive" -C "$verify_root"; then
+            print_error "Could not read the existing public-feed pull request contents."
+            exit 1
+        fi
+        if ! public_release_files_match \
+            "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file" "$verify_root"; then
+            print_error "The existing public-feed pull request does not match the official release. Retry from its exact recovery branch to repair it."
+            exit 1
+        fi
+        final_feed_pr_file="$metadata_dir/existing-feed-pr-final.json"
+        if ! gh pr view "$open_feed_pr" --repo "$repo" \
+            --json state,headRefName,headRefOid,baseRefName > "$final_feed_pr_file"; then
+            print_error "Could not confirm the public-feed pull request stayed unchanged during verification."
+            exit 1
+        fi
+        if ! EXPECTED_FEED_BRANCH="$branch_name" EXPECTED_FEED_HEAD="$open_feed_pr_head" \
+            node --input-type=module - "$final_feed_pr_file" <<'NODE'
+import fs from 'node:fs';
+const pr = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (
+  pr.state !== 'OPEN' ||
+  pr.baseRefName !== 'main' ||
+  pr.headRefName !== process.env.EXPECTED_FEED_BRANCH ||
+  pr.headRefOid !== process.env.EXPECTED_FEED_HEAD
+) {
+  throw new Error('The recovery pull request changed during content verification.');
+}
+NODE
+        then
+            print_error "The public-feed pull request changed during verification. Retry recovery."
+            exit 1
+        fi
+        PUBLIC_FEED_PR_URL="$open_feed_pr"
+        print_success "The existing public-feed pull request matches the official v$version release: $open_feed_pr"
+        print_info "Merge that reviewed pull request and wait for the GitHub Pages checks."
+        rm -rf -- "$metadata_dir"
+        return 0
+    fi
+
+    if [ "$current_branch" = "main" ]; then
+        if repo_has_changes; then
+            print_error "The main checkout changed during feed preparation. No publication branch was created."
+            exit 1
+        fi
+        if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+            git switch "$branch_name"
+            ensure_public_feed_branch_scope
+        elif git ls-remote --heads origin "$branch_name" | grep -q .; then
+            git fetch origin "$branch_name"
+            git switch --track -c "$branch_name" "origin/$branch_name"
+            ensure_public_feed_branch_scope
+        else
+            ensure_feed_recovery_main
+            git switch -c "$branch_name"
+        fi
+    elif [ "$current_branch" = "$branch_name" ]; then
+        ensure_public_feed_branch_scope
+        if ! git merge-base --is-ancestor origin/main HEAD; then
+            print_error "The public-feed branch is behind or diverged from main. Update it through normal review before retrying."
+            exit 1
+        fi
+    else
+        print_error "Run feed recovery from main or the exact recovery branch $branch_name."
+        exit 1
+    fi
+
+    if [ -z "$open_feed_pr" ]; then
+        ensure_no_existing_release_pr "$branch_name"
+    fi
+
+    print_info "Updating the public release feed from the official assets..."
+    GOFER_RELEASE_VSIX_PATH="$vsix_path" GOFER_RELEASE_PLUGIN_ZIP_PATH="$plugin_zip_path" \
+        GOFER_RELEASE_METADATA_FILE="$metadata_file" node scripts/update-releases.js "$version"
+    node scripts/publish-public-release-assets.mjs \
+        --version "$version" \
+        --vsix "$vsix_path" \
+        --plugin-zip "$plugin_zip_path" \
+        --plugin-root "$plugin_root"
+
+    if ! node scripts/verify-public-release-publication.mjs \
+        --version "$version" \
+        --release-metadata-file "$metadata_file" \
+        --vsix "$vsix_path" \
+        --plugin-zip "$plugin_zip_path" \
+        --plugin-root "$plugin_root"; then
+        print_error "The public feed does not match the official release. No PR was created."
+        exit 1
+    fi
+
+    git add -A docs-site/static/releases.json docs-site/static/releases
+    ensure_release_paths_tracked \
+        "docs-site/static/releases/eai-gofer-$version.vsix" \
+        "docs-site/static/releases/eai-gofer-latest.vsix" \
+        "docs-site/static/releases/eai-gofer-agent-plugin-$version.zip" \
+        "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip"
+
+    if ! git diff --cached --quiet; then
+        git commit --no-verify -m "fix(release): publish Gofer v$version to auto-updaters"
+    fi
+
+    git fetch origin main
+    if ! git merge-base --is-ancestor origin/main HEAD; then
+        print_error "Main advanced during feed preparation. Keep this branch for review; do not push it until it is updated."
+        exit 1
+    fi
+    git push --no-verify -u origin "$branch_name"
+    local pr_url
+    if [ -n "$open_feed_pr" ]; then
+        pr_url="$open_feed_pr"
+    else
+        pr_url="$(create_public_feed_pr "$branch_name" "$version")"
+    fi
+    PUBLIC_FEED_PR_URL="$pr_url"
+    print_success "Public-feed pull request is ready for review: $pr_url"
+    print_info "The auto-update feed is pending review, merge, and GitHub Pages deployment."
 }
 
 should_enforce_vscode_marketplace_publish() {
@@ -223,13 +594,22 @@ wait_for_release_workflow() {
     fi
 
     print_info "Watching release workflow run $run_id..."
-    if gh run watch "$run_id" --repo "$repo" --exit-status; then
-        print_success "GitHub release workflow completed successfully"
-    else
-        print_error "GitHub release workflow failed for $tag_name"
+    if ! gh run watch "$run_id" --repo "$repo"; then
+        print_warning "The workflow did not finish green. Checking its core release checks and Marketplace result separately."
+    fi
+
+    local run_result
+    if ! run_result="$(gh run view "$run_id" --repo "$repo" --json status,conclusion,jobs)"; then
+        print_error "Could not verify the completed release workflow for $tag_name."
+        exit 1
+    fi
+
+    if ! printf '%s' "$run_result" | node scripts/inspect-release-workflow-run.mjs; then
+        print_error "Core validation or GitHub Release publication failed for $tag_name."
         gh run view "$run_id" --repo "$repo" --log-failed || true
         exit 1
     fi
+    print_success "GitHub Release publication and required workflow checks are verified"
 }
 
 get_vscode_marketplace_version() {
@@ -460,6 +840,38 @@ run_release_validation_gate() {
     print_success "Release validation gate passed for Gofer v$version"
 }
 
+validate_merged_release_artifact() (
+    local version="$1"
+    local temp_root="${TMPDIR:-/tmp}"
+    local temp_dir
+    local vsix_path
+
+    temp_root="${temp_root%/}"
+    [ -n "$temp_root" ] || temp_root="/tmp"
+    if ! temp_dir="$(mktemp -d "$temp_root/gofer-vsix-validation.XXXXXX")"; then
+        print_error "Could not create a temporary directory for the release VSIX check."
+        return 1
+    fi
+    case "$temp_dir" in
+        "$temp_root"/gofer-vsix-validation.*) ;;
+        *)
+            print_error "Could not create a safe temporary directory for the release VSIX check."
+            return 1
+            ;;
+    esac
+
+    trap 'rm -rf -- "$temp_dir"' EXIT
+    vsix_path="$temp_dir/eai-gofer-$version.vsix"
+
+    print_info "Packaging the merged Gofer VSIX for protocol validation..."
+    if ! (cd extension && npx @vscode/vsce package --no-dependencies --out "$vsix_path"); then
+        print_error "Could not package the merged Gofer VSIX."
+        return 1
+    fi
+
+    npm run test:packaged-protocol -- --vsix "$vsix_path"
+)
+
 ensure_release_base() {
     print_info "Fetching origin/main..."
     git fetch origin main
@@ -488,6 +900,30 @@ ensure_release_base() {
     if ! git merge-base --is-ancestor origin/main HEAD; then
         print_error "Local main has diverged from origin/main."
         print_error "Rebase or merge origin/main before releasing."
+        exit 1
+    fi
+}
+
+ensure_feed_recovery_main() {
+    local local_head
+    local remote_head
+
+    if [ "$(git branch --show-current)" != "main" ]; then
+        print_error "Feed recovery base verification requires local main."
+        exit 1
+    fi
+
+    if ! git fetch origin refs/heads/main:refs/remotes/origin/main; then
+        print_error "Cannot fetch origin/main. No recovery branch was created."
+        exit 1
+    fi
+
+    local_head="$(git rev-parse --verify HEAD)"
+    remote_head="$(git rev-parse --verify refs/remotes/origin/main)"
+    if [ "$local_head" != "$remote_head" ]; then
+        print_error "Feed recovery requires local main to match fetched origin/main exactly."
+        print_error "Local main: $local_head; origin/main: $remote_head. No recovery branch was created."
+        print_error "Sync local main, then rerun feed recovery."
         exit 1
     fi
 }
@@ -568,16 +1004,31 @@ if [ -z "$1" ]; then
     echo "  ./release.sh patch  # Auto-bump and release"
     echo "  ./release.sh minor 'Add new feature'"
     echo "  ./release.sh major 'Breaking changes'"
+    echo "  ./release.sh publish-feed 3.14.5  # Recover public feed for an existing release"
     exit 1
 fi
 
-RELEASE_TYPE=$1
-COMMIT_MSG="${2:-Auto-release}"
-# Preserve the user-provided release notes — auto-commit logic may overwrite COMMIT_MSG
-RELEASE_NOTES="$COMMIT_MSG"
+FEED_ONLY=0
+FEED_VERSION=""
+if [ "$1" = "publish-feed" ]; then
+    FEED_ONLY=1
+    FEED_VERSION="${2:-}"
+    if [ "$#" -ne 2 ] || [[ ! "$FEED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        print_error "Usage: ./release.sh publish-feed <published-version>"
+        exit 1
+    fi
+    RELEASE_TYPE="publish-feed"
+    COMMIT_MSG="Publish public feed for v$FEED_VERSION"
+    RELEASE_NOTES="$COMMIT_MSG"
+else
+    RELEASE_TYPE=$1
+    COMMIT_MSG="${2:-Auto-release}"
+    # Preserve the user-provided release notes — auto-commit logic may overwrite COMMIT_MSG
+    RELEASE_NOTES="$COMMIT_MSG"
+fi
 
 # Validate release type
-if [[ ! "$RELEASE_TYPE" =~ ^(patch|minor|major)$ ]]; then
+if [ "$FEED_ONLY" -eq 0 ] && [[ ! "$RELEASE_TYPE" =~ ^(patch|minor|major)$ ]]; then
     print_error "Invalid release type. Must be: patch, minor, or major"
     exit 1
 fi
@@ -590,19 +1041,48 @@ fi
 
 CURRENT_BRANCH=$(git branch --show-current)
 GITHUB_REPO=${GITHUB_REPO:-$(resolve_github_repo)}
-ensure_release_base
-ensure_vscode_marketplace_publish_ready
+FEED_BRANCH="release/public-feed-v${FEED_VERSION:-pending}"
 
-if repo_has_changes; then
+if [ "$FEED_ONLY" -eq 1 ] && [ "$CURRENT_BRANCH" = "$FEED_BRANCH" ]; then
+    print_info "Checking the existing public-feed recovery branch..."
+    git fetch origin main
+    if ! git merge-base --is-ancestor origin/main HEAD; then
+        print_error "The recovery branch is behind or diverged from main. Update it through normal review before retrying."
+        exit 1
+    fi
+else
+    ensure_release_base
+fi
+
+CURRENT_VERSION=$(node -p "require('./extension/package.json').version")
+FEED_BRANCH="release/public-feed-v${FEED_VERSION:-$CURRENT_VERSION}"
+
+if [ "$FEED_ONLY" -eq 0 ]; then
+    ensure_vscode_marketplace_publish_ready
+fi
+
+if [ "$FEED_ONLY" -eq 1 ] && [ "$CURRENT_BRANCH" = "$FEED_BRANCH" ]; then
+    ensure_public_feed_branch_scope
+elif repo_has_changes; then
     print_error "Working tree is dirty. Commit or stash changes first."
     exit 1
 fi
 
 # Get current version
-CURRENT_VERSION=$(node -p "require('./extension/package.json').version")
 print_info "Current version: $CURRENT_VERSION"
 LATEST_TAG="$(latest_release_tag)"
 LATEST_TAG_VERSION="${LATEST_TAG#v}"
+
+if [ "$FEED_ONLY" -eq 1 ]; then
+    publish_public_release_feed "$FEED_VERSION"
+    echo ""
+    if [ -n "${PUBLIC_FEED_PR_URL:-}" ]; then
+        print_warning "Public auto-updater publication is pending review and merge: $PUBLIC_FEED_PR_URL"
+    else
+        print_success "Public feed files already match Gofer v$FEED_VERSION"
+    fi
+    exit 0
+fi
 
 if version_gt "$CURRENT_VERSION" "${LATEST_TAG_VERSION:-0.0.0}"; then
     RELEASE_PHASE="publish"
@@ -625,15 +1105,11 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
         exit 1
     fi
 
-    ensure_release_paths_tracked \
-        "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix" \
-        "docs-site/static/releases/eai-gofer-latest.vsix" \
-        "docs-site/static/releases/eai-gofer-agent-plugin-$CURRENT_VERSION.zip" \
-        "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip"
-
     install_release_dependencies
     run_release_validation_gate "$CURRENT_VERSION"
-    run_release_check "Merged Gofer release artifact" npm run test:packaged-protocol -- --vsix "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix"
+    # The tag workflow validates the exact VSIX it publishes. Do not validate
+    # an older public Pages copy; the feed is promoted only after that workflow.
+    run_release_check "Merged Gofer release artifact" validate_merged_release_artifact "$CURRENT_VERSION"
 
     if remote_tag_exists "$TAG_NAME"; then
         print_error "Remote tag $TAG_NAME already exists"
@@ -654,6 +1130,9 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
     fi
 
     wait_for_release_workflow "$CURRENT_VERSION"
+    # A Marketplace delay or failure must not leave the independent Gofer
+    # auto-update channel stale. Prepare its reviewed feed PR first.
+    publish_public_release_feed "$CURRENT_VERSION"
     verify_vscode_marketplace_version "$CURRENT_VERSION"
 
     VSIX_URL="https://eai-support.github.io/eai-gofer/releases/eai-gofer-$CURRENT_VERSION.vsix"
@@ -666,7 +1145,12 @@ if [ "$RELEASE_PHASE" = "publish" ]; then
     fi
 
     echo ""
-    print_success "Released Gofer v$CURRENT_VERSION from merged main"
+    print_success "GitHub release workflow completed for Gofer v$CURRENT_VERSION"
+    if [ -n "${PUBLIC_FEED_PR_URL:-}" ]; then
+        print_warning "Auto-updater publication is pending review, merge, and Pages deployment: $PUBLIC_FEED_PR_URL"
+    else
+        print_success "Public feed files already match Gofer v$CURRENT_VERSION"
+    fi
     exit 0
 fi
 
@@ -948,32 +1432,9 @@ run_release_validation_gate "$NEW_VERSION"
 echo ""
 print_success "Pre-push validation complete"
 
-# Update GitHub Pages releases.json and mirror the release artifacts into the
-# public Pages host so VS Code, Claude, and Codex all update from one place.
-print_info "Updating GitHub Pages releases.json..."
-if [ -f "scripts/update-releases.js" ]; then
-    node scripts/update-releases.js "$NEW_VERSION" "$RELEASE_NOTES"
-    print_success "Updated GitHub Pages release feed"
-else
-    print_warning "GitHub Pages update script not found, skipping..."
-fi
-
-print_info "Publishing VSIX + agent plugin artifacts to GitHub Pages..."
-if [ -f "scripts/publish-public-release-assets.mjs" ]; then
-    node scripts/publish-public-release-assets.mjs "$NEW_VERSION"
-    print_success "Published public release assets"
-else
-    print_warning "Public release publisher not found, skipping asset mirroring..."
-fi
-
 # Commit
 print_info "Committing changes..."
 git add -A
-ensure_release_paths_tracked \
-    "docs-site/static/releases/eai-gofer-$NEW_VERSION.vsix" \
-    "docs-site/static/releases/eai-gofer-latest.vsix" \
-    "docs-site/static/releases/eai-gofer-agent-plugin-$NEW_VERSION.zip" \
-    "docs-site/static/releases/eai-gofer-agent-plugin-latest.zip"
 
 git commit --no-verify -m "release: v$NEW_VERSION
 
