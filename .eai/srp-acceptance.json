@@ -1,0 +1,12 @@
+{
+  "schema": "eai.srp_acceptance.v1",
+  "repository": "eai-support/eai-gofer",
+  "requirements": [
+    {
+      "requirement_id": "3610-cli-bundled-support-on-request",
+      "criterion_text": "Canonical, generated, packaged and fresh-workspace Gofer instructions do not offer support when error guidance is unavailable. Explicit support consent and one-query error guidance remain intact, and all mirrored instructions derive from the same canonical contract.",
+      "feature_ids": ["eai-gofer-refresh-compatibility"],
+      "source_refs": [{"source_kind": "issue", "repository": "enterpriseaigroup/Issues2025", "number": 3610}]
+    }
+  ]
+}
