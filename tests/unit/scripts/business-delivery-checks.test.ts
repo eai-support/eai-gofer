@@ -256,4 +256,50 @@ describe('business response executable checks', () => {
     expect(result.code).toBe(0);
     expect(JSON.stringify(result.body)).not.toContain('serializer');
   });
+  const businessUpdateLines = [
+    'Recommendation: Reconcile before continuing.',
+    'Why: The observed confidence is below the configured threshold.',
+    'Next step: Review the missing evidence.',
+    'Owner: Gofer.',
+    'User action: Not required.',
+  ];
+  it('requires a complete, owned business update only when requested', () => {
+    const update = businessUpdateLines.join('\n');
+    expect(response(update, '--kind', 'answer', '--business-update').code).toBe(0);
+    expect(response('The review is blocked.', '--kind', 'answer').code).toBe(0);
+  });
+  it.each([
+    ['Recommendation', 'BUSINESS_UPDATE_FIELD_MISSING:RECOMMENDATION'],
+    ['Why', 'BUSINESS_UPDATE_FIELD_MISSING:WHY'],
+    ['Next step', 'BUSINESS_UPDATE_FIELD_MISSING:NEXT_STEP'],
+    ['Owner', 'BUSINESS_UPDATE_FIELD_MISSING:OWNER'],
+    ['User action', 'BUSINESS_UPDATE_FIELD_MISSING:USER_ACTION'],
+  ])('rejects a business update missing %s', (field, finding) => {
+    const text = businessUpdateLines.filter((line) => !line.startsWith(`${field}:`)).join('\n');
+    expect(response(text, '--kind', 'answer', '--business-update').body.findings).toContain(
+      finding
+    );
+  });
+  it('does not accept empty business-update headings', () => {
+    const empty = [
+      'Recommendation:',
+      'Why: evidence is incomplete.',
+      'Next step: inspect the input.',
+      'Owner: Gofer.',
+      'User action: Not required.',
+    ].join('\n');
+    expect(response(empty, '--business-update').body.findings).toContain(
+      'BUSINESS_UPDATE_FIELD_MISSING:RECOMMENDATION'
+    );
+  });
+  it('explains confidence limits and independent gates in blocker guidance', () => {
+    const guidance = fs.readFileSync(
+      path.join(ROOT, '.specify/references/blocker-mediation.md'),
+      'utf8'
+    );
+    expect(guidance).toMatch(/Choice probabilities identify the\s+closest\s+alternative only/);
+    expect(guidance).toMatch(/If the API\s+returns no\s+reason, say that the cause is unknown/);
+    expect(guidance).toMatch(/Report independent gates separately/);
+    expect(guidance).toMatch(/Do not make confidence-only holds\s+advisory/);
+  });
 });

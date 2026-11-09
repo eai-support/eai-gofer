@@ -19,6 +19,21 @@ describe('generate-commands check mode', () => {
     expect(fs.readFileSync(CANONICAL_COMMAND, 'utf8')).toBe(before);
   });
 
+  it('reuses original-failure tenant guidance in generated AGENTS and special commands', () => {
+    const agents = fs.readFileSync(path.join(ROOT, '.agents/AGENTS.md'), 'utf8');
+    expect(agents).toContain(
+      'reuse the original-failure guidance for `app_token_tenant_context_required`'
+    );
+    expect(agents).toContain('only if it has not been queried');
+    for (const file of ['0_gofer_start.md', '5_gofer_implement.md', 'gofer_eai_first_run.md']) {
+      const content = fs
+        .readFileSync(path.join(ROOT, '.specify/commands', file), 'utf8')
+        .replace(/\s+/g, ' ');
+      expect(content).toMatch(/reuse the original-failure guidance/i);
+      expect(content).toMatch(/only if it has not been queried/i);
+    }
+  });
+
   it('keeps the capability validation contract singular after regeneration', () => {
     const command = fs.readFileSync(CANONICAL_COMMAND, 'utf8');
 

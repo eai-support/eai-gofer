@@ -106,6 +106,37 @@ automatically delete it.
 
 ## User Update
 
+For a status, blocker, low-confidence review, or decision, use these five labels
+so the reader can act without asking for a translation:
+
+```text
+Recommendation: Continue, reconcile, or wait.
+Why: State the verified rule or evidence that supports the recommendation.
+Next step: Name one concrete action.
+Owner: Name the verified person or role responsible; do not guess.
+User action: Required — <one exact action>, or Not required.
+```
+
+Keep the stop rule separate from its cause. A low-confidence result explains why
+Gofer held the task (the score did not meet the configured threshold); it does
+not explain why Jev chose that score. Choice probabilities identify the closest
+alternative only. Do not present them as Jev's reason. If the API returns no
+reason, say that the cause is unknown. Distinguish a missing or oversized input,
+a local budget hold, a provider error, and a review conflict when evidence shows
+which one occurred. Never report a provider 400 cause as known unless a safe
+diagnostic field establishes it.
+
+Report independent gates separately. State each gate's effect on the current
+goal and name its owner only when known. A Jev result does not approve CI,
+reviews, security, deployment, or release. Do not make confidence-only holds
+advisory or change the threshold without explicit approval. Continue safe
+evidence review rather than asking the user to approve an unexplained override.
+
+Run the response format check for these replies with
+`node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file> --kind answer --business-update`.
+The check verifies required labels and basic writing rules. It cannot verify
+that the explanation is true or the named owner is correct.
+
 State the result, business impact and one next action:
 
 > The page opens, but sign-in still fails. Access is needed to check the account

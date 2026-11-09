@@ -96,7 +96,7 @@ const HELPER_BODY_CONTRACTS: Record<
       '## Workspace Root',
       '## Environment Check',
       '## EAI CLI',
-      '## Tenant And Login',
+      '## Workspace And Login',
       '## Template Readiness',
       '## Drift And Recovery',
       '## Next Action',

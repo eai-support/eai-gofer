@@ -25,8 +25,8 @@ function newCustomerFeatureGraph(): unknown {
         stage: 'architecture',
         visibility: 'public-contract',
         status: 'current',
-        capabilityId: 'eai.publicapi.capability.permit-status.v1',
-        contractVersion: 'v1',
+        capabilityId: 'eai.publicapi.capability.permit-status.v4',
+        contractVersion: 'v4',
       },
     ],
     edges: [

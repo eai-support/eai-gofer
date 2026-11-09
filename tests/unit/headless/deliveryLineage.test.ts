@@ -35,7 +35,7 @@ function createInternalLineage(): DeliveryLineageGraph {
         stage: 'architecture',
         visibility: 'public-contract',
         status: 'current',
-        capabilityId: 'eai.publicapi.capability.document-search.v1',
+        capabilityId: 'eai.publicapi.capability.document-search.v4',
         contractVersion: '2026-07-18',
         source: {
           repository: 'PublicAPI',

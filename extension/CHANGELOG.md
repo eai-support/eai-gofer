@@ -2,6 +2,56 @@
 
 All notable changes to the Gofer extension will be documented in this file.
 
+## [3.14.5] - 2026-10-14
+
+Complete-evidence Jev review
+
+## [3.14.4] - 2026-10-14
+
+Offer EAI support only when requested and guide outcome-based issue and pull request titles
+
+## [3.14.3] - 2026-10-08
+
+Validate completed planning artifacts and preserve reviewed Gofer delivery checkpoints
+
+## [3.14.2] - 2026-10-08
+
+Preserve the first verifier key and install its trusted registry atomically
+
+## [3.14.1] - 2026-10-07
+
+Repair deterministic Gofer release checks for managed deployment
+
+## [3.14.0] - 2026-10-07
+
+Ship managed deployment source and local handoff contracts
+
+## [Unreleased]
+
+Add the EAI-managed hosting choice and hand deployment to the canonical EAI CLI
+with exact-operation resume and actionable setup recovery (#3503).
+
+## [3.13.4] - 2026-09-29
+
+Jev evidence safety and blocker guidance
+
+## [3.13.3] - 2026-09-29
+
+Use workspace language in customer guidance
+
+## [3.13.2] - 2026-09-25
+
+Auto-release
+
+## [3.13.1] - 2026-09-25
+
+Standardize EAI PublicAPI guidance on current interfaces and add regression
+coverage
+
+## [3.13.0] - 2026-09-23
+
+Add first-run welcome, review-gated learning, and verified runtime cleanup
+
 ## [3.12.9] - 2026-09-19
 
 Accept release-tagged eai-app-template provenance in readiness checks (#364)

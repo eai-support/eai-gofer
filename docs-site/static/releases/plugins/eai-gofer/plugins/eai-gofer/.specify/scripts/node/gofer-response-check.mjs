@@ -3,7 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export function checkResponse(text, { kind = 'progress', previous = '', technical = false } = {}) {
+const BUSINESS_UPDATE_FIELDS = ['Recommendation', 'Why', 'Next step', 'Owner', 'User action'];
+
+export function checkResponse(text, { kind = 'progress', previous = '', technical = false, businessUpdate = false } = {}) {
   const findings = [];
   if (typeof text !== 'string' || !text.trim()) findings.push('EMPTY_REPLY');
   const prose = String(text ?? '').replace(/```[\s\S]*?```/g, '');
@@ -16,6 +18,12 @@ export function checkResponse(text, { kind = 'progress', previous = '', technica
     if (/\b(?:npm|gh|curl|node)\s+(?:run|api|install|\.specify)/.test(prose)) findings.push('MOVE_COMMAND_TO_EVIDENCE');
     if (prose.split(/(?<=[.!?])\s+/).some(s => s.split(/\s+/).length > 35)) findings.push('SPLIT_LONG_SENTENCE');
   }
+  if (businessUpdate) {
+    for (const field of BUSINESS_UPDATE_FIELDS) {
+      const heading = new RegExp(`^[ \\t]*(?:[-*][ \\t]*)?(?:\\*\\*)?${field}(?:\\*\\*)?:[ \\t]*\\S`, 'im');
+      if (!heading.test(prose)) findings.push(`BUSINESS_UPDATE_FIELD_MISSING:${field.toUpperCase().replace(/ /g, '_')}`);
+    }
+  }
   const normalize = value => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   if (kind === 'progress' && previous && normalize(previous) === normalize(prose)) findings.push('REPEATED_UPDATE');
   return { status: findings.length ? 'fail' : 'pass', findings, wordCount: words.length,
@@ -25,12 +33,13 @@ export function checkResponse(text, { kind = 'progress', previous = '', technica
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help')) {
-    console.log('Usage: gofer-response-check.mjs --input <draft-file> [--kind progress|answer] [--previous <file>] [--technical]');
+    console.log('Usage: gofer-response-check.mjs --input <draft-file> [--kind progress|answer] [--previous <file>] [--technical] [--business-update]');
     return;
   }
   const values = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--technical') values.technical = true;
+    else if (args[i] === '--business-update') values.businessUpdate = true;
     else if (['--input', '--kind', '--previous'].includes(args[i]) && args[i + 1] && !args[i + 1].startsWith('--')) values[args[i].slice(2)] = args[++i];
     else throw new Error('Unknown or missing argument');
   }

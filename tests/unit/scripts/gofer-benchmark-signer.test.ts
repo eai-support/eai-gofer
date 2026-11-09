@@ -160,7 +160,11 @@ async function fixture({ activate = true, signerKeyId = 'verifier-key', worktree
     JSON.stringify({ corpusHash, report })
   );
 
-  const verifier: VerifierInstall = await installVerifier({ trustRoot, keyId: signerKeyId, activate });
+  const verifier: VerifierInstall = await installVerifier({
+    trustRoot,
+    keyId: signerKeyId,
+    activate,
+  });
   roots.push(verifier.protectedDirectory);
   seam.protectedRegistry = verifier.protectedRegistry;
   const snapshot = await captureHeldOutResultSnapshot({ corpusRoot, workspaceRoot, trustRoot });
@@ -267,14 +271,25 @@ describe.skipIf(process.platform !== 'darwin' || process.execPath.startsWith('/U
 
     it('leaves no recheck material behind', async () => {
       const f = await fixture();
-      const before = (await readdir(tmpdir())).filter((name) =>
-        name.startsWith('gofer-heldout-recheck-')
-      );
-      await signHeldOutBenchmarkAttestation(request(f));
-      const after = (await readdir(tmpdir())).filter((name) =>
-        name.startsWith('gofer-heldout-recheck-')
-      );
-      expect(after).toEqual(before);
+      const isolatedTmp = await mkdtemp(path.join(tmpdir(), 'gofer-signer-recheck-owned-'));
+      roots.push(isolatedTmp);
+      const keys = ['TMPDIR', 'TMP', 'TEMP'] as const;
+      const previous = keys.map((key) => ({
+        key,
+        present: Object.hasOwn(process.env, key),
+        value: process.env[key],
+      }));
+      try {
+        for (const key of keys) process.env[key] = isolatedTmp;
+        expect(tmpdir()).toBe(isolatedTmp);
+        await signHeldOutBenchmarkAttestation(request(f));
+        expect(await readdir(isolatedTmp)).toEqual([]);
+      } finally {
+        for (const { key, present, value } of previous) {
+          if (present) process.env[key] = value;
+          else delete process.env[key];
+        }
+      }
     });
   }
 );

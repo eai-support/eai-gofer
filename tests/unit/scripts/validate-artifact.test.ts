@@ -199,6 +199,56 @@ created: '2026-01-01'
         expect(result.valid).toBe(false);
       }
     });
+
+    it('reports a warning-only strict denial without a Bash empty-array error', async () => {
+      const planPath = path.join(tmpDir, 'plan.md');
+      fs.writeFileSync(
+        planPath,
+        '# Plan\n\n## Technical Context\n\nComplete.\n\n## Implementation Phases\n\nPhase one.\n'
+      );
+
+      try {
+        await execFileAsync('bash', [SCRIPT_PATH, 'plan', planPath, '--strict']);
+        expect.fail('A plan without required frontmatter must be denied');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        expect(error.code).toBe(1);
+        expect(error.stdout).toContain('WARNING: No YAML frontmatter found');
+        expect(error.stderr).toBe('');
+      }
+    });
+
+    it('reports an error-only denial without a Bash empty-array error', async () => {
+      const planPath = path.join(tmpDir, 'plan.md');
+      fs.writeFileSync(
+        planPath,
+        `---
+feature: Test Feature
+spec: spec.md
+status: ready
+created: '2026-01-01'
+---
+
+# Plan
+
+## Implementation Phases
+
+Phase one.
+`
+      );
+
+      try {
+        await execFileAsync('bash', [SCRIPT_PATH, 'plan', planPath, '--strict']);
+        expect.fail('A plan without technical context must be denied');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        expect(error.code).toBe(1);
+        expect(error.stdout).toContain(
+          'ERROR: Missing section: ## Tech Stack or ## Technical Context'
+        );
+        expect(error.stderr).toBe('');
+      }
+    });
   });
 
   describe('plan validation', () => {

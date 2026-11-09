@@ -2,17 +2,92 @@
 
 import { constants } from 'fs';
 import { promises as fs } from 'fs';
+import { execFile, spawn } from 'child_process';
 import path from 'path';
 import process from 'process';
+import { promisify } from 'util';
 
 const SECRET_RELATIVE_PATH = path.join('.specify', 'secrets', 'typesafe.env');
-const POLICY_RELATIVE_PATH = path.join('.specify', 'config', 'typesafe-semantic-review.json');
+const POLICY_RELATIVE_PATHS = [
+  path.join('.specify', 'config', 'typesafe-semantic-review.json'),
+  path.join('.specify', 'config', 'typesafe-learning-review.json'),
+];
+const KEYCHAIN_SERVICE = 'com.enterpriseai.gofer.jev';
+const KEYCHAIN_ACCOUNT = 'shared-api-key';
+const execFileAsync = promisify(execFile);
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const action = argv.find((value) => value === '--connect' || value === '--disconnect' || value === '--status');
-  if (!action || argv.length !== 1) throw new Error('Usage: --connect | --disconnect | --status');
-  return action.slice(2);
+  const scopeIndex = argv.indexOf('--scope');
+  const scope = scopeIndex === -1 ? (process.platform === 'darwin' ? 'shared' : 'project') : argv[scopeIndex + 1];
+  const expectedLength = scopeIndex === -1 ? 1 : 3;
+  if (!action || argv.length !== expectedLength || !['project', 'shared'].includes(scope)) {
+    throw new Error('Usage: --connect | --disconnect | --status [--scope project|shared]');
+  }
+  if (action === '--status' && scopeIndex !== -1) {
+    throw new Error('--status reports the effective credential and does not accept --scope.');
+  }
+  return { action: action.slice(2), scope };
 }
+
+const macOSKeychain = {
+  async has() {
+    if (process.platform !== 'darwin') return false;
+    try {
+      await execFileAsync('/usr/bin/security', [
+        'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE,
+      ], { encoding: 'utf8', maxBuffer: 64 * 1024 });
+      return true;
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return false;
+      throw new Error('Gofer could not check the shared Jev credential in macOS Keychain.');
+    }
+  },
+  async read() {
+    if (process.platform !== 'darwin') return '';
+    try {
+      const { stdout } = await execFileAsync('/usr/bin/security', [
+        'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE, '-w',
+      ], { encoding: 'utf8', maxBuffer: 64 * 1024 });
+      return String(stdout).trim();
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return '';
+      throw new Error('Gofer could not read the shared Jev credential from macOS Keychain.');
+    }
+  },
+  async write(key) {
+    if (process.platform !== 'darwin') throw new Error('Shared Jev credentials require macOS Keychain.');
+    const encoded = Buffer.from(String(key), 'utf8').toString('hex');
+    const child = spawn('/usr/bin/security', ['-i'], { stdio: ['pipe', 'ignore', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      if (stderr.length < 64 * 1024) stderr += chunk.toString('utf8');
+    });
+    child.stdin.end(
+      `add-generic-password -a "${KEYCHAIN_ACCOUNT}" -s "${KEYCHAIN_SERVICE}" ` +
+      `-l "EAI Gofer Jev API key" -U -X ${encoded}\n`
+    );
+    const exitCode = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code) => resolve(code));
+    });
+    if (exitCode !== 0 || stderr.includes('SecKeychainItem')) {
+      throw new Error('macOS Keychain did not save the shared Jev credential.');
+    }
+  },
+  async remove() {
+    if (process.platform !== 'darwin') return false;
+    try {
+      await execFileAsync('/usr/bin/security', [
+        'delete-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE,
+      ]);
+      return true;
+    } catch (error) {
+      if (error?.code === 44 || error?.stderr?.includes('could not be found')) return false;
+      throw new Error('Gofer could not remove the shared Jev credential from macOS Keychain.');
+    }
+  },
+};
 
 // A lexical check alone does not stop a symlinked intermediate directory
 // (e.g. .specify/secrets) from redirecting the confined path outside the
@@ -80,6 +155,34 @@ async function existingFile(target) {
 // O_NOFOLLOW only closes the small remaining gap between that check and the
 // open, on platforms that support it.
 const noFollowFlag = process.platform === 'win32' ? 0 : constants.O_NOFOLLOW;
+function sameIdentity(left, right) {
+  if (left.dev === undefined || left.ino === undefined ||
+      right.dev === undefined || right.ino === undefined) return true;
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function withVerifiedParent(target, action) {
+  const parent = path.dirname(target);
+  const parentHandle = await fs.open(parent,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  const openedParent = await parentHandle.stat();
+  try {
+    const currentParent = await fs.lstat(parent);
+    if (!openedParent.isDirectory() || currentParent.isSymbolicLink() ||
+        !sameIdentity(openedParent, currentParent)) {
+      throw new Error('Gofer credential parent directory changed during access.');
+    }
+    const result = await action();
+    const parentAfter = await fs.lstat(parent);
+    if (parentAfter.isSymbolicLink() || !sameIdentity(openedParent, parentAfter)) {
+      throw new Error('Gofer credential parent directory changed during access.');
+    }
+    return result;
+  } finally {
+    await parentHandle.close();
+  }
+}
+
 async function assertNotSymlink(target) {
   const info = await fs.lstat(target).catch((error) => {
     if (error?.code === 'ENOENT') return null;
@@ -93,15 +196,82 @@ async function assertNotSymlink(target) {
 // check immediately before opening, plus O_NOFOLLOW where available, closes
 // that window instead of merely trusting the earlier confinedPath check.
 async function readNoFollow(target) {
-  await assertNotSymlink(target);
-  const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
-  try { return await handle.readFile('utf8'); } finally { await handle.close(); }
+  return withVerifiedParent(target, async () => {
+    await assertNotSymlink(target);
+    const handle = await fs.open(target, constants.O_RDONLY | noFollowFlag);
+    try {
+      const opened = await handle.stat();
+      const current = await fs.lstat(target);
+      if (!opened.isFile() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
+        throw new Error('Gofer credential path must be a stable regular file.');
+      }
+      return await handle.readFile('utf8');
+    } finally { await handle.close(); }
+  });
 }
 
 async function writeNoFollow(target, content, mode) {
-  await assertNotSymlink(target);
-  const handle = await fs.open(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, mode);
-  try { await handle.writeFile(content); } finally { await handle.close(); }
+  return withVerifiedParent(target, async () => {
+    await assertNotSymlink(target);
+    const handle = await fs.open(target,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag, mode);
+    try {
+      const opened = await handle.stat();
+      const current = await fs.lstat(target);
+      if (!opened.isFile() || current.isSymbolicLink() || !sameIdentity(opened, current)) {
+        throw new Error('Gofer credential path must be a stable regular file.');
+      }
+      await handle.writeFile(content);
+      await handle.sync();
+    } finally { await handle.close(); }
+  });
+}
+
+async function unlinkNoFollow(target) {
+  return withVerifiedParent(target, async () => {
+    const before = await fs.lstat(target);
+    if (before.isSymbolicLink() || !before.isFile()) {
+      throw new Error('Gofer credential path must be a regular file.');
+    }
+    await fs.unlink(target);
+  });
+}
+
+async function ensurePrivateParent(target) {
+  const parent = path.dirname(target);
+  const grandparent = path.dirname(parent);
+  const grandparentHandle = await fs.open(grandparent,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+  const openedGrandparent = await grandparentHandle.stat();
+  try {
+    const currentGrandparent = await fs.lstat(grandparent);
+    if (!openedGrandparent.isDirectory() || currentGrandparent.isSymbolicLink() ||
+        !sameIdentity(openedGrandparent, currentGrandparent)) {
+      throw new Error('Gofer credential parent directory changed during setup.');
+    }
+    await fs.mkdir(parent, { mode: 0o700 }).catch((error) => {
+      if (error?.code !== 'EEXIST') throw error;
+    });
+    const parentHandle = await fs.open(parent,
+      constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | noFollowFlag);
+    try {
+      const openedParent = await parentHandle.stat();
+      const [parentCurrent, grandparentAfter] = await Promise.all([
+        fs.lstat(parent),
+        fs.lstat(grandparent),
+      ]);
+      if (!openedParent.isDirectory() || parentCurrent.isSymbolicLink() ||
+          !sameIdentity(openedParent, parentCurrent) || grandparentAfter.isSymbolicLink() ||
+          !sameIdentity(openedGrandparent, grandparentAfter)) {
+        throw new Error('Gofer credential parent directory changed during setup.');
+      }
+      await parentHandle.chmod(0o700);
+    } finally {
+      await parentHandle.close();
+    }
+  } finally {
+    await grandparentHandle.close();
+  }
 }
 
 async function readSecretFile(secretPath) {
@@ -111,10 +281,16 @@ async function readSecretFile(secretPath) {
 }
 
 async function writePolicyEnabled(workspace, enabled) {
-  const policyPath = await confinedPath(workspace, POLICY_RELATIVE_PATH);
-  const current = JSON.parse(await readNoFollow(policyPath));
-  current.enabled = enabled;
-  await writeNoFollow(policyPath, `${JSON.stringify(current, null, 2)}\n`, 0o600);
+  for (const relativePath of POLICY_RELATIVE_PATHS) {
+    const policyPath = await confinedPath(workspace, relativePath);
+    // Older Gofer workspaces have only the semantic-review policy. Keep
+    // connect/disconnect compatible until workspace bootstrap adds the
+    // reviewed-learning policy.
+    if (!(await existingFile(policyPath))) continue;
+    const current = JSON.parse(await readNoFollow(policyPath));
+    current.enabled = enabled;
+    await writeNoFollow(policyPath, `${JSON.stringify(current, null, 2)}\n`, 0o600);
+  }
 }
 
 async function promptForKey() {
@@ -144,27 +320,78 @@ async function promptForKey() {
   return String(key).trim();
 }
 
-export async function credentialStatus({ workspace = process.cwd(), env = process.env } = {}) {
-  const { source } = await resolveApiKey({ workspace, env });
+export async function credentialStatus({ workspace = process.cwd(), env = process.env, keychain = macOSKeychain } = {}) {
+  const { source } = await resolveApiKey({ workspace, env, keychain });
   return {
     configured: source !== 'none',
     source,
-    secretPath: SECRET_RELATIVE_PATH,
+    secretPath: source === 'project_secret_file' ? SECRET_RELATIVE_PATH : null,
+    sharedAcrossLocalWorkspaces: source === 'macos_keychain',
   };
 }
 
-export async function resolveApiKey({ workspace = process.cwd(), env = process.env } = {}) {
+export async function resolveApiKey({ workspace = process.cwd(), env = process.env, keychain = macOSKeychain } = {}) {
   const environmentKey = String(env.TYPESAFE_API_KEY || '').trim();
   if (environmentKey) return { apiKey: environmentKey, source: 'environment' };
   const fileKey = await readSecretFile(await confinedPath(workspace, SECRET_RELATIVE_PATH));
-  return { apiKey: fileKey, source: fileKey ? 'project_secret_file' : 'none' };
+  if (fileKey) return { apiKey: fileKey, source: 'project_secret_file' };
+  if (env.GOFER_DISABLE_SHARED_CREDENTIALS !== '1') {
+    const sharedKey = String(await keychain.read()).trim();
+    if (sharedKey) return { apiKey: sharedKey, source: 'macos_keychain' };
+  }
+  return { apiKey: '', source: 'none' };
+}
+
+export async function sharedCredentialConfigured({ keychain = macOSKeychain } = {}) {
+  return keychain.has();
+}
+
+export async function requestTypeSafeEvaluation({ workspace, env = process.env, fetchImpl = globalThis.fetch, policy, projection, rubric, keychain = macOSKeychain }) {
+  const { apiKey, source } = await resolveApiKey({ workspace, env, keychain });
+  if (!apiKey) return { status: 'not_configured', networkCalled: false };
+  let response;
+  try {
+    response = await fetchImpl(policy.endpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(policy.timeoutMs),
+      body: JSON.stringify({ model: policy.model, state: JSON.stringify(projection), questions: rubric }),
+    });
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      networkCalled: true,
+      reason: ['AbortError', 'TimeoutError'].includes(error?.name) ? 'timeout' : 'network_error',
+    };
+  }
+  if (!response.ok) return { status: 'unavailable', networkCalled: true, httpStatus: response.status };
+  try {
+    if (!response.body?.getReader) throw new Error('response body is not streamable');
+    const reader = response.body.getReader();
+    const chunks = [];
+    let bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2 * 1024 * 1024) {
+        await reader.cancel('response too large');
+        throw new Error('response too large');
+      }
+      chunks.push(Buffer.from(value));
+    }
+    const raw = Buffer.concat(chunks, bytes).toString('utf8');
+    return { status: 'received', networkCalled: true, credentialSource: source, payload: JSON.parse(raw) };
+  } catch {
+    return { status: 'unavailable', networkCalled: true, reason: 'invalid_response' };
+  }
 }
 
 export async function connect({ workspace = process.cwd(), key } = {}) {
   const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
   if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
-  await fs.mkdir(path.dirname(secretPath), { recursive: true, mode: 0o700 });
+  await ensurePrivateParent(secretPath);
   if (await existingFile(secretPath)) await fs.chmod(secretPath, 0o600);
   await writeNoFollow(secretPath, `TYPESAFE_API_KEY=${resolvedKey}\n`, 0o600);
   await fs.chmod(secretPath, 0o600);
@@ -172,17 +399,36 @@ export async function connect({ workspace = process.cwd(), key } = {}) {
   return { configured: true, source: process.env.TYPESAFE_API_KEY ? 'environment' : 'project_secret_file', secretPath: SECRET_RELATIVE_PATH };
 }
 
+export async function connectShared({ workspace = process.cwd(), key, keychain = macOSKeychain } = {}) {
+  await assertSafeWorkspaceRoot(workspace);
+  const resolvedKey = String(key || process.env.TYPESAFE_API_KEY || '').trim() || await promptForKey();
+  if (!resolvedKey) throw new Error('TypeSafe API key cannot be empty.');
+  await keychain.write(resolvedKey);
+  const stored = String(await keychain.read()).trim();
+  if (!stored) throw new Error('macOS Keychain saved no Jev credential.');
+  return { configured: true, source: 'macos_keychain', secretPath: null, sharedAcrossLocalWorkspaces: true };
+}
+
 export async function disconnect({ workspace = process.cwd() } = {}) {
   const secretPath = await confinedPath(workspace, SECRET_RELATIVE_PATH);
   const existed = await existingFile(secretPath);
-  if (existed) await fs.unlink(secretPath);
+  if (existed) await unlinkNoFollow(secretPath);
   await writePolicyEnabled(workspace, false);
   return { removedProjectSecret: existed, environmentStillConfigured: Boolean(process.env.TYPESAFE_API_KEY), secretPath: SECRET_RELATIVE_PATH };
 }
 
+export async function disconnectShared({ workspace = process.cwd(), keychain = macOSKeychain } = {}) {
+  await assertSafeWorkspaceRoot(workspace);
+  const removed = await keychain.remove();
+  return { removedSharedCredential: removed, source: 'macos_keychain', sharedAcrossLocalWorkspaces: false };
+}
+
 async function main() {
-  const action = parseArgs(process.argv.slice(2));
-  const result = action === 'connect' ? await connect() : action === 'disconnect' ? await disconnect() : await credentialStatus();
+  const { action, scope } = parseArgs(process.argv.slice(2));
+  const result = action === 'status' ? await credentialStatus()
+    : action === 'connect' && scope === 'shared' ? await connectShared()
+    : action === 'disconnect' && scope === 'shared' ? await disconnectShared()
+    : action === 'connect' ? await connect() : await disconnect();
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

@@ -77,27 +77,27 @@ Do not apply later delivery requirements to an early MVP.
 
 ## Application Classification And EAI Preflight
 
-Before any EAI CLI, login, tenant, template, or app-enrollment action:
+Before any EAI CLI, login, workspace, template, or app-enrollment action:
 
 1. Classify the request as **EAI app delivery** or **non-application work** using the application signals in `.specify/commands/0_gofer_start.md`.
 2. Create `.specify/specs/{feature}/` and record the active delivery scope before app or operator-tool source work.
-3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI tenant/app setup and continue the Gofer research/docs path. Is that right?"**
-4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai tenant select`, `eai init`, or `/gofer:eai-first-run`.
+3. If the request is clearly non-app work, confirm once: **"This looks like non-app work, so I will skip EAI workspace/app setup and continue the Gofer research/docs path. Is that right?"**
+4. If the user confirms non-app, record the decision and mark app-only capabilities `not_applicable`. Do not run `eai whoami`, `eai workspace select`, `eai init`, or `/gofer:eai-first-run`.
 5. For local MVP app work, validate the implemented user journey, repo runner, and preview evidence. Do not require EAI setup, authentication, or deployment when the active specification does not require them.
-6. When the feature uses EAI Platform services, requires a tenant, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
+6. When the feature uses EAI Platform services, requires a workspace, or prepares deployment, run `eai whoami` and record the EAI readiness evidence in `eai-preflight.md`.
 7. When the feature creates, changes, or validates an EAI Platform app integration, run `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --json`. A missing checker or status other than `ready` blocks that EAI capability. It does not block unrelated local MVP work.
 8. When authentication is implemented or required, validate provider, callback, sign-in, session, first protected API call, and safe denied access.
 9. When deployment is requested or claimed, require the relevant EAI template, security, configuration, and deployment evidence before completion.
 10. For durable app delivery, use EAI Platform first, Azure second, and every other stack only by explicit exception.
 11. If the user changes scope, update `spec.md`, `plan.md`, `tasks.md`, `traceability.md`, and validation scope before continuing. Explain the business effect and evidence change.
 12. Do not accept copied marker files, partial scaffolds, or custom templates as readiness evidence for an EAI capability.
-13. Do not write tokens, secrets, private tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
+13. Do not write tokens, secrets, private workspace IDs, Entra/CIAM authority tenant IDs, or local `.env` values into Gofer artifacts; record only product-safe readiness status and evidence.
 
 **Authentication Access Decision**
 
 When adding or changing authentication, read `.specify/references/platform/eai-auth-access.md`. Ask: **"Who should be able to use this app: only members of its EAI workspace (recommended), or any authenticated EAI user?"** Default to `workspace-only`. Wait for the answer before changing auth code. An unanswered question must not widen access. Preserve stricter existing rules. Record the answer in the feature spec; do not repeat a confirmed question unless its scope changes.
 
-Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-tenant requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
+Confirm the sign-in method separately: EAI sign-in or client SSO through EAI. Verify platform support and CLI syntax; do not invent SSO commands. Enforce trusted server-side workspace membership and app permissions. A session, CIAM directory ID, or email domain alone is not workspace access. Platform-wide sign-in never grants access to another workspace's data. Test allowed and denied users, revoked membership, unavailable membership checks, and cross-workspace requests. These checks apply only when authentication is implemented or required, not to non-app work or an auth-free local MVP.
 
 ## Token And Cost Policy
 <!-- gofer:token-cost-policy:start -->
@@ -158,15 +158,27 @@ certification.
 16. If any check fails, rewrite the reply before sending it.
 **Business Updates And Goal Checks**
 
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
+
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
 Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
 
+For status, blocker, low-confidence, and decision replies, use the Recommendation, Why, Next step, Owner, and User action labels in .specify/references/blocker-mediation.md, then add the --business-update option to the response checker. State only evidence-backed causes; probabilities show the closest alternative, not why Jev chose its answer.
+
 **Priority And Outcome Protection**
+
+Jev must judge goal alignment, specification currency, executable test coverage, and blast-radius completeness at every configured checkpoint. Missing evidence, a conflict, partial alignment, low confidence, or an unavailable verdict blocks the affected task. Update the records and rerun the checkpoint. Never ignore the result, edit the receipt, or complete work with an unresolved verdict.
 
 Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
-Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+**Pre-Edit Chat Readiness**
+
+Before each source or test edit batch for a feature, run `node .specify/scripts/node/gofer-pre-edit-check.mjs --workspace <repo-root> --feature-dir <feature-dir> --task Tnnn --changed-file <repo-relative-path>`, repeating `--changed-file` for every intended path. This confirms that the goal ledger, specification, plan, and tasks are usable, and that the selected task and edit scope are current. Start no edit until it returns `ready`. If it blocks, create or update the missing feature records, resolve the finding, then rerun the gate. Reuse existing feature records; conversation-only work needs no feature files.
+
+Offer an optional Jev chat-readiness review when context could affect whether the work is set up for success. Run it only when the user explicitly selects it, for example: “Check whether this chat is set up for success with Jev.” Summarize only relevant chat context in a short feature-local `chat-readiness-context.md`; do not send the transcript, secrets, or unrelated personal information. Then add `--jev-chat-readiness --chat-context-file chat-readiness-context.md` to the pre-edit check. Jev assesses the selected goal, specification, plan, tasks, decisions, context, and proposed scope. No Jev request occurs by default. A blocked, low-confidence, unavailable, or non-ready result blocks the selected task until reconciled. Jev cannot approve scope changes or replace deterministic checks.
+
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a workspace, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 <!-- gofer:business-progress:end -->
 
@@ -287,14 +299,27 @@ Task generation dispatches agents — keep main context lightweight.
    .specify/scripts/bash/check-prerequisites.sh --json
    ```
 
-   Parse JSON for FEATURE_DIR, AVAILABLE_DOCS
+   Parse JSON for FEATURE_DIR, AVAILABLE_DOCS. Stop if the script rejects the
+   feature specification or the planning file.
+
+   Validate the completed plan before starting task generation:
+
+   ```bash
+   bash .specify/scripts/bash/validate-artifact.sh plan "{FEATURE_DIR}/plan.md" --strict
+   ```
+
+   Stop if the plan is missing or fails validation. The stage-three loop audit
+   below checks loop evidence; it does not validate `spec.md` or `plan.md`.
 
 2. **Scan available documents** (do NOT load full content — agents read
    directly):
    - Note feature name from FEATURE_DIR
    - Note which optional docs exist: data-model.md, contracts/, quickstart.md
-   - Note whether `loop-contract.json` exists. If missing, initialize it with
-     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 4_tasks --init --json`
+   - Note whether `loop-contract.json` exists. If missing, initialize it while
+     auditing the completed planning stage with
+     `node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir {FEATURE_DIR} --stage 3_plan --init --json --strict`.
+     Stop on a failed audit. Task-generation outputs and their reviewed delivery
+     checkpoint are checked after generation, before implementation.
    - Note the tasks template path: `.specify/templates/tasks-template.md`
 
 ---
@@ -568,6 +593,18 @@ node .specify/scripts/node/generate-issues.js "$FEATURE_DIR"
 
 This creates `{FEATURE_DIR}/issues.md` with GitHub-ready issue definitions.
 
+### 6.1 Name each issue by the outcome needed
+
+Read `.specify/references/issue-and-pr-titles.md`.
+
+Replace the generated title placeholder before you open the issue. An issue describes the outcome needed:
+
+`Prevent [risk] for [user or system] by [needed capability]`
+
+Example from Issues2025 #3375: Prevent broken EAI app data links caused by inconsistent Object Type slugs.
+
+Keep the title concise and in business language. Use a prefix such as `CURATE:` only when it helps identify a programme. The prefix should not replace the outcome.
+
 ### 6.5 Update Working Backwards PR/FAQ Delivery Plan
 
 Before implementation:
@@ -704,6 +741,26 @@ created: [ISO date]
 After required reviews pass and either existing scope approval covers the
 tasks or the outstanding approval is received:
 
+Review the current priority plan and generated task/traceability files. Capture
+a new delivery checkpoint only when none exists. On a rerun, verify the existing
+checkpoint against the current artifacts before the strict stage-four audit:
+
+```bash
+set -e
+node .specify/scripts/node/gofer-priority-check.mjs --feature-dir "{FEATURE_DIR}"
+if [ -e "{FEATURE_DIR}/delivery-checkpoint.json" ] || [ -L "{FEATURE_DIR}/delivery-checkpoint.json" ]; then
+  node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir "{FEATURE_DIR}"
+else
+  node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir "{FEATURE_DIR}" --capture
+fi
+node .specify/scripts/node/gofer-loop-audit.mjs --feature-dir "{FEATURE_DIR}" --stage 4_tasks --json --strict
+```
+
+Stop if any check fails. A stale checkpoint requires a new review of the
+affected artifacts. Preserve the prior checkpoint and its review evidence in an
+archive before an explicitly reviewed rebaseline. This continuation never
+overwrites an existing checkpoint to conceal stale task evidence.
+
 ```
 ✓ Tasks APPROVED: {FEATURE_DIR}/tasks.md
 
@@ -725,17 +782,18 @@ is migration-only and used only when `workflowProfile` is explicitly
 
 When the workflow profile is explicitly `enterpriseai`,
 `tasks.md` MUST emit deployment
-tasks in the following ordered chain. Each task is independently runnable and
-the ordering enforces scaffold before deployment so that runtime contract and
-deploy-doctor evidence exist before any deploy command runs.
+tasks in the following ordered chain. Each task is independently runnable. The
+runtime contract must pass before any deploy command runs. Deploy-doctor
+evidence is captured only after the exact operation exists and must pass before
+the EAI-managed deployment task is marked complete.
 
 0. **EAI readiness unblock -> `eai-preflight.md`**
    - If `{FEATURE_DIR}/eai-preflight.md` is missing, stale, or blocked, emit
      only the smallest runnable unblock tasks before normal build tasks:
-     install/update `eai`, run `eai login`, run `eai tenant select`, confirm a
-     tenant-admin membership with `eai tenant list --format json`, initialize
+     install/update `eai`, run `eai login`, run `eai workspace select`, confirm a
+     workspace admin membership (platform role ID `tenant-admin`) with `eai workspace list --format json`, initialize
      the EAI app template with `eai init <app-name> --skip-prompts
-     --company-tenant <tenant-id>` when confirmed, enter the created app folder,
+     --company-workspace <workspace-id>` when confirmed, enter the created app folder,
      and run `node .specify/scripts/node/eai-app-template-readiness.mjs --root
      . --json`.
    - Do not emit EAI app enrollment, object-type, EAI service-fit, or deployment
@@ -743,32 +801,93 @@ deploy-doctor evidence exist before any deploy command runs.
      app-template contract. Local MVP UI and implementation tasks can continue
      when the active specification records EAI capabilities as `planned` or
      `not_applicable`.
-   - Never invent tenant IDs, app keys, app URLs, or platform capabilities.
-     Use `eai --describe`, public EAI docs, and the user's confirmed tenant/app
+   - Never invent workspace IDs, app keys, app URLs, or platform capabilities.
+     Use `eai --describe`, public EAI docs, and the user's confirmed workspace/app
      selection as evidence.
    - Do not emit tasks that establish a non-EAI primary runtime, database,
      hosting platform, or app framework. Non-EAI technologies can appear only as
      approved integration/migration/exception tasks after the EAI Platform/Azure
      fit is recorded.
 1. **EAI App Template scaffolding -> `eai init`**
-   - Command: `eai init <app-name> --skip-prompts --company-tenant <tenant-id>`
+   - Command: `eai init <app-name> --skip-prompts --company-workspace <workspace-id>`
    - Produces the working directory and provider-neutral `eai.runtime.json`
      expected by subsequent runtime and deployment tasks.
 2. **Local validation -> `eai runtime validate` and `eai verify`**
    - Commands: `eai runtime validate` and `eai verify`
-   - Confirms the runtime contract, tenant/workflow configuration, and platform
+   - Confirms the runtime contract, workspace/workflow configuration, and platform
      readiness before any deploy attempt.
-3. **Pinned `eai major.minor` deployment tasks -> `eai deploy`**
-   - Command: `eai deploy trigger --repo <org/repo>`
-   - Inherits the `major.minor` pin recorded in `plan.md`.
-4. **Post-deploy smoke gate -> `eai deploy doctor`**
-   - Command: `mkdir -p .eai && eai deploy doctor --url <deployed-url> --format json > .eai/deploy-doctor.json`
-   - Captures black-box runtime smoke evidence for `/health`, Auth.js,
-     PublicAPI/BFF reachability, tenant/workflow config, and declared smoke
-     tests.
+   - For selected EAI-maintained source, include a read-only source validation
+     task before implementation and after app edits:
+     `node .specify/scripts/node/eai-app-template-readiness.mjs --root . --source eai-managed --json`.
+     Verify `eai deploy source validate --help` first. Preserve an explicitly
+     selected CLI with `--cli <executable>`. Include all customer-authored app
+     files, including runners, tests, backend code, scripts, documentation, and
+     supported dot configuration. Preserve protected EAI authentication,
+     platform-service, deployment, and workflow controls from
+     `.specify/references/platform/eai-app-template.md`.
+     A failed check blocks managed-source readiness and publication. Never omit
+     business changes or customer app files, or restore files automatically.
+     Unsupported custom runtimes must fail explicitly, never trigger source omission.
+3. **Hosting- and source-specific deployment task**
+   - Read the approved hosting choice from the active specification or plan.
+     Do not emit one deployment command for every mode.
+   - For **EAI-managed Azure**, emit exactly one two-phase deployment task,
+     include `[hosting:eai-managed]` on that task's checkbox line, and branch
+     again on the approved source choice:
+     - **EAI-maintained** command: `eai deploy app <app-key> --target eai
+       --tenant-id <app-scope-tenant> --source eai-managed --target-tenant-id
+       <runtime-tenant> [--environment preview] [--wait] --format json`.
+     - **My GitHub** command: `eai deploy app <app-key> --target eai --tenant-id
+       <app-scope-tenant> --source customer-owned --repo <owner/name>
+       --installation-id <positive-id> --target-tenant-id <runtime-tenant>
+       [--branch main] [--environment preview] [--workflow
+       .github/workflows/eai-app.yml] [--wait] --format json`.
+     - `eai deploy trigger --repo <org/repo>` belongs only to a verified
+       customer-owned repository next action returned by the installed CLI.
+       Never substitute it for the EAI-maintained command.
+     - Run the selected initial command without marking the task complete. After
+       it returns the exact operation ID, update this same task's checkbox line
+       to retain `[hosting:eai-managed]`, that selected initial command with its
+       resolved app key, `--target eai`, `--tenant-id`, `--target-tenant-id`,
+       `--source`, and `--format json`,
+       and the fully resolved doctor command below. Run doctor, then request
+       completion. Do not create a separate dependent
+       post-deploy checkbox whose prerequisite is this receipt-gated task.
+       For customer-owned source, also retain the exact `--repo` and
+       `--installation-id`, and any selected `--branch` and `--workflow` on that
+       initial command. The receipt must match the repository, installation,
+       branch, and workflow; omitted branch and workflow mean `main` and
+       `.github/workflows/eai-app.yml`. Missing, duplicated, placeholder, or
+       crossed customer source bindings block completion.
+   - For **customer Azure**, include `[hosting:customer-azure]` and retain the
+     existing approved customer-owned Azure deployment path and credentials.
+     Do not add an EAI-managed operation or source command.
+   - For **local only**, include `[hosting:local-only]`, stop after local
+     validation, and emit no cloud deployment task.
+   - EAI CLI deployment tasks inherit the `major.minor` pin recorded in
+     `plan.md`.
+   - **EAI-managed second phase -> `eai deploy doctor`**
+   - `[hosting:eai-managed]` selects operation-bound receipt validation.
+   - Command: `eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json`
+   - After deployment returns the exact operation ID, replace every placeholder
+     in this command with the resolved operation ID, app key, app-scope tenant, and
+     runtime tenant. Put that complete inline command on the same deployment task's
+     checkbox line in `tasks.md` before requesting completion, and keep the selected
+     initial command with the same app key, app-scope tenant, and runtime tenant plus
+     `--target eai`, `--source eai-managed` or `--source customer-owned`, and
+     `--format json` on that line. The shared gate reads both commands as independent
+     binding sources, requires the initial command's exact target and output mode,
+     and requires their app key, app-scope tenant, and runtime tenant to match before
+     it reads the receipt. An EAI-managed task with a placeholder, mismatch, or
+     missing resolved command cannot pass.
+   - The CLI derives the active URL from the exact operation, verifies its
+     deployment, runtime, source, and configuration bindings, runs authenticated
+     readiness, and atomically writes the receipt. The receipt captures runtime
+     smoke evidence for `/health`, Auth.js, PublicAPI/BFF reachability,
+     workspace/workflow config, and declared smoke tests.
 
 <!-- prettier-ignore -->
-The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, invoke pinned `eai major.minor` deployment tasks, and then capture deploy-doctor evidence. Breaking the order causes deployment preflight gating in `/5_gofer_implement` to fail.
+The ordering above is non-negotiable: tasks.md MUST instruct the pipeline to scaffold before deployment, validate before deploy, branch on the recorded hosting and source choices, invoke the selected pinned `eai major.minor` deployment command only for EAI-managed Azure, and then capture deploy-doctor evidence in that same task after the operation exists. Before completion, the one runnable EAI-managed task MUST retain `[hosting:eai-managed]` and the resolved doctor command on its checkbox line. Splitting those phases into dependent task checkboxes, breaking the order, or leaving unresolved binding placeholders causes deployment preflight gating in `/5_gofer_implement` to fail.
 
 ### App-Delivery Preconditions Inside Shared Stages
 
@@ -837,7 +956,7 @@ evidence:
 - Pinned `eai major.minor` deployment tasks whenever deployment, rollout, or
   environment coordination depends on a specific EAI CLI generation.
 - Contract-pack coverage tasks for actors, object types, workflows/journeys,
-  permissions/tenant boundaries, APIs/events, deployment assumptions, and
+  permissions/workspace boundaries, APIs/events, deployment assumptions, and
   acceptance tests.
 - AI-augmented journey tasks for app delivery: one task group for each of the
   four-or-fewer journey steps covering user experience, chatbot/voice/
@@ -876,7 +995,7 @@ evidence:
   - update `ui-show-and-tell.md` with what was shown, where it opened, what the
     user said, what changed next, and any unresolved UX issues
 - App-delivery service-fit tasks that update `service-fit-matrix.md` using
-  tenant-aware evidence from `eai --describe`, `eai whoami`, `eai tenant
+  workspace context evidence from `eai --describe`, `eai whoami`, `eai workspace
   select`, `eai resources schema --format json`, `eai workflow readiness
   --format json`, `eai verify calls --format json`, or equivalent approved
   platform evidence.

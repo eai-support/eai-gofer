@@ -5,6 +5,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { loadHeldOutCorpus } from './gofer-heldout-corpus.mjs';
+import { decryptSigningKey } from './gofer-encrypted-key.mjs';
 
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const inside = (parent, child) => {
@@ -13,7 +14,7 @@ const inside = (parent, child) => {
 };
 const denied = () => new Error('TRUSTED_EVALUATOR_REQUIRED');
 
-function accountTrustRoot() {
+export function accountTrustRoot() {
   // HOME is caller-controlled. Resolve the account record by effective UID.
   if (process.platform === 'linux') {
     const uid = process.getuid();
@@ -73,14 +74,60 @@ async function openVerifiedFile(directory, filename) {
   } catch (err) { await file.close(); throw err; }
 }
 
+export const VERIFIER_EVALUATOR = 'gofer-heldout-benchmark-verifier';
+
+/** Verifier keys are trusted only from a root-owned registry. Anything the
+ * account can write, an unsandboxed process in that account can also write. */
+export function protectedVerifierRegistryPath() {
+  if (process.platform === 'darwin') return '/Library/Application Support/EAI Gofer/verifier-registry.json';
+  if (process.platform === 'linux') return '/etc/eai-gofer/verifier-registry.json';
+  throw denied();
+}
+
+async function loadProtectedVerifierKey(receipt, { path: registryPath = protectedVerifierRegistryPath(),
+  ownerUid = 0 } = {}) {
+  try {
+    if (!path.isAbsolute(registryPath) || !Number.isInteger(ownerUid)) throw denied();
+    const parent = await realpath(path.dirname(registryPath));
+    for (let current = parent; ;) {
+      const info = await lstat(current);
+      if (!info.isDirectory() || ![0, ownerUid].includes(info.uid) || (info.mode & 0o022) !== 0) throw denied();
+      const above = path.dirname(current);
+      if (above === current) break;
+      current = above;
+    }
+    let registry;
+    const file = await open(path.join(parent, path.basename(registryPath)),
+      constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const info = await file.stat();
+      if (!info.isFile() || info.uid !== ownerUid || info.nlink !== 1 ||
+          (info.mode & 0o022) !== 0 || info.size < 2 || info.size > 65536) throw denied();
+      registry = JSON.parse(await file.readFile('utf8'));
+    } finally { await file.close(); }
+    if (registry?.schemaVersion !== 1 || !Array.isArray(registry.evaluators) ||
+        registry.evaluators.length < 1 || registry.evaluators.length > 32 ||
+        registry.evaluators.some(item => !text(item?.keyId) || !text(item?.host) ||
+          item.evaluator !== VERIFIER_EVALUATOR || !text(item?.publicKeyPem)) ||
+        new Set(registry.evaluators.map(item => item.keyId)).size !== registry.evaluators.length) throw denied();
+    const entry = registry.evaluators.find(item => item.keyId === receipt.provenance.keyId &&
+      item.host === receipt.host);
+    if (!entry) throw denied();
+    const key = createPublicKey(entry.publicKeyPem);
+    if (key.asymmetricKeyType !== 'ed25519') throw denied();
+    return key;
+  } catch { throw denied(); }
+}
+
 /**
  * The default trust root is fixed outside the checkout. `trustRoot` exists for
  * isolated tests; the production composition root never accepts an override.
  */
-export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot, trustRoot } = {}) {
+export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot, trustRoot, protectedRegistry } = {}) {
   if (process.platform === 'win32' || typeof process.getuid !== 'function' ||
       !text(workspaceRoot) || !text(receipt?.host) || !text(receipt?.provenance?.keyId) ||
       !text(receipt?.provenance?.evaluator)) throw denied();
+  if (receipt.provenance.evaluator === VERIFIER_EVALUATOR) return loadProtectedVerifierKey(receipt, protectedRegistry);
   const root = trustRoot ?? accountTrustRoot();
   try {
     const directory = await inspectAccountTrustRoot(root, workspaceRoot);
@@ -110,7 +157,8 @@ export async function resolveTrustedEvaluatorPublicKey(receipt, { workspaceRoot,
 
 /** Only activated identities can sign. Production issuers never expose a
  * caller-selected trust root; the override is for isolated tests. */
-async function loadActiveEvaluatorKey({ workspaceRoot, trustRoot, identityName, evaluator } = {}) {
+async function loadActiveEvaluatorKey({ workspaceRoot, trustRoot, identityName, evaluator,
+  getPassphrase, protectedRegistry } = {}) {
   if (!text(workspaceRoot) || process.platform === 'win32' || typeof process.getuid !== 'function') throw denied();
   const root = trustRoot ?? accountTrustRoot();
   try {
@@ -132,14 +180,29 @@ async function loadActiveEvaluatorKey({ workspaceRoot, trustRoot, identityName, 
       if (identity?.schemaVersion !== 1 || identity.host !== 'codex' ||
           identity.evaluator !== evaluator || !text(identity.keyId)) throw denied();
       const publicKey = await resolveTrustedEvaluatorPublicKey({ host: identity.host,
-        provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot });
-      const privateFile = await openVerifiedFile(directory, `${identityName}.private.pem`);
-      try {
-        const info = await privateFile.stat();
-        if (!info.isFile() || info.uid !== process.getuid() ||
-            (info.mode & 0o077) !== 0 || info.size < 32 || info.size > 8192) throw denied();
-        privateKey = createPrivateKey(await privateFile.readFile('utf8'));
-      } finally { await privateFile.close(); }
+        provenance: { evaluator: identity.evaluator, keyId: identity.keyId } }, { workspaceRoot, trustRoot, protectedRegistry });
+      if (evaluator === VERIFIER_EVALUATOR) {
+        // A plaintext verifier key is readable by any worker. Only an
+        // encrypted envelope, opened with a passphrase a person types, loads.
+        if (typeof getPassphrase !== 'function') throw denied();
+        const envelopeFile = await openVerifiedFile(directory, `${identityName}.private.enc.json`);
+        let envelope;
+        try {
+          const info = await envelopeFile.stat();
+          if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1 ||
+              (info.mode & 0o077) !== 0 || info.size < 100 || info.size > 8192) throw denied();
+          envelope = JSON.parse(await envelopeFile.readFile('utf8'));
+        } finally { await envelopeFile.close(); }
+        privateKey = await decryptSigningKey(envelope, await getPassphrase());
+      } else {
+        const privateFile = await openVerifiedFile(directory, `${identityName}.private.pem`);
+        try {
+          const info = await privateFile.stat();
+          if (!info.isFile() || info.uid !== process.getuid() ||
+              (info.mode & 0o077) !== 0 || info.size < 32 || info.size > 8192) throw denied();
+          privateKey = createPrivateKey(await privateFile.readFile('utf8'));
+        } finally { await privateFile.close(); }
+      }
       if (privateKey.asymmetricKeyType !== 'ed25519' ||
           !createPublicKey(privateKey).export({ type: 'spki', format: 'der' })
             .equals(publicKey.export({ type: 'spki', format: 'der' }))) throw denied();
@@ -153,9 +216,10 @@ export async function loadActiveCodexEvaluatorKey({ workspaceRoot, trustRoot } =
     identityName: 'codex-evaluator', evaluator: 'gofer-native-host-evaluator' });
 }
 
-export async function loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot } = {}) {
-  return loadActiveEvaluatorKey({ workspaceRoot, trustRoot,
-    identityName: 'heldout-verifier', evaluator: 'gofer-heldout-benchmark-verifier' });
+export async function loadActiveBenchmarkVerifierKey({ workspaceRoot, trustRoot, getPassphrase,
+  protectedRegistry } = {}) {
+  return loadActiveEvaluatorKey({ workspaceRoot, trustRoot, getPassphrase, protectedRegistry,
+    identityName: 'heldout-verifier', evaluator: VERIFIER_EVALUATOR });
 }
 
 /** The controller pins one corpus inside its account-owned trust root.

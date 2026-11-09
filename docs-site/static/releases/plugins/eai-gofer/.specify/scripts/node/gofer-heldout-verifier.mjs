@@ -86,6 +86,9 @@ function runSandboxCheck(worktree) {
   return result.status === 0;
 }
 
+// Shared with the benchmark executor so both use the same sandbox and scope rules.
+export { runSandboxCheck as runHeldOutSandboxCheck, snapshot as snapshotHeldOutWorktree };
+
 /** The report and receipts may be mutable. Only the fresh sandbox result is
  * authoritative for this diagnostic; the output is never routing authority. */
 export async function recheckHeldOutBenchmark({ corpusRoot, workspaceRoot,

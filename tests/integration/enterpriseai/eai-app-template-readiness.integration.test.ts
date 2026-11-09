@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { resolveCliExecution } from '../../../.specify/scripts/node/eai-app-template-readiness.mjs';
 
 const SCRIPT = path.join(process.cwd(), '.specify/scripts/node/eai-app-template-readiness.mjs');
 const tempRoots: string[] = [];
@@ -50,8 +51,8 @@ function writeReadyProject(root: string): void {
   }
 }
 
-function run(root: string) {
-  const result = spawnSync(process.execPath, [SCRIPT, '--root', root, '--json'], {
+function run(root: string, args: string[] = []) {
+  const result = spawnSync(process.execPath, [SCRIPT, '--root', root, '--json', ...args], {
     encoding: 'utf8',
   });
   return {
@@ -60,11 +61,199 @@ function run(root: string) {
   };
 }
 
+function sourceReport(overrides: Record<string, unknown> = {}) {
+  return {
+    schemaVersion: 'eai.cli_managed_source_validation.v1',
+    status: 'passed',
+    sourceMode: 'eai-cli-generated',
+    templateCommitSha: 'a'.repeat(40),
+    fileCount: 3,
+    totalBytes: 128,
+    ...overrides,
+  };
+}
+
+function fakeCli(output: unknown, exitCode = 0, checkCwd?: string): string {
+  const cliRoot = makeRoot();
+  const cli = path.join(cliRoot, 'selected-cli.cjs');
+  fs.writeFileSync(
+    cli,
+    `
+    const args = process.argv.slice(2);
+    if (JSON.stringify(args) !== JSON.stringify(['deploy', 'source', 'validate', '--format', 'json'])
+      ${checkCwd ? `|| require('node:fs').realpathSync(process.cwd()) !== ${JSON.stringify(fs.realpathSync(checkCwd))}` : ''}) process.exit(9);
+    require('node:fs').writeSync(1, ${JSON.stringify(typeof output === 'string' ? output : JSON.stringify(output))});
+    process.exit(${exitCode});
+  `
+  );
+  return cli;
+}
+
 afterEach(() => {
   for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
 
 describe('EAI app-template readiness gate', () => {
+  it('runs a selected Windows npm shim through its verified Node entrypoint without a shell', async () => {
+    const root = makeRoot();
+    const bin = path.join(root, 'node_modules', '.bin');
+    const shim = path.join(bin, 'eai.cmd');
+    const entrypoint = path.join(root, 'node_modules', '@enterpriseai', 'cli', 'dist', 'index.js');
+    write(root, 'node_modules/.bin/eai.cmd', '@echo off\r\n');
+    write(
+      root,
+      'node_modules/@enterpriseai/cli/package.json',
+      JSON.stringify({
+        name: '@enterpriseai/cli',
+        bin: { eai: 'dist/index.js' },
+      })
+    );
+    write(root, 'node_modules/@enterpriseai/cli/dist/index.js', '');
+
+    expect(await resolveCliExecution(shim, 'win32')).toEqual({
+      command: process.execPath,
+      args: [entrypoint, 'deploy', 'source', 'validate', '--format', 'json'],
+    });
+    expect(await resolveCliExecution('eai', 'win32', bin)).toEqual(
+      await resolveCliExecution(shim, 'win32')
+    );
+    expect(await resolveCliExecution(`${shim}&echo injected`, 'win32')).toBeNull();
+  });
+
+  it('rejects an unrelated Windows shim instead of executing its batch content', async () => {
+    const root = makeRoot();
+    const shim = path.join(root, 'eai.cmd');
+    write(root, 'eai.cmd', '@echo off\r\n');
+    write(
+      root,
+      'node_modules/@enterpriseai/cli/package.json',
+      JSON.stringify({
+        name: 'unrelated-cli',
+        bin: { eai: 'dist/index.js' },
+      })
+    );
+    write(root, 'node_modules/@enterpriseai/cli/dist/index.js', '');
+    expect(await resolveCliExecution(shim, 'win32')).toBeNull();
+  });
+
+  it.each([['--source'], ['--cli'], ['--source', 'unsupported']])(
+    'does not report readiness for malformed selection %j',
+    (...args) => {
+      const root = makeRoot();
+      writeReadyProject(root);
+      const result = spawnSync(process.execPath, [SCRIPT, '--root', root, '--json', ...args], {
+        encoding: 'utf8',
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).not.toContain(root);
+    }
+  );
+
+  it('checks the selected CLI publication boundary before managed-source readiness without changing app files', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    write(root, 'src/app/counter.tsx', 'export const counter = 1;');
+    const before = fs.readFileSync(path.join(root, 'src/app/counter.tsx'));
+
+    const result = run(root, [
+      '--source',
+      'eai-managed',
+      '--cli',
+      fakeCli(sourceReport(), 0, root),
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.report.sourceValidation).toEqual({
+      status: 'passed',
+      fileCount: 3,
+      totalBytes: 128,
+    });
+    expect(result.report.nextAction).toContain('does not prove publication or deployment');
+    expect(fs.readFileSync(path.join(root, 'src/app/counter.tsx'))).toEqual(before);
+    expect(fs.existsSync(path.join(root, '.eai'))).toBe(false);
+  });
+
+  it('blocks managed readiness on unsupported platform edits while preserving the business change', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    write(root, 'run.sh', 'platform runner change');
+    write(root, 'src/app/counter.tsx', 'approved business change');
+    const privateMessage = 'private context which must never be printed';
+    const report = {
+      schemaVersion: 'eai.cli_managed_source_validation.v1',
+      status: 'failed',
+      sourceMode: 'eai-cli-generated',
+      error: { code: 'SOURCE_SCOPE_UNSUPPORTED', message: privateMessage },
+    };
+
+    const result = run(root, ['--source', 'eai-managed', '--cli', fakeCli(report, 1)]);
+
+    expect(result.status).toBe(2);
+    expect(result.report.status).toBe('source_not_ready');
+    expect(result.report.sourceValidation.code).toBe('SOURCE_SCOPE_UNSUPPORTED');
+    expect(result.report.nextAction).toContain('Preserve business changes');
+    expect(result.stdout).not.toContain(privateMessage);
+    expect(fs.readFileSync(path.join(root, 'run.sh'), 'utf8')).toBe('platform runner change');
+    expect(fs.readFileSync(path.join(root, 'src/app/counter.tsx'), 'utf8')).toBe(
+      'approved business change'
+    );
+  });
+
+  it.each([undefined, 'local-only', 'customer-owned'])(
+    'does not impose a managed-source gate for %s',
+    (source) => {
+      const root = makeRoot();
+      writeReadyProject(root);
+      const args = ['--cli', path.join(root, 'unavailable-cli')];
+      if (source) args.push('--source', source);
+      const result = run(root, args);
+      expect(result.status).toBe(0);
+      expect(result.report.sourceValidation).toBeUndefined();
+    }
+  );
+
+  it('fails closed for a missing explicit CLI without falling back to a global publication command', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    const result = run(root, [
+      '--source',
+      'eai-managed',
+      '--cli',
+      path.join(root, 'unavailable-cli'),
+    ]);
+    expect(result.status).toBe(2);
+    expect(result.report.sourceValidation.code).toBe('SOURCE_VALIDATOR_UNAVAILABLE');
+    expect(result.stdout).not.toContain(root);
+  });
+
+  it.each([
+    ['malformed JSON', '{', 0],
+    ['wrong schema', sourceReport({ schemaVersion: 'another.schema' }), 0],
+    ['wrong source', sourceReport({ sourceMode: 'source-unknown' }), 0],
+    ['invalid pin', sourceReport({ templateCommitSha: ['a'.repeat(40)] }), 0],
+    ['excessive files', sourceReport({ fileCount: 501 }), 0],
+    ['excessive bytes', sourceReport({ totalBytes: 20 * 1024 * 1024 + 1 }), 0],
+    ['raw source included', sourceReport({ files: [{ contentBase64: 'private-source' }] }), 0],
+    ['contradictory exit', sourceReport(), 1],
+  ])('rejects %s without printing unvalidated CLI output', (_label, report, exitCode) => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    const result = run(root, ['--source', 'eai-managed', '--cli', fakeCli(report, exitCode)]);
+    expect(result.status).toBe(2);
+    expect(result.report.sourceValidation.code).toBe('SOURCE_VALIDATOR_INVALID');
+    expect(result.stdout).not.toContain('private-source');
+  });
+
+  it('bounds CLI output rather than accepting or printing a partial report', () => {
+    const root = makeRoot();
+    writeReadyProject(root);
+    const result = run(root, ['--source', 'eai-managed', '--cli', fakeCli('x'.repeat(70 * 1024))]);
+    expect(result.status).toBe(2);
+    expect(result.report.sourceValidation.code).toBe('SOURCE_VALIDATOR_UNAVAILABLE');
+    expect(result.stdout.length).toBeLessThan(4096);
+  });
+
   it('blocks an empty folder before app delivery starts', () => {
     const result = run(makeRoot());
 

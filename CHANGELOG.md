@@ -53,6 +53,10 @@ and this project adheres to
 
 ### Fixed
 
+- Bind customer-owned deployment completion to the requested repository,
+  GitHub installation, branch, and workflow. The readiness gate now accepts the
+  CLI doctor's exact wire source modes and rejects crossed or incomplete source
+  receipts without adding provider requests.
 - Canonicalized `GitHubConnection` to `github-connection` across source,
   extension, and packaged plugin routing contracts for the next release.
 - Restored the versioned v3.7.28 and v3.7.29 Pages plugin bundles to their

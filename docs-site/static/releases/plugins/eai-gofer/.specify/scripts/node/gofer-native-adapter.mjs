@@ -61,23 +61,39 @@ function extractTokenUsage(jsonl) {
   return findings.at(-1) ?? null;
 }
 
+/** The Codex host profile: what differs between hosts is only how a host is
+ * launched, how its sandbox is described, and how its result is read. The
+ * process-group evidence, Git baseline and scope checks are shared. */
+export const CODEX_HOST = Object.freeze({
+  name: 'codex',
+  sandboxPolicy: workspace => codexIsolatedPermissionArgs(workspace),
+  buildArgs: ({ sandboxPolicy, outputPath, modelId, prompt }) => ['--ask-for-approval', 'never', 'exec',
+    '--ignore-user-config', ...sandboxPolicy.config.flatMap(value => ['-c', value]),
+    '--json', '--output-last-message', outputPath, '--model', modelId, prompt],
+  finalMessage: ({ outputPath }) => readFile(outputPath, 'utf8').catch(() => ''),
+  extractUsage: stdoutText => extractTokenUsage(stdoutText),
+});
+
 /**
- * Start a real local Codex process in a pre-created isolated worktree. This
+ * Start a real local host process in a pre-created isolated worktree. This
  * primitive deliberately has no fallback host or cloud mode. Its receipt is
  * only available after the child has exited, so a cancellation cannot be
  * reported as confirmed while the host still owns the worktree.
  */
-export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, modelId,
-  capabilityReceiptHash, allowedWriteScope, command = 'codex', spawnProcess = spawn,
+export async function startLocalHostInvocation({ host, isolatedWorkspace, prompt, modelId,
+  capabilityReceiptHash, allowedWriteScope, command, spawnProcess = spawn,
   receiptDirectory = tmpdir(), evidenceDirectory, objectiveRevision, leaseId,
   worktreeReceipt, expectedHead, signalProcessGroup = (pid, signal) => process.kill(-pid, signal),
-  usageReporting = false } = {}) {
+  usageReporting = false, hostOptions = {} } = {}) {
+  if (!/^[a-z]{3,16}$/.test(host?.name ?? '') || typeof host.sandboxPolicy !== 'function' ||
+      typeof host.buildArgs !== 'function' || typeof host.finalMessage !== 'function' ||
+      typeof host.extractUsage !== 'function') throw new Error('INVALID_NATIVE_HOST');
   if (!text(isolatedWorkspace) || !text(prompt) || !text(modelId) || !text(capabilityReceiptHash) ||
       !Array.isArray(allowedWriteScope) || !allowedWriteScope.length ||
       allowedWriteScope.some(scope => !safeScope(scope)) || !text(command) ||
       (evidenceDirectory && (![objectiveRevision, leaseId, worktreeReceipt].every(text)))) throw new Error('INVALID_NATIVE_REQUEST');
   const workspace = await realpath(isolatedWorkspace);
-  const sandboxPolicy = codexIsolatedPermissionArgs(workspace);
+  const sandboxPolicy = host.sandboxPolicy(workspace, hostOptions);
   if (!sandboxPolicy) throw new Error('LOCAL_SANDBOX_REQUIRED');
   const outputRoot = await realpath(receiptDirectory);
   // A clean file-status result does not reveal a commit or a new branch made
@@ -103,27 +119,29 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       throw new Error('NATIVE_EVIDENCE_INSIDE_WORKTREE');
     }
   }
-  const outputPath = path.join(outputRoot, `gofer-codex-${randomUUID()}.md`);
-  const args = ['--ask-for-approval', 'never', 'exec', '--ignore-user-config',
-    ...sandboxPolicy.config.flatMap(value => ['-c', value]),
-    '--json', '--output-last-message', outputPath,
-    '--model', modelId, prompt];
+  const outputPath = path.join(outputRoot, `gofer-${host.name}-${randomUUID()}.md`);
+  const args = host.buildArgs({ sandboxPolicy, outputPath, modelId, prompt, allowedWriteScope,
+    workspace, hostOptions });
   const stdout = boundedCollector();
   const stderr = boundedCollector();
   let child;
   let exit = null;
   let cancelRequested = false;
+  let fatal = null;
   let completion;
-  const invocationId = `codex-${randomUUID()}`;
+  const invocationId = `${host.name}-${randomUUID()}`;
   const evidencePath = evidenceRoot ? path.join(evidenceRoot, `native-worker-${invocationId}.jsonl`) : null;
   const receiptFor = async () => {
-    const message = await readFile(outputPath, 'utf8').catch(() => '');
+    const message = await host.finalMessage({ outputPath, stdout: stdout.value() });
     return createHash('sha256').update(JSON.stringify({ invocationId, capabilityReceiptHash, modelId,
       allowedWriteScope, exit, stdout: stdout.value(), stderr: stderr.value(), message })).digest('hex');
   };
+  // A host may write a per-task policy file before it starts.
+  await host.beforeStart?.({ workspace, sandboxPolicy, hostOptions });
   try {
     child = spawnProcess(command, args, { cwd: workspace, shell: false, detached: Boolean(evidenceRoot),
-      stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+      ...(typeof host.env === 'function' ? { env: host.env(process.env) } : {}) });
   } catch (error) {
     throw new Error(`NATIVE_HOST_START_FAILED:${error.message}`);
   }
@@ -143,11 +161,28 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
     } finally { await file.close(); }
   })() : Promise.resolve();
   child.stdout?.on('data', chunk => stdout.add(chunk));
-  child.stderr?.on('data', chunk => stderr.add(chunk));
+  child.stderr?.on('data', chunk => {
+    stderr.add(chunk);
+    // A sandbox that fails to apply must never be allowed to run unsandboxed.
+    if (!fatal && host.fatalStderr?.test(String(chunk))) {
+      fatal = 'NATIVE_HOST_SANDBOX_NOT_APPLIED';
+      // A single group signal can miss a child that was starting at that moment,
+      // so keep killing until the group is empty.
+      (async () => {
+        for (let attempt = 0; attempt < 30; attempt++) {
+          try { if (evidencePath) signalProcessGroup(child.pid, 'SIGKILL'); else child.kill('SIGKILL'); } catch { /* already gone */ }
+          await new Promise(resolve => setTimeout(resolve, 50));
+          if (evidencePath ? !processGroupAlive(child.pid) : exit !== null) return;
+        }
+      })();
+    }
+  });
   completion = new Promise((resolve, reject) => {
     child.once('error', error => reject(new Error(`NATIVE_HOST_START_FAILED:${error.message}`)));
     child.once('close', async (code, signal) => {
       exit = { code, signal };
+      // The host has stopped: remove anything it needed from the worktree.
+      try { await host.cleanup?.({ workspace, sandboxPolicy, hostOptions }); } catch { /* reported by the scope check */ }
       try {
         await startEvidence;
         if (evidencePath) {
@@ -203,7 +238,9 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
         if (evidencePath && processGroupAlive(child.pid)) throw new Error('CANCELLATION_CONFIRMATION_REQUIRED');
         return { invocationId, capabilityReceiptHash, receipt, cancelled: true };
       }
+      if (fatal) throw new Error(fatal);
       if (exit?.code !== 0) throw new Error(`NATIVE_HOST_EXIT:${exit?.code ?? 'signal'}`);
+      host.assertSuccess?.(stdout.value(), stderr.value());
       if (!gitBaseline) throw new Error('NATIVE_GIT_BASELINE_REQUIRED');
       const [head, refs] = await Promise.all([
         git(workspace, ['rev-parse', 'HEAD']),
@@ -212,6 +249,7 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       if (head.stdout.trim() !== gitBaseline.head || refs.stdout !== gitBaseline.refs) {
         throw new Error('NATIVE_UNAUTHORIZED_GIT_CHANGE');
       }
+      await host.afterExit?.({ workspace, sandboxPolicy, hostOptions });
       const status = await git(workspace, ['-c', 'status.renames=false', 'status', '--porcelain=v1', '-z',
         '--untracked-files=all', '--ignored=matching']);
       const entries = status.stdout.split('\0').filter(Boolean);
@@ -222,9 +260,14 @@ export async function startLocalCodexInvocation({ isolatedWorkspace, prompt, mod
       }
       return Object.freeze({ invocationId, capabilityReceiptHash, receipt, changedFiles,
         outputPath, isolation: QUALIFIED_LOCAL_ISOLATION,
-        usage: usageReporting ? extractTokenUsage(stdout.value()) : undefined });
+        usage: usageReporting ? host.extractUsage(stdout.value()) : undefined });
     },
   });
+}
+
+/** Start a real local Codex process. Kept as the stable entry point. */
+export function startLocalCodexInvocation(options = {}) {
+  return startLocalHostInvocation({ ...options, host: CODEX_HOST, command: options.command ?? 'codex' });
 }
 
 /** A missing, incomplete, or still-running process never becomes a stop proof. */
@@ -239,7 +282,7 @@ export async function inspectNativeWorkerEvidence({ evidenceDirectory, revision,
   let root;
   try { root = await realpath(evidenceDirectory); } catch { return denied; }
   const names = await readdir(root);
-  if (names.length > 1000 || names.some(name => !/^native-worker-codex-[0-9a-f-]+\.jsonl$/.test(name))) return denied;
+  if (names.length > 1000 || names.some(name => !/^native-worker-(?:codex|claude|grok)-[0-9a-f-]+\.jsonl$/.test(name))) return denied;
   const records = [];
   for (const name of names) {
     const file = await open(path.join(root, name), constants.O_RDONLY | constants.O_NOFOLLOW).catch(() => null);

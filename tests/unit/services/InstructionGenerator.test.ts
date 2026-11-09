@@ -202,14 +202,27 @@ describe('InstructionGenerator', () => {
       const claude = await generator.generateClaudeMd(info);
       const copilot = await generator.generateCopilotMd(info);
 
+      for (const content of [agents, claude, copilot]) {
+        const recovery = content.split('## EAI Repo Contract')[1].split('\n## ')[0];
+        expect(recovery).toContain('at most once for the original failure');
+        expect(recovery).toContain('Never retry or explain a failed `eai errors explain` command');
+        expect(recovery).toContain('read-only diagnostics automatically');
+        expect(recovery).toContain(
+          'ask the person before any fix that changes workspace or external state'
+        );
+        expect(recovery).toContain('reuse the original-failure guidance');
+        expect(recovery).not.toContain('After any `eai` command error');
+        expect(recovery).not.toContain('offer "get help"');
+      }
       expect(agents).toContain('## EAI Repo Contract');
       expect(agents).toContain('public `eai` entrypoint');
       expect(agents).toContain('.specify/commands/gofer_eai_first_run.md');
       expect(agents).toContain('eai agent guide --format json');
       expect(agents).toContain('eai errors explain <code-or-reason> --format json');
       expect(agents).toContain(
-        'eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json'
+        'eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json'
       );
+      expect(agents).toContain('confirm workspace context');
       expect(agents).toContain('sign out and sign back in');
       expect(agents).toContain('app_token_tenant_context_required');
       expect(agents).toContain('/v4/platform/tenants/<tenant-id>/...');

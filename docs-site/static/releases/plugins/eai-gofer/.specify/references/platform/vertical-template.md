@@ -26,7 +26,8 @@ Gofer terminology resolve to the same guidance.
 3. The BFF or server helpers attach auth, tenant, and correlation headers.
 4. The frontend never receives direct downstream database, blob, search, or
    PublicAPI credentials.
-5. Prefer PublicAPI V4 surfaces; v3 route-family mapping is compatibility glue.
+5. Use the published PublicAPI route family through the template SDK, named
+   `eai` commands, or an approved server-side helper.
 
 ## Implementation Contract
 
@@ -38,7 +39,7 @@ Gofer terminology resolve to the same guidance.
   callbacks, auth actions, analytics hooks, render props, and React nodes.
 - Use the CLI for setup and verification:
   - `eai login`
-  - `eai tenant select <tenant-slug>`
+  - `eai workspace select <workspace-slug>`
   - `eai types validate --tenant-key <key> --tenant-id <tenant-id>`
   - `eai types seed --tenant-key <key> --tenant-id <tenant-id>`
   - `eai types diff --tenant-key <key> --tenant-id <tenant-id>`

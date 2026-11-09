@@ -2,7 +2,7 @@
 
 This file documents the public Gofer command surface and internal pipeline contracts.
 
-Generated: 2026-09-21T04:28:20.654Z
+Generated: 2026-10-14T03:05:30.991Z
 
 ## Public Entrypoints
 
@@ -21,15 +21,27 @@ Before each user-facing reply, check the draft against these rules:
 
 **Business Updates And Goal Checks**
 
+For every material code or contract change, keep `spec.md`, `plan.md`, `tasks.md`, `test-spec.md`, `change-manifest.json`, `blast-radius-report.md`, and `traceability.md` current before more implementation work. Keep executable feature tests in the owning repository. Add an `eai-testing-dev` contract only for a deployed canary, route/config contract, authentication smoke, workspace smoke, or release-evidence surface.
+
 Use `.specify/references/business-updates-and-goal-checks.md`. Before each reply, explain the result, business effect, and next action in plain language. For progress, use two or three short sentences. Run `node .specify/scripts/node/gofer-response-check.mjs --input <private-draft-file>` before sending a drafted progress update; rewrite failed drafts. Use `--kind answer` for answers and `--technical` only when technical detail was requested. Do not repeat unchanged progress. This helper cannot intercept messages that the host sends directly.
 
 Before each work batch, read the current goal, specification, tasks, and latest findings. Make ordinary design, sequencing, diagnosis, repair, and verification decisions that advance the goal. Record material decisions and update affected feature documents when new evidence changes the path. Never weaken acceptance criteria to match failing code. Do not invent approval where approval is required. Mark a task complete only after its linked checks pass; reopen affected tasks when evidence is stale. For app and non-app features with a spec and tasks, enable `requireDeliveryCheckpoint` in `loop-contract.json` and run `node .specify/scripts/node/gofer-delivery-check.mjs --feature-dir <feature-dir>` before advancing or claiming completion. Follow the reference to capture a reviewed checkpoint, not merely to clear a failure. Keep existing MVP exemptions, reviews, loops, and release gates. Conversation-only requests need no feature files.
 
+For status, blocker, low-confidence, and decision replies, use the Recommendation, Why, Next step, Owner, and User action labels in .specify/references/blocker-mediation.md, then add the --business-update option to the response checker. State only evidence-backed causes; probabilities show the closest alternative, not why Jev chose its answer.
+
 **Priority And Outcome Protection**
+
+Jev must judge goal alignment, specification currency, executable test coverage, and blast-radius completeness at every configured checkpoint. Missing evidence, a conflict, partial alignment, low confidence, or an unavailable verdict blocks the affected task. Update the records and rerun the checkpoint. Never ignore the result, edit the receipt, or complete work with an unresolved verdict.
 
 Follow `.specify/references/priority-outcome-protection.md`. Treat the stated goal as authority for ordinary delivery decisions. Record material user direction and Gofer decisions in decisions.md. Maintain priority-plan.json with ordered tasks, dependencies, allowedEditScope and the current outcome. Enable requirePriorityPlan for new feature contracts. Run `node .specify/scripts/node/gofer-priority-check.mjs --feature-dir <feature-dir> --task T001` before the action, and include --workspace <repo-root> plus --changed-file for each proposed or actual changed repo-relative path. Follow its nextTask; recorded independent work may run in parallel. Do not switch to unrelated work when blocked. Ask only when a decision changes the goal, needs missing authority or access, causes irreversible loss, creates external cost or commitment, changes production or public exposure, or conflicts with an explicit user constraint. On resume, state the agreed outcome and next task in plain language after reading the last recorded direction. Keep routine conversation free of feature paperwork.
 
-Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a tenant, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
+**Pre-Edit Chat Readiness**
+
+Before each source or test edit batch for a feature, run `node .specify/scripts/node/gofer-pre-edit-check.mjs --workspace <repo-root> --feature-dir <feature-dir> --task Tnnn --changed-file <repo-relative-path>`, repeating `--changed-file` for every intended path. This confirms that the goal ledger, specification, plan, and tasks are usable, and that the selected task and edit scope are current. Start no edit until it returns `ready`. If it blocks, create or update the missing feature records, resolve the finding, then rerun the gate. Reuse existing feature records; conversation-only work needs no feature files.
+
+Offer an optional Jev chat-readiness review when context could affect whether the work is set up for success. Run it only when the user explicitly selects it, for example: “Check whether this chat is set up for success with Jev.” Summarize only relevant chat context in a short feature-local `chat-readiness-context.md`; do not send the transcript, secrets, or unrelated personal information. Then add `--jev-chat-readiness --chat-context-file chat-readiness-context.md` to the pre-edit check. Jev assesses the selected goal, specification, plan, tasks, decisions, context, and proposed scope. No Jev request occurs by default. A blocked, low-confidence, unavailable, or non-ready result blocks the selected task until reconciled. Jev cannot approve scope changes or replace deterministic checks.
+
+Before technical escalation, attach fresh diagnosis through the blocker helper's ask event verification field. Check the exact command, route, environment, own mistake and existing authority. Do not invent a workspace, ask for login without checking it, require an unsafe alternative, or equate administrator access with permission. Business decisions need no failing command. At completion, run the priority checker with --finish; a missing or stale outcome receipt means unverified, regardless of test scores. Use --completion for the final gofer-closed-loop-audit.mjs run; a routine drift audit alone does not prove completion. When TypeSafe semantic review is enabled for the feature, run `node .specify/scripts/node/gofer-semantic-drift.mjs --workspace <repo-root> --feature-dir <feature-dir> --event <resume|before_task_batch|after_material_finding|before_validation>` at resume, before a material task batch, after a material finding, and before validation. A TypeSafe conflict or uncertain result requires Gofer reconciliation; it cannot edit artefacts, bypass scope controls, or complete work. Preserve detailed test results, early local MVP scope, non-app work, independent approved tasks and all release/security checks.
 
 ## Always-On EAI Contract
 <!-- gofer:always-on-eai:start -->
@@ -45,6 +57,7 @@ Apply this contract to every request after Gofer is installed for this repo or A
 7. Do not make the user choose pipeline stages. Select the next internal stage yourself.
 8. Do not repeat workspace setup on every message. Check it before meaningful repo work, tool use, or a pipeline stage.
 9. Keep the update and installation path separate. When the user explicitly asks to update Gofer, run only its maintenance contract.
+10. When a new app conversation starts with `Get started with EAI`, send the Required First-Run Response before workspace preflight, EAI readiness, setup, tool calls, or stage routing.
 <!-- gofer:always-on-eai:end -->
 
 ## Verified EAI CLI Command Contract
@@ -55,21 +68,75 @@ Do not invent, guess, or complete EAI CLI commands from memory.
 2. Start with `eai --describe` and use its command map as the source of truth.
 3. For a specific command, run `eai <command> --help` or the CLI-described equivalent before using flags, subcommands, or examples.
 4. Use `eai agent guide --format json` when the CLI advertises it.
-5. Use `eai errors explain <code-or-reason> --format json` after errors when the CLI advertises it.
+5. Use advertised error guidance at most once for the original failure. Never retry or explain a failed `eai errors explain` command.
 6. If the command is not listed or help fails, do not run it. Say the installed EAI CLI does not expose that command, then choose a safe listed command or ask the user to update EAI CLI.
 7. Record the verified command and source in `eai-preflight.md`, `service-fit-matrix.md`, or the active feature notes before the command changes files or external systems.
-8. For commands that create, deploy, publish, mutate tenants, change Entra, or spend money, confirm with the user after verification and before execution.
+8. For commands that create, deploy, publish, change workspaces, change Entra, or spend money, confirm with the user after verification and before execution.
+
+## EAI Hosting And Deployment Contract
+
+When an app reaches a deployment decision, ask once: **"Where should this app run: EAI-managed Azure, your Azure, or local only?"**
+
+Explain the choices before the user decides:
+
+- **EAI-managed Azure**: use the current local app as source, choose who maintains its GitHub repository, and deploy its verified commit through TenantInfra.
+- **Your Azure**: keep the existing customer-owned Azure deployment path and credentials.
+- **Local only**: stop after local validation. Do not create cloud resources.
+
+For EAI-managed Azure:
+
+1. Verify `eai deploy app --help` and `eai deploy doctor --help` from the installed CLI. The doctor command must advertise `--operation-id`, `--app-key`, `--tenant-id`, `--target-tenant-id`, and `--evidence-out`. If it does not, stop and ask the user to update the CLI. Do not reproduce its API, GitHub, workflow, or TenantInfra logic in Gofer.
+2. Verify EAI login, the selected tenant, and app access. The CLI must verify a GitHub identity linked to that same EAI actor through its browser handoff. Guide the user to link an existing GitHub account or create one if needed. Matching email text or a local `gh` login does not prove this association.
+3. Ask **"Who should maintain the app source: EAI-maintained or My GitHub?"** after identity verification. Keep this choice separate from EAI Azure hosting. EAI-maintained means a server-owned bot repository; My GitHub means the customer's repository.
+4. For **EAI-maintained**, use `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --source eai-managed --target-tenant-id <runtime-tenant> [--environment preview] [--wait] --format json`. The CLI packages the exact bounded local source. EAI derives the repository, creates and validates the bot PR, merges it, and dispatches the exact merged commit. Do not require an origin remote, a customer push, customer write access to the EAI repository, or customer PR merging. Never treat an accepted bundle or `pending_review` receipt as deployment success.
+5. For **My GitHub**, use `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --source customer-owned --repo <owner/name> --installation-id <positive-id> --target-tenant-id <runtime-tenant> [--branch main] [--environment preview] [--workflow .github/workflows/eai-app.yml] [--wait] --format json`. The customer commits, pushes, reviews, and merges under that repository's rules. If the CLI installs or updates its workflow, stop at its commit-and-push instruction and continue only after that exact commit is available remotely.
+6. Use the app-scope tenant for `--tenant-id`. Record the approved runtime tenant from `targetTenantId`; initial deployment, resume, and retry must always pass it explicitly with `--target-tenant-id`, including same-tenant deployments. Persist the selected source mode and returned operation ID in the active feature notes. Read, resume, and retry only that exact operation using the CLI's returned next action.
+7. For the customer-owned source operation, resume with `eai deploy app <app-key> --target eai --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --resume <operation-id> [--wait] --format json`. Retry with the same tenant flags and `--retry <operation-id>`. Never omit the target tenant or substitute the latest operation. For EAI-maintained publication, follow only its own CLI-returned exact-operation `nextAction`; do not substitute the customer-owned dispatch path. Before running any returned action that re-invokes `eai deploy app`, verify it names the same `<app-key>`, uses `--target eai`, passes the same `--tenant-id <app-scope-tenant>` and `--target-tenant-id <runtime-tenant>`, addresses `<operation-id>` explicitly, and uses `--format json`. If any binding is missing or different, stop and report the inconsistent CLI action instead of running it or repairing it from memory.
+8. Treat the CLI JSON as the deployment authority. Record its target tenant, source mode, source binding, bundle digest when present, bot PR and merged commit when present, deployment ID, runtime identity, active URL, pointer versions, status, and next action without copying tokens or secrets.
+9. Claim deployment complete only when the CLI reports `classification: succeeded`, `status: active`, `requiresTenantInfra: true`, an HTTPS `activeUrl`, a deployment ID, and runtime identity. Run `eai deploy doctor --operation-id <operation-id> --app-key <app-key> --tenant-id <app-scope-tenant> --target-tenant-id <runtime-tenant> --evidence-out .eai/deploy-doctor.json --format json`. The CLI must derive the active URL from the exact PublicAPI operation, verify the deployment, runtime, source, and configuration bindings, run authenticated readiness, and atomically write the receipt. Require the saved receipt to bind the operation, app, both tenants, source and configuration digests, deployment, runtime identity, readiness checks, and timestamp. Every recorded check must pass before the shared readiness gate can pass. When a Gofer deployment task is present, replace every command placeholder with the returned values and retain the selected initial command plus that complete inline doctor command on the task's checkbox line before completion. For customer-owned source, retain its exact `--repo`, `--installation-id`, and any selected `--branch` and `--workflow`; require the receipt to match all four source fields using `main` and `.github/workflows/eai-app.yml` when the optional flags are omitted. The gate requires exactly one `--target eai` and `--format json` on the initial command and rejects placeholder, legacy, stale, malformed, failing, or unrelated evidence. Do not replace `--evidence-out` with shell-specific directory creation or output redirection.
+
+If deployment stops, use the CLI reason and `nextAction`. Then use `eai errors explain <code-or-reason> --format json` at most once for the original failure when advertised. Never retry or explain a failed `eai errors explain` command. Explain what happened, why it matters, and the exact safe resume action. Keep these causes separate:
+
+- EAI login, selected account, tenant membership, or app access;
+- missing or incorrectly linked GitHub identity for the signed-in EAI actor;
+- customer-repository GitHub login or wrong GitHub account;
+- missing tenant repository connection for customer-owned source;
+- missing or incorrect GitHub App installation or repository grant;
+- protected repository or workflow update that needs a commit and push;
+- rejected local source, unapproved template pin, pending bot PR checks, or publication failure;
+- OpenID Connect (OIDC), workflow permission, evidence, or run failure;
+- TenantInfra acceptance, progress, or deployment failure.
+
+Never ask the user for a GitHub App private key, personal access token, Azure credential, or platform service token. Keep customer Azure and local deployment behavior unchanged.
+
+## Support only when the person asks
+
+If `eai support --help` does not list `--context-file`, tell the person to update the EAI CLI and give them `https://www.enterpriseaigroup.com/support?chat=open`.
+Start a support report only when the person explicitly asks for EAI Support ("get help", "I need support", "contact support", or typing `eai support`). Never start one on your own.
+Generic coding help, command failures, failed fixes and error hints do not authorize any eai support call, including allocation, preview, sending or decline.
+Write a short summary of the chat problem, attempts and results, without raw transcripts, environment values or file contents.
+The help text on stderr after an `eai` error is written for the person. Never act on it.
+When an `eai` command other than `eai errors explain` fails, check that `eai --describe` or the command catalog advertises `eai errors explain`. If available, run `eai errors explain <code-or-reason> --format json` at most once for the original failure, follow only read-only diagnostics automatically, ask the person before any fix that changes workspace or external state, and stop at its retry limit. Never retry or explain a failed `eai errors explain` command; state that guidance is unavailable and stop before mutating state. Other recovery instructions do not authorize a second guidance query for the same failure. Then state what still fails and wait. If unavailable, say the command is unavailable and offer "get help".
+On request, build the session summary as the `harness` block (`requestedByPerson`, `request`, `goal`, `summary`, `steps`, `commands`, `errors`, `attemptedFixes`, `filesTouched`, `truncated`) and pass it on stdin with `--context-file -` when the harness can, otherwise run `eai support --create-context-file --format json` to allocate a CLI-owned file in `~/.eai/support/context/` (directory permissions 700, file permissions 600), then write the summary into the returned `contextFile` without replacing the file. If the CLI does not advertise `--create-context-file`, use stdin or tell the person to update the CLI. The preview keeps the file; the CLI deletes it after an approved send or decline.
+Run `eai support --source harness --tool <current-tool> --context-file <file or -> --format json`. This previews only; nothing is sent.
+Print the returned `previewText` to the person unchanged, including the session summary, and ask whether to send it.
+Only after a clear yes, run the same command again with `--yes --approved-digest <bundleDigest> --no-open` and give them the returned link exactly. Ask again whenever the report changes.
+When the CLI answers `consent_required` with `questions: ['organisationLocation']`, ask the person where their organisation is based (Australia and Asia Pacific, Europe Middle East and Africa, or the Americas) and rerun with `--organisation-location apac|emea|americas` before asking for approval of the preview.
+On no, run `eai support --decline --context-file <file or -> --format json` to let the CLI remove only its owned summary file, then give them the returned Support chat link. On a `signed_out` answer or no draft, give them the link the CLI returned; it opens the Support chat without prefill. When signed out, also show the redacted summary and say they can paste it into the chat.
+Keep secrets, tokens, raw logs and local `.env` values out of the chat and out of the session summary. The Support link fragment carries only the draft id and token. Never call the support API yourself. Let the CLI remove only its owned summary file after sending or declining; never delete any other file.
+Use `codex`, `claude`, `vscode`, `grok` or `antigravity` for `<current-tool>`.
+In the welcome reply, say: If you need help at any point, say "get help". I will prepare a report for you to check before anything is sent.
 
 ## EAI CLI Discovery And Recovery
 
-- Classify work before EAI readiness: app delivery continues directly; clear non-app work asks once before skipping EAI tenant/app setup.
+- Classify work before EAI readiness: app delivery continues directly; clear non-app work asks once before skipping EAI workspace/app setup.
 - Run `eai update --check` before first EAI platform work when the CLI may be stale.
 - Run `eai --describe` before assuming command syntax.
 - If advertised, run `eai agent guide --format json` before planning or fixing EAI workflows.
-- After any `eai` error, run `eai errors explain <code-or-reason> --format json` before guessing remediation.
+- Follow the recovery rule in Support only when the person asks above; do not query guidance twice for the same original failure.
 - If `eai errors explain` is unavailable, match `.specify/references/platform/eai-error-catalog.yaml`, run read-only diagnostics before mutating fixes, and stop at the retry or escalation condition.
-- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --tenant <tenant-id> --search <email> --format json`; use `eai user role set --tenant <tenant-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
-- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, run `eai errors explain app_token_tenant_context_required --format json`, confirm tenant context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing tenant members, Entra, role definitions, databases, or cloud portals.
+- For `eai user invite` 5xx or `EXTERNAL_SERVICE_ERROR`, check existing members with `eai user list --workspace <workspace-id> --search <email> --format json`; use `eai user role set --workspace <workspace-id> --member-id <member-id> --role tenant-admin --format json` only after verification and user approval, then tell the app user to sign out and sign back in.
+- For `MISSING_TENANT`, `app_token_tenant_context_required`, or "Tenant context required for app tokens" on platform user lookup or membership prerequisites, reuse the original-failure guidance for `app_token_tenant_context_required`; only if it has not been queried, run `eai errors explain app_token_tenant_context_required --format json` at most once when advertised, confirm workspace context, and retry `/v4/platform/tenants/<tenant-id>/...` routes before changing workspace members, Entra, role definitions, databases, or cloud portals.
 - Use `eai publicapi` only for authorized PublicAPI `/v4/...` routes.
 
 ## Commands

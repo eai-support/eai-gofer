@@ -40,3 +40,5 @@ docs-site/static/releases/
 .grok/skills/
 *.tgz
 *.tar.gz
+# One sentence per line, mirrored verbatim into generated surfaces and the EAI CLI.
+.specify/references/platform/eai-support.md

@@ -29,7 +29,7 @@ EAI Gofer is designed to be easy to adopt in an existing repo:
    `$eai` in Codex.
 3. If you only need to add Gofer to an existing repo, run **Gofer: Initialize
    Repository** in VS Code, then refresh/restart the host command picker.
-4. Gofer checks first-run readiness, workspace health, EAI CLI/login/tenant
+4. Gofer checks first-run readiness, workspace health, EAI CLI/login/workspace
    state, and then routes the internal pipeline for you.
 
 If `/eai` is unknown, use `/eai-update` in a host where Gofer is already
@@ -75,10 +75,11 @@ Gemini is not a current install or update host.
 Users do not manually run stage commands. Write normal requests as `/eai ...`
 and Gofer will:
 
-1. Check the repo scaffold, EAI CLI, login, tenant, and app-template readiness.
+1. Check the repo scaffold, EAI CLI, login, workspace, and app-template
+   readiness.
 2. Work out the current feature state from `.specify/specs/`.
-3. Ask business-level questions when the goal, audience, value, risk, or tenant
-   context is unclear.
+3. Ask business-level questions when the goal, audience, value, risk, or
+   workspace context is unclear.
 4. Run the internal stage contracts for research, specification, planning,
    tasks, implementation, and validation.
 5. Show the UI as early and as often as practical when an app UI is involved.
@@ -114,11 +115,11 @@ Each stage also maintains a running product-release PR/FAQ in
 `prfaq-history/`. Gofer uses that same evidence to keep stakeholder review
 documents current:
 
-| Persona            | Summary document              | Built from                                                                                                    |
-| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Business Owner     | `business-owner-summary.md`   | `problem-brief.md`, `discovery.md`, `spec-summary.md`, `business-metrics.md`, value stream evidence, ROI      |
-| CTO / Architecture | `cto-architecture-summary.md` | `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams, `service-fit-matrix.md`, EAI preflight           |
-| CISO / Risk        | `ciso-security-summary.md`    | `validation-report.md`, `audit-history.md`, risk heatmap, auth/tenant controls, secret/data handling evidence |
+| Persona            | Summary document              | Built from                                                                                                       |
+| ------------------ | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Business Owner     | `business-owner-summary.md`   | `problem-brief.md`, `discovery.md`, `spec-summary.md`, `business-metrics.md`, value stream evidence, ROI         |
+| CTO / Architecture | `cto-architecture-summary.md` | `plan.md`, `contract-pack.md`, `data-model.md`, C4 diagrams, `service-fit-matrix.md`, EAI preflight              |
+| CISO / Risk        | `ciso-security-summary.md`    | `validation-report.md`, `audit-history.md`, risk heatmap, auth/workspace controls, secret/data handling evidence |
 
 Gofer also scores visual communication during validation. Architecture, process,
 security, UI, and EAI Platform visuals must be simple, rendered or
@@ -301,7 +302,7 @@ https://eai-support.github.io/eai-gofer/releases.json
 `/eai` replaces the long website setup prompt for users who have installed a
 supported AI coding host. It can run before `.specify/` exists in the target
 repo, because Gofer routes first-run setup internally when the machine, login,
-tenant, template, or scaffold is not ready.
+workspace, template, or scaffold is not ready.
 
 When first-run setup is needed, Gofer:
 
@@ -309,12 +310,13 @@ When first-run setup is needed, Gofer:
   Codespaces, OS, shell, and workspace folder
 - checks Git, Node.js, npm, the scoped EAI npm registry, and `eai --version`
 - asks before installing Git, Node.js, npm, EAI CLI, opening browser login, or
-  changing tenant/project state
+  changing workspace/project state
 - uses `npm install -g eai-cli` when EAI CLI installation is approved, with
   `npm install -g @enterpriseai/cli --@enterpriseai:registry=https://eai-support.github.io/eai/registry/`
   as the static-registry fallback when npmjs is unavailable
 - runs `eai update --check`, `eai --describe`, `eai whoami`, and
-  `eai tenant list --format json` before assuming CLI syntax or tenant readiness
+  `eai workspace list --format json` before assuming CLI syntax or workspace
+  readiness
 - does not invent EAI CLI commands; it verifies command paths and flags with
   `eai --describe` and command-specific `--help` before suggesting or running
   them
@@ -322,9 +324,11 @@ When first-run setup is needed, Gofer:
   uses `eai errors explain <code-or-reason> --format json` before guessing a
   workaround
 - asks for the project display name, proposes a lowercase kebab-case CLI name,
-  confirms the active tenant, then runs
-  `eai init <project-name> --skip-prompts --company-tenant <active-tenant-id>`
+  confirms the active workspace, then runs
+  `eai init <project-name> --skip-prompts --company-workspace <active-workspace-id>`
   when approved
+- For older CLI versions that do not advertise `--company-workspace`, use the
+  `--company-tenant` compatibility alias.
 - treats `E001` from `eai verify`, `eai template check`, or
   `eai doctor --check-updates` as "this repo is not yet an EAI app project",
   then offers initialization instead of leaving the user at a dead end
@@ -381,23 +385,34 @@ npm run gofer:package-plugin -- --sync-repo
 ### Optional TypeSafe semantic review
 
 TypeSafe adds an independent, bounded signal for long-running delivery work. It
-does not replace the specification, tests, priority controls, or human
-approval.
+does not replace the specification, tests, priority controls, or human approval.
 
-From the repository where Gofer is installed, connect once:
+On macOS, connect once per macOS user from any updated Gofer workspace. That
+single connection is then available to every local Gofer workspace used by Codex
+CLI or Codex Desktop:
 
 ```bash
 node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect
 ```
 
-The prompt stores the key only in the ignored private file
-`.specify/secrets/typesafe.env`, enables the non-secret policy, and does not
-print the key. A process-level `TYPESAFE_API_KEY` takes priority for CI or a
-managed surface. Remove the project key and disable review with:
+The command stores the key in the current user's macOS Keychain. It does not
+print the key. Gofer remains fully operational when Jev is not connected. Once
+connected, the shared credential is discovered automatically by every updated
+local Gofer workspace. A project secret can still override the shared key:
+
+```bash
+node .specify/scripts/node/gofer-typesafe-credentials.mjs --connect --scope project
+```
+
+A process-level `TYPESAFE_API_KEY` takes priority for CI or a managed surface.
+Remove the shared key from this macOS user with:
 
 ```bash
 node .specify/scripts/node/gofer-typesafe-credentials.mjs --disconnect
 ```
+
+Use `--disconnect --scope project` to remove only a project override. On
+non-macOS systems, `--connect` falls back to project scope.
 
 Run a review at a Gofer delivery checkpoint with:
 
@@ -408,6 +423,47 @@ node .specify/scripts/node/gofer-semantic-drift.mjs --feature-dir .specify/specs
 The receipt contains only hashes and review outcomes. A conflict or uncertain
 outcome requires reconciliation; it cannot modify the specification or close a
 task.
+
+### Reviewed learning from completed runs
+
+Gofer can convert a completed local runtime journal into a normalized trace. It
+can then evaluate a proposed lesson and place it in a review queue. Jev is
+optional. No memory becomes reusable without explicit approval.
+
+Normalize a completed journal:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs normalize \
+  --input .specify/specs/<feature>/verified-execution.jsonl \
+  --host codex \
+  --objective "Complete the scoped delivery task"
+```
+
+Prepare a proposed lesson in a workspace file. Inspect the exact projection
+without making a network call:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs evaluate \
+  --trace .specify/memory/reviewed-learning/traces/<trace-id>.json \
+  --title "Validate before commit" \
+  --lesson-file .specify/memory/proposed-lesson.md \
+  --kind delivery-control \
+  --dry-run
+```
+
+When TypeSafe is connected and the learning policy is enabled, omit `--dry-run`
+to create a candidate. Approve it only after review:
+
+```bash
+node .specify/scripts/node/gofer-reviewed-learning.mjs review \
+  --candidate <candidate-id> \
+  --decision approve \
+  --actor <reviewer> \
+  --reason "The trace supports this reusable lesson."
+```
+
+Approved memory remains project-scoped and local. It cannot authorize model
+routing, execution, writes, commits, validation, or feature completion.
 
 ## Community
 

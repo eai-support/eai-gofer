@@ -45,9 +45,9 @@ describe('capability receipt lifetime', () => {
     ['not a number', '5'],
     ['zero', 0],
   ])('rejects a lifetime that is %s before doing any work', async (_name, ttlMs) => {
-    await expect(issueLocalCapabilityReceipt({ workspaceRoot: '/w', ttlMs: ttlMs as number })).rejects.toThrow(
-      'RECEIPT_LIFETIME_OUT_OF_RANGE'
-    );
+    await expect(
+      issueLocalCapabilityReceipt({ workspaceRoot: '/w', ttlMs: ttlMs as number })
+    ).rejects.toThrow('RECEIPT_LIFETIME_OUT_OF_RANGE');
     expect(isolation).not.toHaveBeenCalled();
     expect(evaluate).not.toHaveBeenCalled();
   });

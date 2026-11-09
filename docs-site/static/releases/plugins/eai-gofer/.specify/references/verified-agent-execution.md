@@ -52,7 +52,7 @@ does not mean a host has registered or executed a native agent.
 
 Use this contract for all stages and helpers, including non-app research.
 Conversation and maintenance do not require an unnecessary multi-agent run. Keep
-EAI app setup, tenant access, MVP scope, preview, and release rules intact.
+EAI app setup, workspace access, MVP scope, preview, and release rules intact.
 
 Before assigning a specialist:
 

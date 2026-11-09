@@ -1,5 +1,5 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,11 @@ import { createIsolationRepository, localIsolationReport } from './local-isolati
 const runGraph = vi.hoisted(() => vi.fn());
 const issueReceipt = vi.hoisted(() => vi.fn());
 const trustedKey = vi.hoisted(() => ({ value: null as KeyObject | null }));
+const gitEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => !['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR'].includes(key)
+  )
+);
 
 vi.mock('../../../.specify/scripts/node/gofer-verified-execution.mjs', () => ({
   runVerifiedGraph: runGraph,
@@ -101,6 +106,25 @@ describe('verified native runtime command entrypoint', () => {
       const result = await runVerifiedSmokeTask({ workspace: source });
       expect(result).toMatchObject({ status: 'verified', adapterCallsSettled: true });
       expect(runGraph).toHaveBeenCalledTimes(1);
+      // The verified task worktree is disposed, and its output is kept as evidence.
+      const worktrees = execFileSync('git', ['-C', source, 'worktree', 'list', '--porcelain'], {
+        encoding: 'utf8',
+        env: gitEnvironment,
+      });
+      expect(worktrees).not.toContain('gofer-isolated-worktree-');
+      expect(
+        await readFile(
+          path.join(
+            source,
+            '.specify',
+            'specs',
+            'native-runtime-smoke',
+            'evidence',
+            'NATIVE_SMOKE_PROOF.md'
+          ),
+          'utf8'
+        )
+      ).toBe('native wiring smoke test passed.\n');
       const ledgerPath = path.join(
         source,
         '.specify',
@@ -148,6 +172,10 @@ describe('verified native runtime command entrypoint', () => {
       let seen: Record<string, unknown> = {};
       runGraph.mockImplementationOnce(async (input) => {
         seen = input;
+        await writeFile(
+          path.join(input.workspaceRoot, 'NATIVE_SMOKE_PROOF.md'),
+          'native wiring smoke test passed.\n'
+        );
         return { status: 'verified', adapterCallsSettled: true };
       });
       const benchmark = { evidence: { schemaVersion: 2 }, attestation: { schemaVersion: 1 } };
@@ -160,7 +188,9 @@ describe('verified native runtime command entrypoint', () => {
       expect(seen.maxCalls).toBeGreaterThanOrEqual(9);
       const feature = path.join(source, '.specify', 'specs', 'native-runtime-smoke');
       expect(await readFile(path.join(feature, 'plan.md'), 'utf8')).toContain('Plan');
-      expect(JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))).toMatchObject({
+      expect(
+        JSON.parse(await readFile(path.join(feature, 'loop-contract.json'), 'utf8'))
+      ).toMatchObject({
         maxIterations: 2,
       });
     } finally {
