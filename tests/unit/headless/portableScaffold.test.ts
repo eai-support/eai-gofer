@@ -24,6 +24,13 @@ const candidateRelease = {
   inventoryDigest: createGoferScaffoldInventoryDigest(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS),
 };
 const additions = [
+  '.specify/references/platform/app-marketplace.md',
+  '.specify/scripts/node/generated/application-package-runtime.mjs',
+  '.specify/scripts/node/generated/application-package.schema.json',
+  '.specify/scripts/node/generated/fixtures/application-package.fixtures.json',
+  '.specify/scripts/node/generated/fixtures/application-package.valid.json',
+  '.specify/scripts/node/generated/fixtures/application-package.valid.reordered.json',
+  '.specify/scripts/node/validate-application-package.mjs',
   '.specify/references/blocker-mediation.md',
   '.specify/references/business-updates-and-goal-checks.md',
   '.specify/references/priority-outcome-protection.md',
@@ -130,6 +137,24 @@ describe('release-pinned portable inventories', () => {
     }
     const manifest = bundle.files.find((file) => file.path === '.specify/gofer-version.json');
     expect(JSON.parse(manifest!.content).goferRelease).toEqual(candidateRelease);
+  });
+
+  it('still accepts the previously pinned verified-runtime inventory', () => {
+    const packageAssets = new Set(additions.slice(0, 7));
+    const previousPaths = GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS.filter(
+      (file) => !packageAssets.has(file)
+    );
+    expect(previousPaths).toHaveLength(243);
+    const previousRelease = {
+      ...candidateRelease,
+      inventoryDigest: createGoferScaffoldInventoryDigest(previousPaths),
+    };
+    expect(getGoferPortableScaffoldPaths(previousRelease)).toEqual(previousPaths);
+    const request = candidateRequest();
+    request.run = { ...request.run, goferRelease: previousRelease };
+    request.files = request.files.filter((file) => !packageAssets.has(file.path));
+    const bundle = createGoferExportBundle(request);
+    expect(bundle.files.some((file) => packageAssets.has(file.path))).toBe(false);
   });
 
   it.each(additions)('rejects a candidate missing %s', (missing) => {

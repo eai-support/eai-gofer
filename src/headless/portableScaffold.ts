@@ -237,8 +237,8 @@ const GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   ].sort()
 );
 
-/** Current inventory includes the verified runtime and its full import chain. */
-export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+/** Preserve the verified-runtime inventory for releases that already pinned it. */
+const GOFER_VERIFIED_RUNTIME_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
   [
     ...GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS,
     ...under('config', ['object-type-routing.json']),
@@ -247,18 +247,11 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
       'agent-catalog.json',
       'issue-and-pr-titles.md',
       'mvp-capability-validation.md',
-      'platform/app-marketplace.md',
       'platform/eai-auth-access.md',
       'platform/eai-support.md',
       'verified-agent-execution.md',
     ]),
     ...under('scripts', [
-      'node/generated/application-package-runtime.mjs',
-      'node/generated/application-package.schema.json',
-      'node/generated/fixtures/application-package.fixtures.json',
-      'node/generated/fixtures/application-package.valid.json',
-      'node/generated/fixtures/application-package.valid.reordered.json',
-      'node/validate-application-package.mjs',
       'bash/verify-object-type-routing-workspace.sh',
       'node/eai-app-template-readiness.mjs',
       'node/gofer-acceptance-check.mjs',
@@ -315,11 +308,28 @@ export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.f
   ].sort()
 );
 
+/** INVARIANT: Package assets extend new exports without changing earlier pinned inventories. */
+export const GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS: readonly string[] = Object.freeze(
+  [
+    ...GOFER_VERIFIED_RUNTIME_PORTABLE_SCAFFOLD_PATHS,
+    ...under('references', ['platform/app-marketplace.md']),
+    ...under('scripts', [
+      'node/generated/application-package-runtime.mjs',
+      'node/generated/application-package.schema.json',
+      'node/generated/fixtures/application-package.fixtures.json',
+      'node/generated/fixtures/application-package.valid.json',
+      'node/generated/fixtures/application-package.valid.reordered.json',
+      'node/validate-application-package.mjs',
+    ]),
+  ].sort()
+);
+
 const PORTABLE_PATHS = new Set(GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS);
 const RELEASE_INVENTORIES = new Map(
   [
     GOFER_PORTABLE_SCAFFOLD_PATHS,
     GOFER_PRIORITY_PORTABLE_SCAFFOLD_PATHS,
+    GOFER_VERIFIED_RUNTIME_PORTABLE_SCAFFOLD_PATHS,
     GOFER_CURRENT_PORTABLE_SCAFFOLD_PATHS,
   ].map((paths) => [createGoferScaffoldInventoryDigest(paths), paths])
 );
