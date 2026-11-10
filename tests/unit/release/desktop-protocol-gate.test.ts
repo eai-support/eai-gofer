@@ -103,12 +103,14 @@ describe('desktop protocol release gate', () => {
     expect(vsixIndex).toBeGreaterThan(buildIndex);
   });
 
-  it('rechecks the committed versioned VSIX before the publish phase creates a tag', () => {
+  it('builds and tests the merged VSIX before the publish phase creates a tag', () => {
     const release = read('release.sh');
     const phase = release.slice(release.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then'));
     const check =
-      'run_release_check "Merged Gofer release artifact" npm run test:packaged-protocol -- --vsix "docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix"';
+      'run_release_check "Merged Gofer release artifact" validate_merged_release_artifact "$CURRENT_VERSION"';
     expect(phase).toContain(check);
+    expect(release).toContain('validate_merged_release_artifact() (');
+    expect(phase).not.toContain('docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix');
     expect(phase.indexOf('run_release_validation_gate "$CURRENT_VERSION"')).toBeLessThan(
       phase.indexOf(check)
     );
