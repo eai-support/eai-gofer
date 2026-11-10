@@ -11,6 +11,10 @@ and this project adheres to
 
 ### Changed
 
+- Keep support on request when error guidance is unavailable. Generated and
+  freshly installed instructions report the unavailable command without
+  offering an unsolicited support action.
+
 - Standardized the current Gofer host contract on exactly Claude, Codex,
   Copilot, Google Antigravity, Grok Build, and VS Code. Existing automation that
   supplies `--host gemini` is mapped silently to `antigravity`; Gemini remains

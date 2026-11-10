@@ -97,7 +97,7 @@
         },
         {
           "id": "eai-gofer-refresh-compatibility",
-          "description": "Gofer releases produce the complete normalized resource layout consumed by eai update, and release preparation and publication both enforce that contract. Packaged, fresh-workspace and portable instructions retain one canonical support-on-request section, remove both owned historical/current sections before replacement, and bound error guidance to one query for the original failure without explaining a failed explanation.",
+          "description": "Gofer releases produce the complete normalized resource layout consumed by eai update, and release preparation and publication both enforce that contract. Packaged, fresh-workspace and portable instructions retain one canonical support-on-request section, remove both owned historical/current sections before replacement, and bound error guidance to one query for the original failure without explaining a failed explanation. Unavailable error guidance never adds an unsolicited support offer in generated, packaged or freshly installed instructions.",
           "owned_paths": [
             ".eai/test-coverage.json",
             ".specify/config/**",
