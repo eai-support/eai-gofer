@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = resolve(import.meta.dirname, '../../..');
 const excludedPaths = [
   'dist/',
-  'graphify-out/',
   'docs-site/static/releases/eai-gofer-',
   'docs-site/static/releases/gofer-',
 ];
