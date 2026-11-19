@@ -46,8 +46,31 @@ function firstExistingPath(candidates) {
 const version =
   process.argv[2] ||
   JSON.parse(fs.readFileSync(path.join(__dirname, '../extension/package.json'), 'utf8')).version;
-const releaseNotes = process.argv[3] || 'New release';
+const officialReleasePath = process.env.GOFER_RELEASE_METADATA_FILE
+  ? path.resolve(process.env.GOFER_RELEASE_METADATA_FILE)
+  : null;
+const officialRelease = officialReleasePath
+  ? JSON.parse(fs.readFileSync(officialReleasePath, 'utf8'))
+  : null;
+if (
+  officialRelease &&
+  (officialRelease.tagName !== `v${version}` ||
+    officialRelease.isDraft ||
+    officialRelease.isPrerelease ||
+    !Number.isFinite(Date.parse(officialRelease.publishedAt)))
+) {
+  throw new Error(`Official release metadata does not match version '${version}'.`);
+}
+const releaseNotes = officialRelease
+  ? officialRelease.body || officialRelease.name || `Gofer v${version}`
+  : process.argv[3] || 'New release';
 const customDownloadUrl = process.argv[4]; // Optional custom download URL
+const suppliedPublishedAt = officialRelease?.publishedAt || process.argv[5]; // Optional timestamp from the official GitHub Release
+const publishedAt = suppliedPublishedAt ? new Date(suppliedPublishedAt) : new Date();
+
+if (!Number.isFinite(publishedAt.getTime())) {
+  throw new Error(`Invalid release publication time: '${suppliedPublishedAt}'.`);
+}
 
 const releasesPath = path.join(__dirname, '../docs-site/static/releases.json');
 const releases = JSON.parse(fs.readFileSync(releasesPath, 'utf8'));
@@ -62,6 +85,9 @@ const latestAgentPluginZipUrl = buildLatestAgentPluginZipUrl();
 
 // Calculate actual file size from local release output if available.
 const candidateVsixPaths = [
+  ...(process.env.GOFER_RELEASE_VSIX_PATH
+    ? [path.resolve(process.env.GOFER_RELEASE_VSIX_PATH)]
+    : []),
   path.join(__dirname, '..', `eai-gofer-${version}.vsix`),
   path.join(__dirname, '..', `gofer-${version}.vsix`),
   path.join(__dirname, '../extension', `eai-gofer-${version}.vsix`),
@@ -70,6 +96,9 @@ const candidateVsixPaths = [
   path.join(__dirname, '../docs-site/static/releases', `gofer-${version}.vsix`),
 ];
 const candidatePluginZipPaths = [
+  ...(process.env.GOFER_RELEASE_PLUGIN_ZIP_PATH
+    ? [path.resolve(process.env.GOFER_RELEASE_PLUGIN_ZIP_PATH)]
+    : []),
   path.join(__dirname, '../dist', `eai-gofer-agent-plugin-${version}.zip`),
   path.join(__dirname, '../docs-site/static/releases', `eai-gofer-agent-plugin-${version}.zip`),
 ];
@@ -82,7 +111,7 @@ const agentPluginSizeMb = pluginZipPath ? sizeInMb(pluginZipPath) : 1.5;
 const newRelease = {
   version: version,
   tag_name: `v${version}`,
-  published_at: new Date().toISOString(),
+  published_at: publishedAt.toISOString(),
   download_url: downloadUrl,
   notes: releaseNotes,
   prerelease: false,
@@ -115,6 +144,14 @@ const newRelease = {
       bundle_url: publicPluginBundleUrl,
       marketplace_url: `${publicPluginBundleUrl}/copilot-marketplace.json`,
       manifest_url: `${publicPluginBundleUrl}/copilot-plugin.json`,
+      download_url: agentPluginDownloadUrl,
+      latest_download_url: latestAgentPluginZipUrl,
+      size_mb: agentPluginSizeMb,
+    },
+    antigravity: {
+      bundle_url: publicPluginBundleUrl,
+      manifest_url: `${publicPluginBundleUrl}/plugin.json`,
+      install_url: 'https://github.com/eai-support/eai-gofer',
       download_url: agentPluginDownloadUrl,
       latest_download_url: latestAgentPluginZipUrl,
       size_mb: agentPluginSizeMb,

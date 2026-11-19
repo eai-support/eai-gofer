@@ -146,4 +146,75 @@ describe('publish-public-release-assets.mjs', () => {
       false
     );
   });
+
+  it('publishes explicit official release artifacts instead of local fallback files', async () => {
+    const officialRoot = path.join(tmpRoot, 'official-release');
+    const officialPluginRoot = path.join(officialRoot, 'eai-gofer');
+    const nestedPluginRoot = path.join(officialPluginRoot, 'plugins', 'eai-gofer');
+    const officialVsixPath = path.join(officialRoot, 'eai-gofer-3.4.0.vsix');
+    const officialPluginZipPath = path.join(officialRoot, 'eai-gofer-agent-plugin-3.4.0.zip');
+    const vsixBytes = Buffer.from('official-vsix');
+    const pluginZipBytes = Buffer.from('official-plugin-zip');
+
+    fs.mkdirSync(nestedPluginRoot, { recursive: true });
+    fs.mkdirSync(path.join(officialPluginRoot, '.claude-plugin'), { recursive: true });
+    fs.mkdirSync(path.join(officialPluginRoot, 'commands'), { recursive: true });
+    fs.writeFileSync(officialVsixPath, vsixBytes);
+    fs.writeFileSync(officialPluginZipPath, pluginZipBytes);
+    fs.writeFileSync(path.join(officialPluginRoot, '.eai-gofer-plugin-version'), '3.4.0\n');
+    fs.writeFileSync(path.join(officialPluginRoot, 'AGENTS.md'), 'outer release instructions');
+    fs.writeFileSync(path.join(officialPluginRoot, 'commands', 'eai.md'), 'outer command');
+    fs.writeFileSync(
+      path.join(officialPluginRoot, '.claude-plugin', 'plugin.json'),
+      '{"name":"official-release"}'
+    );
+    fs.writeFileSync(path.join(nestedPluginRoot, 'plugin.json'), '{"name":"nested-plugin"}');
+
+    await execFileAsync(
+      'node',
+      [
+        scriptPath,
+        '--version',
+        '3.4.0',
+        '--vsix',
+        officialVsixPath,
+        '--plugin-zip',
+        officialPluginZipPath,
+        '--plugin-root',
+        officialPluginRoot,
+      ],
+      { cwd: tmpRoot }
+    );
+
+    const releasesDir = path.join(tmpRoot, 'docs-site', 'static', 'releases');
+    expect(fs.readFileSync(path.join(releasesDir, 'eai-gofer-3.4.0.vsix'))).toEqual(vsixBytes);
+    expect(fs.readFileSync(path.join(releasesDir, 'eai-gofer-latest.vsix'))).toEqual(vsixBytes);
+    expect(fs.readFileSync(path.join(releasesDir, 'eai-gofer-agent-plugin-3.4.0.zip'))).toEqual(
+      pluginZipBytes
+    );
+    expect(fs.readFileSync(path.join(releasesDir, 'eai-gofer-agent-plugin-latest.zip'))).toEqual(
+      pluginZipBytes
+    );
+    expect(
+      fs.readFileSync(
+        path.join(releasesDir, 'plugins', 'eai-gofer', '.claude-plugin', 'plugin.json'),
+        'utf8'
+      )
+    ).toBe('{"name":"official-release"}');
+    expect(
+      fs.readFileSync(path.join(releasesDir, 'plugins', 'eai-gofer', 'AGENTS.md'), 'utf8')
+    ).toBe('outer release instructions');
+    expect(
+      fs.readFileSync(path.join(releasesDir, 'plugins', 'eai-gofer', 'commands', 'eai.md'), 'utf8')
+    ).toBe('outer command');
+    expect(
+      fs.readFileSync(
+        path.join(releasesDir, 'plugins', 'eai-gofer', 'plugins', 'eai-gofer', 'plugin.json'),
+        'utf8'
+      )
+    ).toBe('{"name":"nested-plugin"}');
+    expect(
+      fs.readFileSync(path.join(releasesDir, 'plugins', 'eai-gofer', 'claude-plugin.json'), 'utf8')
+    ).toBe('{"name":"official-release"}');
+  });
 });

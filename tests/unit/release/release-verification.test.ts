@@ -196,7 +196,7 @@ describe('Release Verification', () => {
         'npm run gofer:eai-refresh-layout:check 2>&1'
       );
       const compileIndex = RELEASE_SCRIPT.indexOf('if npm run compile 2>&1; then');
-      const packageIndex = RELEASE_SCRIPT.indexOf('npx @vscode/vsce package');
+      const packageIndex = RELEASE_SCRIPT.indexOf('npx @vscode/vsce package', compileIndex);
       const publishModeIndex = RELEASE_SCRIPT.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then');
       const publishLayoutIndex = RELEASE_SCRIPT.indexOf(
         'node scripts/verify-eai-refresh-layout.mjs 2>&1',
@@ -306,14 +306,9 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain('sleep 20');
     });
 
-    it('should not push directly to origin/main from release.sh', () => {
+    it('should keep public release files out of pre-tag release preparation', () => {
       const validationGateIndex = RELEASE_SCRIPT.indexOf(
         'run_release_validation_gate "$NEW_VERSION"'
-      );
-      const trackedAssetsIndex = RELEASE_SCRIPT.indexOf(
-        'ensure_release_paths_tracked \\\n' +
-          '    "docs-site/static/releases/eai-gofer-$NEW_VERSION.vsix"',
-        validationGateIndex
       );
       const releaseCommitIndex = RELEASE_SCRIPT.indexOf(
         'git commit --no-verify -m "release: v$NEW_VERSION'
@@ -324,11 +319,15 @@ describe('Release Verification', () => {
       const pushTagIndex = RELEASE_SCRIPT.indexOf('git push --no-verify origin "$TAG_NAME"');
 
       expect(validationGateIndex).toBeGreaterThan(-1);
-      expect(trackedAssetsIndex).toBeGreaterThan(validationGateIndex);
       expect(releaseCommitIndex).toBeGreaterThan(validationGateIndex);
-      expect(releaseCommitIndex).toBeGreaterThan(trackedAssetsIndex);
       expect(pushBranchIndex).toBeGreaterThan(releaseCommitIndex);
       expect(pushTagIndex).toBeGreaterThan(-1);
+      expect(RELEASE_SCRIPT).not.toContain(
+        'node scripts/update-releases.js "$NEW_VERSION" "$RELEASE_NOTES"'
+      );
+      expect(RELEASE_SCRIPT).not.toContain(
+        'node scripts/publish-public-release-assets.mjs "$NEW_VERSION"'
+      );
       expect(RELEASE_SCRIPT).not.toContain('git push --no-verify origin HEAD:main');
       expect(RELEASE_SCRIPT).not.toContain('--force-with-lease');
     });
@@ -338,24 +337,188 @@ describe('Release Verification', () => {
       expect(RELEASE_SCRIPT).toContain('git pull --ff-only origin main');
     });
 
+    it('should select only stable semantic-version tags for the public feed', () => {
+      const selectorStart = RELEASE_SCRIPT.indexOf('latest_release_tag() {');
+      const selectorEnd = RELEASE_SCRIPT.indexOf('\n}', selectorStart);
+      const selector = RELEASE_SCRIPT.slice(selectorStart, selectorEnd);
+      const stableTagPattern = /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/;
+      const tags = [
+        'refs/tags/v3.14.4',
+        'refs/tags/v3.14.5',
+        'refs/tags/v3.14.6-beta.1',
+        'refs/tags/v3.14.6-rc.1',
+        'refs/tags/v3.14.7',
+        'refs/tags/v3.14',
+      ];
+
+      expect(selector).toContain(
+        "awk '$2 ~ /^refs\\/tags\\/v[0-9]+\\.[0-9]+\\.[0-9]+$/ {print $2}'"
+      );
+      expect(tags.filter((tag) => stableTagPattern.test(tag)).at(-1)).toBe('refs/tags/v3.14.7');
+    });
+
+    it('should reject a local main that differs from fetched origin/main before creating a feed branch', () => {
+      const feedRecovery = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('publish_public_release_feed()'),
+        RELEASE_SCRIPT.indexOf('should_enforce_vscode_marketplace_publish()')
+      );
+      const createBranchIndex = feedRecovery.indexOf('git switch -c "$branch_name"');
+      const baseCheckIndex = feedRecovery.lastIndexOf(
+        'ensure_feed_recovery_main',
+        createBranchIndex
+      );
+      const baseCheckFunction = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('ensure_feed_recovery_main() {'),
+        RELEASE_SCRIPT.indexOf('\n}', RELEASE_SCRIPT.indexOf('ensure_feed_recovery_main() {'))
+      );
+
+      expect(createBranchIndex).toBeGreaterThan(-1);
+      expect(baseCheckIndex).toBeGreaterThan(-1);
+      expect(baseCheckIndex).toBeLessThan(createBranchIndex);
+      expect(baseCheckFunction).toContain(
+        'git fetch origin refs/heads/main:refs/remotes/origin/main'
+      );
+      expect(baseCheckFunction).toContain('local_head="$(git rev-parse --verify HEAD)"');
+      expect(baseCheckFunction).toContain(
+        'remote_head="$(git rev-parse --verify refs/remotes/origin/main)"'
+      );
+      expect(baseCheckFunction).toContain('[ "$local_head" != "$remote_head" ]');
+      expect(baseCheckFunction).toContain('No recovery branch was created.');
+    });
+
     it('should detect dirty worktrees using git status porcelain output', () => {
       expect(RELEASE_SCRIPT).toContain('git status --porcelain');
       expect(RELEASE_SCRIPT).not.toContain('git diff-index --quiet HEAD --');
     });
 
-    it('should update release feed assets only after repo validation passes', () => {
-      const validationGateIndex = RELEASE_SCRIPT.indexOf(
-        'run_release_validation_gate "$NEW_VERSION"'
+    it('should promote the official feed only after GitHub release publication succeeds', () => {
+      const publishModeIndex = RELEASE_SCRIPT.indexOf('if [ "$RELEASE_PHASE" = "publish" ]; then');
+      const publishMode = RELEASE_SCRIPT.slice(
+        publishModeIndex,
+        RELEASE_SCRIPT.indexOf('# Calculate new version', publishModeIndex)
       );
-      const updateReleasesIndex = RELEASE_SCRIPT.indexOf(
-        'node scripts/update-releases.js "$NEW_VERSION" "$RELEASE_NOTES"'
+      const tagPushIndex = publishMode.indexOf('git push --no-verify origin "$TAG_NAME"');
+      const releaseWorkflowIndex = publishMode.indexOf(
+        'wait_for_release_workflow "$CURRENT_VERSION"'
       );
-      const publishAssetsIndex = RELEASE_SCRIPT.indexOf(
-        'node scripts/publish-public-release-assets.mjs "$NEW_VERSION"'
+      const marketplaceIndex = publishMode.indexOf(
+        'verify_vscode_marketplace_version "$CURRENT_VERSION"'
+      );
+      const feedIndex = publishMode.indexOf('publish_public_release_feed "$CURRENT_VERSION"');
+      const successIndex = publishMode.indexOf('GitHub release workflow completed');
+
+      expect(tagPushIndex).toBeGreaterThan(-1);
+      expect(releaseWorkflowIndex).toBeGreaterThan(tagPushIndex);
+      expect(feedIndex).toBeGreaterThan(releaseWorkflowIndex);
+      expect(marketplaceIndex).toBeGreaterThan(feedIndex);
+      expect(successIndex).toBeGreaterThan(feedIndex);
+      expect(publishMode).not.toContain('ensure_release_paths_tracked');
+      expect(publishMode).not.toContain(
+        'docs-site/static/releases/eai-gofer-$CURRENT_VERSION.vsix'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'gh run view "$run_id" --repo "$repo" --json status,conclusion,jobs'
+      );
+      expect(RELEASE_SCRIPT).toContain('node scripts/inspect-release-workflow-run.mjs');
+      expect(RELEASE_SCRIPT).not.toContain('gh run watch "$run_id" --repo "$repo" --exit-status');
+    });
+
+    it('should recover the public feed for an existing tag without retagging or merging', () => {
+      expect(RELEASE_SCRIPT).toContain('Usage: ./release.sh publish-feed <published-version>');
+      expect(RELEASE_SCRIPT).toContain('publish_public_release_feed "$FEED_VERSION"');
+      expect(RELEASE_SCRIPT).toContain(
+        'Only the latest official tag can become the public auto-update version.'
+      );
+      expect(RELEASE_SCRIPT).toContain('gh release download "$tag_name"');
+      expect(RELEASE_SCRIPT).toContain('create_public_feed_pr "$branch_name" "$version"');
+      expect(RELEASE_SCRIPT).not.toContain('gh pr merge');
+      expect(RELEASE_SCRIPT).not.toContain('git push --no-verify origin HEAD:main');
+      expect(RELEASE_SCRIPT).not.toContain('--force-with-lease');
+    });
+
+    it('should allow recovery of the latest published tag after a newer package version is prepared', () => {
+      const feedRecovery = RELEASE_SCRIPT.slice(
+        RELEASE_SCRIPT.indexOf('publish_public_release_feed()'),
+        RELEASE_SCRIPT.indexOf('should_enforce_vscode_marketplace_publish()')
       );
 
-      expect(updateReleasesIndex).toBeGreaterThan(validationGateIndex);
-      expect(publishAssetsIndex).toBeGreaterThan(updateReleasesIndex);
+      expect(feedRecovery).not.toContain('Feed recovery must use the current package version');
+      expect(feedRecovery).toContain('if [ "$latest_tag" != "$tag_name" ]; then');
+      expect(feedRecovery).toContain(
+        'Only the latest official tag can become the public auto-update version.'
+      );
+    });
+
+    it('should verify an existing recovery PR head against official release files before accepting it', () => {
+      const existingPullRequest = RELEASE_SCRIPT.indexOf(
+        'if [ -n "$open_feed_pr" ] && [ "$current_branch" != "$branch_name" ]; then'
+      );
+      const pullRequestValidation = RELEASE_SCRIPT.indexOf(
+        'public_release_files_match \\',
+        existingPullRequest
+      );
+      const finalPullRequestCheck = RELEASE_SCRIPT.indexOf(
+        'existing-feed-pr-final.json',
+        pullRequestValidation
+      );
+      const acceptedPullRequest = RELEASE_SCRIPT.indexOf(
+        'print_success "The existing public-feed pull request matches',
+        existingPullRequest
+      );
+
+      expect(RELEASE_SCRIPT).toContain('gh pr view "$open_feed_pr" --repo "$repo"');
+      expect(RELEASE_SCRIPT).toContain('--json state,headRefName,headRefOid,baseRefName');
+      expect(RELEASE_SCRIPT).toContain('git fetch origin "$branch_name"');
+      expect(RELEASE_SCRIPT).toContain('git archive --format=tar --output="$pr_archive"');
+      expect(RELEASE_SCRIPT).toContain('"docs-site/static/releases/eai-gofer-$version.vsix"');
+      expect(RELEASE_SCRIPT).toContain(
+        '"docs-site/static/releases/eai-gofer-agent-plugin-$version.zip"'
+      );
+      expect(RELEASE_SCRIPT).toContain('docs-site/static/releases/plugins/eai-gofer');
+      expect(RELEASE_SCRIPT).toContain('"$metadata_file" "$verify_root"');
+      expect(pullRequestValidation).toBeGreaterThan(existingPullRequest);
+      expect(finalPullRequestCheck).toBeGreaterThan(pullRequestValidation);
+      expect(RELEASE_SCRIPT).toContain('EXPECTED_FEED_HEAD="$open_feed_pr_head"');
+      expect(acceptedPullRequest).toBeGreaterThan(finalPullRequestCheck);
+      expect(RELEASE_SCRIPT).toContain(
+        'does not match the official release. Retry from its exact recovery branch'
+      );
+      expect(RELEASE_SCRIPT).toContain(
+        'The public-feed pull request changed during verification. Retry recovery.'
+      );
+    });
+
+    it('should verify the complete official release bundle and public metadata before reporting success', () => {
+      expect(RELEASE_SCRIPT).toContain('plugin_root="$extract_dir/eai-gofer"');
+      expect(RELEASE_SCRIPT).toContain('plugin_root/plugins/eai-gofer');
+      expect(RELEASE_SCRIPT).toContain(
+        'public_release_files_match "$version" "$vsix_path" "$plugin_zip_path" "$plugin_root" "$metadata_file"'
+      );
+      expect(RELEASE_SCRIPT).toContain('node scripts/verify-public-release-publication.mjs');
+      expect(RELEASE_SCRIPT).toContain('--release-metadata-file "$metadata_file"');
+      expect(RELEASE_SCRIPT).toContain(
+        'GOFER_RELEASE_METADATA_FILE="$metadata_file" node scripts/update-releases.js "$version"'
+      );
+      expect(RELEASE_SCRIPT).toContain('trap cleanup_public_feed_temp_dir EXIT');
+    });
+
+    it('should match an open recovery PR by the exact generated head branch', () => {
+      expect(RELEASE_SCRIPT).toContain(
+        'gh pr list --repo "$repo" --base main --head "$branch_name"'
+      );
+      expect(RELEASE_SCRIPT).toContain('--json url,title,headRefName');
+      expect(RELEASE_SCRIPT).toMatch(/\.headRefName == \\"\$branch_name\\"/);
+    });
+
+    it('should report feed review and Pages deployment as separate release gates', () => {
+      expect(RELEASE_SCRIPT).toContain(
+        'Auto-updater publication is pending review, merge, and Pages deployment:'
+      );
+      expect(RELEASE_SCRIPT).toContain('This pull request does not create or move a release tag.');
+      expect(RELEASE_WORKFLOW).toContain(
+        'this workflow does not confirm the Gofer auto-update feed'
+      );
+      expect(RELEASE_WORKFLOW).toContain('Review and merge the public-feed pull request');
     });
 
     it('should validate merged main before pushing the release tag', () => {

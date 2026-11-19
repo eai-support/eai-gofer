@@ -35,6 +35,14 @@ interface ReleaseEntry {
       latest_download_url: string;
       size_mb: number;
     };
+    antigravity?: {
+      bundle_url: string;
+      manifest_url: string;
+      install_url: string;
+      download_url: string;
+      latest_download_url: string;
+      size_mb: number;
+    };
     gemini?: {
       bundle_url: string;
       manifest_url: string;
@@ -152,6 +160,12 @@ describe('update-releases.js', () => {
     expect(updated.releases[0].assets?.codex?.manifest_url).toBe(
       'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/codex-plugin.json'
     );
+    expect(updated.releases[0].assets?.antigravity?.manifest_url).toBe(
+      'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/plugin.json'
+    );
+    expect(updated.releases[0].assets?.antigravity?.install_url).toBe(
+      'https://github.com/eai-support/eai-gofer'
+    );
     expect(updated.releases[0].assets?.gemini?.manifest_url).toBe(
       'https://eai-support.github.io/eai-gofer/releases/plugins/eai-gofer/gemini-extension.json'
     );
@@ -186,6 +200,48 @@ describe('update-releases.js', () => {
     expect(updated.latest_version).toBe(version);
     expect(updated.releases[0].download_url).toBe(customUrl);
     expect(updated.releases[0].tag_name).toBe(`v${version}`);
+  });
+
+  it('uses official metadata, preserves trailing note newlines, and records asset sizes', async () => {
+    const version = '3.2.2';
+    const publishedAt = '2026-10-15T18:55:01Z';
+    const officialAssets = path.join(tmpRoot, 'official-release-assets');
+    const officialMetadataPath = path.join(officialAssets, 'release.json');
+    const vsixPath = path.join(officialAssets, `eai-gofer-${version}.vsix`);
+    const pluginZipPath = path.join(officialAssets, `eai-gofer-agent-plugin-${version}.zip`);
+    const officialNotes = 'Official release notes\n\n';
+
+    fs.mkdirSync(officialAssets, { recursive: true });
+    fs.writeFileSync(releasesPath, JSON.stringify({ latest_version: '3.2.1', releases: [] }));
+    fs.writeFileSync(vsixPath, Buffer.alloc(1024 * 1024));
+    fs.writeFileSync(pluginZipPath, Buffer.alloc(2 * 1024 * 1024));
+    fs.writeFileSync(
+      officialMetadataPath,
+      JSON.stringify({
+        tagName: `v${version}`,
+        isDraft: false,
+        isPrerelease: false,
+        publishedAt,
+        body: officialNotes,
+        name: `Gofer v${version}`,
+      })
+    );
+
+    await execFileAsync('node', [scriptPath, version], {
+      env: {
+        ...process.env,
+        GOFER_RELEASE_VSIX_PATH: vsixPath,
+        GOFER_RELEASE_PLUGIN_ZIP_PATH: pluginZipPath,
+        GOFER_RELEASE_METADATA_FILE: officialMetadataPath,
+      },
+    });
+
+    const updated = readReleasesJson(releasesPath);
+    expect(updated.latest_version).toBe(version);
+    expect(updated.releases[0].published_at).toBe('2026-10-15T18:55:01.000Z');
+    expect(updated.releases[0].notes).toBe(officialNotes);
+    expect(updated.releases[0].size_mb).toBe(1);
+    expect(updated.releases[0].assets?.claude?.size_mb).toBe(2);
   });
 
   it('keeps only the latest five releases', async () => {
